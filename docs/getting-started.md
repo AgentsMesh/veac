@@ -41,7 +41,7 @@ ffmpeg -version
 Clone the repository and install the CLI:
 
 ```bash
-git clone https://github.com/yishuiliunian/veac.git
+git clone https://github.com/AgentsMesh/veac.git
 cd veac
 cargo install --path crates/veac-cli
 ```

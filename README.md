@@ -1,6 +1,6 @@
 # VEAC — Video Editing as Code
 
-![CI](https://github.com/yishuiliunian/veac/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/AgentsMesh/veac/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
 **Let AI agents edit videos by writing code, not clicking buttons.**
@@ -47,7 +47,7 @@ timeline main {
 
 ```bash
 # Prerequisites: Rust toolchain and FFmpeg
-git clone https://github.com/yishuiliunian/veac.git
+git clone https://github.com/AgentsMesh/veac.git
 cd veac
 cargo install --path crates/veac-cli
 ```
