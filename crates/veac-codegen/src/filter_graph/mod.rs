@@ -1,5 +1,4 @@
 /// FFmpeg filter graph builder — core structure and rendering.
-
 mod audio;
 mod effects;
 mod text;
@@ -54,10 +53,8 @@ impl FilterGraph {
         self.filters
             .iter()
             .map(|f| {
-                let ins: String =
-                    f.inputs.iter().map(|l| format!("[{l}]")).collect();
-                let outs: String =
-                    f.outputs.iter().map(|l| format!("[{l}]")).collect();
+                let ins: String = f.inputs.iter().map(|l| format!("[{l}]")).collect();
+                let outs: String = f.outputs.iter().map(|l| format!("[{l}]")).collect();
                 format!("{ins}{}{outs}", f.expr)
             })
             .collect::<Vec<_>>()
@@ -87,8 +84,15 @@ mod tests {
     fn render_drawtext() {
         let mut g = FilterGraph::new();
         let out = g.add_drawtext(
-            "0:v", "Hello", "Arial", 48, "white",
-            "(w-text_w)/2", "(h-text_h)/2", 3.0, 8.0,
+            "0:v",
+            "Hello",
+            "Arial",
+            48,
+            "white",
+            "(w-text_w)/2",
+            "(h-text_h)/2",
+            3.0,
+            8.0,
         );
         let rendered = g.render();
         assert!(rendered.contains("drawtext=text='Hello'"));

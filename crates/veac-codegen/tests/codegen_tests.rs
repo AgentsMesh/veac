@@ -42,7 +42,8 @@ fn make_text_overlay() -> IrTextOverlay {
 
 #[test]
 fn single_clip_generates_valid_args() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "intro".into(),
@@ -78,7 +79,8 @@ fn single_clip_generates_valid_args() {
 
 #[test]
 fn multiple_clips_use_concat() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
             IrAsset {
@@ -128,7 +130,8 @@ fn multiple_clips_use_concat() {
 
 #[test]
 fn text_overlay_generates_drawtext() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "intro".into(),
@@ -169,7 +172,8 @@ fn volume_adjustment_in_filter() {
     let mut clip = make_clip("intro", "./assets/intro.mp4", None, None);
     clip.volume = Some(0.5);
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "intro".into(),
@@ -193,7 +197,8 @@ fn volume_adjustment_in_filter() {
 
 #[test]
 fn to_command_string_starts_with_ffmpeg() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "intro".into(),

@@ -46,7 +46,10 @@ impl Lexer<'_> {
                     } else {
                         TokenKind::StringLit(content)
                     };
-                    return Ok(Token::new(kind, self.span_from(start, start_line, start_col)));
+                    return Ok(Token::new(
+                        kind,
+                        self.span_from(start, start_line, start_col),
+                    ));
                 }
                 Some('\\') => {
                     self.advance();
@@ -86,7 +89,10 @@ impl Lexer<'_> {
             .with_hint("use format #RRGGBB or #RRGGBBAA"));
         }
 
-        Ok(Token::new(TokenKind::ColorLit(hex), self.span_from(start, start_line, start_col)))
+        Ok(Token::new(
+            TokenKind::ColorLit(hex),
+            self.span_from(start, start_line, start_col),
+        ))
     }
 
     pub(crate) fn lex_number(
@@ -101,7 +107,7 @@ impl Lexer<'_> {
         while let Some(ch) = self.current() {
             if ch.is_ascii_digit() {
                 self.advance();
-            } else if ch == '.' && !has_dot && self.peek().map_or(false, |n| n.is_ascii_digit()) {
+            } else if ch == '.' && !has_dot && self.peek().is_some_and(|n| n.is_ascii_digit()) {
                 has_dot = true;
                 self.advance();
             } else {
@@ -125,7 +131,11 @@ impl Lexer<'_> {
             if ch == 's' {
                 self.advance();
                 let val: f64 = num_str.parse().map_err(|_| {
-                    VeacError::new(ErrorKind::InvalidTimeLiteral, format!("invalid time value `{num_str}s`"), Some(span))
+                    VeacError::new(
+                        ErrorKind::InvalidTimeLiteral,
+                        format!("invalid time value `{num_str}s`"),
+                        Some(span),
+                    )
                 })?;
                 return Ok(Token::new(TokenKind::TimeSec(val), span));
             }
@@ -133,14 +143,22 @@ impl Lexer<'_> {
                 self.advance();
                 self.advance();
                 let val: f64 = num_str.parse().map_err(|_| {
-                    VeacError::new(ErrorKind::InvalidTimeLiteral, format!("invalid time value `{num_str}ms`"), Some(span))
+                    VeacError::new(
+                        ErrorKind::InvalidTimeLiteral,
+                        format!("invalid time value `{num_str}ms`"),
+                        Some(span),
+                    )
                 })?;
                 return Ok(Token::new(TokenKind::TimeMs(val), span));
             }
             if ch == 'f' && !has_dot {
                 self.advance();
                 let val: u64 = num_str.parse().map_err(|_| {
-                    VeacError::new(ErrorKind::InvalidTimeLiteral, format!("invalid frame value `{num_str}f`"), Some(span))
+                    VeacError::new(
+                        ErrorKind::InvalidTimeLiteral,
+                        format!("invalid frame value `{num_str}f`"),
+                        Some(span),
+                    )
                 })?;
                 return Ok(Token::new(TokenKind::TimeFrames(val), span));
             }
@@ -149,12 +167,20 @@ impl Lexer<'_> {
         // Plain number
         if has_dot {
             let val: f64 = num_str.parse().map_err(|_| {
-                VeacError::new(ErrorKind::InvalidNumber, format!("invalid float literal `{num_str}`"), Some(span))
+                VeacError::new(
+                    ErrorKind::InvalidNumber,
+                    format!("invalid float literal `{num_str}`"),
+                    Some(span),
+                )
             })?;
             Ok(Token::new(TokenKind::FloatLit(val), span))
         } else {
             let val: i64 = num_str.parse().map_err(|_| {
-                VeacError::new(ErrorKind::InvalidNumber, format!("invalid integer literal `{num_str}`"), Some(span))
+                VeacError::new(
+                    ErrorKind::InvalidNumber,
+                    format!("invalid integer literal `{num_str}`"),
+                    Some(span),
+                )
             })?;
             Ok(Token::new(TokenKind::IntLit(val), span))
         }
@@ -215,6 +241,9 @@ impl Lexer<'_> {
             _ => TokenKind::Ident(ident),
         };
 
-        Ok(Token::new(kind, self.span_from(start, start_line, start_col)))
+        Ok(Token::new(
+            kind,
+            self.span_from(start, start_line, start_col),
+        ))
     }
 }

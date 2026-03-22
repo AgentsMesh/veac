@@ -1,5 +1,4 @@
 /// Variable, expression, and asset resolution helpers.
-
 use std::collections::HashMap;
 
 use crate::ast::*;

@@ -22,7 +22,11 @@ pub fn cmd_build(file: &Path, output: &Path) -> Result<(), Box<dyn std::error::E
     let plans = veac_codegen::ffmpeg::generate_all(&ir, output);
 
     for plan in &plans {
-        println!("Building: {} -> {}", file.display(), plan.output_path.display());
+        println!(
+            "Building: {} -> {}",
+            file.display(),
+            plan.output_path.display()
+        );
 
         // Execute FFmpeg
         let args = plan.to_args();

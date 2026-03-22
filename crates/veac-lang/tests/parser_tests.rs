@@ -11,13 +11,15 @@ fn parse(input: &str) -> Program {
 
 #[test]
 fn test_parse_project() {
-    let prog = parse(r#"
+    let prog = parse(
+        r#"
         project "my-video" {
             resolution = "1920x1080"
             fps = 30
             format = "mp4"
         }
-    "#);
+    "#,
+    );
     let proj = prog.project.unwrap();
     assert_eq!(proj.name, "my-video");
     assert_eq!(proj.attributes.len(), 3);
@@ -26,11 +28,13 @@ fn test_parse_project() {
 
 #[test]
 fn test_parse_asset() {
-    let prog = parse(r#"
+    let prog = parse(
+        r#"
         asset intro = video("./assets/intro.mp4")
         asset bgm = audio("./assets/bgm.mp3")
         asset logo = image("./assets/logo.png")
-    "#);
+    "#,
+    );
     assert_eq!(prog.assets.len(), 3);
     assert_eq!(prog.assets[0].name, "intro");
     assert_eq!(prog.assets[0].kind, AssetKind::Video);
@@ -48,7 +52,8 @@ fn test_parse_let() {
 
 #[test]
 fn test_parse_timeline() {
-    let prog = parse(r#"
+    let prog = parse(
+        r#"
         timeline main {
             track video {
                 clip intro {
@@ -62,7 +67,8 @@ fn test_parse_timeline() {
                 }
             }
         }
-    "#);
+    "#,
+    );
     assert_eq!(prog.timelines.len(), 1);
     let tl = &prog.timelines[0];
     assert_eq!(tl.name, "main");
@@ -73,7 +79,8 @@ fn test_parse_timeline() {
 
 #[test]
 fn test_parse_text_overlay() {
-    let prog = parse(r#"
+    let prog = parse(
+        r#"
         timeline main {
             track text {
                 text "Hello World" {
@@ -86,7 +93,8 @@ fn test_parse_text_overlay() {
                 }
             }
         }
-    "#);
+    "#,
+    );
     let tl = &prog.timelines[0];
     let item = &tl.tracks[0].items[0];
     match item {
@@ -100,7 +108,8 @@ fn test_parse_text_overlay() {
 
 #[test]
 fn test_parse_full_program() {
-    let prog = parse(r#"
+    let prog = parse(
+        r#"
         project "demo" {
             resolution = "1920x1080"
             fps = 30
@@ -134,7 +143,8 @@ fn test_parse_full_program() {
                 }
             }
         }
-    "#);
+    "#,
+    );
 
     assert!(prog.project.is_some());
     assert_eq!(prog.assets.len(), 2);

@@ -53,7 +53,9 @@ impl Parser {
                         format!("unexpected {} at top level", self.current().kind),
                         Some(self.current().span),
                     )
-                    .with_hint("expected `project`, `asset`, `let`, `timeline`, `output`, or `include`"));
+                    .with_hint(
+                        "expected `project`, `asset`, `let`, `timeline`, `output`, or `include`",
+                    ));
                 }
             }
         }
@@ -144,7 +146,10 @@ impl Parser {
             _ => {
                 return Err(VeacError::new(
                     ErrorKind::ExpectedToken,
-                    format!("expected `video`, `audio`, or `image`, found {}", self.current().kind),
+                    format!(
+                        "expected `video`, `audio`, or `image`, found {}",
+                        self.current().kind
+                    ),
                     Some(self.current().span),
                 ));
             }
@@ -155,7 +160,11 @@ impl Parser {
         let path_str = self.expect_string()?;
         self.expect(&TokenKind::RParen)?;
 
-        Ok(AssetDecl { name, kind, path: PathBuf::from(path_str) })
+        Ok(AssetDecl {
+            name,
+            kind,
+            path: PathBuf::from(path_str),
+        })
     }
 
     fn parse_let(&mut self) -> Result<LetDecl, VeacError> {
@@ -169,7 +178,9 @@ impl Parser {
     fn parse_include(&mut self) -> Result<IncludeDecl, VeacError> {
         self.expect(&TokenKind::Include)?;
         let path_str = self.expect_string()?;
-        Ok(IncludeDecl { path: PathBuf::from(path_str) })
+        Ok(IncludeDecl {
+            path: PathBuf::from(path_str),
+        })
     }
 
     fn parse_output(&mut self) -> Result<OutputDecl, VeacError> {
@@ -179,6 +190,9 @@ impl Parser {
         self.expect(&TokenKind::LBrace)?;
         let attributes = self.parse_attributes()?;
         self.expect(&TokenKind::RBrace)?;
-        Ok(OutputDecl { path: PathBuf::from(path_str), attributes })
+        Ok(OutputDecl {
+            path: PathBuf::from(path_str),
+            attributes,
+        })
     }
 }

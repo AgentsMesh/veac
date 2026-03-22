@@ -1,5 +1,4 @@
 /// Project-level IR types: output format, codec, and quality settings.
-
 use super::FitMode;
 
 #[derive(Debug, Clone)]

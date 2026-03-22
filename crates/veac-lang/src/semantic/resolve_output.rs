@@ -1,5 +1,4 @@
 /// Resolution of output declarations for multi-output support.
-
 use std::collections::HashMap;
 
 use crate::ast::*;

@@ -1,5 +1,4 @@
 /// Intermediate Representation — fully validated, all references resolved.
-
 mod clip;
 mod overlay;
 mod project;
@@ -54,6 +53,7 @@ pub enum IrTrackKind {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum IrTrackItem {
     Clip(IrClip),
     TextOverlay(IrTextOverlay),

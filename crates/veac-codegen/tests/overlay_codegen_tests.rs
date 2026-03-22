@@ -1,5 +1,4 @@
 /// Tests for overlay codegen: image overlay and scale filter generation.
-
 use std::path::{Path, PathBuf};
 
 use veac_lang::ir::*;
@@ -28,11 +27,20 @@ fn make_clip(name: &str, path: &str) -> IrClip {
 
 #[test]
 fn image_overlay_generates_overlay_filter() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "intro".into(), kind: IrAssetKind::Video, path: PathBuf::from("intro.mp4") },
-            IrAsset { name: "logo".into(), kind: IrAssetKind::Image, path: PathBuf::from("logo.png") },
+            IrAsset {
+                name: "intro".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("intro.mp4"),
+            },
+            IrAsset {
+                name: "logo".into(),
+                kind: IrAssetKind::Image,
+                path: PathBuf::from("logo.png"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
@@ -73,11 +81,20 @@ fn image_overlay_generates_overlay_filter() {
 
 #[test]
 fn image_overlay_without_scale_or_opacity() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "intro".into(), kind: IrAssetKind::Video, path: PathBuf::from("intro.mp4") },
-            IrAsset { name: "watermark".into(), kind: IrAssetKind::Image, path: PathBuf::from("wm.png") },
+            IrAsset {
+                name: "intro".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("intro.mp4"),
+            },
+            IrAsset {
+                name: "watermark".into(),
+                kind: IrAssetKind::Image,
+                path: PathBuf::from("wm.png"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),

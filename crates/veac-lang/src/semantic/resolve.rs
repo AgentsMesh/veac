@@ -1,5 +1,4 @@
 /// Project resolution and value conversion helpers.
-
 use std::collections::HashMap;
 
 use crate::ast::*;
@@ -38,11 +37,14 @@ impl SemanticAnalyzer<'_> {
                             "fill" => FitMode::Fill,
                             "letterbox" => FitMode::Letterbox,
                             "crop" => FitMode::Crop,
-                            _ => return Err(VeacError::new(
-                                ErrorKind::InvalidValue,
-                                format!("unknown fit mode `{s}`"),
-                                None,
-                            ).with_hint("supported: fill, letterbox, crop")),
+                            _ => {
+                                return Err(VeacError::new(
+                                    ErrorKind::InvalidValue,
+                                    format!("unknown fit mode `{s}`"),
+                                    None,
+                                )
+                                .with_hint("supported: fill, letterbox, crop"))
+                            }
                         };
                     }
                 }
@@ -50,12 +52,26 @@ impl SemanticAnalyzer<'_> {
             }
         }
 
-        Ok(IrProject { name: decl.name.clone(), width, height, fps, format, codec, quality, fit })
+        Ok(IrProject {
+            name: decl.name.clone(),
+            width,
+            height,
+            fps,
+            format,
+            codec,
+            quality,
+            fit,
+        })
     }
 
     // --- Value conversion helpers ---
 
-    pub(crate) fn expr_to_seconds(&self, expr: &Expression, fps: u32, field: &str) -> Result<f64, VeacError> {
+    pub(crate) fn expr_to_seconds(
+        &self,
+        expr: &Expression,
+        fps: u32,
+        field: &str,
+    ) -> Result<f64, VeacError> {
         match expr {
             Expression::TimeSec(v) => Ok(*v),
             Expression::TimeMs(v) => Ok(*v / 1000.0),
@@ -63,7 +79,11 @@ impl SemanticAnalyzer<'_> {
             Expression::Smpte(s) => Self::parse_smpte(s, fps),
             Expression::IntLit(n) => Ok(*n as f64),
             Expression::FloatLit(n) => Ok(*n),
-            _ => Err(VeacError::new(ErrorKind::TypeMismatch, format!("`{field}` expects a time value (e.g. 3.5s, 500ms, 84f)"), None)),
+            _ => Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                format!("`{field}` expects a time value (e.g. 3.5s, 500ms, 84f)"),
+                None,
+            )),
         }
     }
 
@@ -71,29 +91,49 @@ impl SemanticAnalyzer<'_> {
         match expr {
             Expression::FloatLit(n) => Ok(*n),
             Expression::IntLit(n) => Ok(*n as f64),
-            _ => Err(VeacError::new(ErrorKind::TypeMismatch, format!("`{field}` expects a number"), None)),
+            _ => Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                format!("`{field}` expects a number"),
+                None,
+            )),
         }
     }
 
     pub(crate) fn expr_to_bool(&self, expr: &Expression, field: &str) -> Result<bool, VeacError> {
         match expr {
             Expression::BoolLit(b) => Ok(*b),
-            _ => Err(VeacError::new(ErrorKind::TypeMismatch, format!("`{field}` expects a boolean"), None)),
+            _ => Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                format!("`{field}` expects a boolean"),
+                None,
+            )),
         }
     }
 
     pub(crate) fn expr_to_u32(&self, expr: &Expression, field: &str) -> Result<u32, VeacError> {
         match expr {
             Expression::IntLit(n) if *n >= 0 => Ok(*n as u32),
-            Expression::IntLit(n) => Err(VeacError::new(ErrorKind::InvalidValue, format!("`{field}` must be positive, got {n}"), None)),
-            _ => Err(VeacError::new(ErrorKind::TypeMismatch, format!("`{field}` expects an integer"), None)),
+            Expression::IntLit(n) => Err(VeacError::new(
+                ErrorKind::InvalidValue,
+                format!("`{field}` must be positive, got {n}"),
+                None,
+            )),
+            _ => Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                format!("`{field}` expects an integer"),
+                None,
+            )),
         }
     }
 
     pub(crate) fn parse_smpte(s: &str, fps: u32) -> Result<f64, VeacError> {
         let parts: Vec<&str> = s.split(':').collect();
         if parts.len() != 4 {
-            return Err(VeacError::new(ErrorKind::InvalidTimeLiteral, format!("invalid SMPTE timecode `{s}`"), None));
+            return Err(VeacError::new(
+                ErrorKind::InvalidTimeLiteral,
+                format!("invalid SMPTE timecode `{s}`"),
+                None,
+            ));
         }
         let h: f64 = parts[0].parse().unwrap_or(0.0);
         let m: f64 = parts[1].parse().unwrap_or(0.0);
@@ -106,13 +146,33 @@ impl SemanticAnalyzer<'_> {
         if let Expression::StringLit(s) = val {
             let parts: Vec<&str> = s.split('x').collect();
             if parts.len() != 2 {
-                return Err(VeacError::new(ErrorKind::InvalidValue, format!("invalid resolution `{s}`, expected `WIDTHxHEIGHT`"), None));
+                return Err(VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("invalid resolution `{s}`, expected `WIDTHxHEIGHT`"),
+                    None,
+                ));
             }
-            let w = parts[0].parse().map_err(|_| VeacError::new(ErrorKind::InvalidValue, format!("invalid width in `{s}`"), None))?;
-            let h = parts[1].parse().map_err(|_| VeacError::new(ErrorKind::InvalidValue, format!("invalid height in `{s}`"), None))?;
+            let w = parts[0].parse().map_err(|_| {
+                VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("invalid width in `{s}`"),
+                    None,
+                )
+            })?;
+            let h = parts[1].parse().map_err(|_| {
+                VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("invalid height in `{s}`"),
+                    None,
+                )
+            })?;
             Ok((w, h))
         } else {
-            Err(VeacError::new(ErrorKind::TypeMismatch, "resolution must be a string like \"1920x1080\"", None))
+            Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                "resolution must be a string like \"1920x1080\"",
+                None,
+            ))
         }
     }
 
@@ -123,10 +183,19 @@ impl SemanticAnalyzer<'_> {
                 "mkv" => Ok(OutputFormat::Mkv),
                 "webm" => Ok(OutputFormat::Webm),
                 "mov" => Ok(OutputFormat::Mov),
-                _ => Err(VeacError::new(ErrorKind::InvalidValue, format!("unknown format `{s}`"), None).with_hint("supported: mp4, mkv, webm, mov")),
+                _ => Err(VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("unknown format `{s}`"),
+                    None,
+                )
+                .with_hint("supported: mp4, mkv, webm, mov")),
             }
         } else {
-            Err(VeacError::new(ErrorKind::TypeMismatch, "format must be a string", None))
+            Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                "format must be a string",
+                None,
+            ))
         }
     }
 
@@ -137,10 +206,19 @@ impl SemanticAnalyzer<'_> {
                 "h265" => Ok(Codec::H265),
                 "vp9" => Ok(Codec::Vp9),
                 "av1" => Ok(Codec::Av1),
-                _ => Err(VeacError::new(ErrorKind::InvalidValue, format!("unknown codec `{s}`"), None).with_hint("supported: h264, h265, vp9, av1")),
+                _ => Err(VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("unknown codec `{s}`"),
+                    None,
+                )
+                .with_hint("supported: h264, h265, vp9, av1")),
             }
         } else {
-            Err(VeacError::new(ErrorKind::TypeMismatch, "codec must be a string", None))
+            Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                "codec must be a string",
+                None,
+            ))
         }
     }
 
@@ -151,10 +229,19 @@ impl SemanticAnalyzer<'_> {
                 "medium" => Ok(Quality::Medium),
                 "high" => Ok(Quality::High),
                 "lossless" => Ok(Quality::Lossless),
-                _ => Err(VeacError::new(ErrorKind::InvalidValue, format!("unknown quality `{s}`"), None).with_hint("supported: low, medium, high, lossless")),
+                _ => Err(VeacError::new(
+                    ErrorKind::InvalidValue,
+                    format!("unknown quality `{s}`"),
+                    None,
+                )
+                .with_hint("supported: low, medium, high, lossless")),
             }
         } else {
-            Err(VeacError::new(ErrorKind::TypeMismatch, "quality must be a string", None))
+            Err(VeacError::new(
+                ErrorKind::TypeMismatch,
+                "quality must be a string",
+                None,
+            ))
         }
     }
 

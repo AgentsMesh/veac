@@ -33,9 +33,7 @@ pub fn check_ffmpeg() -> Result<String, RuntimeError> {
         .arg("-version")
         .output()
         .map_err(|_| {
-            RuntimeError::new(
-                "ffmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html",
-            )
+            RuntimeError::new("ffmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
         })?;
 
     let version = String::from_utf8_lossy(&output.stdout);

@@ -1,12 +1,11 @@
 /// Video visual effect filter methods: blur, opacity, vignette, grain, sharpen, deshake.
-
 use super::FilterGraph;
 
 impl FilterGraph {
     /// Apply Gaussian blur. `strength` is 0-100, mapped to boxblur radius.
     pub fn add_blur(&mut self, input: &str, strength: f64) -> String {
         let out = self.next_label("bl");
-        let r = (strength / 5.0).max(1.0).min(20.0) as u32;
+        let r = (strength / 5.0).clamp(1.0, 20.0) as u32;
         let expr = format!("boxblur={r}:{r}");
         self.add(vec![input.to_string()], &expr, vec![out.clone()]);
         out

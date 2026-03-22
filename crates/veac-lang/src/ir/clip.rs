@@ -1,5 +1,4 @@
 /// Clip-level IR types with all time values resolved to seconds.
-
 use std::path::PathBuf;
 
 use super::IrAssetKind;

@@ -1,5 +1,4 @@
 /// Video transform filter methods: crop, rotate, flip.
-
 use super::FilterGraph;
 
 impl FilterGraph {
@@ -31,7 +30,8 @@ impl FilterGraph {
     pub fn add_rotate(&mut self, input: &str, degrees: f64) -> String {
         let out = self.next_label("rot");
         let radians = degrees * std::f64::consts::PI / 180.0;
-        let expr = format!("rotate={radians}:fillcolor=black@0:ow=rotw({radians}):oh=roth({radians})");
+        let expr =
+            format!("rotate={radians}:fillcolor=black@0:ow=rotw({radians}):oh=roth({radians})");
         self.add(vec![input.to_string()], &expr, vec![out.clone()]);
         out
     }

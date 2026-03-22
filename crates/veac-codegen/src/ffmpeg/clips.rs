@@ -1,5 +1,4 @@
 /// Build filter chains for clips with transitions, speed, and effects.
-
 use std::collections::HashMap;
 
 use veac_lang::ir::{IrClip, IrTrackItem, IrTransition};
@@ -32,7 +31,8 @@ pub fn build_clip_filters(
                         let mut v_labels = vec![v_label.clone()];
                         let mut a_labels = vec![a_label.clone()];
                         for _ in 1..count {
-                            let (vl, al) = process_single_clip(clip, input_map, graph, width, height, fps);
+                            let (vl, al) =
+                                process_single_clip(clip, input_map, graph, width, height, fps);
                             v_labels.push(vl);
                             a_labels.push(al);
                         }
@@ -48,7 +48,13 @@ pub fn build_clip_filters(
                 if let Some(trans) = pending_transition.take() {
                     if let Some(prev) = segments.last_mut() {
                         let offset = (cumulative_duration - trans.duration_sec).max(0.0);
-                        prev.0 = graph.add_xfade(&prev.0, &v_label, trans.kind.to_ffmpeg(), trans.duration_sec, offset);
+                        prev.0 = graph.add_xfade(
+                            &prev.0,
+                            &v_label,
+                            trans.kind.to_ffmpeg(),
+                            trans.duration_sec,
+                            offset,
+                        );
                         prev.1 = graph.add_acrossfade(&prev.1, &a_label, trans.duration_sec);
                         cumulative_duration += estimate_clip_duration(clip) - trans.duration_sec;
                     }
@@ -69,7 +75,8 @@ pub fn build_clip_filters(
             IrTrackItem::Freeze(freeze) => {
                 let idx = input_map[&freeze.asset_name];
                 let v_in = format!("{idx}:v");
-                let trimmed = graph.add_trim(&v_in, Some(freeze.at_sec), Some(freeze.at_sec + 0.04));
+                let trimmed =
+                    graph.add_trim(&v_in, Some(freeze.at_sec), Some(freeze.at_sec + 0.04));
                 let scaled = graph.add_scale(&trimmed, &width.to_string(), &height.to_string());
                 let v_label = graph.add_tpad(&scaled, freeze.duration_sec);
                 let a_label = graph.add_silence(freeze.duration_sec);
@@ -121,9 +128,15 @@ fn apply_video_effects(
     // Order: crop → rotate → flip → scale → zoompan → speed → eq
     //        → blur → sharpen → vignette → grain → opacity
     //        → reverse → chromakey → stabilize
-    if let Some(ref spec) = clip.crop { v = graph.add_crop(&v, spec); }
-    if let Some(deg) = clip.rotate { v = graph.add_rotate(&v, deg); }
-    if let Some(ref mode) = clip.flip { v = graph.add_flip(&v, mode); }
+    if let Some(ref spec) = clip.crop {
+        v = graph.add_crop(&v, spec);
+    }
+    if let Some(deg) = clip.rotate {
+        v = graph.add_rotate(&v, deg);
+    }
+    if let Some(ref mode) = clip.flip {
+        v = graph.add_flip(&v, mode);
+    }
 
     v = graph.add_scale(&v, &width.to_string(), &height.to_string());
 
@@ -131,18 +144,38 @@ fn apply_video_effects(
         let dur = estimate_clip_duration_raw(clip);
         v = graph.add_zoompan(&v, peak, dur, width, height, fps, clip.pan_x, clip.pan_y);
     }
-    if let Some(spd) = clip.speed { v = graph.add_speed(&v, spd); }
+    if let Some(spd) = clip.speed {
+        v = graph.add_speed(&v, spd);
+    }
     if clip.brightness.is_some() || clip.contrast.is_some() || clip.saturation.is_some() {
         v = graph.add_eq(&v, clip.brightness, clip.contrast, clip.saturation);
     }
-    if let Some(b) = clip.blur { v = graph.add_blur(&v, b); }
-    if let Some(s) = clip.sharpen { v = graph.add_sharpen(&v, s); }
-    if let Some(val) = clip.vignette { v = graph.add_vignette(&v, val); }
-    if let Some(g) = clip.grain { v = graph.add_grain(&v, g); }
-    if let Some(o) = clip.opacity { if o < 1.0 { v = graph.add_opacity(&v, o); } }
-    if clip.reverse == Some(true) { v = graph.add_reverse(&v); }
-    if let Some(ref color) = clip.chromakey { v = graph.add_chromakey(&v, color); }
-    if clip.stabilize == Some(true) { v = graph.add_deshake(&v); }
+    if let Some(b) = clip.blur {
+        v = graph.add_blur(&v, b);
+    }
+    if let Some(s) = clip.sharpen {
+        v = graph.add_sharpen(&v, s);
+    }
+    if let Some(val) = clip.vignette {
+        v = graph.add_vignette(&v, val);
+    }
+    if let Some(g) = clip.grain {
+        v = graph.add_grain(&v, g);
+    }
+    if let Some(o) = clip.opacity {
+        if o < 1.0 {
+            v = graph.add_opacity(&v, o);
+        }
+    }
+    if clip.reverse == Some(true) {
+        v = graph.add_reverse(&v);
+    }
+    if let Some(ref color) = clip.chromakey {
+        v = graph.add_chromakey(&v, color);
+    }
+    if clip.stabilize == Some(true) {
+        v = graph.add_deshake(&v);
+    }
     v
 }
 
@@ -154,25 +187,43 @@ fn apply_audio_chain(clip: &IrClip, idx: usize, graph: &mut FilterGraph) -> Stri
         graph.add_silence(estimate_clip_duration(clip))
     };
 
-    if let Some(vol) = clip.volume { a = graph.add_volume(&a, vol); }
-    if let Some(spd) = clip.speed { a = graph.add_atempo(&a, spd); }
-    if let Some(fi) = clip.fade_in_sec { a = graph.add_afade(&a, "in", 0.0, fi); }
+    if let Some(vol) = clip.volume {
+        a = graph.add_volume(&a, vol);
+    }
+    if let Some(spd) = clip.speed {
+        a = graph.add_atempo(&a, spd);
+    }
+    if let Some(fi) = clip.fade_in_sec {
+        a = graph.add_afade(&a, "in", 0.0, fi);
+    }
     if let Some(fo) = clip.fade_out_sec {
         let start = (estimate_clip_duration(clip) - fo).max(0.0);
         a = graph.add_afade(&a, "out", start, fo);
     }
-    if clip.reverse == Some(true) { a = graph.add_areverse(&a); }
-    if clip.normalize == Some(true) { a = graph.add_loudnorm(&a); }
+    if clip.reverse == Some(true) {
+        a = graph.add_areverse(&a);
+    }
+    if clip.normalize == Some(true) {
+        a = graph.add_loudnorm(&a);
+    }
     a
 }
 
 fn estimate_clip_duration(clip: &IrClip) -> f64 {
     let base = estimate_clip_duration_raw(clip);
-    if let Some(spd) = clip.speed { base / spd } else { base }
+    if let Some(spd) = clip.speed {
+        base / spd
+    } else {
+        base
+    }
 }
 
 fn estimate_clip_duration_raw(clip: &IrClip) -> f64 {
-    if let Some(d) = clip.duration_sec { return d; }
-    if let (Some(from), Some(to)) = (clip.from_sec, clip.to_sec) { return to - from; }
+    if let Some(d) = clip.duration_sec {
+        return d;
+    }
+    if let (Some(from), Some(to)) = (clip.from_sec, clip.to_sec) {
+        return to - from;
+    }
     10.0
 }

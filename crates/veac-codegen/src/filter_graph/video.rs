@@ -1,15 +1,9 @@
 /// Video filter methods: trim, speed, eq, xfade, overlay, scale.
-
 use super::FilterGraph;
 
 impl FilterGraph {
     /// Build a trim + setpts filter chain for a video stream.
-    pub fn add_trim(
-        &mut self,
-        input_label: &str,
-        from: Option<f64>,
-        to: Option<f64>,
-    ) -> String {
+    pub fn add_trim(&mut self, input_label: &str, from: Option<f64>, to: Option<f64>) -> String {
         let out = self.next_label("tv");
         let mut parts = Vec::new();
         if let Some(f) = from {
@@ -90,8 +84,7 @@ impl FilterGraph {
         end: f64,
     ) -> String {
         let out = self.next_label("ov");
-        let expr =
-            format!("overlay=x={x}:y={y}:enable='between(t,{start},{end})'");
+        let expr = format!("overlay=x={x}:y={y}:enable='between(t,{start},{end})'");
         self.add(
             vec![video.to_string(), image.to_string()],
             &expr,
@@ -111,6 +104,7 @@ impl FilterGraph {
     /// Apply zoompan animation: normal → zoom in → hold → zoom out.
     /// `peak` is the maximum zoom level (e.g. 2.0), `duration` in seconds.
     /// Optional `pan_x`/`pan_y` (-1.0 to 1.0) offset the focus point.
+    #[allow(clippy::too_many_arguments)]
     pub fn add_zoompan(
         &mut self,
         input: &str,
@@ -185,7 +179,14 @@ impl FilterGraph {
     }
 
     /// Generate a color source video stream (for gaps).
-    pub fn add_color_source(&mut self, duration: f64, width: u32, height: u32, fps: u32, color: &str) -> String {
+    pub fn add_color_source(
+        &mut self,
+        duration: f64,
+        width: u32,
+        height: u32,
+        fps: u32,
+        color: &str,
+    ) -> String {
         let out = self.next_label("clr");
         let expr = format!("color=c={color}:s={width}x{height}:r={fps}:d={duration}");
         self.add(vec![], &expr, vec![out.clone()]);

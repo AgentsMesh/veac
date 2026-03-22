@@ -1,15 +1,9 @@
 /// Audio filter methods: atrim, volume, atempo, afade, acrossfade, amix.
-
 use super::FilterGraph;
 
 impl FilterGraph {
     /// Build an atrim + asetpts filter chain for an audio stream.
-    pub fn add_atrim(
-        &mut self,
-        input_label: &str,
-        from: Option<f64>,
-        to: Option<f64>,
-    ) -> String {
+    pub fn add_atrim(&mut self, input_label: &str, from: Option<f64>, to: Option<f64>) -> String {
         let out = self.next_label("ta");
         let mut parts = Vec::new();
         if let Some(f) = from {
@@ -62,13 +56,7 @@ impl FilterGraph {
     }
 
     /// Apply audio fade in or out. `fade_type` is "in" or "out".
-    pub fn add_afade(
-        &mut self,
-        input: &str,
-        fade_type: &str,
-        start: f64,
-        duration: f64,
-    ) -> String {
+    pub fn add_afade(&mut self, input: &str, fade_type: &str, start: f64, duration: f64) -> String {
         let out = self.next_label("af");
         let expr = format!("afade=t={fade_type}:st={start}:d={duration}");
         self.add(vec![input.to_string()], &expr, vec![out.clone()]);

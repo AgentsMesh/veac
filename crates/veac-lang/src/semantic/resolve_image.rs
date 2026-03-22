@@ -1,5 +1,4 @@
 /// Resolution of image overlay declarations.
-
 use std::collections::HashMap;
 
 use crate::ast::*;
@@ -22,7 +21,10 @@ impl SemanticAnalyzer<'_> {
                 format!("undefined asset `{}`", decl.asset_ref),
                 None,
             )
-            .with_hint(format!("define it with `asset {} = image(\"path\")`", decl.asset_ref))
+            .with_hint(format!(
+                "define it with `asset {} = image(\"path\")`",
+                decl.asset_ref
+            ))
         })?;
 
         let mut at_sec = 0.0;

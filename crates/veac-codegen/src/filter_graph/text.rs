@@ -1,9 +1,9 @@
 /// Text filter methods: drawtext with optional alpha animation.
-
 use super::FilterGraph;
 
 impl FilterGraph {
     /// Build a drawtext filter for text overlay (legacy, no alpha animation).
+    #[allow(clippy::too_many_arguments)]
     pub fn add_drawtext(
         &mut self,
         input_label: &str,
@@ -16,10 +16,22 @@ impl FilterGraph {
         start_sec: f64,
         end_sec: f64,
     ) -> String {
-        self.add_drawtext_with_alpha(input_label, text, font, size, color, x_expr, y_expr, start_sec, end_sec, None)
+        self.add_drawtext_with_alpha(
+            input_label,
+            text,
+            font,
+            size,
+            color,
+            x_expr,
+            y_expr,
+            start_sec,
+            end_sec,
+            None,
+        )
     }
 
     /// Build a drawtext filter with optional alpha animation expression.
+    #[allow(clippy::too_many_arguments)]
     pub fn add_drawtext_with_alpha(
         &mut self,
         input_label: &str,

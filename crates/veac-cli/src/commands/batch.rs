@@ -1,5 +1,4 @@
 /// Batch render: apply CSV variable overrides to a template and render each row.
-
 use std::path::Path;
 use std::process;
 
@@ -24,11 +23,7 @@ pub fn cmd_batch(
 
     // Read CSV: first row is headers (variable names), subsequent rows are values.
     let mut reader = csv::Reader::from_path(params)?;
-    let headers: Vec<String> = reader
-        .headers()?
-        .iter()
-        .map(|h| h.to_string())
-        .collect();
+    let headers: Vec<String> = reader.headers()?.iter().map(|h| h.to_string()).collect();
 
     let records: Vec<csv::StringRecord> = reader.records().collect::<Result<_, _>>()?;
     let total = records.len();
@@ -76,7 +71,10 @@ pub fn cmd_batch(
 
         // Execute each output
         for plan in &plans {
-            print!("[{row_num}/{total}] Rendering {}...", plan.output_path.display());
+            print!(
+                "[{row_num}/{total}] Rendering {}...",
+                plan.output_path.display()
+            );
             let args = plan.to_args();
             let status = process::Command::new("ffmpeg")
                 .args(&args)

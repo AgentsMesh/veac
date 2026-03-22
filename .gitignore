@@ -30,7 +30,7 @@ demo-screen/assets/
 demo-mix/
 
 # Rendered output
-output.*
+/output.*
 
 # IDE
 .idea/

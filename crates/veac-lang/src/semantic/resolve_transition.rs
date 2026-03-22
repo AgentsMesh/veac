@@ -1,5 +1,4 @@
 /// Resolution of transition declarations.
-
 use std::collections::HashMap;
 
 use crate::ast::*;
@@ -23,7 +22,7 @@ impl SemanticAnalyzer<'_> {
             match attr.key.as_str() {
                 "type" => {
                     if let Expression::StringLit(s) = val {
-                        kind = TransitionKind::from_str(s).ok_or_else(|| {
+                        kind = TransitionKind::parse(s).ok_or_else(|| {
                             VeacError::new(
                                 ErrorKind::InvalidValue,
                                 format!("unknown transition type `{s}`"),

@@ -38,10 +38,12 @@ impl<'a> SemanticAnalyzer<'a> {
         })?;
 
         if merged.timelines.is_empty() {
-            return Err(
-                VeacError::new(ErrorKind::NoTimeline, "no `timeline` declaration found", None)
-                    .with_hint("add a `timeline main { ... }` block"),
-            );
+            return Err(VeacError::new(
+                ErrorKind::NoTimeline,
+                "no `timeline` declaration found",
+                None,
+            )
+            .with_hint("add a `timeline main { ... }` block"));
         }
 
         let variables = self.resolve_variables(&merged.variables)?;
@@ -53,7 +55,12 @@ impl<'a> SemanticAnalyzer<'a> {
             self.resolve_timeline(&merged.timelines[0], &asset_map, &variables, project.fps)?;
         let outputs = self.resolve_outputs(&merged.outputs, &variables)?;
 
-        Ok(IrProgram { project, assets, timeline, outputs })
+        Ok(IrProgram {
+            project,
+            assets,
+            timeline,
+            outputs,
+        })
     }
 
     /// Recursively process include declarations, merging their content.
@@ -134,24 +141,27 @@ impl<'a> SemanticAnalyzer<'a> {
                     TrackItem::ImageOverlay(i) => items.push(IrTrackItem::ImageOverlay(
                         self.resolve_image_overlay(i, assets, variables, fps)?,
                     )),
-                    TrackItem::Gap(g) => items.push(IrTrackItem::Gap(
-                        self.resolve_gap(g, variables, fps)?,
-                    )),
+                    TrackItem::Gap(g) => {
+                        items.push(IrTrackItem::Gap(self.resolve_gap(g, variables, fps)?))
+                    }
                     TrackItem::Freeze(f) => items.push(IrTrackItem::Freeze(
                         self.resolve_freeze(f, assets, variables, fps)?,
                     )),
                     TrackItem::Pip(p) => items.push(IrTrackItem::Pip(
                         self.resolve_pip(p, assets, variables, fps)?,
                     )),
-                    TrackItem::Subtitle(s) => items.push(IrTrackItem::Subtitle(
-                        IrSubtitle { path: self.base_dir.join(&s.path) },
-                    )),
+                    TrackItem::Subtitle(s) => items.push(IrTrackItem::Subtitle(IrSubtitle {
+                        path: self.base_dir.join(&s.path),
+                    })),
                 }
             }
 
             tracks.push(IrTrack { kind, items });
         }
 
-        Ok(IrTimeline { name: decl.name.clone(), tracks })
+        Ok(IrTimeline {
+            name: decl.name.clone(),
+            tracks,
+        })
     }
 }

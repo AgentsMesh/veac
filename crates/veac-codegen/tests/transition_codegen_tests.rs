@@ -1,5 +1,4 @@
 /// Tests for transition codegen: xfade and acrossfade filter generation.
-
 use std::path::{Path, PathBuf};
 
 use veac_lang::ir::*;
@@ -30,11 +29,20 @@ fn make_clip(name: &str, path: &str, from: Option<f64>, to: Option<f64>) -> IrCl
 
 #[test]
 fn transition_generates_xfade() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") },
-            IrAsset { name: "b".into(), kind: IrAssetKind::Video, path: PathBuf::from("b.mp4") },
+            IrAsset {
+                name: "a".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("a.mp4"),
+            },
+            IrAsset {
+                name: "b".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("b.mp4"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
@@ -60,11 +68,20 @@ fn transition_generates_xfade() {
 
 #[test]
 fn dissolve_transition() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") },
-            IrAsset { name: "b".into(), kind: IrAssetKind::Video, path: PathBuf::from("b.mp4") },
+            IrAsset {
+                name: "a".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("a.mp4"),
+            },
+            IrAsset {
+                name: "b".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("b.mp4"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
@@ -89,11 +106,20 @@ fn dissolve_transition() {
 
 #[test]
 fn no_transition_uses_concat() {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") },
-            IrAsset { name: "b".into(), kind: IrAssetKind::Video, path: PathBuf::from("b.mp4") },
+            IrAsset {
+                name: "a".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("a.mp4"),
+            },
+            IrAsset {
+                name: "b".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("b.mp4"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),

@@ -71,7 +71,11 @@ fn main() {
         Command::Plan { file } => commands::cmd_plan(&file),
         Command::Fmt { file } => commands::cmd_fmt(&file),
         Command::Probe { file } => commands::cmd_probe(&file),
-        Command::Batch { file, params, output } => commands::cmd_batch(&file, &params, &output),
+        Command::Batch {
+            file,
+            params,
+            output,
+        } => commands::cmd_batch(&file, &params, &output),
     };
 
     if let Err(e) = result {

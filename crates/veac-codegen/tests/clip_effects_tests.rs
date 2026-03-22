@@ -1,6 +1,5 @@
 /// Tests for new clip video effects: crop, blur, opacity, rotate, flip, vignette, grain, sharpen,
 /// pan_x/pan_y, reverse, chromakey, normalize, loop, stabilize.
-
 use std::path::{Path, PathBuf};
 
 use veac_lang::ir::*;
@@ -30,7 +29,8 @@ fn make_clip(name: &str, path: &str) -> IrClip {
 }
 
 fn gen(clip: IrClip) -> String {
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: clip.asset_name.clone(),

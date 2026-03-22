@@ -9,8 +9,10 @@ pub fn cmd_probe(file: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let output = process::Command::new("ffprobe")
         .args([
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
         ])

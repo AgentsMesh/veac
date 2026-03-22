@@ -11,7 +11,12 @@ pub struct Span {
 
 impl Span {
     pub fn new(start: usize, end: usize, line: usize, col: usize) -> Self {
-        Self { start, end, line, col }
+        Self {
+            start,
+            end,
+            line,
+            col,
+        }
     }
 }
 
@@ -51,13 +56,13 @@ pub enum TokenKind {
     ColorLit(String), // e.g. #FFFFFF or #FF000080
 
     // Punctuation
-    LBrace,    // {
-    RBrace,    // }
-    LParen,    // (
-    RParen,    // )
-    Equals,    // =
-    Comma,     // ,
-    Dot,       // .
+    LBrace, // {
+    RBrace, // }
+    LParen, // (
+    RParen, // )
+    Equals, // =
+    Comma,  // ,
+    Dot,    // .
 
     // Special
     Eof,

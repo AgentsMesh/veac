@@ -1,5 +1,4 @@
 /// Tests for Step 4-6: gap, freeze, text animation, pip, subtitle, letterbox, multi-output.
-
 use std::path::{Path, PathBuf};
 
 use veac_lang::ir::*;
@@ -35,7 +34,11 @@ fn gap_generates_color_source_and_silence() {
     let ir = IrProgram {
         outputs: vec![],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![IrTrack {
@@ -60,19 +63,21 @@ fn freeze_generates_trim_and_tpad() {
     let ir = IrProgram {
         outputs: vec![],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![IrTrack {
                 kind: IrTrackKind::Video,
-                items: vec![
-                    IrTrackItem::Freeze(IrFreeze {
-                        asset_name: "a".into(),
-                        asset_path: PathBuf::from("a.mp4"),
-                        at_sec: 5.0,
-                        duration_sec: 3.0,
-                    }),
-                ],
+                items: vec![IrTrackItem::Freeze(IrFreeze {
+                    asset_name: "a".into(),
+                    asset_path: PathBuf::from("a.mp4"),
+                    at_sec: 5.0,
+                    duration_sec: 3.0,
+                })],
             }],
         },
     };
@@ -131,7 +136,11 @@ fn text_fade_in_out_generates_alpha() {
     let ir = IrProgram {
         outputs: vec![],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![
@@ -204,8 +213,16 @@ fn pip_generates_overlay() {
         outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "main_vid".into(), kind: IrAssetKind::Video, path: PathBuf::from("main.mp4") },
-            IrAsset { name: "cam".into(), kind: IrAssetKind::Video, path: PathBuf::from("cam.mp4") },
+            IrAsset {
+                name: "main_vid".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("main.mp4"),
+            },
+            IrAsset {
+                name: "cam".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("cam.mp4"),
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
@@ -272,7 +289,11 @@ fn subtitle_generates_subtitles_filter() {
     let ir = IrProgram {
         outputs: vec![],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![
@@ -322,7 +343,11 @@ fn letterbox_generates_pad_filter() {
     let ir = IrProgram {
         outputs: vec![],
         project,
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![IrTrack {
@@ -380,7 +405,11 @@ fn multi_output_generates_multiple_commands() {
             },
         ],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![IrTrack {
@@ -431,7 +460,11 @@ fn no_outputs_falls_back_to_single() {
     let ir = IrProgram {
         outputs: vec![],
         project: make_project(),
-        assets: vec![IrAsset { name: "a".into(), kind: IrAssetKind::Video, path: PathBuf::from("a.mp4") }],
+        assets: vec![IrAsset {
+            name: "a".into(),
+            kind: IrAssetKind::Video,
+            path: PathBuf::from("a.mp4"),
+        }],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![IrTrack {

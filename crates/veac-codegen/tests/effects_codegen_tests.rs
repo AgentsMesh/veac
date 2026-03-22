@@ -1,5 +1,4 @@
 /// Tests for effects codegen: speed, eq (color grading), and audio fades.
-
 use std::path::{Path, PathBuf};
 
 use veac_lang::ir::*;
@@ -33,7 +32,8 @@ fn speed_generates_setpts_and_atempo() {
     let mut clip = make_clip("a", "a.mp4");
     clip.speed = Some(2.0);
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "a".into(),
@@ -63,7 +63,8 @@ fn color_grading_generates_eq() {
     clip.contrast = Some(1.2);
     clip.saturation = Some(1.5);
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "a".into(),
@@ -92,7 +93,8 @@ fn audio_fade_generates_afade() {
     clip.fade_in_sec = Some(2.0);
     clip.fade_out_sec = Some(3.0);
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "bgm".into(),
@@ -120,7 +122,8 @@ fn partial_color_grading_only_brightness() {
     let mut clip = make_clip("a", "a.mp4");
     clip.brightness = Some(-0.2);
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "a".into(),
@@ -148,7 +151,8 @@ fn partial_color_grading_only_brightness() {
 fn no_effects_no_extra_filters() {
     let clip = make_clip("a", "a.mp4");
 
-    let ir = IrProgram { outputs: vec![],
+    let ir = IrProgram {
+        outputs: vec![],
         project: make_project(),
         assets: vec![IrAsset {
             name: "a".into(),

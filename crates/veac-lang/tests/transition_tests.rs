@@ -1,8 +1,7 @@
+use veac_lang::ast::TrackItem;
 /// Tests for transition syntax parsing and semantic validation.
-
 use veac_lang::lexer::Lexer;
 use veac_lang::parser::Parser;
-use veac_lang::ast::TrackItem;
 
 fn parse(source: &str) -> veac_lang::ast::Program {
     let mut lexer = Lexer::new(source);
@@ -87,7 +86,10 @@ fn semantic_resolve_transition() {
 
     let track = &ir.timeline.tracks[0];
     assert_eq!(track.items.len(), 3);
-    assert!(matches!(track.items[1], veac_lang::ir::IrTrackItem::Transition(_)));
+    assert!(matches!(
+        track.items[1],
+        veac_lang::ir::IrTrackItem::Transition(_)
+    ));
 
     if let veac_lang::ir::IrTrackItem::Transition(t) = &track.items[1] {
         assert_eq!(t.kind, veac_lang::ir::TransitionKind::Fade);

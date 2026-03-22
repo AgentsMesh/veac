@@ -100,7 +100,7 @@ impl<'a> Lexer<'a> {
         if ch.is_ascii_digit() {
             return self.lex_number(start, start_line, start_col);
         }
-        if ch == '-' && self.peek().map_or(false, |c| c.is_ascii_digit()) {
+        if ch == '-' && self.peek().is_some_and(|c| c.is_ascii_digit()) {
             return self.lex_negative_number(start, start_line, start_col);
         }
         if ch.is_ascii_alphabetic() || ch == '_' {
@@ -125,12 +125,18 @@ impl<'a> Lexer<'a> {
         };
 
         self.advance();
-        Ok(Token::new(kind, self.span_from(start, start_line, start_col)))
+        Ok(Token::new(
+            kind,
+            self.span_from(start, start_line, start_col),
+        ))
     }
 }
 
 /// Check if a string matches SMPTE timecode format: HH:MM:SS:FF
 pub(crate) fn is_smpte(s: &str) -> bool {
     let parts: Vec<&str> = s.split(':').collect();
-    parts.len() == 4 && parts.iter().all(|p| p.len() == 2 && p.chars().all(|c| c.is_ascii_digit()))
+    parts.len() == 4
+        && parts
+            .iter()
+            .all(|p| p.len() == 2 && p.chars().all(|c| c.is_ascii_digit()))
 }

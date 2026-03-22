@@ -1,5 +1,4 @@
 /// Resolution of gap, freeze, and pip track item declarations.
-
 use std::collections::HashMap;
 
 use crate::ast::*;

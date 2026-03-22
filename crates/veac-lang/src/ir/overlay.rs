@@ -1,5 +1,4 @@
 /// Overlay and transition IR types.
-
 use std::path::PathBuf;
 
 use super::Position;
@@ -81,7 +80,7 @@ impl TransitionKind {
     }
 
     /// Parse from a user-facing string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "fade" => Some(TransitionKind::Fade),
             "fadeblack" | "fade-black" => Some(TransitionKind::FadeBlack),

@@ -1,8 +1,7 @@
+use veac_lang::ast::TrackItem;
 /// Tests for image overlay parsing, include syntax, and semantic validation.
-
 use veac_lang::lexer::Lexer;
 use veac_lang::parser::Parser;
-use veac_lang::ast::TrackItem;
 
 fn parse(source: &str) -> veac_lang::ast::Program {
     let mut lexer = Lexer::new(source);
@@ -53,7 +52,10 @@ fn parse_include_statement() {
 
     let program = parse(src);
     assert_eq!(program.includes.len(), 1);
-    assert_eq!(program.includes[0].path.to_str().unwrap(), "./templates/intro.veac");
+    assert_eq!(
+        program.includes[0].path.to_str().unwrap(),
+        "./templates/intro.veac"
+    );
 }
 
 #[test]
@@ -117,7 +119,10 @@ fn semantic_resolve_image_overlay() {
     let ir = analyzer.analyze(&program).unwrap();
 
     // Find the overlay track
-    let overlay_track = ir.timeline.tracks.iter()
+    let overlay_track = ir
+        .timeline
+        .tracks
+        .iter()
         .find(|t| t.kind == veac_lang::ir::IrTrackKind::Overlay)
         .expect("should have overlay track");
 

@@ -1,5 +1,4 @@
 /// Apply text overlays, image overlays, pip overlays, and subtitles onto a video stream.
-
 use std::collections::HashMap;
 
 use veac_lang::ir::IrImageOverlay;
@@ -41,7 +40,12 @@ pub fn apply_text_overlays(
 }
 
 /// Build FFmpeg alpha expression for text fade in/out.
-fn build_text_alpha_expr(start: f64, end: f64, fade_in: Option<f64>, fade_out: Option<f64>) -> Option<String> {
+fn build_text_alpha_expr(
+    start: f64,
+    end: f64,
+    fade_in: Option<f64>,
+    fade_out: Option<f64>,
+) -> Option<String> {
     match (fade_in, fade_out) {
         (None, None) => None,
         (Some(fi), None) => {
@@ -101,14 +105,7 @@ pub fn apply_image_overlays(
         // Overlay onto video with position and time enable.
         let (x, y) = ov.position.to_overlay_xy();
         let end_sec = ov.at_sec + ov.duration_sec;
-        current = graph.add_overlay(
-            &current,
-            &with_opacity,
-            x,
-            y,
-            ov.at_sec,
-            end_sec,
-        );
+        current = graph.add_overlay(&current, &with_opacity, x, y, ov.at_sec, end_sec);
     }
 
     current
@@ -147,16 +144,16 @@ pub fn apply_pip_overlays(
 }
 
 /// Apply subtitle files onto a video stream.
-pub fn apply_subtitles(
-    subs: &[&IrSubtitle],
-    video_label: &str,
-    graph: &mut FilterGraph,
-) -> String {
+pub fn apply_subtitles(subs: &[&IrSubtitle], video_label: &str, graph: &mut FilterGraph) -> String {
     let mut current = video_label.to_string();
 
     for sub in subs {
         let out = graph.next_label("sub");
-        let path_str = sub.path.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
+        let path_str = sub
+            .path
+            .to_string_lossy()
+            .replace('\\', "/")
+            .replace('\'', "'\\''");
         let expr = format!("subtitles=filename='{path_str}'");
         graph.add(vec![current], &expr, vec![out.clone()]);
         current = out;

@@ -32,7 +32,12 @@ pub fn parse_ffmpeg_progress(line: &str) -> Option<RenderProgress> {
         .and_then(|v| v.trim().trim_end_matches('x').parse::<f64>().ok())
         .unwrap_or(0.0);
 
-    Some(RenderProgress { frame, fps, time_sec, speed })
+    Some(RenderProgress {
+        frame,
+        fps,
+        time_sec,
+        speed,
+    })
 }
 
 /// Extract the value after `key=` up to the next space or `=`-prefixed key.
@@ -45,7 +50,9 @@ fn extract_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
         .map(|pos| {
             // Check if this is the start of a next key (has = after alpha chars)
             let after = &rest[pos..];
-            if after.contains('=') && after.find('=').unwrap() < after.find(' ').unwrap_or(after.len()) {
+            if after.contains('=')
+                && after.find('=').unwrap() < after.find(' ').unwrap_or(after.len())
+            {
                 pos
             } else {
                 rest.len()

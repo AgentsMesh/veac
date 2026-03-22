@@ -1,5 +1,4 @@
 /// Resolution of text overlay declarations.
-
 use std::collections::HashMap;
 
 use crate::ast::*;
@@ -29,16 +28,22 @@ impl SemanticAnalyzer<'_> {
             match attr.key.as_str() {
                 "at" => at_sec = self.expr_to_seconds(val, fps, "at")?,
                 "duration" => duration_sec = self.expr_to_seconds(val, fps, "duration")?,
-                "font" => { if let Expression::StringLit(s) = val { font = s.clone(); } }
-                "size" => size = self.expr_to_u32(val, "size")?,
-                "color" => {
-                    match val {
-                        Expression::ColorLit(c) => color = c.clone(),
-                        Expression::StringLit(c) => color = c.trim_start_matches('#').to_string(),
-                        _ => {}
+                "font" => {
+                    if let Expression::StringLit(s) = val {
+                        font = s.clone();
                     }
                 }
-                "position" => { if let Expression::StringLit(s) = val { position = Self::parse_position(s)?; } }
+                "size" => size = self.expr_to_u32(val, "size")?,
+                "color" => match val {
+                    Expression::ColorLit(c) => color = c.clone(),
+                    Expression::StringLit(c) => color = c.trim_start_matches('#').to_string(),
+                    _ => {}
+                },
+                "position" => {
+                    if let Expression::StringLit(s) = val {
+                        position = Self::parse_position(s)?;
+                    }
+                }
                 "fade_in" => fade_in_sec = Some(self.expr_to_seconds(val, fps, "fade_in")?),
                 "fade_out" => fade_out_sec = Some(self.expr_to_seconds(val, fps, "fade_out")?),
                 _ => {}

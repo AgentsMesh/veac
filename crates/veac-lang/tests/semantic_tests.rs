@@ -17,7 +17,8 @@ fn analyze(input: &str) -> Result<IrProgram, veac_lang::error::VeacError> {
 
 #[test]
 fn test_basic_program() {
-    let ir = analyze(r#"
+    let ir = analyze(
+        r#"
         project "test" {
             resolution = "1280x720"
             fps = 24
@@ -32,7 +33,8 @@ fn test_basic_program() {
                 }
             }
         }
-    "#)
+    "#,
+    )
     .unwrap();
 
     assert_eq!(ir.project.width, 1280);
@@ -44,7 +46,8 @@ fn test_basic_program() {
 
 #[test]
 fn test_variable_resolution() {
-    let ir = analyze(r#"
+    let ir = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -59,7 +62,8 @@ fn test_variable_resolution() {
                 }
             }
         }
-    "#)
+    "#,
+    )
     .unwrap();
 
     if let IrTrackItem::Clip(clip) = &ir.timeline.tracks[0].items[0] {
@@ -71,7 +75,8 @@ fn test_variable_resolution() {
 
 #[test]
 fn test_undefined_asset_error() {
-    let result = analyze(r#"
+    let result = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -85,14 +90,16 @@ fn test_undefined_asset_error() {
                 }
             }
         }
-    "#);
+    "#,
+    );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind, ErrorKind::UndefinedAsset);
 }
 
 #[test]
 fn test_invalid_time_range() {
-    let result = analyze(r#"
+    let result = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -107,14 +114,16 @@ fn test_invalid_time_range() {
                 }
             }
         }
-    "#);
+    "#,
+    );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind, ErrorKind::InvalidTimeRange);
 }
 
 #[test]
 fn test_invalid_volume() {
-    let result = analyze(r#"
+    let result = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -128,28 +137,32 @@ fn test_invalid_volume() {
                 }
             }
         }
-    "#);
+    "#,
+    );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind, ErrorKind::InvalidValue);
 }
 
 #[test]
 fn test_missing_project() {
-    let result = analyze(r#"
+    let result = analyze(
+        r#"
         asset clip1 = video("./test.mp4")
         timeline main {
             track video {
                 clip clip1 {}
             }
         }
-    "#);
+    "#,
+    );
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind, ErrorKind::NoProject);
 }
 
 #[test]
 fn test_text_overlay_resolution() {
-    let ir = analyze(r#"
+    let ir = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -167,7 +180,8 @@ fn test_text_overlay_resolution() {
                 }
             }
         }
-    "#)
+    "#,
+    )
     .unwrap();
 
     if let IrTrackItem::TextOverlay(t) = &ir.timeline.tracks[0].items[0] {
@@ -185,7 +199,8 @@ fn test_text_overlay_resolution() {
 
 #[test]
 fn test_time_conversions() {
-    let ir = analyze(r#"
+    let ir = analyze(
+        r#"
         project "test" {
             resolution = "1920x1080"
             fps = 30
@@ -200,7 +215,8 @@ fn test_time_conversions() {
                 }
             }
         }
-    "#)
+    "#,
+    )
     .unwrap();
 
     if let IrTrackItem::Clip(clip) = &ir.timeline.tracks[0].items[0] {

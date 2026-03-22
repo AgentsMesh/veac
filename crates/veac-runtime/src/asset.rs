@@ -19,13 +19,18 @@ pub struct MediaInfo {
 /// Probe a media file using ffprobe and return its info.
 pub fn probe(path: &Path) -> Result<MediaInfo, RuntimeError> {
     if !path.exists() {
-        return Err(RuntimeError::new(format!("file not found: {}", path.display())));
+        return Err(RuntimeError::new(format!(
+            "file not found: {}",
+            path.display()
+        )));
     }
 
     let output = Command::new("ffprobe")
         .args([
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
         ])
@@ -35,7 +40,10 @@ pub fn probe(path: &Path) -> Result<MediaInfo, RuntimeError> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(RuntimeError::new(format!("ffprobe failed on {}: {stderr}", path.display())));
+        return Err(RuntimeError::new(format!(
+            "ffprobe failed on {}: {stderr}",
+            path.display()
+        )));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -43,8 +51,8 @@ pub fn probe(path: &Path) -> Result<MediaInfo, RuntimeError> {
 }
 
 fn parse_ffprobe_json(json: &str) -> Result<MediaInfo, RuntimeError> {
-    let data: FfprobeOutput =
-        serde_json::from_str(json).map_err(|e| RuntimeError::new(format!("failed to parse ffprobe output: {e}")))?;
+    let data: FfprobeOutput = serde_json::from_str(json)
+        .map_err(|e| RuntimeError::new(format!("failed to parse ffprobe output: {e}")))?;
 
     let duration_sec = data
         .format
@@ -74,7 +82,14 @@ fn parse_ffprobe_json(json: &str) -> Result<MediaInfo, RuntimeError> {
         }
     }
 
-    Ok(MediaInfo { duration_sec, width, height, has_audio, video_codec, audio_codec })
+    Ok(MediaInfo {
+        duration_sec,
+        width,
+        height,
+        has_audio,
+        video_codec,
+        audio_codec,
+    })
 }
 
 impl std::fmt::Display for MediaInfo {
