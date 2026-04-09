@@ -11,7 +11,7 @@ set -eu
 
 REPO="AgentsMesh/veac"
 BIN_NAME="veac"
-DEFAULT_INSTALL_DIR="/usr/local/bin"
+DEFAULT_INSTALL_DIR="$HOME/.local/bin"
 
 # --- Helper functions ---
 

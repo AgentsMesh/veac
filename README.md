@@ -51,11 +51,10 @@ timeline main {
 curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
 ```
 
-Specify version or install directory:
+Specify version:
 
 ```bash
-VEAC_VERSION=v0.1.0 VEAC_INSTALL_DIR=~/.local/bin \
-  curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
+VEAC_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
 ```
 
 ### Build from Source
