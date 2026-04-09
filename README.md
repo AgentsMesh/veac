@@ -45,8 +45,23 @@ timeline main {
 
 ## Installation
 
+### Quick Install (Mac / Linux)
+
 ```bash
-# Prerequisites: Rust toolchain and FFmpeg
+curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
+```
+
+Specify version or install directory:
+
+```bash
+VEAC_VERSION=v0.1.0 VEAC_INSTALL_DIR=~/.local/bin \
+  curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
+```
+
+### Build from Source
+
+```bash
+# Prerequisites: Rust toolchain 1.70+ and FFmpeg 4.0+
 git clone https://github.com/AgentsMesh/veac.git
 cd veac
 cargo install --path crates/veac-cli

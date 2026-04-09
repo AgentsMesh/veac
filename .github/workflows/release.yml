@@ -33,12 +33,6 @@ jobs:
           - target: aarch64-apple-darwin
             runner: macos-latest
             archive: tar.gz
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
-            archive: zip
-          - target: aarch64-pc-windows-msvc
-            runner: windows-latest
-            archive: zip
 
     steps:
       - uses: actions/checkout@v4
@@ -75,9 +69,8 @@ jobs:
           echo "name=${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      # Package - Unix
-      - name: Package (unix)
-        if: matrix.archive == 'tar.gz'
+      # Package
+      - name: Package
         shell: bash
         run: |
           STAGING="${{ steps.archive.outputs.name }}"
@@ -86,18 +79,6 @@ jobs:
           cp README.md LICENSE "$STAGING/" 2>/dev/null || true
           tar czf "$STAGING.tar.gz" "$STAGING"
           echo "ASSET=$STAGING.tar.gz" >> "$GITHUB_ENV"
-
-      # Package - Windows
-      - name: Package (windows)
-        if: matrix.archive == 'zip'
-        shell: bash
-        run: |
-          STAGING="${{ steps.archive.outputs.name }}"
-          mkdir -p "$STAGING"
-          cp "target/${{ matrix.target }}/release/${{ env.BIN_NAME }}.exe" "$STAGING/"
-          cp README.md LICENSE "$STAGING/" 2>/dev/null || true
-          7z a "$STAGING.zip" "$STAGING"
-          echo "ASSET=$STAGING.zip" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -121,6 +102,10 @@ jobs:
 
       - name: List artifacts
         run: ls -lhR artifacts/
+
+      - name: Generate checksums
+        working-directory: artifacts
+        run: sha256sum *.tar.gz > checksums-sha256.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
