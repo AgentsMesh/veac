@@ -60,6 +60,9 @@ enum Command {
         #[arg(short, long)]
         output: PathBuf,
     },
+
+    /// Print the complete VEAC language syntax reference.
+    Syntax,
 }
 
 fn main() {
@@ -76,6 +79,7 @@ fn main() {
             params,
             output,
         } => commands::cmd_batch(&file, &params, &output),
+        Command::Syntax => commands::cmd_syntax(),
     };
 
     if let Err(e) = result {
