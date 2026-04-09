@@ -11,19 +11,6 @@
 .DS_Store
 Thumbs.db
 
-# Media assets (binary, large files — not suitable for git)
-*.mp4
-*.mkv
-*.webm
-*.mov
-*.avi
-*.mp3
-*.m4a
-*.wav
-*.flac
-*.ogg
-*.aac
-
 # Miscellaneous build artifacts
 demo-mix/
 

@@ -1,0 +1,146 @@
+project "agentsmesh-intro-15s" {
+    resolution = "1920x1080"
+    fps        = 30
+    format     = "mp4"
+    codec      = "h264"
+    quality    = "high"
+}
+
+asset overview = video("assets/platform-overview.mp4")
+asset loop_demo = video("assets/loop-demo.mp4")
+asset narration = audio("assets/narration.mp3")
+
+let fast = 0.3s
+let mid  = 0.5s
+
+timeline main {
+    track video {
+        // Shot 1 (0~2s): KANBAN BOARD — "Write a ticket. It gets done."
+        clip overview {
+            from     = 208s
+            to       = 210s
+            fade_in  = 0.3s
+        }
+
+        transition { type = "fade-black"  duration = fast }
+
+        // Shot 2 (2~4s): CHANNELS — E2E report, agents communicating
+        clip overview {
+            from     = 238s
+            to       = 240s
+        }
+
+        transition { type = "pixelize"  duration = fast }
+
+        // Shot 3 (4~6s): POD EXECUTION — agent actively coding
+        clip overview {
+            from     = 123s
+            to       = 125s
+            speed    = 1.2
+        }
+
+        transition { type = "fade-black"  duration = fast }
+
+        // Shot 4 (6~8s): MESH TOPOLOGY — the hero shot
+        clip overview {
+            from     = 273s
+            to       = 275s
+        }
+
+        transition { type = "dissolve"  duration = mid }
+
+        // Shot 5 (8~12s): DUAL POD PARALLEL — two agents working simultaneously
+        clip loop_demo {
+            from     = 298s
+            to       = 302s
+        }
+
+        transition { type = "fade-black"  duration = mid }
+
+        // Shot 6 (12~15s): LOOPS DASHBOARD — automated 24/7 + CTA
+        clip overview {
+            from     = 303s
+            to       = 306s
+            fade_out = 0.5s
+        }
+    }
+
+    track audio {
+        clip narration {
+            volume   = 1.0
+            fade_out = 0.8s
+        }
+    }
+
+    track text {
+        // Shot 1: Kanban
+        text "Write a ticket. It gets done." {
+            at         = 0.2s
+            duration   = 1.8s
+            font       = "Arial"
+            size       = 36
+            color      = #FFFFFF
+            position   = "bottom"
+            fade_in    = 0.15s
+            fade_out   = 0.15s
+            background = "black@0.5"
+            background_padding = 14
+        }
+
+        // Shot 2: Channels
+        text "They talk to each other." {
+            at         = 2.2s
+            duration   = 1.8s
+            font       = "Arial"
+            size       = 36
+            color      = #FFFFFF
+            position   = "bottom"
+            fade_in    = 0.15s
+            fade_out   = 0.15s
+            background = "black@0.5"
+            background_padding = 14
+        }
+
+        // Shot 3: Pods
+        text "Every agent gets a desk." {
+            at         = 4.2s
+            duration   = 1.8s
+            font       = "Arial"
+            size       = 36
+            color      = #FFFFFF
+            position   = "bottom"
+            fade_in    = 0.15s
+            fade_out   = 0.15s
+            background = "black@0.5"
+            background_padding = 14
+        }
+
+        // Shot 4: Mesh
+        text "See everything. Real-time." {
+            at         = 6.2s
+            duration   = 1.8s
+            font       = "Arial"
+            size       = 36
+            color      = #FFFFFF
+            position   = "bottom"
+            fade_in    = 0.15s
+            fade_out   = 0.15s
+            background = "black@0.5"
+            background_padding = 14
+        }
+
+        // Shot 6: CTA
+        text "agentsmesh.ai" {
+            at         = 12.5s
+            duration   = 3s
+            font       = "Arial"
+            size       = 52
+            color      = #FFFFFF
+            position   = "bottom"
+            fade_in    = 0.2s
+            fade_out   = 0.5s
+            background = "black@0.6"
+            background_padding = 16
+        }
+    }
+}
