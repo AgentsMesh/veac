@@ -23,10 +23,22 @@ pub fn apply_text_overlays(
         // Build alpha expression for fade in/out
         let alpha_expr = build_text_alpha_expr(ov.at_sec, end_sec, ov.fade_in_sec, ov.fade_out_sec);
 
+        // Use resolved font path if available, otherwise fall back to font name
+        let font_ref = ov
+            .resolved_font_path
+            .as_deref()
+            .unwrap_or(&ov.font);
+
+        // Build background box options if specified
+        let box_opts = ov.background.as_ref().map(|bg| {
+            let padding = ov.background_padding.unwrap_or(12);
+            format!("box=1:boxcolor={bg}:boxborderw={padding}")
+        });
+
         current = graph.add_drawtext_with_alpha(
             &current,
             &ov.content,
-            &ov.font,
+            font_ref,
             ov.size,
             &ov.color,
             x,
@@ -34,6 +46,7 @@ pub fn apply_text_overlays(
             ov.at_sec,
             end_sec,
             alpha_expr.as_deref(),
+            box_opts.as_deref(),
         );
     }
     current

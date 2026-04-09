@@ -39,6 +39,7 @@ fn speed_generates_setpts_and_atempo() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -70,6 +71,7 @@ fn color_grading_generates_eq() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -100,6 +102,7 @@ fn audio_fade_generates_afade() {
             name: "bgm".into(),
             kind: IrAssetKind::Audio,
             path: PathBuf::from("bgm.mp3"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -129,6 +132,7 @@ fn partial_color_grading_only_brightness() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -158,6 +162,7 @@ fn no_effects_no_extra_filters() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),

@@ -66,6 +66,7 @@ impl SemanticAnalyzer<'_> {
                     AssetKind::Image => IrAssetKind::Image,
                 },
                 path: resolved_path,
+                media_info: None,
             });
         }
 

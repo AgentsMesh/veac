@@ -38,6 +38,7 @@ fn gap_generates_color_source_and_silence() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -67,6 +68,7 @@ fn freeze_generates_trim_and_tpad() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -140,6 +142,7 @@ fn text_fade_in_out_generates_alpha() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -160,6 +163,9 @@ fn text_fade_in_out_generates_alpha() {
                         position: Position::Center,
                         fade_in_sec: Some(0.5),
                         fade_out_sec: Some(1.0),
+                        resolved_font_path: None,
+                background: None,
+                background_padding: None,
                     })],
                 },
             ],
@@ -217,11 +223,13 @@ fn pip_generates_overlay() {
                 name: "main_vid".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("main.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "cam".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("cam.mp4"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
@@ -293,6 +301,7 @@ fn subtitle_generates_subtitles_filter() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -347,6 +356,7 @@ fn letterbox_generates_pad_filter() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -409,6 +419,7 @@ fn multi_output_generates_multiple_commands() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -464,6 +475,7 @@ fn no_outputs_falls_back_to_single() {
             name: "a".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("a.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),

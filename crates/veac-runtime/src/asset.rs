@@ -4,8 +4,10 @@ use std::process::Command;
 use serde::Deserialize;
 
 use crate::RuntimeError;
+use veac_lang::ir::MediaInfo as IrMediaInfo;
+use veac_lang::resolve::{ProbeBackend, ProbeError};
 
-/// Probed media file information.
+/// Probed media file information (runtime-level, with codec details).
 #[derive(Debug, Clone)]
 pub struct MediaInfo {
     pub duration_sec: f64,
@@ -14,6 +16,23 @@ pub struct MediaInfo {
     pub has_audio: bool,
     pub video_codec: Option<String>,
     pub audio_codec: Option<String>,
+}
+
+/// FFprobe-based implementation of `ProbeBackend`.
+pub struct FfprobeBackend;
+
+impl ProbeBackend for FfprobeBackend {
+    fn probe(&self, path: &Path) -> Result<IrMediaInfo, ProbeError> {
+        let info = probe(path).map_err(|e| ProbeError::new(e.message))?;
+        Ok(IrMediaInfo {
+            duration_secs: info.duration_sec,
+            has_video: info.video_codec.is_some(),
+            has_audio: info.has_audio,
+            width: info.width,
+            height: info.height,
+            sample_rate: None, // TODO: parse from ffprobe streams
+        })
+    }
 }
 
 /// Probe a media file using ffprobe and return its info.

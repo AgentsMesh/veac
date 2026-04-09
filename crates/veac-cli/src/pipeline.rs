@@ -1,10 +1,13 @@
 use std::path::Path;
 
 use veac_lang::error::VeacError;
-use veac_lang::ir::{IrProgram, IrTrackItem};
+use veac_lang::ir::IrProgram;
 use veac_lang::lexer::Lexer;
 use veac_lang::parser::Parser;
+use veac_lang::resolve::MediaResolver;
 use veac_lang::semantic::SemanticAnalyzer;
+
+use crate::cache::CachedProbeBackend;
 
 /// Run the frontend pipeline: lex -> parse -> analyze.
 /// Returns the validated IR on success.
@@ -52,36 +55,25 @@ impl std::fmt::Display for PipelineError {
 
 impl std::error::Error for PipelineError {}
 
-/// Probe each asset referenced in the IR and update `has_audio` on every clip.
-/// Assets that cannot be probed (e.g. missing files during plan/check) are
-/// left with the default `has_audio = true` so the generated command is
-/// conservative (references `[idx:a]` as before).
-pub fn probe_audio_streams(ir: &mut IrProgram, base_dir: &Path) {
-    use std::collections::HashMap;
+/// Resolve media metadata on the IR using ffprobe with caching.
+/// Cache is stored in `.veac-cache/` alongside the .veac source file.
+/// Returns warnings for assets that could not be probed.
+pub fn resolve_media(ir: &mut IrProgram, source_file: &Path) -> Vec<String> {
+    let cache_dir = source_file
+        .parent()
+        .unwrap_or(Path::new("."))
+        .join(".veac-cache");
+    let backend = CachedProbeBackend::new(veac_runtime::asset::FfprobeBackend, &cache_dir);
+    let resolver = MediaResolver::new(backend);
+    let warnings = resolver.resolve(ir);
+    warnings.into_iter().map(|w| w.message).collect()
+}
 
-    // Build a name -> has_audio map by probing each asset once.
-    let mut audio_map: HashMap<String, bool> = HashMap::new();
-    for asset in &ir.assets {
-        let path = if asset.path.is_relative() {
-            base_dir.join(&asset.path)
-        } else {
-            asset.path.clone()
-        };
-        let has_audio = match veac_runtime::asset::probe(&path) {
-            Ok(info) => info.has_audio,
-            Err(_) => true, // conservative default: assume audio exists
-        };
-        audio_map.insert(asset.name.clone(), has_audio);
-    }
-
-    // Walk every clip in the timeline and stamp has_audio.
-    for track in &mut ir.timeline.tracks {
-        for item in &mut track.items {
-            if let IrTrackItem::Clip(clip) = item {
-                if let Some(&has) = audio_map.get(&clip.asset_name) {
-                    clip.has_audio = has;
-                }
-            }
-        }
-    }
+/// Clean the probe cache for a given source file directory.
+pub fn clean_cache(source_file: &Path) {
+    let cache_dir = source_file
+        .parent()
+        .unwrap_or(Path::new("."))
+        .join(".veac-cache");
+    CachedProbeBackend::<veac_runtime::asset::FfprobeBackend>::clean(&cache_dir);
 }

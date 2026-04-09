@@ -36,6 +36,7 @@ fn gen(clip: IrClip) -> String {
             name: clip.asset_name.clone(),
             kind: IrAssetKind::Video,
             path: clip.asset_path.clone(),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),

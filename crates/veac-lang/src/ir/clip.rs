@@ -12,6 +12,10 @@ pub struct IrClip {
     pub from_sec: Option<f64>,
     pub to_sec: Option<f64>,
     pub duration_sec: Option<f64>,
+    /// Actual duration after resolving from media probe, trim bounds, and speed.
+    /// Populated by `MediaResolver`. Used by codegen for accurate fade timing
+    /// and transition offsets. Falls back to estimation if `None`.
+    pub resolved_duration: Option<f64>,
     pub volume: Option<f64>,
     // P1: speed control
     pub speed: Option<f64>,
@@ -61,6 +65,7 @@ impl Default for IrClip {
             from_sec: None,
             to_sec: None,
             duration_sec: None,
+            resolved_duration: None,
             volume: None,
             speed: None,
             fade_in_sec: None,

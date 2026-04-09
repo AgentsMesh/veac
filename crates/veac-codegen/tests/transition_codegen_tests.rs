@@ -37,11 +37,13 @@ fn transition_generates_xfade() {
                 name: "a".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("a.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "b".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("b.mp4"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
@@ -76,11 +78,13 @@ fn dissolve_transition() {
                 name: "a".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("a.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "b".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("b.mp4"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
@@ -114,11 +118,13 @@ fn no_transition_uses_concat() {
                 name: "a".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("a.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "b".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("b.mp4"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {

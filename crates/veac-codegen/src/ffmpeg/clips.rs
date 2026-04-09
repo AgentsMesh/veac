@@ -7,6 +7,10 @@ use crate::filter_graph::FilterGraph;
 
 /// Build trim + transition + effects filters for video track items.
 /// Returns `(video_out_label, audio_out_label)`.
+///
+/// When `skip_audio` is true, all audio chains use silence instead of
+/// extracting audio from video sources. This is used when the user provides
+/// a separate `track audio` — the original video audio should be discarded.
 pub fn build_clip_filters(
     items: &[&IrTrackItem],
     input_map: &HashMap<String, usize>,
@@ -14,6 +18,7 @@ pub fn build_clip_filters(
     width: u32,
     height: u32,
     fps: u32,
+    skip_audio: bool,
 ) -> (String, String) {
     let mut segments: Vec<(String, String)> = Vec::new();
     let mut pending_transition: Option<&IrTransition> = None;
@@ -23,7 +28,7 @@ pub fn build_clip_filters(
         match item {
             IrTrackItem::Clip(clip) => {
                 let (v_label, a_label) =
-                    process_single_clip(clip, input_map, graph, width, height, fps);
+                    process_single_clip(clip, input_map, graph, width, height, fps, skip_audio);
 
                 // Handle loop: duplicate segment N times
                 let (v_label, a_label) = if let Some(count) = clip.loop_count {
@@ -32,7 +37,7 @@ pub fn build_clip_filters(
                         let mut a_labels = vec![a_label.clone()];
                         for _ in 1..count {
                             let (vl, al) =
-                                process_single_clip(clip, input_map, graph, width, height, fps);
+                                process_single_clip(clip, input_map, graph, width, height, fps, skip_audio);
                             v_labels.push(vl);
                             a_labels.push(al);
                         }
@@ -107,12 +112,26 @@ fn process_single_clip(
     width: u32,
     height: u32,
     fps: u32,
+    skip_audio: bool,
 ) -> (String, String) {
     let idx = input_map[&clip.asset_name];
     let v_in = format!("{idx}:v");
     let v_label = graph.add_trim(&v_in, clip.from_sec, clip.to_sec);
     let v_label = apply_video_effects(clip, v_label, graph, width, height, fps);
-    let a_label = apply_audio_chain(clip, idx, graph);
+
+    let a_label = if skip_audio {
+        // When separate audio track exists, generate silence for video clips
+        graph.add_silence(estimate_clip_duration(clip))
+    } else {
+        // Extract audio from video and apply effects via unified pipeline
+        let a = if clip.has_audio {
+            graph.add_atrim(&format!("{idx}:a"), clip.from_sec, clip.to_sec)
+        } else {
+            graph.add_silence(estimate_clip_duration(clip))
+        };
+        super::apply_audio_effects(a, clip, graph)
+    };
+
     (v_label, a_label)
 }
 
@@ -179,37 +198,17 @@ fn apply_video_effects(
     v
 }
 
-/// Build the audio chain for a clip: trim/silence → volume → speed → fade → reverse → normalize.
-fn apply_audio_chain(clip: &IrClip, idx: usize, graph: &mut FilterGraph) -> String {
-    let mut a = if clip.has_audio {
-        graph.add_atrim(&format!("{idx}:a"), clip.from_sec, clip.to_sec)
-    } else {
-        graph.add_silence(estimate_clip_duration(clip))
-    };
-
-    if let Some(vol) = clip.volume {
-        a = graph.add_volume(&a, vol);
-    }
-    if let Some(spd) = clip.speed {
-        a = graph.add_atempo(&a, spd);
-    }
-    if let Some(fi) = clip.fade_in_sec {
-        a = graph.add_afade(&a, "in", 0.0, fi);
-    }
-    if let Some(fo) = clip.fade_out_sec {
-        let start = (estimate_clip_duration(clip) - fo).max(0.0);
-        a = graph.add_afade(&a, "out", start, fo);
-    }
-    if clip.reverse == Some(true) {
-        a = graph.add_areverse(&a);
-    }
-    if clip.normalize == Some(true) {
-        a = graph.add_loudnorm(&a);
-    }
-    a
+/// Estimate clip duration from IR fields. Used as fallback when
+/// `resolved_duration` is not available (probing was skipped).
+pub fn estimate_audio_clip_duration(clip: &IrClip) -> f64 {
+    estimate_clip_duration(clip)
 }
 
 fn estimate_clip_duration(clip: &IrClip) -> f64 {
+    // Prefer resolved_duration from MediaResolver probe
+    if let Some(d) = clip.resolved_duration {
+        return d;
+    }
     let base = estimate_clip_duration_raw(clip);
     if let Some(spd) = clip.speed {
         base / spd

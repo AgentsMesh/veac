@@ -37,6 +37,9 @@ fn make_text_overlay() -> IrTextOverlay {
         position: Position::Center,
         fade_in_sec: None,
         fade_out_sec: None,
+        resolved_font_path: None,
+                background: None,
+                background_padding: None,
     }
 }
 
@@ -49,6 +52,7 @@ fn single_clip_generates_valid_args() {
             name: "intro".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("./assets/intro.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -87,11 +91,13 @@ fn multiple_clips_use_concat() {
                 name: "intro".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("./assets/intro.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "scene1".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("./assets/scene1.mp4"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
@@ -137,6 +143,7 @@ fn text_overlay_generates_drawtext() {
             name: "intro".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("./assets/intro.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -179,6 +186,7 @@ fn volume_adjustment_in_filter() {
             name: "intro".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("./assets/intro.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),
@@ -204,6 +212,7 @@ fn to_command_string_starts_with_ffmpeg() {
             name: "intro".into(),
             kind: IrAssetKind::Video,
             path: PathBuf::from("./assets/intro.mp4"),
+            media_info: None,
         }],
         timeline: IrTimeline {
             name: "main".into(),

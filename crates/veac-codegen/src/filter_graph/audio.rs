@@ -104,4 +104,9 @@ impl FilterGraph {
         self.add(vec![input.to_string()], "loudnorm", vec![out.clone()]);
         out
     }
+
+    /// Sink an audio stream with anullsink so it doesn't produce a dangling output.
+    pub fn add_anullsink(&mut self, input: &str) {
+        self.add(vec![input.to_string()], "anullsink", vec![]);
+    }
 }

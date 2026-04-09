@@ -29,52 +29,77 @@ pub struct InputSpec {
     pub path: PathBuf,
 }
 
-/// Categorized track items extracted from the timeline.
-struct TrackCategories<'a> {
+// ---------------------------------------------------------------------------
+// Track Plan: early categorization + audio routing decision
+// ---------------------------------------------------------------------------
+
+/// How audio from video clips should be handled.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AudioRouting {
+    /// No separate audio track — keep video's extracted audio.
+    Keep,
+    /// Separate audio track exists — discard video's audio.
+    Discard,
+}
+
+/// Pre-categorized track items with routing decisions.
+struct TrackPlan<'a> {
     video_items: Vec<&'a IrTrackItem>,
     audio_clips: Vec<&'a IrClip>,
     text_overlays: Vec<&'a IrTextOverlay>,
     image_overlays: Vec<&'a IrImageOverlay>,
     pip_items: Vec<&'a IrPip>,
     subtitle_items: Vec<&'a IrSubtitle>,
+    audio_routing: AudioRouting,
 }
 
-fn categorize_tracks(ir: &IrProgram) -> TrackCategories<'_> {
-    let mut cats = TrackCategories {
-        video_items: Vec::new(),
-        audio_clips: Vec::new(),
-        text_overlays: Vec::new(),
-        image_overlays: Vec::new(),
-        pip_items: Vec::new(),
-        subtitle_items: Vec::new(),
-    };
-    for track in &ir.timeline.tracks {
-        for item in &track.items {
-            match track.kind {
-                IrTrackKind::Video => cats.video_items.push(item),
-                IrTrackKind::Audio => {
-                    if let IrTrackItem::Clip(c) = item {
-                        cats.audio_clips.push(c);
+impl<'a> TrackPlan<'a> {
+    fn from_ir(ir: &'a IrProgram) -> Self {
+        let mut plan = Self {
+            video_items: Vec::new(),
+            audio_clips: Vec::new(),
+            text_overlays: Vec::new(),
+            image_overlays: Vec::new(),
+            pip_items: Vec::new(),
+            subtitle_items: Vec::new(),
+            audio_routing: AudioRouting::Keep,
+        };
+        for track in &ir.timeline.tracks {
+            for item in &track.items {
+                match track.kind {
+                    IrTrackKind::Video => plan.video_items.push(item),
+                    IrTrackKind::Audio => {
+                        if let IrTrackItem::Clip(c) = item {
+                            plan.audio_clips.push(c);
+                        }
                     }
-                }
-                IrTrackKind::Text => {
-                    if let IrTrackItem::TextOverlay(t) = item {
-                        cats.text_overlays.push(t);
+                    IrTrackKind::Text => {
+                        if let IrTrackItem::TextOverlay(t) = item {
+                            plan.text_overlays.push(t);
+                        }
                     }
+                    IrTrackKind::Overlay => match item {
+                        IrTrackItem::ImageOverlay(o) => plan.image_overlays.push(o),
+                        IrTrackItem::Pip(p) => plan.pip_items.push(p),
+                        IrTrackItem::Subtitle(s) => plan.subtitle_items.push(s),
+                        _ => {}
+                    },
                 }
-                IrTrackKind::Overlay => match item {
-                    IrTrackItem::ImageOverlay(o) => cats.image_overlays.push(o),
-                    IrTrackItem::Pip(p) => cats.pip_items.push(p),
-                    IrTrackItem::Subtitle(s) => cats.subtitle_items.push(s),
-                    _ => {}
-                },
             }
         }
+        // Routing decision: if user has a separate audio track, discard video audio.
+        if !plan.audio_clips.is_empty() {
+            plan.audio_routing = AudioRouting::Discard;
+        }
+        plan
     }
-    cats
 }
 
-fn register_inputs(cats: &TrackCategories) -> (Vec<InputSpec>, HashMap<String, usize>) {
+// ---------------------------------------------------------------------------
+// Input registration
+// ---------------------------------------------------------------------------
+
+fn register_inputs(plan: &TrackPlan) -> (Vec<InputSpec>, HashMap<String, usize>) {
     let mut inputs = Vec::new();
     let mut map: HashMap<String, usize> = HashMap::new();
 
@@ -87,91 +112,154 @@ fn register_inputs(cats: &TrackCategories) -> (Vec<InputSpec>, HashMap<String, u
         }
     };
 
-    for item in &cats.video_items {
+    for item in &plan.video_items {
         match item {
             IrTrackItem::Clip(c) => reg(&c.asset_name, &c.asset_path),
             IrTrackItem::Freeze(f) => reg(&f.asset_name, &f.asset_path),
             _ => {}
         }
     }
-    for c in &cats.audio_clips {
+    for c in &plan.audio_clips {
         reg(&c.asset_name, &c.asset_path);
     }
-    for o in &cats.image_overlays {
+    for o in &plan.image_overlays {
         reg(&o.asset_name, &o.asset_path);
     }
-    for p in &cats.pip_items {
+    for p in &plan.pip_items {
         reg(&p.asset_name, &p.asset_path);
     }
 
     (inputs, map)
 }
 
+// ---------------------------------------------------------------------------
+// Unified audio effect pipeline
+// ---------------------------------------------------------------------------
+
+/// Apply audio effects to a single audio clip label.
+/// Used by both video-track audio and audio-track clips — single code path.
+fn apply_audio_effects(
+    mut a: String,
+    clip: &IrClip,
+    graph: &mut FilterGraph,
+) -> String {
+    let clip_dur = clip
+        .resolved_duration
+        .unwrap_or_else(|| clips::estimate_audio_clip_duration(clip));
+
+    if let Some(vol) = clip.volume {
+        a = graph.add_volume(&a, vol);
+    }
+    if let Some(spd) = clip.speed {
+        a = graph.add_atempo(&a, spd);
+    }
+    if let Some(fi) = clip.fade_in_sec {
+        a = graph.add_afade(&a, "in", 0.0, fi);
+    }
+    if let Some(fo) = clip.fade_out_sec {
+        let start = (clip_dur - fo).max(0.0);
+        a = graph.add_afade(&a, "out", start, fo);
+    }
+    if clip.reverse == Some(true) {
+        a = graph.add_areverse(&a);
+    }
+    if clip.normalize == Some(true) {
+        a = graph.add_loudnorm(&a);
+    }
+    a
+}
+
+// ---------------------------------------------------------------------------
+// Audio track pipeline: build audio from separate audio track clips
+// ---------------------------------------------------------------------------
+
+fn build_audio_track(
+    audio_clips: &[&IrClip],
+    input_map: &HashMap<String, usize>,
+    graph: &mut FilterGraph,
+) -> String {
+    let mut audio_labels = Vec::new();
+    for clip in audio_clips {
+        let idx = input_map[&clip.asset_name];
+        let a = graph.add_atrim(&format!("{idx}:a"), clip.from_sec, clip.to_sec);
+        let a = apply_audio_effects(a, clip, graph);
+        audio_labels.push(a);
+    }
+    if audio_labels.len() == 1 {
+        audio_labels.remove(0)
+    } else {
+        let n = audio_labels.len();
+        graph.add_amix(&audio_labels, n)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point: pipeline-style generate()
+// ---------------------------------------------------------------------------
+
 /// Generate an `FfmpegCommand` from validated IR and a desired output path.
 pub fn generate(ir: &IrProgram, output_path: &Path) -> FfmpegCommand {
     let mut graph = FilterGraph::new();
-    let cats = categorize_tracks(ir);
-    let (inputs, input_map) = register_inputs(&cats);
     let mut map_args = Vec::new();
 
-    if !cats.video_items.is_empty() {
+    // Stage 1: Plan — categorize tracks and decide audio routing
+    let plan = TrackPlan::from_ir(ir);
+
+    // Stage 2: Register inputs
+    let (inputs, input_map) = register_inputs(&plan);
+
+    // Stage 3: Build video pipeline
+    if !plan.video_items.is_empty() {
+        // Build video + video-audio clip filters
+        let skip_audio = plan.audio_routing == AudioRouting::Discard;
         let (vout, aout) = clips::build_clip_filters(
-            &cats.video_items,
+            &plan.video_items,
             &input_map,
             &mut graph,
             ir.project.width,
             ir.project.height,
             ir.project.fps,
+            skip_audio,
         );
 
-        // Apply letterbox padding if fit mode is Letterbox
+        // Letterbox padding
         let vout = if ir.project.fit == FitMode::Letterbox {
             graph.add_pad(&vout, ir.project.width, ir.project.height, "black")
         } else {
             vout
         };
 
+        // Apply overlays
         let v = overlays::apply_pip_overlays(
-            &cats.pip_items,
+            &plan.pip_items,
             &vout,
             &input_map,
             &mut graph,
             ir.project.width,
             ir.project.height,
         );
-        let v = overlays::apply_image_overlays(&cats.image_overlays, &v, &input_map, &mut graph);
-        let v = overlays::apply_subtitles(&cats.subtitle_items, &v, &mut graph);
-        let v = overlays::apply_text_overlays(&cats.text_overlays, &v, &mut graph);
+        let v = overlays::apply_image_overlays(&plan.image_overlays, &v, &input_map, &mut graph);
+        let v = overlays::apply_subtitles(&plan.subtitle_items, &v, &mut graph);
+        let v = overlays::apply_text_overlays(&plan.text_overlays, &v, &mut graph);
         map_args.push(format!("[{v}]"));
 
-        // Audio mixing
-        if !cats.audio_clips.is_empty() {
-            let mut audio_labels = vec![aout];
-            for clip in &cats.audio_clips {
-                let idx = input_map[&clip.asset_name];
-                let mut a = graph.add_atrim(&format!("{idx}:a"), clip.from_sec, clip.to_sec);
-                if let Some(vol) = clip.volume {
-                    a = graph.add_volume(&a, vol);
-                }
-                if let Some(fi) = clip.fade_in_sec {
-                    a = graph.add_afade(&a, "in", 0.0, fi);
-                }
-                if let Some(fo) = clip.fade_out_sec {
-                    a = graph.add_afade(&a, "out", 0.0, fo);
-                }
-                audio_labels.push(a);
+        // Stage 4: Audio routing
+        match plan.audio_routing {
+            AudioRouting::Discard => {
+                // aout is silence (skip_audio=true), sink it
+                graph.add_anullsink(&aout);
+                // Build audio from separate audio track
+                let audio_out = build_audio_track(&plan.audio_clips, &input_map, &mut graph);
+                map_args.push(format!("[{audio_out}]"));
             }
-            if audio_labels.len() == 1 {
-                map_args.push(format!("[{}]", audio_labels[0]));
-            } else {
-                let n = audio_labels.len();
-                map_args.push(format!("[{}]", graph.add_amix(&audio_labels, n)));
+            AudioRouting::Keep => {
+                // Use video's extracted audio
+                map_args.push(format!("[{aout}]"));
             }
-        } else {
-            map_args.push(format!("[{aout}]"));
         }
     }
 
+    // Stage 5: Build output args
     let output_args = output::build_output_args(&ir.project);
     let filter_str = if graph.is_empty() {
         None

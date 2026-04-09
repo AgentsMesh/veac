@@ -1,9 +1,11 @@
 /// Intermediate Representation — fully validated, all references resolved.
 mod clip;
+mod media_info;
 mod overlay;
 mod project;
 
 pub use clip::*;
+pub use media_info::*;
 pub use overlay::*;
 pub use project::*;
 
@@ -23,6 +25,9 @@ pub struct IrAsset {
     pub name: String,
     pub kind: IrAssetKind,
     pub path: PathBuf,
+    /// Media metadata from probing. Populated by `MediaResolver`.
+    /// `None` when probing is skipped or the file cannot be probed.
+    pub media_info: Option<MediaInfo>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

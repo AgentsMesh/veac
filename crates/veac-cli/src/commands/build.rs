@@ -14,9 +14,11 @@ pub fn cmd_build(file: &Path, output: &Path) -> Result<(), Box<dyn std::error::E
         }
     };
 
-    // Probe assets and update has_audio on each clip.
-    let base_dir = file.parent().unwrap_or(Path::new("."));
-    pipeline::probe_audio_streams(&mut ir, base_dir);
+    // Resolve media metadata (duration, has_audio, etc.) via ffprobe with caching.
+    let warnings = pipeline::resolve_media(&mut ir, file);
+    for w in &warnings {
+        eprintln!("warning: {w}");
+    }
 
     // Codegen: produce FFmpeg command(s) — supports multi-output
     let plans = veac_codegen::ffmpeg::generate_all(&ir, output);

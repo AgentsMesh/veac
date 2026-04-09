@@ -251,6 +251,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "csv",
+ "serde",
+ "serde_json",
  "veac-codegen",
  "veac-lang",
  "veac-runtime",

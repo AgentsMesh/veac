@@ -73,22 +73,24 @@ resolve_version() {
 
 # --- Main ---
 
+TMP_DIR=""
+cleanup() { [ -n "$TMP_DIR" ] && rm -rf "$TMP_DIR"; }
+
 main() {
     need_cmd uname
     need_cmd curl
     need_cmd tar
     need_cmd mktemp
 
-    local os arch target version install_dir
     os="$(detect_os)"
     arch="$(detect_arch)"
     target="${arch}-${os}"
     version="$(resolve_version)"
     install_dir="${VEAC_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 
-    local archive_name="${BIN_NAME}-${version}-${target}"
-    local download_url="https://github.com/${REPO}/releases/download/${version}/${archive_name}.tar.gz"
-    local checksum_url="https://github.com/${REPO}/releases/download/${version}/checksums-sha256.txt"
+    archive_name="${BIN_NAME}-${version}-${target}"
+    download_url="https://github.com/${REPO}/releases/download/${version}/${archive_name}.tar.gz"
+    checksum_url="https://github.com/${REPO}/releases/download/${version}/checksums-sha256.txt"
 
     info "platform:  ${target}"
     info "version:   ${version}"
@@ -96,20 +98,19 @@ main() {
     info ""
 
     # Create temp directory
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-    trap 'rm -rf "$tmp_dir"' EXIT
+    TMP_DIR="$(mktemp -d)"
+    trap cleanup EXIT
 
     # Download archive
     info "downloading ${archive_name}.tar.gz ..."
-    curl -fsSL "$download_url" -o "${tmp_dir}/${archive_name}.tar.gz" \
+    curl -fsSL "$download_url" -o "${TMP_DIR}/${archive_name}.tar.gz" \
         || error "download failed. Check that version '${version}' exists for target '${target}'."
 
     # Verify checksum
     info "verifying checksum..."
-    curl -fsSL "$checksum_url" -o "${tmp_dir}/checksums-sha256.txt" 2>/dev/null
-    if [ -f "${tmp_dir}/checksums-sha256.txt" ]; then
-        cd "$tmp_dir"
+    curl -fsSL "$checksum_url" -o "${TMP_DIR}/checksums-sha256.txt" 2>/dev/null
+    if [ -f "${TMP_DIR}/checksums-sha256.txt" ]; then
+        cd "$TMP_DIR"
         if command -v sha256sum > /dev/null 2>&1; then
             grep "${archive_name}.tar.gz" checksums-sha256.txt | sha256sum -c --quiet - \
                 || error "checksum verification failed!"
@@ -130,7 +131,7 @@ main() {
 
     # Extract
     info "extracting..."
-    tar xzf "${tmp_dir}/${archive_name}.tar.gz" -C "$tmp_dir"
+    tar xzf "${TMP_DIR}/${archive_name}.tar.gz" -C "$TMP_DIR"
 
     # Install
     if [ ! -d "$install_dir" ]; then
@@ -141,11 +142,11 @@ main() {
     fi
 
     if [ -w "$install_dir" ]; then
-        cp "${tmp_dir}/${archive_name}/${BIN_NAME}" "${install_dir}/${BIN_NAME}"
+        cp "${TMP_DIR}/${archive_name}/${BIN_NAME}" "${install_dir}/${BIN_NAME}"
         chmod +x "${install_dir}/${BIN_NAME}"
     else
         info "installing to ${install_dir} requires elevated permissions"
-        sudo cp "${tmp_dir}/${archive_name}/${BIN_NAME}" "${install_dir}/${BIN_NAME}"
+        sudo cp "${TMP_DIR}/${archive_name}/${BIN_NAME}" "${install_dir}/${BIN_NAME}"
         sudo chmod +x "${install_dir}/${BIN_NAME}"
     fi
 

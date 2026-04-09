@@ -22,6 +22,8 @@ impl SemanticAnalyzer<'_> {
         let mut position = Position::Center;
         let mut fade_in_sec = None;
         let mut fade_out_sec = None;
+        let mut background = None;
+        let mut background_padding = None;
 
         for attr in &text.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -46,6 +48,14 @@ impl SemanticAnalyzer<'_> {
                 }
                 "fade_in" => fade_in_sec = Some(self.expr_to_seconds(val, fps, "fade_in")?),
                 "fade_out" => fade_out_sec = Some(self.expr_to_seconds(val, fps, "fade_out")?),
+                "background" => {
+                    if let Expression::StringLit(s) = val {
+                        background = Some(s.clone());
+                    }
+                }
+                "background_padding" => {
+                    background_padding = Some(self.expr_to_u32(val, "background_padding")?);
+                }
                 _ => {}
             }
         }
@@ -60,6 +70,9 @@ impl SemanticAnalyzer<'_> {
             position,
             fade_in_sec,
             fade_out_sec,
+            resolved_font_path: None,
+            background,
+            background_padding,
         })
     }
 }

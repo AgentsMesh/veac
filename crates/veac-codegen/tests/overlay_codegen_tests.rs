@@ -35,11 +35,13 @@ fn image_overlay_generates_overlay_filter() {
                 name: "intro".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("intro.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "logo".into(),
                 kind: IrAssetKind::Image,
                 path: PathBuf::from("logo.png"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
@@ -89,11 +91,13 @@ fn image_overlay_without_scale_or_opacity() {
                 name: "intro".into(),
                 kind: IrAssetKind::Video,
                 path: PathBuf::from("intro.mp4"),
+                media_info: None,
             },
             IrAsset {
                 name: "watermark".into(),
                 kind: IrAssetKind::Image,
                 path: PathBuf::from("wm.png"),
+                media_info: None,
             },
         ],
         timeline: IrTimeline {
