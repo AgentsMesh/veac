@@ -1,6 +1,21 @@
 /// Video filter methods: trim, speed, eq, xfade, overlay, scale.
 use super::FilterGraph;
 
+/// Build a per-frame dimension expression that animates `full → target` over `zi` seconds at the
+/// start and `target → full` over `zo` seconds at the end (local time `t`, 0..`dur`). Used by
+/// `add_scale_anim` for pip zoom in/out. Commas stay inside the caller's single-quoted `w='...'`.
+fn anim_dim(full: f64, target: f64, zi: f64, zo: f64, dur: f64) -> String {
+    let mut e = format!("{target}");
+    if zo > 0.0 {
+        let os = dur - zo;
+        e = format!("if(gt(t,{os}),{target}+({full}-{target})*(t-{os})/{zo},{e})");
+    }
+    if zi > 0.0 {
+        e = format!("if(lt(t,{zi}),{full}+({target}-{full})*t/{zi},{e})");
+    }
+    e
+}
+
 impl FilterGraph {
     /// Build a trim + setpts filter chain for a video stream.
     pub fn add_trim(&mut self, input_label: &str, from: Option<f64>, to: Option<f64>) -> String {
@@ -19,6 +34,58 @@ impl FilterGraph {
         };
         let expr = format!("{trim_expr},setpts=PTS-STARTPTS");
         self.add(vec![input_label.to_string()], &expr, vec![out.clone()]);
+        out
+    }
+
+    /// Shift a stream's presentation timestamps forward by `offset` seconds.
+    /// A trimmed pip source has its PTS reset to 0 (by `add_trim`); when overlaid with
+    /// `enable='between(t,at,end)'` it must carry PTS in `[at, end]`, otherwise the overlay
+    /// finds no matching frame during that window and freezes on the source's last frame.
+    pub fn add_pts_offset(&mut self, input: &str, offset: f64) -> String {
+        let out = self.next_label("pts");
+        let expr = format!("setpts=PTS+{offset}/TB");
+        self.add(vec![input.to_string()], &expr, vec![out.clone()]);
+        out
+    }
+
+    /// Animated scale for a zooming pip: interpolates size `full → target → full` over local time.
+    /// `eval=frame` re-evaluates the size expressions per frame using `t`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_scale_anim(&mut self, input: &str, full_w: f64, full_h: f64, target_w: f64,
+                          target_h: f64, zoom_in: f64, zoom_out: f64, dur: f64) -> String {
+        let out = self.next_label("sca");
+        let w = anim_dim(full_w, target_w, zoom_in, zoom_out, dur);
+        let h = anim_dim(full_h, target_h, zoom_in, zoom_out, dur);
+        let expr = format!("scale=w='{w}':h='{h}':eval=frame");
+        self.add(vec![input.to_string()], &expr, vec![out.clone()]);
+        out
+    }
+
+    /// Alpha fade in/out for an overlay (pip) source. Promotes the stream to `yuva420p` so it has an
+    /// alpha channel, then ramps that channel 0→1 over `fade_in` at the start and 1→0 over `fade_out`
+    /// at the end of the local clip time (0..`dur`). The overlay compositor blends the base track
+    /// through the ramp, giving a dissolve. Call BEFORE `add_pts_offset` (fade `st` is 0-based local
+    /// PTS, matching a freshly-trimmed source). Returns the output label.
+    pub fn add_alpha_fade(&mut self, input: &str, fade_in: f64, fade_out: f64, dur: f64) -> String {
+        let out = self.next_label("fade");
+        let mut parts = vec!["format=yuva420p".to_string()];
+        if fade_in > 0.0 {
+            parts.push(format!("fade=t=in:st=0:d={fade_in}:alpha=1"));
+        }
+        if fade_out > 0.0 {
+            let st = dur - fade_out;
+            parts.push(format!("fade=t=out:st={st}:d={fade_out}:alpha=1"));
+        }
+        let expr = parts.join(",");
+        self.add(vec![input.to_string()], &expr, vec![out.clone()]);
+        out
+    }
+
+    /// Overlay with per-frame position eval (for a pip whose size animates). Returns the output label.
+    pub fn add_overlay_anim(&mut self, video: &str, image: &str, x: &str, y: &str, start: f64, end: f64) -> String {
+        let out = self.next_label("ov");
+        let expr = format!("overlay=x='{x}':y='{y}':eval=frame:enable='between(t,{start},{end})'");
+        self.add(vec![video.to_string(), image.to_string()], &expr, vec![out.clone()]);
         out
     }
 

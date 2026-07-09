@@ -5,8 +5,77 @@ use veac_lang::ir::IrImageOverlay;
 use veac_lang::ir::IrPip;
 use veac_lang::ir::IrSubtitle;
 use veac_lang::ir::IrTextOverlay;
+use veac_lang::ir::Position;
 
 use crate::filter_graph::FilterGraph;
+
+/// Per-frame overlay x/y expressions for an animated (zooming) pip that exactly fills the frame at
+/// full size and comes to rest inset by (`mx`, `my`) px from its anchored edges at corner size
+/// (`cw`×`ch`). `eval=frame` re-evaluates these as w/h shrink, so the inset grows in lockstep with
+/// the zoom: 0 at full frame (no ghost against the base track), full margin at the corner. `mx=my=0`
+/// reproduces the flush margin-less anchor. Center anchoring ignores margins.
+fn animated_inset_xy(
+    pos: Position,
+    out_w: f64,
+    out_h: f64,
+    cw: f64,
+    ch: f64,
+    mx: f64,
+    my: f64,
+) -> (String, String) {
+    // Constant denominators (how far the pip travels from fill to corner); guard against /0 for a
+    // degenerate scale==1 zoom pip.
+    let wmt = (out_w - cw).max(1.0);
+    let hmt = (out_h - ch).max(1.0);
+    let x_left = format!("{mx}*(W-w)/{wmt}");
+    let x_right = format!("{}*(W-w)/{wmt}", out_w - cw - mx);
+    let x_center = "(W-w)/2".to_string();
+    let y_top = format!("{my}*(H-h)/{hmt}");
+    let y_bottom = format!("{}*(H-h)/{hmt}", out_h - ch - my);
+    let y_center = "(H-h)/2".to_string();
+    match pos {
+        Position::Center => (x_center, y_center),
+        Position::TopLeft => (x_left, y_top),
+        Position::TopRight => (x_right, y_top),
+        Position::BottomLeft => (x_left, y_bottom),
+        Position::BottomRight => (x_right, y_bottom),
+        Position::Top => (x_center, y_top),
+        Position::Bottom => (x_center, y_bottom),
+        Position::Left => (x_left, y_center),
+        Position::Right => (x_right, y_center),
+    }
+}
+
+/// Static overlay x/y for a non-animated pip inset by (`mx`, `my`) px from its anchored edges.
+/// Positions are constants (the pip never resizes), so this is the resting position of
+/// [`animated_inset_xy`]. Used by fade-only / plain pips that still need to clear a screen edge.
+fn static_inset_xy(
+    pos: Position,
+    out_w: f64,
+    out_h: f64,
+    cw: f64,
+    ch: f64,
+    mx: f64,
+    my: f64,
+) -> (String, String) {
+    let x_left = format!("{mx}");
+    let x_right = format!("{}", out_w - cw - mx);
+    let x_center = format!("{}", (out_w - cw) / 2.0);
+    let y_top = format!("{my}");
+    let y_bottom = format!("{}", out_h - ch - my);
+    let y_center = format!("{}", (out_h - ch) / 2.0);
+    match pos {
+        Position::Center => (x_center, y_center),
+        Position::TopLeft => (x_left, y_top),
+        Position::TopRight => (x_right, y_top),
+        Position::BottomLeft => (x_left, y_bottom),
+        Position::BottomRight => (x_right, y_bottom),
+        Position::Top => (x_center, y_top),
+        Position::Bottom => (x_center, y_bottom),
+        Position::Left => (x_left, y_center),
+        Position::Right => (x_right, y_center),
+    }
+}
 
 /// Chain drawtext filters onto a video stream.
 /// Supports optional fade_in/fade_out alpha animation.
@@ -15,9 +84,20 @@ pub fn apply_text_overlays(
     video_label: &str,
     graph: &mut FilterGraph,
 ) -> String {
+    use veac_lang::ir::Position;
     let mut current = video_label.to_string();
     for ov in overlays {
-        let (x, y) = ov.position.to_ffmpeg_xy();
+        let (x, y_anchor) = ov.position.to_ffmpeg_xy();
+        // Custom margin overrides the fixed 10px vertical offset for top/bottom positions
+        // (e.g. lower-third subtitles clearing a vertical player's bottom UI).
+        let y_custom = ov.margin.map(|m| match ov.position {
+            Position::Bottom | Position::BottomLeft | Position::BottomRight => {
+                format!("h-text_h-{m}")
+            }
+            Position::Top | Position::TopLeft | Position::TopRight => format!("{m}"),
+            _ => y_anchor.to_string(),
+        });
+        let y = y_custom.as_deref().unwrap_or(y_anchor);
         let end_sec = ov.at_sec + ov.duration_sec;
 
         // Build alpha expression for fade in/out
@@ -142,15 +222,57 @@ pub fn apply_pip_overlays(
         // Trim the pip source
         let trimmed = graph.add_trim(&v_in, pip.from_sec, pip.to_sec);
 
-        // Scale pip to the desired size
-        let pip_w = ((target_w as f64) * pip.scale) as u32;
-        let pip_h = ((target_h as f64) * pip.scale) as u32;
-        let scaled = graph.add_scale(&trimmed, &pip_w.to_string(), &pip_h.to_string());
-
-        // Overlay pip onto main video with position and time enable
-        let (x, y) = pip.position.to_overlay_xy();
+        // Scale pip to the desired size. Explicit width/height (px) override scale — needed for a
+        // square overlay on a portrait canvas (scale alone would give a rectangle).
+        let pip_w = if pip.width > 0.0 { pip.width as u32 } else { ((target_w as f64) * pip.scale) as u32 };
+        let pip_h = if pip.height > 0.0 { pip.height as u32 } else { ((target_h as f64) * pip.scale) as u32 };
         let end_sec = pip.at_sec + pip.duration_sec;
-        current = graph.add_overlay(&current, &scaled, x, y, pip.at_sec, end_sec);
+        let has_fade = pip.fade_in_sec > 0.0 || pip.fade_out_sec > 0.0;
+
+        if pip.zoom_in_sec > 0.0 || pip.zoom_out_sec > 0.0 {
+            // Animated pip: size interpolates full-frame → corner (`zoom_in`) and back (`zoom_out`),
+            // giving a shrink-to-corner / grow-to-full transition. Anchor is margin-less so a
+            // full-frame pip fills exactly. PTS shifted to `at` (see add_pts_offset) then overlaid
+            // with per-frame position eval.
+            let scaled = graph.add_scale_anim(
+                &trimmed, target_w as f64, target_h as f64, pip_w as f64, pip_h as f64,
+                pip.zoom_in_sec, pip.zoom_out_sec, pip.duration_sec,
+            );
+            // Fade runs on 0-based local PTS, before the offset shifts it into the timeline window.
+            let faded = if has_fade {
+                graph.add_alpha_fade(&scaled, pip.fade_in_sec, pip.fade_out_sec, pip.duration_sec)
+            } else {
+                scaled
+            };
+            let shifted = graph.add_pts_offset(&faded, pip.at_sec);
+            let (x, y) = animated_inset_xy(
+                pip.position, target_w as f64, target_h as f64,
+                pip_w as f64, pip_h as f64, pip.margin_x, pip.margin_y,
+            );
+            current = graph.add_overlay_anim(&current, &shifted, &x, &y, pip.at_sec, end_sec);
+        } else {
+            let scaled = graph.add_scale(&trimmed, &pip_w.to_string(), &pip_h.to_string());
+            let faded = if has_fade {
+                graph.add_alpha_fade(&scaled, pip.fade_in_sec, pip.fade_out_sec, pip.duration_sec)
+            } else {
+                scaled
+            };
+            // Shift the (trim-reset) PTS to `at` so the overlay plays through its enable window
+            // instead of freezing on the source's last frame.
+            let shifted = graph.add_pts_offset(&faded, pip.at_sec);
+            // Honor margin inset when set (e.g. a fading corner bubble clearing the screen edge);
+            // otherwise fall back to the default 10px anchor.
+            let (x, y) = if pip.margin_x > 0.0 || pip.margin_y > 0.0 {
+                static_inset_xy(
+                    pip.position, target_w as f64, target_h as f64,
+                    pip_w as f64, pip_h as f64, pip.margin_x, pip.margin_y,
+                )
+            } else {
+                let (ax, ay) = pip.position.to_overlay_xy();
+                (ax.to_string(), ay.to_string())
+            };
+            current = graph.add_overlay(&current, &shifted, &x, &y, pip.at_sec, end_sec);
+        }
     }
 
     current

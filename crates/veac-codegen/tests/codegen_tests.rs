@@ -40,6 +40,7 @@ fn make_text_overlay() -> IrTextOverlay {
         resolved_font_path: None,
                 background: None,
                 background_padding: None,
+                margin: None,
     }
 }
 

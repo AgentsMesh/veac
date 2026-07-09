@@ -24,6 +24,7 @@ impl SemanticAnalyzer<'_> {
         let mut fade_out_sec = None;
         let mut background = None;
         let mut background_padding = None;
+        let mut margin = None;
 
         for attr in &text.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -56,6 +57,7 @@ impl SemanticAnalyzer<'_> {
                 "background_padding" => {
                     background_padding = Some(self.expr_to_u32(val, "background_padding")?);
                 }
+                "margin" => margin = Some(self.expr_to_u32(val, "margin")?),
                 _ => {}
             }
         }
@@ -73,6 +75,7 @@ impl SemanticAnalyzer<'_> {
             resolved_font_path: None,
             background,
             background_padding,
+            margin,
         })
     }
 }

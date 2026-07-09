@@ -26,6 +26,10 @@ pub struct IrTextOverlay {
     pub background: Option<String>,
     /// Background box padding in pixels. Default: 12.
     pub background_padding: Option<u32>,
+    /// Custom edge margin in pixels, overriding the fixed 10px anchor margin.
+    /// Only affects the vertical offset for top/bottom positions (e.g. lower-third subtitles
+    /// that must clear a player's bottom UI). `None` keeps the default 10px anchor.
+    pub margin: Option<u32>,
 }
 
 /// A transition between two adjacent clips.

@@ -79,6 +79,14 @@ impl SemanticAnalyzer<'_> {
         let mut duration_sec = 5.0;
         let mut position = Position::BottomRight;
         let mut scale = 0.25;
+        let mut zoom_in_sec = 0.0;
+        let mut zoom_out_sec = 0.0;
+        let mut fade_in_sec = 0.0;
+        let mut fade_out_sec = 0.0;
+        let mut margin_x = 0.0;
+        let mut margin_y = 0.0;
+        let mut width = 0.0;
+        let mut height = 0.0;
 
         for attr in &pip.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -93,6 +101,20 @@ impl SemanticAnalyzer<'_> {
                     }
                 }
                 "scale" => scale = self.expr_to_f64(val, "scale")?,
+                "zoom_in" => zoom_in_sec = self.expr_to_seconds(val, fps, "zoom_in")?,
+                "zoom_out" => zoom_out_sec = self.expr_to_seconds(val, fps, "zoom_out")?,
+                "fade_in" => fade_in_sec = self.expr_to_seconds(val, fps, "fade_in")?,
+                "fade_out" => fade_out_sec = self.expr_to_seconds(val, fps, "fade_out")?,
+                // `margin` sets both axes; `margin_x`/`margin_y` override per-axis (apply after).
+                "margin" => {
+                    let m = self.expr_to_f64(val, "margin")?;
+                    margin_x = m;
+                    margin_y = m;
+                }
+                "margin_x" => margin_x = self.expr_to_f64(val, "margin_x")?,
+                "margin_y" => margin_y = self.expr_to_f64(val, "margin_y")?,
+                "width" => width = self.expr_to_f64(val, "width")?,
+                "height" => height = self.expr_to_f64(val, "height")?,
                 _ => {}
             }
         }
@@ -106,6 +128,14 @@ impl SemanticAnalyzer<'_> {
             duration_sec,
             position,
             scale,
+            zoom_in_sec,
+            zoom_out_sec,
+            fade_in_sec,
+            fade_out_sec,
+            margin_x,
+            margin_y,
+            width,
+            height,
         })
     }
 }

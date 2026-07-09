@@ -166,6 +166,7 @@ fn text_fade_in_out_generates_alpha() {
                         resolved_font_path: None,
                 background: None,
                 background_padding: None,
+                margin: None,
                     })],
                 },
             ],
@@ -250,6 +251,14 @@ fn pip_generates_overlay() {
                         duration_sec: 10.0,
                         position: Position::BottomRight,
                         scale: 0.25,
+                        zoom_in_sec: 0.0,
+                        zoom_out_sec: 0.0,
+                        fade_in_sec: 0.0,
+                        fade_out_sec: 0.0,
+                        margin_x: 0.0,
+                        margin_y: 0.0,
+                        width: 0.0,
+                        height: 0.0,
                     })],
                 },
             ],
@@ -261,6 +270,159 @@ fn pip_generates_overlay() {
     assert!(fg.contains("scale=480:270"));
     assert!(fg.contains("overlay="));
     assert_eq!(cmd.inputs.len(), 2);
+}
+
+#[test]
+fn pip_fade_generates_alpha_ramp() {
+    let ir = IrProgram {
+        outputs: vec![],
+        project: make_project(),
+        assets: vec![
+            IrAsset {
+                name: "main_vid".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("main.mp4"),
+                media_info: None,
+            },
+            IrAsset {
+                name: "roll".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("roll.mp4"),
+                media_info: None,
+            },
+        ],
+        timeline: IrTimeline {
+            name: "main".into(),
+            tracks: vec![
+                IrTrack {
+                    kind: IrTrackKind::Video,
+                    items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))],
+                },
+                IrTrack {
+                    kind: IrTrackKind::Overlay,
+                    items: vec![IrTrackItem::Pip(IrPip {
+                        asset_name: "roll".into(),
+                        asset_path: PathBuf::from("roll.mp4"),
+                        from_sec: None,
+                        to_sec: None,
+                        at_sec: 5.0,
+                        duration_sec: 8.0,
+                        position: Position::Center,
+                        scale: 1.0,
+                        zoom_in_sec: 0.0,
+                        zoom_out_sec: 0.0,
+                        fade_in_sec: 0.5,
+                        fade_out_sec: 0.5,
+                        margin_x: 0.0,
+                        margin_y: 0.0,
+                        width: 0.0,
+                        height: 0.0,
+                    })],
+                },
+            ],
+        },
+    };
+    let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
+    let fg = cmd.filter_graph.expect("should have filter_complex");
+    // Alpha channel must be added, then ramped in at local 0 and out at duration-fade_out.
+    assert!(fg.contains("format=yuva420p"), "pip fade needs an alpha channel: {fg}");
+    assert!(fg.contains("fade=t=in:st=0:d=0.5:alpha=1"), "missing fade-in: {fg}");
+    assert!(fg.contains("fade=t=out:st=7.5:d=0.5:alpha=1"), "missing fade-out: {fg}");
+}
+
+#[test]
+fn pip_zoom_margin_insets_corner_but_fills_at_full() {
+    // Output 1920x1080 (see make_project). A bottom-left zooming pip at scale 0.3 rests at
+    // corner size 576x324; wmt=1920-576=1344, hmt=1080-324=756. With margin_x=48, margin_y=100 the
+    // overlay x/y must interpolate 0→inset with the zoom (0 at full frame → no ghost).
+    let ir = IrProgram {
+        outputs: vec![],
+        project: make_project(),
+        assets: vec![
+            IrAsset { name: "main_vid".into(), kind: IrAssetKind::Video, path: PathBuf::from("main.mp4"), media_info: None },
+            IrAsset { name: "cam".into(), kind: IrAssetKind::Video, path: PathBuf::from("cam.mp4"), media_info: None },
+        ],
+        timeline: IrTimeline {
+            name: "main".into(),
+            tracks: vec![
+                IrTrack { kind: IrTrackKind::Video, items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))] },
+                IrTrack {
+                    kind: IrTrackKind::Overlay,
+                    items: vec![IrTrackItem::Pip(IrPip {
+                        asset_name: "cam".into(),
+                        asset_path: PathBuf::from("cam.mp4"),
+                        from_sec: None,
+                        to_sec: None,
+                        at_sec: 2.0,
+                        duration_sec: 6.0,
+                        position: Position::BottomLeft,
+                        scale: 0.3,
+                        zoom_in_sec: 0.4,
+                        zoom_out_sec: 0.4,
+                        fade_in_sec: 0.0,
+                        fade_out_sec: 0.0,
+                        margin_x: 48.0,
+                        margin_y: 100.0,
+                        width: 0.0,
+                        height: 0.0,
+                    })],
+                },
+            ],
+        },
+    };
+    let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
+    let fg = cmd.filter_graph.expect("should have filter_complex");
+    // x: 48*(W-w)/1344 → 0 at full (w=W), 48 at corner (w=576). y: 656*(H-h)/756 → 0 at full, 656 at corner.
+    assert!(fg.contains("48*(W-w)/1344"), "x should interpolate to a 48px left inset: {fg}");
+    assert!(fg.contains("656*(H-h)/756"), "y should rest 656px down (1080-324-100): {fg}");
+    assert!(fg.contains("eval=frame"), "animated overlay must re-eval position per frame: {fg}");
+}
+
+#[test]
+fn pip_explicit_size_and_static_margin() {
+    // A fade-only bubble: explicit square width/height (px) overrides the portrait scale, and the
+    // bottom-left margin insets it to a constant resting position (no zoom → no per-frame eval).
+    let ir = IrProgram {
+        outputs: vec![],
+        project: make_project(), // 1920x1080
+        assets: vec![
+            IrAsset { name: "main_vid".into(), kind: IrAssetKind::Video, path: PathBuf::from("main.mp4"), media_info: None },
+            IrAsset { name: "cam".into(), kind: IrAssetKind::Video, path: PathBuf::from("cam.mp4"), media_info: None },
+        ],
+        timeline: IrTimeline {
+            name: "main".into(),
+            tracks: vec![
+                IrTrack { kind: IrTrackKind::Video, items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))] },
+                IrTrack {
+                    kind: IrTrackKind::Overlay,
+                    items: vec![IrTrackItem::Pip(IrPip {
+                        asset_name: "cam".into(),
+                        asset_path: PathBuf::from("cam.mp4"),
+                        from_sec: None,
+                        to_sec: None,
+                        at_sec: 2.0,
+                        duration_sec: 6.0,
+                        position: Position::BottomLeft,
+                        scale: 0.25, // ignored — width/height win
+                        zoom_in_sec: 0.0,
+                        zoom_out_sec: 0.0,
+                        fade_in_sec: 0.4,
+                        fade_out_sec: 0.4,
+                        margin_x: 40.0,
+                        margin_y: 100.0,
+                        width: 300.0,
+                        height: 300.0,
+                    })],
+                },
+            ],
+        },
+    };
+    let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
+    let fg = cmd.filter_graph.expect("should have filter_complex");
+    // Square size from width/height, not scale (0.25*1920=480 would be wrong).
+    assert!(fg.contains("scale=300:300"), "explicit px size should win over scale: {fg}");
+    // Static bottom-left inset: x=margin_x=40, y=H-h-margin_y=1080-300-100=680.
+    assert!(fg.contains("overlay=x=40:y=680"), "static margin should inset to a constant corner: {fg}");
 }
 
 #[test]
