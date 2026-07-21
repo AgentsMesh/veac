@@ -235,11 +235,21 @@ pub fn apply_image_overlays(
             carded
         };
 
-        // Position: explicit x/y (numeric) overrides the anchor per axis.
-        let (ax, ay) = ov.position.to_overlay_xy();
-        let x = ov.x.map(fnum).unwrap_or_else(|| ax.to_string());
-        let y = ov.y.map(fnum).unwrap_or_else(|| ay.to_string());
-        current = graph.add_overlay(&current, &composited, &x, &y, ov.at_sec, end_sec);
+        // Position. A scroll animates it linearly across the window (per-frame eval); otherwise
+        // explicit x/y (numeric) overrides the anchor per axis.
+        if ov.scroll_x != 0.0 || ov.scroll_y != 0.0 {
+            let x0 = ov.x.unwrap_or(0.0);
+            let y0 = ov.y.unwrap_or(0.0);
+            let dur = ov.duration_sec.max(0.0001);
+            let xe = format!("{x0}+({})*(t-{})/{dur}", ov.scroll_x, ov.at_sec);
+            let ye = format!("{y0}+({})*(t-{})/{dur}", ov.scroll_y, ov.at_sec);
+            current = graph.add_overlay_anim(&current, &composited, &xe, &ye, ov.at_sec, end_sec);
+        } else {
+            let (ax, ay) = ov.position.to_overlay_xy();
+            let x = ov.x.map(fnum).unwrap_or_else(|| ax.to_string());
+            let y = ov.y.map(fnum).unwrap_or_else(|| ay.to_string());
+            current = graph.add_overlay(&current, &composited, &x, &y, ov.at_sec, end_sec);
+        }
     }
 
     current

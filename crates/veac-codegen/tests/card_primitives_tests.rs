@@ -343,3 +343,17 @@ fn text_shadow_and_outline_reach_drawtext() {
         "drawtext outline: {g}"
     );
 }
+
+#[test]
+fn image_scroll_animates_position_linearly() {
+    let (assets, base) = base_and_image("river");
+    let g = fg(assets, base, vec![IrTrackItem::ImageOverlay(IrImageOverlay {
+        width: Some(1080.0),
+        height: Some(5000.0),
+        y: Some(0.0),
+        scroll_y: -3000.0,
+        ..image("river")
+    })]);
+    assert!(g.contains("eval=frame"), "scroll uses per-frame animated overlay: {g}");
+    assert!(g.contains("(-3000)*(t-0)"), "linear travel expression over the window: {g}");
+}

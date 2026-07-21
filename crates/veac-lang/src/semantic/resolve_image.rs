@@ -39,6 +39,8 @@ impl SemanticAnalyzer<'_> {
         let mut style = CardStyle::default();
         let mut x = None;
         let mut y = None;
+        let mut scroll_x = 0.0;
+        let mut scroll_y = 0.0;
 
         for attr in &decl.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -78,6 +80,8 @@ impl SemanticAnalyzer<'_> {
                 "fade_out" => fade_out_sec = Some(self.expr_to_seconds(val, fps, "fade_out")?),
                 "x" => x = Some(self.expr_to_f64(val, "x")?),
                 "y" => y = Some(self.expr_to_f64(val, "y")?),
+                "scroll_x" => scroll_x = self.expr_to_f64(val, "scroll_x")?,
+                "scroll_y" => scroll_y = self.expr_to_f64(val, "scroll_y")?,
                 other => {
                     self.apply_card_attr(other, val, &mut style)?;
                 }
@@ -99,6 +103,8 @@ impl SemanticAnalyzer<'_> {
             style,
             x,
             y,
+            scroll_x,
+            scroll_y,
         })
     }
 }

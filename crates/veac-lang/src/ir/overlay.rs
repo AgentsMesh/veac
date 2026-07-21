@@ -198,4 +198,10 @@ pub struct IrImageOverlay {
     pub x: Option<f64>,
     /// Explicit pixel y, overriding the anchor.
     pub y: Option<f64>,
+    /// Linear horizontal travel in px across the overlay's window — the image slides from its
+    /// start position by this many px (negative = leftward). `0` = static. Powers a "river" of
+    /// widgets flying past. Combines with `scroll_y` for diagonal motion.
+    pub scroll_x: f64,
+    /// Linear vertical travel in px across the overlay's window (negative = upward). `0` = static.
+    pub scroll_y: f64,
 }
