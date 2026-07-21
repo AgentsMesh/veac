@@ -138,11 +138,7 @@ fn register_inputs(plan: &TrackPlan) -> (Vec<InputSpec>, HashMap<String, usize>)
 
 /// Apply audio effects to a single audio clip label.
 /// Used by both video-track audio and audio-track clips — single code path.
-fn apply_audio_effects(
-    mut a: String,
-    clip: &IrClip,
-    graph: &mut FilterGraph,
-) -> String {
+fn apply_audio_effects(mut a: String, clip: &IrClip, graph: &mut FilterGraph) -> String {
     let clip_dur = clip
         .resolved_duration
         .unwrap_or_else(|| clips::estimate_audio_clip_duration(clip));
@@ -238,7 +234,13 @@ pub fn generate(ir: &IrProgram, output_path: &Path) -> FfmpegCommand {
             ir.project.width,
             ir.project.height,
         );
-        let v = overlays::apply_image_overlays(&plan.image_overlays, &v, &input_map, &mut graph);
+        let v = overlays::apply_image_overlays(
+            &plan.image_overlays,
+            &v,
+            &input_map,
+            &mut graph,
+            ir.project.fps,
+        );
         let v = overlays::apply_subtitles(&plan.subtitle_items, &v, &mut graph);
         let v = overlays::apply_text_overlays(&plan.text_overlays, &v, &mut graph);
         map_args.push(format!("[{v}]"));

@@ -1,0 +1,35 @@
+// Card overlays: fit + rounded corners + drop shadow + fade — a promo-grade "floating widget"
+// shot composed declaratively. A still on the main track now honors `duration`.
+project "card-overlay" {
+    resolution = "1080x1920"
+    fps        = 30
+    format     = "mp4"
+    codec      = "h264"
+    quality    = "high"
+}
+
+asset bg      = image("assets/bg.png")       // a premium background still
+asset widget  = video("assets/widget.mov")   // a widget/app-capture clip
+asset caption = image("assets/caption.png")  // a pre-rendered caption strip (transparent PNG)
+
+timeline main {
+    track video {
+        clip bg { duration = 4s }            // looped to 4s — no more collapse to one frame
+    }
+    track overlay {
+        // The widget as a rounded, shadowed card, aspect-preserved inside its box.
+        pip widget {
+            at = 0s   duration = 4s
+            width = 740  height = 775  y = 900
+            fit    = "cover"
+            radius = 56
+            shadow = true  shadow_blur = 34  shadow_opacity = 0.5  shadow_y = 30
+        }
+        // The caption dissolves in/out at an exact position.
+        image caption {
+            at = 0.3s  duration = 3.4s
+            y  = 150
+            fade_in = 0.3s  fade_out = 0.4s
+        }
+    }
+}

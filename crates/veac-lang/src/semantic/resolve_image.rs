@@ -32,6 +32,13 @@ impl SemanticAnalyzer<'_> {
         let mut position = Position::TopRight;
         let mut scale = None;
         let mut opacity = None;
+        let mut width = None;
+        let mut height = None;
+        let mut fade_in_sec = None;
+        let mut fade_out_sec = None;
+        let mut style = CardStyle::default();
+        let mut x = None;
+        let mut y = None;
 
         for attr in &decl.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -65,7 +72,15 @@ impl SemanticAnalyzer<'_> {
                     }
                     opacity = Some(v);
                 }
-                _ => {}
+                "width" => width = Some(self.expr_to_f64(val, "width")?),
+                "height" => height = Some(self.expr_to_f64(val, "height")?),
+                "fade_in" => fade_in_sec = Some(self.expr_to_seconds(val, fps, "fade_in")?),
+                "fade_out" => fade_out_sec = Some(self.expr_to_seconds(val, fps, "fade_out")?),
+                "x" => x = Some(self.expr_to_f64(val, "x")?),
+                "y" => y = Some(self.expr_to_f64(val, "y")?),
+                other => {
+                    self.apply_card_attr(other, val, &mut style)?;
+                }
             }
         }
 
@@ -77,6 +92,13 @@ impl SemanticAnalyzer<'_> {
             position,
             scale,
             opacity,
+            width,
+            height,
+            fade_in_sec,
+            fade_out_sec,
+            style,
+            x,
+            y,
         })
     }
 }

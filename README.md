@@ -36,6 +36,8 @@ timeline main {
 - 21 video/audio effects (brightness, contrast, speed, zoom, blur, etc.)
 - 20 transition types (fade, dissolve, wipe, slide, etc.)
 - Text, image, PIP, subtitle overlays
+- Card styling for overlays: aspect-preserving `fit`, rounded `radius`, drop `shadow`, `fade`, and pixel-exact `x`/`y` — compose promo-grade "floating widget" shots declaratively
+- Text `shadow` / `outline`; still images honor `duration` on the main track
 - Variable system with `let` bindings
 - Module system with `include` for reuse
 - Multiple time formats: seconds (`3.5s`), milliseconds (`500ms`), frames (`84f`), SMPTE timecode

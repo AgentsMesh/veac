@@ -126,6 +126,74 @@ impl SemanticAnalyzer<'_> {
         }
     }
 
+    /// Extract an FFmpeg-usable color string from a color/string expr
+    /// (`#0A0A0A` → `0x0A0A0A`, `"black"` → `black`).
+    pub(crate) fn expr_to_color(&self, expr: &Expression) -> String {
+        match expr {
+            Expression::ColorLit(c) => format!("0x{c}"),
+            Expression::StringLit(s) => s.clone(),
+            _ => "black".to_string(),
+        }
+    }
+
+    /// Apply a shared "card style" attribute (fit / rounded corners / drop shadow) when `key`
+    /// is one. Returns `Ok(true)` when handled, `Ok(false)` when `key` belongs to the caller.
+    /// Single owner for the card-styling grammar, reused by both image and pip overlays.
+    pub(crate) fn apply_card_attr(
+        &self,
+        key: &str,
+        val: &Expression,
+        style: &mut CardStyle,
+    ) -> Result<bool, VeacError> {
+        match key {
+            "radius" => style.radius = Some(self.expr_to_u32(val, "radius")?),
+            "fit" => {
+                if let Expression::StringLit(s) = val {
+                    style.fit = Some(match s.as_str() {
+                        "fill" => FitMode::Fill,
+                        "contain" | "letterbox" => FitMode::Letterbox,
+                        "cover" | "crop" => FitMode::Crop,
+                        other => {
+                            return Err(VeacError::new(
+                                ErrorKind::InvalidValue,
+                                format!("unknown fit `{other}` (expected fill, contain, or cover)"),
+                                None,
+                            ))
+                        }
+                    });
+                }
+            }
+            "shadow" => {
+                if self.expr_to_bool(val, "shadow")? {
+                    style.shadow.get_or_insert_with(Shadow::default);
+                } else {
+                    style.shadow = None;
+                }
+            }
+            "shadow_blur" => {
+                style.shadow.get_or_insert_with(Shadow::default).blur =
+                    self.expr_to_f64(val, "shadow_blur")?
+            }
+            "shadow_opacity" => {
+                style.shadow.get_or_insert_with(Shadow::default).opacity =
+                    self.expr_to_f64(val, "shadow_opacity")?
+            }
+            "shadow_x" => {
+                style.shadow.get_or_insert_with(Shadow::default).dx =
+                    self.expr_to_f64(val, "shadow_x")?
+            }
+            "shadow_y" => {
+                style.shadow.get_or_insert_with(Shadow::default).dy =
+                    self.expr_to_f64(val, "shadow_y")?
+            }
+            "shadow_color" => {
+                style.shadow.get_or_insert_with(Shadow::default).color = self.expr_to_color(val)
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
+
     pub(crate) fn parse_smpte(s: &str, fps: u32) -> Result<f64, VeacError> {
         let parts: Vec<&str> = s.split(':').collect();
         if parts.len() != 4 {

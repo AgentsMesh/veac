@@ -61,6 +61,7 @@ fn image_overlay_generates_overlay_filter() {
                         position: Position::TopRight,
                         scale: Some(0.1),
                         opacity: Some(0.8),
+                        ..Default::default()
                     })],
                 },
             ],
@@ -117,6 +118,7 @@ fn image_overlay_without_scale_or_opacity() {
                         position: Position::BottomRight,
                         scale: None,
                         opacity: None,
+                        ..Default::default()
                     })],
                 },
             ],

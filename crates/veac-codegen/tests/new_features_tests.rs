@@ -164,9 +164,10 @@ fn text_fade_in_out_generates_alpha() {
                         fade_in_sec: Some(0.5),
                         fade_out_sec: Some(1.0),
                         resolved_font_path: None,
-                background: None,
-                background_padding: None,
-                margin: None,
+                        background: None,
+                        background_padding: None,
+                        margin: None,
+                        ..Default::default()
                     })],
                 },
             ],
@@ -259,6 +260,7 @@ fn pip_generates_overlay() {
                         margin_y: 0.0,
                         width: 0.0,
                         height: 0.0,
+                        ..Default::default()
                     })],
                 },
             ],
@@ -317,6 +319,7 @@ fn pip_fade_generates_alpha_ramp() {
                         margin_y: 0.0,
                         width: 0.0,
                         height: 0.0,
+                        ..Default::default()
                     })],
                 },
             ],
@@ -325,9 +328,18 @@ fn pip_fade_generates_alpha_ramp() {
     let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
     let fg = cmd.filter_graph.expect("should have filter_complex");
     // Alpha channel must be added, then ramped in at local 0 and out at duration-fade_out.
-    assert!(fg.contains("format=yuva420p"), "pip fade needs an alpha channel: {fg}");
-    assert!(fg.contains("fade=t=in:st=0:d=0.5:alpha=1"), "missing fade-in: {fg}");
-    assert!(fg.contains("fade=t=out:st=7.5:d=0.5:alpha=1"), "missing fade-out: {fg}");
+    assert!(
+        fg.contains("format=yuva420p"),
+        "pip fade needs an alpha channel: {fg}"
+    );
+    assert!(
+        fg.contains("fade=t=in:st=0:d=0.5:alpha=1"),
+        "missing fade-in: {fg}"
+    );
+    assert!(
+        fg.contains("fade=t=out:st=7.5:d=0.5:alpha=1"),
+        "missing fade-out: {fg}"
+    );
 }
 
 #[test]
@@ -339,13 +351,26 @@ fn pip_zoom_margin_insets_corner_but_fills_at_full() {
         outputs: vec![],
         project: make_project(),
         assets: vec![
-            IrAsset { name: "main_vid".into(), kind: IrAssetKind::Video, path: PathBuf::from("main.mp4"), media_info: None },
-            IrAsset { name: "cam".into(), kind: IrAssetKind::Video, path: PathBuf::from("cam.mp4"), media_info: None },
+            IrAsset {
+                name: "main_vid".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("main.mp4"),
+                media_info: None,
+            },
+            IrAsset {
+                name: "cam".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("cam.mp4"),
+                media_info: None,
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![
-                IrTrack { kind: IrTrackKind::Video, items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))] },
+                IrTrack {
+                    kind: IrTrackKind::Video,
+                    items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))],
+                },
                 IrTrack {
                     kind: IrTrackKind::Overlay,
                     items: vec![IrTrackItem::Pip(IrPip {
@@ -365,6 +390,7 @@ fn pip_zoom_margin_insets_corner_but_fills_at_full() {
                         margin_y: 100.0,
                         width: 0.0,
                         height: 0.0,
+                        ..Default::default()
                     })],
                 },
             ],
@@ -373,9 +399,18 @@ fn pip_zoom_margin_insets_corner_but_fills_at_full() {
     let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
     let fg = cmd.filter_graph.expect("should have filter_complex");
     // x: 48*(W-w)/1344 → 0 at full (w=W), 48 at corner (w=576). y: 656*(H-h)/756 → 0 at full, 656 at corner.
-    assert!(fg.contains("48*(W-w)/1344"), "x should interpolate to a 48px left inset: {fg}");
-    assert!(fg.contains("656*(H-h)/756"), "y should rest 656px down (1080-324-100): {fg}");
-    assert!(fg.contains("eval=frame"), "animated overlay must re-eval position per frame: {fg}");
+    assert!(
+        fg.contains("48*(W-w)/1344"),
+        "x should interpolate to a 48px left inset: {fg}"
+    );
+    assert!(
+        fg.contains("656*(H-h)/756"),
+        "y should rest 656px down (1080-324-100): {fg}"
+    );
+    assert!(
+        fg.contains("eval=frame"),
+        "animated overlay must re-eval position per frame: {fg}"
+    );
 }
 
 #[test]
@@ -386,13 +421,26 @@ fn pip_explicit_size_and_static_margin() {
         outputs: vec![],
         project: make_project(), // 1920x1080
         assets: vec![
-            IrAsset { name: "main_vid".into(), kind: IrAssetKind::Video, path: PathBuf::from("main.mp4"), media_info: None },
-            IrAsset { name: "cam".into(), kind: IrAssetKind::Video, path: PathBuf::from("cam.mp4"), media_info: None },
+            IrAsset {
+                name: "main_vid".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("main.mp4"),
+                media_info: None,
+            },
+            IrAsset {
+                name: "cam".into(),
+                kind: IrAssetKind::Video,
+                path: PathBuf::from("cam.mp4"),
+                media_info: None,
+            },
         ],
         timeline: IrTimeline {
             name: "main".into(),
             tracks: vec![
-                IrTrack { kind: IrTrackKind::Video, items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))] },
+                IrTrack {
+                    kind: IrTrackKind::Video,
+                    items: vec![IrTrackItem::Clip(make_clip("main_vid", "main.mp4"))],
+                },
                 IrTrack {
                     kind: IrTrackKind::Overlay,
                     items: vec![IrTrackItem::Pip(IrPip {
@@ -412,6 +460,7 @@ fn pip_explicit_size_and_static_margin() {
                         margin_y: 100.0,
                         width: 300.0,
                         height: 300.0,
+                        ..Default::default()
                     })],
                 },
             ],
@@ -420,9 +469,15 @@ fn pip_explicit_size_and_static_margin() {
     let cmd = veac_codegen::ffmpeg::generate(&ir, Path::new("out.mp4"));
     let fg = cmd.filter_graph.expect("should have filter_complex");
     // Square size from width/height, not scale (0.25*1920=480 would be wrong).
-    assert!(fg.contains("scale=300:300"), "explicit px size should win over scale: {fg}");
+    assert!(
+        fg.contains("scale=300:300"),
+        "explicit px size should win over scale: {fg}"
+    );
     // Static bottom-left inset: x=margin_x=40, y=H-h-margin_y=1080-300-100=680.
-    assert!(fg.contains("overlay=x=40:y=680"), "static margin should inset to a constant corner: {fg}");
+    assert!(
+        fg.contains("overlay=x=40:y=680"),
+        "static margin should inset to a constant corner: {fg}"
+    );
 }
 
 #[test]

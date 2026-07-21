@@ -1,5 +1,6 @@
 /// FFmpeg filter graph builder — core structure and rendering.
 mod audio;
+mod card;
 mod effects;
 mod text;
 mod transform;

@@ -86,7 +86,7 @@ pub struct IrFreeze {
 }
 
 /// Picture-in-picture overlay.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IrPip {
     pub asset_name: String,
     pub asset_path: PathBuf,
@@ -120,6 +120,12 @@ pub struct IrPip {
     pub width: f64,
     /// Explicit pip height in px, overriding `scale * output_height`. `0` = derive from `scale`.
     pub height: f64,
+    /// Card styling (fit / rounded corners / drop shadow).
+    pub style: CardStyle,
+    /// Explicit pixel x, overriding the anchored position. `None` = use anchor/margin.
+    pub x: Option<f64>,
+    /// Explicit pixel y, overriding the anchored position.
+    pub y: Option<f64>,
 }
 
 /// Subtitle (.srt) import.
@@ -139,16 +145,22 @@ pub struct IrOutputConfig {
     pub quality: Option<Quality>,
 }
 
-/// How the video content is fitted into the output frame.
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// How the video content is fitted into the output frame (and how an overlay source is
+/// fitted into its target box).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum FitMode {
+    /// Stretch to the box, ignoring aspect (legacy overlay behavior).
+    #[default]
     Fill,
+    /// Fit inside the box preserving aspect (may leave transparent margins).
     Letterbox,
+    /// Cover the box preserving aspect, cropping the overflow.
     Crop,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Position {
+    #[default]
     Center,
     TopLeft,
     TopRight,

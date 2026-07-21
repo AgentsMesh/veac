@@ -1,7 +1,7 @@
 /// Build filter chains for clips with transitions, speed, and effects.
 use std::collections::HashMap;
 
-use veac_lang::ir::{IrClip, IrTrackItem, IrTransition};
+use veac_lang::ir::{IrAssetKind, IrClip, IrTrackItem, IrTransition};
 
 use crate::filter_graph::FilterGraph;
 
@@ -36,8 +36,9 @@ pub fn build_clip_filters(
                         let mut v_labels = vec![v_label.clone()];
                         let mut a_labels = vec![a_label.clone()];
                         for _ in 1..count {
-                            let (vl, al) =
-                                process_single_clip(clip, input_map, graph, width, height, fps, skip_audio);
+                            let (vl, al) = process_single_clip(
+                                clip, input_map, graph, width, height, fps, skip_audio,
+                            );
                             v_labels.push(vl);
                             a_labels.push(al);
                         }
@@ -116,7 +117,13 @@ fn process_single_clip(
 ) -> (String, String) {
     let idx = input_map[&clip.asset_name];
     let v_in = format!("{idx}:v");
-    let v_label = graph.add_trim(&v_in, clip.from_sec, clip.to_sec);
+    // A still image input is a single frame — `trim`/`duration` on it collapses. Loop it to the
+    // clip's duration so an image on the main track honors `duration`/`to` like any other clip.
+    let v_label = if clip.asset_kind == IrAssetKind::Image {
+        graph.add_image_loop(&v_in, estimate_clip_duration_raw(clip), fps)
+    } else {
+        graph.add_trim(&v_in, clip.from_sec, clip.to_sec)
+    };
     let v_label = apply_video_effects(clip, v_label, graph, width, height, fps);
 
     let a_label = if skip_audio {

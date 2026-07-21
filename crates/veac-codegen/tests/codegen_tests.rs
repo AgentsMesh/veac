@@ -38,9 +38,10 @@ fn make_text_overlay() -> IrTextOverlay {
         fade_in_sec: None,
         fade_out_sec: None,
         resolved_font_path: None,
-                background: None,
-                background_padding: None,
-                margin: None,
+        background: None,
+        background_padding: None,
+        margin: None,
+        ..Default::default()
     }
 }
 

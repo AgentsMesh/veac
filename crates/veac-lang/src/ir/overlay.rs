@@ -1,10 +1,54 @@
 /// Overlay and transition IR types.
 use std::path::PathBuf;
 
-use super::Position;
+use super::{FitMode, Position};
+
+/// A soft drop shadow cast by a styled overlay (or text). Rendered as a blurred, offset,
+/// semi-transparent black silhouette composited beneath the element — the depth cue that
+/// makes a widget read as a floating card.
+#[derive(Debug, Clone)]
+pub struct Shadow {
+    pub blur: f64,
+    pub opacity: f64,
+    pub dx: f64,
+    pub dy: f64,
+    pub color: String,
+}
+
+impl Default for Shadow {
+    fn default() -> Self {
+        Self {
+            blur: 24.0,
+            opacity: 0.5,
+            dx: 0.0,
+            dy: 18.0,
+            color: "black".into(),
+        }
+    }
+}
+
+/// A stroke drawn around text (drawtext `borderw`/`bordercolor`).
+#[derive(Debug, Clone)]
+pub struct Outline {
+    pub width: u32,
+    pub color: String,
+}
+
+/// Shared visual styling for a composited overlay ("card"): aspect-preserving fit,
+/// rounded corners, and a drop shadow. One owner reused by both image and pip overlays
+/// so the "make it a card" mechanism lives in a single place.
+#[derive(Debug, Clone, Default)]
+pub struct CardStyle {
+    /// Corner radius in pixels. `None` = square corners.
+    pub radius: Option<u32>,
+    /// Drop shadow. `None` = no shadow.
+    pub shadow: Option<Shadow>,
+    /// How the source is fitted into the target box. `None` = `Fill` (stretch, legacy).
+    pub fit: Option<FitMode>,
+}
 
 /// A fully resolved text overlay with all times in seconds.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IrTextOverlay {
     pub content: String,
     pub at_sec: f64,
@@ -30,6 +74,14 @@ pub struct IrTextOverlay {
     /// Only affects the vertical offset for top/bottom positions (e.g. lower-third subtitles
     /// that must clear a player's bottom UI). `None` keeps the default 10px anchor.
     pub margin: Option<u32>,
+    /// Optional soft shadow behind the glyphs (legibility over busy footage).
+    pub shadow: Option<Shadow>,
+    /// Optional stroke around the glyphs.
+    pub outline: Option<Outline>,
+    /// Explicit pixel x, overriding the anchor's horizontal position. `None` = use anchor.
+    pub x: Option<f64>,
+    /// Explicit pixel y, overriding the anchor's vertical position. `None` = use anchor.
+    pub y: Option<f64>,
 }
 
 /// A transition between two adjacent clips.
@@ -122,7 +174,7 @@ impl TransitionKind {
 }
 
 /// A fully resolved image overlay.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IrImageOverlay {
     pub asset_name: String,
     pub asset_path: PathBuf,
@@ -131,4 +183,19 @@ pub struct IrImageOverlay {
     pub position: Position,
     pub scale: Option<f64>,
     pub opacity: Option<f64>,
+    /// Explicit target width in px (overrides `scale`). Pairs with `height`; either alone
+    /// preserves aspect via `fit`. `None` = derive from `scale`.
+    pub width: Option<f64>,
+    /// Explicit target height in px (overrides `scale`).
+    pub height: Option<f64>,
+    /// Entrance alpha fade in seconds (parity with pip) — lets a caption/card dissolve in.
+    pub fade_in_sec: Option<f64>,
+    /// Exit alpha fade in seconds.
+    pub fade_out_sec: Option<f64>,
+    /// Card styling (fit / rounded corners / drop shadow).
+    pub style: CardStyle,
+    /// Explicit pixel x, overriding the anchor. `None` = use anchor.
+    pub x: Option<f64>,
+    /// Explicit pixel y, overriding the anchor.
+    pub y: Option<f64>,
 }

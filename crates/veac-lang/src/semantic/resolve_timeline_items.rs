@@ -87,6 +87,9 @@ impl SemanticAnalyzer<'_> {
         let mut margin_y = 0.0;
         let mut width = 0.0;
         let mut height = 0.0;
+        let mut style = CardStyle::default();
+        let mut x = None;
+        let mut y = None;
 
         for attr in &pip.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -115,7 +118,11 @@ impl SemanticAnalyzer<'_> {
                 "margin_y" => margin_y = self.expr_to_f64(val, "margin_y")?,
                 "width" => width = self.expr_to_f64(val, "width")?,
                 "height" => height = self.expr_to_f64(val, "height")?,
-                _ => {}
+                "x" => x = Some(self.expr_to_f64(val, "x")?),
+                "y" => y = Some(self.expr_to_f64(val, "y")?),
+                other => {
+                    self.apply_card_attr(other, val, &mut style)?;
+                }
             }
         }
 
@@ -136,6 +143,9 @@ impl SemanticAnalyzer<'_> {
             margin_y,
             width,
             height,
+            style,
+            x,
+            y,
         })
     }
 }

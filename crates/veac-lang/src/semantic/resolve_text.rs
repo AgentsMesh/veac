@@ -25,6 +25,18 @@ impl SemanticAnalyzer<'_> {
         let mut background = None;
         let mut background_padding = None;
         let mut margin = None;
+        let mut shadow: Option<Shadow> = None;
+        let mut outline: Option<Outline> = None;
+        let mut x = None;
+        let mut y = None;
+        // Text shadow is a hard drawtext shadow (no blur); tighter default offset than a card's.
+        let text_shadow = || Shadow {
+            blur: 0.0,
+            opacity: 1.0,
+            dx: 2.0,
+            dy: 2.0,
+            color: "black".into(),
+        };
 
         for attr in &text.attributes {
             let val = self.resolve_expression(&attr.value, variables)?;
@@ -58,6 +70,40 @@ impl SemanticAnalyzer<'_> {
                     background_padding = Some(self.expr_to_u32(val, "background_padding")?);
                 }
                 "margin" => margin = Some(self.expr_to_u32(val, "margin")?),
+                "shadow" => {
+                    if self.expr_to_bool(val, "shadow")? {
+                        shadow.get_or_insert_with(text_shadow);
+                    } else {
+                        shadow = None;
+                    }
+                }
+                "shadow_x" => {
+                    shadow.get_or_insert_with(text_shadow).dx = self.expr_to_f64(val, "shadow_x")?
+                }
+                "shadow_y" => {
+                    shadow.get_or_insert_with(text_shadow).dy = self.expr_to_f64(val, "shadow_y")?
+                }
+                "shadow_color" => {
+                    shadow.get_or_insert_with(text_shadow).color = self.expr_to_color(val)
+                }
+                "outline" => {
+                    outline
+                        .get_or_insert_with(|| Outline {
+                            width: 0,
+                            color: "black".into(),
+                        })
+                        .width = self.expr_to_u32(val, "outline")?
+                }
+                "outline_color" => {
+                    outline
+                        .get_or_insert_with(|| Outline {
+                            width: 2,
+                            color: "black".into(),
+                        })
+                        .color = self.expr_to_color(val)
+                }
+                "x" => x = Some(self.expr_to_f64(val, "x")?),
+                "y" => y = Some(self.expr_to_f64(val, "y")?),
                 _ => {}
             }
         }
@@ -76,6 +122,10 @@ impl SemanticAnalyzer<'_> {
             background,
             background_padding,
             margin,
+            shadow,
+            outline,
+            x,
+            y,
         })
     }
 }
