@@ -84,8 +84,8 @@ property map. Target membership and active intervals resolve before codegen.
 A pipeline preserves stage order. Color stages include typed primary controls,
 curves, wheels, matrices, color-space transforms, tone maps, and LUTs. A LUT
 stage references a project `lut-1d` or `lut-3d` material. LUT1D permits
-`nearest`, `linear`, and `spline`; LUT3D permits `nearest`, `trilinear`, and
-`tetrahedral`.
+`nearest`, `linear`, `cosine`, `cubic`, and `spline`; LUT3D permits `nearest`,
+`trilinear`, `tetrahedral`, `pyramid`, and `prism`.
 
 Video effects, masks, transforms, mattes, opacity, and blend modes are closed
 unions. Unsupported variants fail before backend generation; raw FFmpeg filter
@@ -137,8 +137,9 @@ format. No independent audio-file output exists in the V3 authoring parser.
 
 ## Edit Kernel
 
-An EditBatch is canonical JSON containing optional `base_revision`, ordered
-`preconditions`, and ordered tagged `operations`. Operations are a closed union
+An EditBatch is canonical JSON containing required `operation_id`,
+`base_revision`, and `atomic` fields plus ordered `preconditions` and tagged
+`operations`. Operations are a closed union
 covering Insert, Set, Move, Remove, locks, and typed convenience setters.
 
 The editor checks revision, preconditions, and locks; rewrites typed references

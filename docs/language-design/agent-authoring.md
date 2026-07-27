@@ -48,7 +48,7 @@ project sample {
     }
 
     resource video host {
-        locator file "media/host.mov";
+        locator local { path "media/host.mov"; }
         streams { video auto; audio disabled; }
     }
 
@@ -63,10 +63,14 @@ project sample {
         }
     }
 
-    output video preview from sequence main to "preview.mp4" {
-        container mp4;
-        video { codec h264; }
-        audio { none; }
+    output video preview {
+        sequence main;
+        file-name "preview.mp4";
+        encoding {
+            container mp4;
+            video { codec h264; }
+            audio { none; }
+        }
     }
 }
 ```
@@ -83,7 +87,7 @@ Item sources are exactly:
 - `source caption { text "..."; ... }`
 - `source generated <transparent|silence|solid|gradient|shape> { ... }`
 - `source sequence sequence <id>;`
-- `source multicam multicam <id> { switch angle <id>; }`
+- `source multicam multicam <id> { switch angle <id> { at <time>; duration <time>; } }`
 
 Use `source generated solid`, never `source color`. Caption text is an item
 source; subtitle files such as SRT, VTT, or ASS are `output
@@ -117,9 +121,9 @@ carry a mapping.
 ## Build Ordered Processing
 
 Use `pipeline` for ordered color and effect stages. Use a named `lut-1d` or
-`lut-3d` resource in a `lut` stage. LUT1D permits `nearest`, `linear`, or
-`spline`; LUT3D permits `nearest`, `trilinear`, or `tetrahedral`. Do not flatten
-stages into item properties.
+`lut-3d` resource in a `lut` stage. LUT1D permits `nearest`, `linear`, `cosine`,
+`cubic`, or `spline`; LUT3D permits `nearest`, `trilinear`, `tetrahedral`,
+`pyramid`, or `prism`. Do not flatten stages into item properties.
 
 Use `scope composite-band`, `scope layer`, or `scope items` for first-class
 Apply records. The scope selects the target; the pipeline selects ordered
@@ -150,13 +154,13 @@ For an IR edit, generate canonical JSON, not invented syntax:
 
 ```json
 {
+  "operation_id": "edit-disable-host",
   "base_revision": 0,
+  "atomic": true,
   "preconditions": [],
   "operations": [
     {
       "type": "set_clip_enabled",
-      "sequence_id": "main",
-      "track_id": "picture",
       "clip_id": "host-shot",
       "enabled": false
     }

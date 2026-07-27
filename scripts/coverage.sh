@@ -87,7 +87,7 @@ run_package() {
   fi
   export CARGO_TARGET_DIR="${COVERAGE_TARGET_ROOT:-target}/coverage-$package"
   cargo llvm-cov clean --workspace
-  cargo llvm-cov -p "$package" --all-features --lib --bins --no-report
+    cargo llvm-cov -p "$package" --all-features --lib --bins --tests --no-report
   report_gate -p "$package"
 }
 

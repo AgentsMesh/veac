@@ -2,8 +2,9 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use serde_json::Value;
 use veac_lang::authoring::{
-    lower, parse, AudioCodec, AudioStemFormat, CaptionSidecarFormat, ContainerFormat, Document,
-    ImageFormat, OutputDecl, ResourceKind, ResourceLocator, VideoCodec, VideoScope,
+    lower_document, parse, AudioCodec, AudioStemFormat, CaptionSidecarFormat, Document,
+    ImageFormat, OutputDecl, OutputEncoding, OutputFormat, ResourceKind, ResourceLocator,
+    VideoCodec, VideoScope,
 };
 
 fn root() -> PathBuf {
@@ -14,10 +15,8 @@ fn load_fixture(name: &str) -> Document {
     let path = root().join("examples/workflow-evidence").join(name);
     let source = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{path:?}: {error}"));
     let document = parse(&source).unwrap_or_else(|error| panic!("{path:?}: {error}"));
-    let envelope = lower(&document).unwrap_or_else(|error| panic!("{path:?}: {error}"));
-    envelope
-        .validate()
-        .unwrap_or_else(|error| panic!("{path:?}: {error}"));
+    let envelope = lower_document(&document).unwrap_or_else(|error| panic!("{path:?}: {error}"));
+    veac_ir::validate(&envelope).unwrap_or_else(|error| panic!("{path:?}: {error}"));
     document
 }
 
@@ -75,23 +74,23 @@ fn delivery_workflow_fixture_matches_catalog() {
 }
 
 fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
-    match output {
-        OutputDecl::Video(value) => {
-            ids.insert(container_id(value.encoding.format).to_owned());
-            ids.insert(video_codec_id(value.encoding.video.codec).to_owned());
-            if let Some(audio) = &value.encoding.audio {
+    match &output.encoding {
+        OutputEncoding::Video(value) => {
+            ids.insert(container_id(value.container).to_owned());
+            ids.insert(video_codec_id(value.video.codec).to_owned());
+            if let Some(audio) = &value.audio {
                 ids.insert(audio_codec_id(audio.codec).to_owned());
             }
         }
-        OutputDecl::AudioStem(value) => {
-            let id = match value.encoding.format {
+        OutputEncoding::AudioStem(value) => {
+            let id = match value.format {
                 AudioStemFormat::Wav => "delivery.audio-stem-format.wav",
                 AudioStemFormat::Flac => "delivery.audio-stem-format.flac",
             };
             ids.insert(id.to_owned());
         }
-        OutputDecl::ImageSequence(value) => {
-            let id = match value.encoding.format {
+        OutputEncoding::ImageSequence(value) => {
+            let id = match value.format {
                 ImageFormat::Png => "delivery.image-format.png",
                 ImageFormat::Jpeg => "delivery.image-format.jpeg",
                 ImageFormat::Tiff => "delivery.image-format.tiff",
@@ -99,16 +98,16 @@ fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
             };
             ids.insert(id.to_owned());
         }
-        OutputDecl::CaptionSidecar(value) => {
-            let id = match value.encoding.format {
+        OutputEncoding::CaptionSidecar(value) => {
+            let id = match value.format {
                 CaptionSidecarFormat::Srt => "delivery.caption-format.srt",
                 CaptionSidecarFormat::WebVtt => "delivery.caption-format.web-vtt",
                 CaptionSidecarFormat::Ass => "delivery.caption-format.ass",
             };
             ids.insert(id.to_owned());
         }
-        OutputDecl::Scope(value) => {
-            let id = match value.encoding.scope {
+        OutputEncoding::Scope(value) => {
+            let id = match value.scope {
                 VideoScope::Waveform => "delivery.scope.waveform",
                 VideoScope::Vectorscope => "delivery.scope.vectorscope",
                 VideoScope::Histogram => "delivery.scope.histogram",
@@ -118,13 +117,13 @@ fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
     }
 }
 
-fn container_id(value: ContainerFormat) -> &'static str {
+fn container_id(value: OutputFormat) -> &'static str {
     match value {
-        ContainerFormat::Mp4 => "delivery.container.mp4",
-        ContainerFormat::Mov => "delivery.container.mov",
-        ContainerFormat::Mkv => "delivery.container.mkv",
-        ContainerFormat::WebM => "delivery.container.webm",
-        ContainerFormat::Mxf => "delivery.container.mxf",
+        OutputFormat::Mp4 => "delivery.container.mp4",
+        OutputFormat::Mov => "delivery.container.mov",
+        OutputFormat::Mkv => "delivery.container.mkv",
+        OutputFormat::Webm => "delivery.container.webm",
+        OutputFormat::Mxf => "delivery.container.mxf",
     }
 }
 

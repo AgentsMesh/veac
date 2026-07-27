@@ -47,11 +47,11 @@ Media resources are closed by kind and location:
 
 ```veac
 resource video camera {
-    locator file "media/camera.mov";
+    locator local { path "media/camera.mov"; }
     streams { video auto; audio disabled; }
 }
 resource audio voice {
-    locator url "https://example.test/voice.wav";
+    locator remote { uri "https://example.test/voice.wav"; identity sha256 "0000000000000000000000000000000000000000000000000000000000000000"; }
     streams { video disabled; audio auto; }
 }
 ```
@@ -61,8 +61,8 @@ stream intent. Probe normalization records exact selections for planning.
 Fonts and LUTs use the same project resource primitive:
 
 ```veac
-resource font inter { locator file "fonts/Inter.ttf"; }
-resource lut-3d show-look { locator file "color/show.cube"; }
+resource font inter { locator local { path "fonts/Inter.ttf"; } }
+resource lut-3d show-look { locator local { path "color/show.cube"; } }
 ```
 
 ## Closed Item Sources
@@ -82,7 +82,7 @@ source text { text "Chapter one"; style text-style title; }
 source caption { text "Hello"; language "en"; speaker "host"; }
 source generated solid { color #101820FF; }
 source sequence sequence intro;
-source multicam multicam interview { switch angle wide; }
+source multicam multicam interview { switch angle wide { at 0s; duration 4s; } }
 ```
 
 Generated kinds are `transparent`, `silence`, `solid`, `gradient`, and `shape`.
@@ -116,7 +116,7 @@ Curve keys are ordered by record time, and V3 source-time interpolation is only
 
 ## Multicam
 
-A project-level multicam group owns angles, sync, and switch definitions:
+A project-level multicam group owns angles and sync; item sources own switches:
 
 ```veac
 multicam interview {

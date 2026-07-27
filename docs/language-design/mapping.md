@@ -45,20 +45,20 @@ not interchangeable strings.
 
 ```veac
 resource video host {
-    locator file "media/host.mov";
+    locator local { path "media/host.mov"; }
     streams { video auto; audio disabled; }
     probe required;
 }
 ```
 
-This lowers to a video `Material` with a file locator, probe policy, video
+This lowers to a video `Material` with a local locator, probe policy, video
 intent `auto`, and disabled audio. Authoring permits only `auto` and `disabled`;
 probe normalization records exact canonical stream selection and media facts
 separately. Backend code does not repeat the selection heuristic.
 
 Resource kinds are closed: `video`, `audio`, `image`, `font`, `lut-1d`, and
-`lut-3d`. Locator kinds are `file`, `url`, and `provider`; locator payloads stay
-typed. LUT and font files are materials, not ad hoc strings embedded in stages.
+`lut-3d`. Locators are local paths or remote URIs with required SHA-256 identity;
+their payloads stay typed. LUT and font files are materials, not stage strings.
 
 ## Source Mapping
 
@@ -111,9 +111,9 @@ lut show {
 ```
 
 The LUT reference resolves to a LUT material. LUT1D accepts `nearest`, `linear`,
-or `spline`; LUT3D accepts `nearest`, `trilinear`, or `tetrahedral`. Other
-interpolation names are parsed only where their own primitive allows them and
-cannot leak into LUT or source-time semantics.
+`cosine`, `cubic`, or `spline`; LUT3D accepts `nearest`, `trilinear`,
+`tetrahedral`, `pyramid`, or `prism`. Other interpolation names are parsed only
+where their own primitive allows them and cannot leak into other semantics.
 
 Scoped processing lowers to first-class Apply:
 
@@ -160,13 +160,13 @@ There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
 
 ```json
 {
+  "operation_id": "edit-disable-host",
   "base_revision": 12,
+  "atomic": true,
   "preconditions": [],
   "operations": [
     {
       "type": "set_clip_enabled",
-      "sequence_id": "main",
-      "track_id": "picture",
       "clip_id": "host-shot",
       "enabled": false
     }

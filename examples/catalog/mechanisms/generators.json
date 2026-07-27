@@ -16,7 +16,7 @@
     {"id":"generator.paint","title":"Generated shape paint","family":"Shape paint","coverage":"workflow_evidence","evidence":"crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs"},
     {"id":"generator.stroke.solid","title":"Solid shape stroke","family":"Shape strokes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.stroke.gradient","title":"Gradient shape stroke","family":"Shape strokes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
-    {"id":"resource.kind.font","title":"Font resource kind","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac","capability_id":"P1-16"},
-    {"id":"resource.locator.remote","title":"Pinned remote resource locator","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac","capability_id":"P1-34"}
+    {"id":"resource.kind.font","title":"Font resource kind","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac"},
+    {"id":"resource.locator.remote","title":"Pinned remote resource locator","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac"}
   ]
 }
