@@ -49,6 +49,7 @@ structure: ## Enforce file-size and production test-boundary rules.
 
 check-language-docs: ## Verify V3 documentation contracts
 	bash scripts/check-language-docs.sh
+	$(CARGO) test -p veac-lang --test language_docs_contract
 
 clippy: ## Run Clippy with warnings denied.
 	$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings

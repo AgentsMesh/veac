@@ -94,7 +94,7 @@ text is not a language primitive.
 ## Media And Streams Kernel
 
 Authoring resources are closed to video, audio, image, font, LUT1D, and LUT3D.
-Locations are typed file, URL, or provider locators. Video and audio selection
+Locations are `local` paths or pinned `remote` URIs. Video and audio selection
 are independently `auto` or `disabled` and lower to canonical stream intent.
 Probe normalization records exact stream selections and media facts separately.
 Planning does not rerun authoring selection heuristics.

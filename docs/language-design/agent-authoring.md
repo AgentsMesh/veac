@@ -69,7 +69,7 @@ project sample {
         encoding {
             container mp4;
             video { codec h264; }
-            audio { none; }
+            audio none;
         }
     }
 }
@@ -154,14 +154,14 @@ For an IR edit, generate canonical JSON, not invented syntax:
 
 ```json
 {
-  "operation_id": "edit-disable-host",
+  "operation_id": "op_disable_host",
   "base_revision": 0,
   "atomic": true,
   "preconditions": [],
   "operations": [
     {
       "type": "set_clip_enabled",
-      "clip_id": "host-shot",
+      "clip_id": "clip_host_shot",
       "enabled": false
     }
   ]

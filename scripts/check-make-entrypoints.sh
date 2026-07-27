@@ -54,8 +54,9 @@ rg -q -- '--test cli_tests' "$ROOT/Makefile" || {
   exit 1
 }
 
-for target in check-example-capabilities test-example-capabilities \
-  check-examples build-examples serve-examples clean-examples e2e; do
+for target in check-language-docs check-example-capabilities \
+  test-example-capabilities check-examples build-examples serve-examples \
+  clean-examples e2e; do
   rg -q -- "^$target:" "$ROOT/Makefile" || {
     echo "Makefile does not expose target: $target" >&2
     exit 1

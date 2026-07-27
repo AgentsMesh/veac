@@ -29,6 +29,7 @@ require_in() {
 }
 
 reject 'locator[[:space:]]+(file|url|provider)\b' 'legacy resource locator syntax'
+reject 'provider locators?' 'authoring supports only local and remote locators'
 reject 'output video .*from sequence' 'legacy video output syntax'
 reject 'switch angle [^;{]+;' 'multicam switch without a time range'
 reject 'optional `base_revision`' 'EditBatch base_revision is required'

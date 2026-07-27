@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use veac_ir::{Clip, ClipSource, ProjectEnvelope, TextStyle};
+use veac_ir::{Clip, ClipSource, ProjectEnvelope, Sequence, TextStyle};
 use veac_lang::authoring::{lower_document, parse};
 
 #[derive(Debug)]
@@ -39,13 +39,19 @@ pub fn assert_preview_evidence(
     );
 }
 
-pub fn clips(envelope: &ProjectEnvelope) -> impl Iterator<Item = &Clip> {
+pub fn entry_sequence(envelope: &ProjectEnvelope) -> &Sequence {
     envelope
         .project
         .sequences
         .iter()
-        .filter(|sequence| sequence.id == envelope.project.entry_sequence_id)
-        .flat_map(|sequence| &sequence.tracks)
+        .find(|sequence| sequence.id == envelope.project.entry_sequence_id)
+        .expect("entry sequence")
+}
+
+pub fn clips(envelope: &ProjectEnvelope) -> impl Iterator<Item = &Clip> {
+    entry_sequence(envelope)
+        .tracks
+        .iter()
         .flat_map(|track| &track.clips)
 }
 
@@ -111,6 +117,10 @@ fn lower_target(target_id: &str) -> ProjectEnvelope {
     let relative = relative
         .strip_prefix("examples/")
         .unwrap_or_else(|| panic!("gallery target {target_id} has invalid source {relative}"));
+    lower_example(relative)
+}
+
+pub fn lower_example(relative: &str) -> ProjectEnvelope {
     let path = examples_root().join(relative);
     let source = fs::read_to_string(&path).unwrap();
     let document =

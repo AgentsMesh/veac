@@ -1,122 +1,117 @@
-use std::collections::BTreeSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{collections::BTreeSet, fs, path::Path};
 
 use serde_json::Value;
-use veac_lang::authoring::{
-    parse, AnnotationPayloadDecl, ApplyScope, Document, RelationDecl, RelationKind, SourceDecl,
-    StructureDecl, TemplateSlotDecl,
+use veac_ir::{
+    AnnotationPayload, ApplyTarget, ClipSource, ProjectEnvelope, RelationKind, SequenceId,
 };
 
-const EXAMPLES: &[&str] = &[
-    "examples/executable-mechanisms/main.veac",
-    "examples/apply-scopes/main.veac",
-    "examples/all-features/main.veac",
-    "examples/nested-and-multicam/main.veac",
-    "examples/template-fill/main.veac",
-];
+use crate::support::{assert_preview_evidence, clips, entry_sequence, lower_example};
 
 #[test]
-fn project_structure_catalog_matches_typed_examples() {
-    let root = workspace_root();
-    let catalog = root.join("examples/catalog/mechanisms/project-structure.json");
-    let expected: Value =
-        serde_json::from_str(&fs::read_to_string(catalog).expect("read project structure catalog"))
-            .expect("parse project structure catalog");
-    let expected = expected
-        .get("mechanisms")
-        .and_then(Value::as_array)
-        .expect("mechanisms must be an array")
-        .iter()
-        .map(|mechanism| {
-            mechanism
-                .get("id")
-                .and_then(Value::as_str)
-                .expect("mechanism id must be a string")
-                .to_owned()
-        })
-        .collect::<BTreeSet<_>>();
+fn project_structure_preview_rows_have_entry_sequence_evidence() {
+    assert_preview_evidence("project-structure.json", preview_evidence);
+}
 
+#[test]
+fn project_structure_workflow_rows_match_typed_examples() {
     let mut actual = BTreeSet::new();
-    for path in EXAMPLES {
-        let source = fs::read_to_string(root.join(path)).expect("read example");
-        collect_document(&parse(&source).expect("parse example"), &mut actual);
+    for relative in [
+        "nested-and-multicam/main.veac",
+        "executable-mechanisms/main.veac",
+    ] {
+        actual.extend(workflow_evidence(&lower_example(relative)));
     }
-    assert_eq!(actual, expected);
+    assert_eq!(actual, catalog_ids("workflow_evidence"));
 }
 
-fn collect_document(document: &Document, found: &mut BTreeSet<String>) {
-    let project = &document.project;
-    if !project.multicams.is_empty() {
-        insert(found, "project.multicam");
-    }
-    for annotation in &project.annotations {
-        collect_annotation(&annotation.payload, found);
-    }
-    for sequence in &project.sequences {
-        for layer in &sequence.layers {
-            for item in &layer.items {
-                match &item.source {
-                    SourceDecl::Sequence { .. } => insert(found, "source.sequence"),
-                    SourceDecl::Multicam { .. } => insert(found, "source.multicam"),
-                    _ => {}
-                }
-                if let Some(slot) = &item.template_slot {
-                    insert(
-                        found,
-                        match slot {
-                            TemplateSlotDecl::Media { .. } => "template.slot.media",
-                            TemplateSlotDecl::Text { .. } => "template.slot.text",
-                        },
-                    );
-                }
+#[test]
+fn non_entry_sequence_structure_is_not_preview_evidence() {
+    let mut envelope = lower_example("nested-and-multicam/main.veac");
+    envelope.project.entry_sequence_id = SequenceId::new("seq_intro").unwrap();
+    let actual = preview_evidence(&envelope);
+    assert!(actual.is_empty(), "non-entry evidence leaked: {actual:?}");
+}
+
+fn preview_evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    let entry = entry_sequence(envelope);
+    for apply in &entry.applies {
+        found.insert(
+            match &apply.target {
+                ApplyTarget::CompositeBand { .. } => "apply.scope.composite-band",
+                ApplyTarget::Layer { .. } => "apply.scope.layer",
+                ApplyTarget::ItemSet { .. } => "apply.scope.items",
             }
-        }
-        for structure in &sequence.structures {
-            match structure {
-                StructureDecl::Apply(apply) => insert(
-                    found,
-                    match &apply.scope {
-                        ApplyScope::CompositeBand { .. } => "apply.scope.composite-band",
-                        ApplyScope::Layer { .. } => "apply.scope.layer",
-                        ApplyScope::Items { .. } => "apply.scope.items",
-                    },
-                ),
-                StructureDecl::Relation(relation) => collect_relation(relation, found),
+            .to_owned(),
+        );
+    }
+    for clip in clips(envelope) {
+        match &clip.source {
+            ClipSource::Sequence { .. } => {
+                found.insert("source.sequence".to_owned());
             }
+            ClipSource::Multicam { .. } => {
+                found.insert("source.multicam".to_owned());
+            }
+            _ => {}
+        }
+        if clip.replaceable.is_some() {
+            found.insert("template.slot.media".to_owned());
+        }
+        if clip.template_editable_text {
+            found.insert("template.slot.text".to_owned());
         }
     }
-}
-
-fn collect_relation(relation: &RelationDecl, found: &mut BTreeSet<String>) {
-    match &relation.kind {
-        RelationKind::Group(_) => insert(found, "relation.group"),
-        RelationKind::AvLink(_) => insert(found, "relation.av-link"),
-        RelationKind::Transition(_) | RelationKind::Matte(_) | RelationKind::Sidechain(_) => {}
+    for relation in envelope
+        .project
+        .relations
+        .iter()
+        .filter(|relation| relation.sequence_id == entry.id)
+    {
+        match &relation.kind {
+            RelationKind::Group { .. } => {
+                found.insert("relation.group".to_owned());
+            }
+            RelationKind::AvLink { .. } => {
+                found.insert("relation.av-link".to_owned());
+            }
+            _ => {}
+        }
     }
+    found
 }
 
-fn collect_annotation(payload: &AnnotationPayloadDecl, found: &mut BTreeSet<String>) {
-    insert(
-        found,
-        match payload {
-            AnnotationPayloadDecl::Marker(_) => "annotation.marker",
-            AnnotationPayloadDecl::Language(_) => "annotation.language",
-            AnnotationPayloadDecl::SceneBoundary(_) => "annotation.scene-boundary",
-            AnnotationPayloadDecl::Scene => "annotation.scene",
-            AnnotationPayloadDecl::Beat(_) => "annotation.beat",
-            AnnotationPayloadDecl::Silence(_) => "annotation.silence",
-            AnnotationPayloadDecl::Filler(_) => "annotation.filler",
-            AnnotationPayloadDecl::Highlight(_) => "annotation.highlight",
-            AnnotationPayloadDecl::Review(_) => "annotation.review",
-        },
-    );
+fn workflow_evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    if !envelope.project.multicam_groups.is_empty() {
+        found.insert("project.multicam".to_owned());
+    }
+    for annotation in &envelope.project.annotations {
+        let id = match &annotation.payload {
+            AnnotationPayload::Marker { .. } => "annotation.marker",
+            AnnotationPayload::Language { .. } => "annotation.language",
+            AnnotationPayload::SceneBoundary { .. } => "annotation.scene-boundary",
+            AnnotationPayload::Scene => "annotation.scene",
+            AnnotationPayload::Beat { .. } => "annotation.beat",
+            AnnotationPayload::Silence { .. } => "annotation.silence",
+            AnnotationPayload::Filler { .. } => "annotation.filler",
+            AnnotationPayload::Highlight { .. } => "annotation.highlight",
+            AnnotationPayload::Review { .. } => "annotation.review",
+        };
+        found.insert(id.to_owned());
+    }
+    found
 }
 
-fn insert(found: &mut BTreeSet<String>, id: &str) {
-    found.insert(id.to_owned());
-}
-
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+fn catalog_ids(coverage: &str) -> BTreeSet<String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let path = root.join("examples/catalog/mechanisms/project-structure.json");
+    let value: Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+    value["mechanisms"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["coverage"] == coverage)
+        .map(|row| row["id"].as_str().unwrap().to_owned())
+        .collect()
 }

@@ -2,15 +2,44 @@ use std::collections::BTreeSet;
 
 use veac_ir::{
     Animatable, AudioFadeCurve, AudioProcessor, Interpolation, PitchPolicy, PlaybackDirection,
-    ProjectEnvelope, Rational, RelationKind, SourceMapping, SourceOutOfRangePolicy, SourceTimeMap,
-    TrackRouting,
+    ProjectEnvelope, Rational, RelationKind, SequenceId, SourceMapping, SourceOutOfRangePolicy,
+    SourceTimeMap, TrackRouting,
 };
 
-use crate::support::{assert_preview_evidence, clips};
+use crate::support::{assert_preview_evidence, clips, entry_sequence, lower_example};
 
 #[test]
 fn preview_timing_and_audio_rows_have_typed_evidence_in_their_target() {
     assert_preview_evidence("timing-audio.json", evidence);
+}
+
+#[test]
+fn non_entry_audio_is_not_preview_evidence() {
+    let mut envelope = lower_example("audio-processing/main.veac");
+    let entry_id = envelope.project.entry_sequence_id.clone();
+    let mut hidden = {
+        let entry = envelope
+            .project
+            .sequences
+            .iter_mut()
+            .find(|sequence| sequence.id == entry_id)
+            .unwrap();
+        let hidden = entry.clone();
+        entry.tracks.clear();
+        hidden
+    };
+    let hidden_id = SequenceId::new("seq_hidden_audio").unwrap();
+    hidden.id = hidden_id.clone();
+    for relation in &mut envelope.project.relations {
+        if relation.sequence_id == entry_id {
+            relation.sequence_id = hidden_id.clone();
+        }
+    }
+    envelope.project.sequences.push(hidden);
+    let actual = evidence(&envelope);
+    assert!(!actual.contains("audio.normalize"));
+    assert!(!actual.contains("audio.routing"));
+    assert!(!actual.contains("audio.sidechain-ducking"));
 }
 
 fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
@@ -26,11 +55,10 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
             interpolation_evidence(&visual.transform.position, &mut found);
         }
     }
-    if envelope
-        .project
-        .sequences
+    let entry = entry_sequence(envelope);
+    if entry
+        .tracks
         .iter()
-        .flat_map(|sequence| &sequence.tracks)
         .any(|track| matches!(track.routing, TrackRouting::AudioBus { .. }))
     {
         found.insert("audio.routing".to_owned());
@@ -39,6 +67,7 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
         .project
         .relations
         .iter()
+        .filter(|relation| relation.sequence_id == entry.id)
         .any(|relation| matches!(relation.kind, RelationKind::Sidechain { .. }))
     {
         found.insert("audio.sidechain-ducking".to_owned());

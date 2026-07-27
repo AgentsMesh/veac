@@ -160,14 +160,14 @@ There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
 
 ```json
 {
-  "operation_id": "edit-disable-host",
+  "operation_id": "op_disable_host",
   "base_revision": 12,
   "atomic": true,
   "preconditions": [],
   "operations": [
     {
       "type": "set_clip_enabled",
-      "clip_id": "host-shot",
+      "clip_id": "clip_host_shot",
       "enabled": false
     }
   ]
