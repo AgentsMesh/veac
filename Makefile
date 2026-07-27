@@ -13,7 +13,7 @@ PORT ?= 8000
 
 .PHONY: help doctor build check fmt fmt-check structure clippy lint test e2e
 .PHONY: coverage-package coverage-packages coverage check-examples build-examples
-.PHONY: serve-examples clean-examples
+.PHONY: serve-examples clean-examples check-language-docs
 .PHONY: check-example-capabilities test-example-capabilities
 
 help: ## Show the available repository commands.
@@ -45,6 +45,10 @@ fmt-check: ## Verify Rust formatting without changing files.
 
 structure: ## Enforce file-size and production test-boundary rules.
 	bash scripts/check-rust-structure.sh
+	bash scripts/check-language-docs.sh
+
+check-language-docs: ## Verify V3 documentation contracts
+	bash scripts/check-language-docs.sh
 
 clippy: ## Run Clippy with warnings denied.
 	$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
