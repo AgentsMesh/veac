@@ -1,0 +1,63 @@
+project transition-gallery {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual scenes {
+      item dissolve-a { source generated solid { color #ffbe0bff; } record { at 0s; duration 2s; } }
+      item dissolve-b { source generated solid { color #fb5607ff; } record { at 2s; duration 2s; } }
+      item fade-a { source generated solid { color #ff006eff; } record { at 4s; duration 2s; } }
+      item fade-b { source generated solid { color #8338ecff; } record { at 6s; duration 2s; } }
+      item wipe-a { source generated solid { color #3a86ffff; } record { at 8s; duration 2s; } }
+      item wipe-b { source generated solid { color #00b4d8ff; } record { at 10s; duration 2s; } }
+      item slide-a { source generated solid { color #06d6a0ff; } record { at 12s; duration 2s; } }
+      item slide-b { source generated solid { color #8ac926ff; } record { at 14s; duration 2s; } }
+      item zoom-a { source generated solid { color #ffca3aff; } record { at 16s; duration 2s; } }
+      item zoom-b { source generated solid { color #ff924cff; } record { at 18s; duration 2s; } }
+      item circle-a { source generated solid { color #f72585ff; } record { at 20s; duration 2s; } }
+      item circle-b { source generated solid { color #7209b7ff; } record { at 22s; duration 2s; } }
+      item pixelize-a { source generated solid { color #4361eeff; } record { at 24s; duration 2s; } }
+      item pixelize-b { source generated solid { color #4cc9f0ff; } record { at 26s; duration 2s; } }
+    }
+    relation transition dissolve-cut {
+      endpoints { from item dissolve-a; to item dissolve-b; }
+      timing { duration 500ms; alignment centered; }
+      style { dissolve; }
+    }
+    relation transition fade-cut {
+      endpoints { from item fade-a; to item fade-b; }
+      timing { duration 500ms; alignment centered; }
+      style { fade { color black; } }
+    }
+    relation transition wipe-cut {
+      endpoints { from item wipe-a; to item wipe-b; }
+      timing { duration 500ms; alignment centered; }
+      style { wipe { direction left; angle 0deg; softness 10%; } }
+    }
+    relation transition slide-cut {
+      endpoints { from item slide-a; to item slide-b; }
+      timing { duration 500ms; alignment centered; }
+      style { slide { direction up; amount 1; } }
+    }
+    relation transition zoom-cut {
+      endpoints { from item zoom-a; to item zoom-b; }
+      timing { duration 500ms; alignment centered; }
+      style { zoom { direction in; amount 1.4; } }
+    }
+    relation transition circle-cut {
+      endpoints { from item circle-a; to item circle-b; }
+      timing { duration 500ms; alignment centered; }
+      style { circle { direction open; softness 10%; } }
+    }
+    relation transition pixelize-cut {
+      endpoints { from item pixelize-a; to item pixelize-b; }
+      timing { duration 500ms; alignment centered; }
+      style { pixelize { amount 65%; } }
+    }
+  }
+}

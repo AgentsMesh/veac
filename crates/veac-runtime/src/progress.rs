@@ -74,3 +74,6 @@ fn parse_time_to_seconds(time_str: &str) -> f64 {
         time_str.parse().unwrap_or(0.0)
     }
 }
+
+#[cfg(test)]
+mod tests;

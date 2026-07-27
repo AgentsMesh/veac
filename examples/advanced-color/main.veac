@@ -1,0 +1,54 @@
+project advanced-color {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource lut-3d cinematic { locator local { path "assets/cinematic.cube"; } }
+  resource lut-1d tone-curve { locator local { path "assets/tone-curve.cube"; } }
+
+  sequence main {
+    layer visual picture {
+      item graded {
+        source generated solid { color #465362ff; }
+        record { at 0s; duration 5s; }
+        modifiers {
+          color cinematic {
+            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
+            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            basic {
+              exposure 0stops; temperature 6500k; tint 0;
+              highlights 0; shadows 0; fade 0%;
+            }
+            matrix {
+              red 1 0 0; green 0 1 0; blue 0 0 1; offset 0 0 0;
+            }
+            hsl { range red; hue 8deg; saturation 0.08; lightness 0; }
+            curves {
+              interpolation monotonic;
+              curve luma { point 0% 0%; point 50% 54%; point 100% 100%; }
+              curve red { point 0% 0%; point 100% 100%; }
+            }
+            wheels { lift 0 0 0.02; gamma 0.01 0 0; gain 0.02 0.01 0; }
+            lut { resource cinematic; interpolation tetrahedral; }
+          }
+        }
+      }
+      item tone-curve {
+        source generated solid { color #465362ff; }
+        record { at 5s; duration 3s; }
+        modifiers {
+          color tone-curve {
+            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
+            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            lut { resource tone-curve; interpolation linear; }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+project captions-and-sidecars {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual background {
+      item canvas {
+        source generated solid { color #111827ff; }
+        record { at 0s; duration 6s; }
+      }
+    }
+    layer caption subtitles {
+      item opening {
+        source caption {
+          content "Captions are timeline sources.";
+          speaker "Narrator";
+          style {
+            font family "Inter"; size 48px; fill #ffffffff;
+            background { color #000000aa; padding 12px; }
+          }
+          layout {
+            box-width 1100px; box-height 180px;
+            wrap word; overflow clip;
+            horizontal-align center; vertical-align bottom;
+          }
+        }
+        record { at 0s; duration 3s; }
+      }
+      item closing {
+        source caption {
+          content "Sidecars select typed caption layers.";
+          speaker "Narrator";
+          style { font family "Inter"; size 48px; fill #ffffffff; }
+        }
+        record { at 3s; duration 3s; }
+      }
+    }
+  }
+
+  output caption-sidecar transcript {
+    sequence main;
+    file-name "captions.vtt";
+    encoding { format web-vtt; tracks { track subtitles; } }
+  }
+}

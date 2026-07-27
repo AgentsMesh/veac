@@ -1,0 +1,107 @@
+project text-animation {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual title {
+      item reveal {
+        source text {
+          content "Every word arrives with intent";
+          style { font family "Inter"; size 64px; weight bold; fill #ffffffff; }
+          layout {
+            box-width 1100px; box-height 220px;
+            wrap word; overflow visible;
+            horizontal-align center; vertical-align middle;
+          }
+          animation {
+            unit whole;
+            stagger 100ms;
+            reveal curve {
+              key reveal-start { at 0s; value 0%; interpolation linear; }
+              key reveal-end { at 2s; value 100%; interpolation linear; }
+            }
+            highlight {
+              fill #ffd166ff;
+              progress curve {
+                key highlight-start { at 0s; value 0%; interpolation linear; }
+                key highlight-end { at 3s; value 100%; interpolation linear; }
+              }
+            }
+            opacity curve {
+              key fade-start { at 0s; value 0%; interpolation linear; }
+              key fade-end { at 1s; value 100%; interpolation linear; }
+            }
+            transform {
+              position curve {
+                key slide-start {
+                  at 0s; value { x 0px; y 24px; } interpolation ease-out;
+                }
+                key slide-end {
+                  at 1s; value { x 0px; y 0px; } interpolation ease-out;
+                }
+              }
+              scale curve {
+                key scale-start {
+                  at 0s; value { x 80%; y 80%; } interpolation ease-out;
+                }
+                key scale-end {
+                  at 1s; value { x 100%; y 100%; } interpolation ease-out;
+                }
+              }
+              rotation 0deg;
+            }
+          }
+        }
+        record { at 0s; duration 5s; }
+      }
+    }
+  }
+  sequence line-unit-demo {
+    layer visual line-unit-text {
+      item line-unit-label {
+        source text {
+          content "Line one\nLine two";
+          style { font family "Inter"; size 48px; fill #ffffffff; }
+          animation { unit line; stagger 80ms; }
+        }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+  sequence word-unit-demo {
+    layer visual word-unit-text {
+      item word-unit-label {
+        source text {
+          content "Word by word";
+          style { font family "Inter"; size 48px; fill #ffffffff; }
+          animation { unit word; stagger 60ms; }
+        }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+  sequence grapheme-unit-demo {
+    layer visual grapheme-unit-text {
+      item grapheme-unit-label {
+        source text {
+          content "VEAC";
+          style { font family "Inter"; size 48px; fill #ffffffff; }
+          animation {
+            unit grapheme;
+            stagger 40ms;
+            reveal curve {
+              key hidden { at 0s; value 0; interpolation linear; }
+              key shown { at 1s; value 1; interpolation linear; }
+            }
+          }
+        }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+}

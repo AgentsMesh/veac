@@ -1,0 +1,50 @@
+project nested-and-multicam {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource video host {
+    locator local { path "assets/host.mp4"; }
+    streams { video auto; audio auto; }
+  }
+  resource video guest {
+    locator local { path "assets/guest.mp4"; }
+    streams { video auto; audio auto; }
+  }
+
+  multicam interview {
+    sync audio { reference angle host-angle; }
+    angle host-angle { source resource host; source-offset 0s; }
+    angle guest-angle { source resource guest; source-offset 120ms; }
+  }
+
+  sequence intro {
+    layer visual card {
+      item slate {
+        source generated solid { color #118ab2ff; }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+
+  sequence main {
+    layer video program {
+      item interview-cut {
+        source multicam multicam interview {
+          switch angle host-angle { at 0s; duration 2s; }
+          switch angle guest-angle { at 2s; duration 2s; }
+        }
+        record { at 2s; duration 4s; }
+      }
+    }
+    layer visual opener {
+      item nested-intro {
+        source sequence sequence intro;
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+}

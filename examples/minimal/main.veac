@@ -1,19 +1,18 @@
-// VEAC Minimal Example
-// The simplest possible .veac file: a single clip.
+project minimal {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-project "minimal" {
-    resolution = "1280x720"
-    fps        = 30
-    format     = "mp4"
-}
-
-asset clip1 = video("./assets/clip.mp4")
-
-timeline main {
-    track video {
-        clip clip1 {
-            from = 0s
-            to   = 10s
-        }
+  sequence main {
+    layer visual canvas {
+      item background {
+        source generated solid { color #18202aff; }
+        record { at 0s; duration 3s; }
+      }
     }
+  }
 }

@@ -1,0 +1,106 @@
+project audio-processing {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource audio voice {
+    locator local { path "assets/voice.wav"; }
+    streams { video disabled; audio auto; }
+  }
+
+  sequence main {
+    layer audio dialogue {
+      route bus dialogue-bus;
+      item voiceover {
+        source media resource voice;
+        record { at 0s; duration 8s; }
+        mapping linear { from 0s; to 8s; }
+        modifiers {
+          audio voice-chain {
+            gain curve {
+              key intro { at 0s; value -12db; interpolation linear; }
+              key full { at 1s; value -2db; interpolation linear; }
+            }
+            pan 0;
+            muted false;
+            normalize true;
+            pitch preserve;
+            crossfade { fade-in 80ms; fade-out 120ms; curve equal-power; }
+            processor high-pass { frequency 80hz; q 0.707; poles 2; }
+            processor eq { band { frequency 2800hz; gain 2db; q 1; } }
+            processor limiter { ceiling -1db; attack 1ms; release 80ms; }
+          }
+        }
+      }
+    }
+    layer audio music-key {
+      route bus music-key;
+      item key-tone {
+        source generated silence;
+        record { at 0s; duration 8s; }
+        modifiers {
+          audio compressor-demo {
+            processor compressor {
+              threshold -18db; ratio 3; attack 10ms; release 120ms;
+              knee 6db; makeup-gain 2db; mix 100%;
+            }
+          }
+        }
+      }
+    }
+    relation sidechain duck {
+      endpoints { key bus music-key; target item voiceover; }
+      dynamics { threshold -24db; ratio 4; attack 20ms; release 120ms; }
+    }
+  }
+  sequence gate-demo {
+    layer audio gated {
+      item gated-tone {
+        source generated silence;
+        record { at 0s; duration 1s; }
+        modifiers {
+          audio gate-demo {
+            pitch follow-speed;
+            crossfade { fade-in 90ms; fade-out 90ms; curve linear; }
+            processor gate {
+              threshold -48db; ratio 2; attack 5ms; release 100ms; range -36db;
+            }
+          }
+        }
+      }
+    }
+  }
+  sequence loudness-demo {
+    layer audio normalized {
+      item normalized-tone {
+        source generated silence;
+        record { at 0s; duration 1s; }
+        modifiers {
+          audio loudness-demo {
+            pitch preserve;
+            crossfade { fade-in 110ms; fade-out 110ms; curve exponential; }
+            processor loudness { integrated -16lufs; true-peak -1dbtp; range 7lu; }
+          }
+        }
+      }
+    }
+  }
+  sequence normalize-effect-demo {
+    layer audio normalized-effect {
+      item normalized-effect-tone {
+        source generated silence;
+        record { at 0s; duration 1s; }
+        modifiers {
+          effect normalize-effect {
+            type audio.normalize;
+            enabled true;
+            parameter target_lufs -18;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+project transforms-and-animation {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual graphics {
+      item badge {
+        source generated shape {
+          geometry rounded-rectangle { bounds 0% 0% 100% 100%; radius 24px; }
+          fill solid #06d6a0ff;
+        }
+        record { at 0s; duration 4s; }
+        modifiers {
+          layout badge-layout {
+            placement anchor { at bottom-right; inset { x 48px; y 48px; } }
+            frame { width 360px; height 200px; fit contain; }
+          }
+          transform motion {
+            position curve {
+              key hold { at 0ms; value { x 240px; y 0px; } interpolation hold; }
+              key linear { at 120ms; value { x 200px; y -20px; } interpolation linear; }
+              key ease-in { at 240ms; value { x 160px; y 0px; } interpolation ease-in; }
+              key ease-out { at 360ms; value { x 120px; y 20px; } interpolation ease-out; }
+              key ease-in-out {
+                at 480ms; value { x 80px; y 0px; } interpolation ease-in-out;
+              }
+              key bezier {
+                at 600ms; value { x 40px; y -20px; }
+                interpolation cubic-bezier {
+                  x1 0.42; y1 0; x2 0.58; y2 1;
+                }
+              }
+              key settle { at 800ms; value { x 0px; y 0px; } interpolation linear; }
+            }
+            scale { x 1; y 1; }
+            rotation 5deg;
+            anchor { x 0.5; y 0.5; }
+            crop { x 0; y 0; width 1; height 1; }
+            flip-horizontal false;
+            flip-vertical false;
+          }
+          composite top { opacity 0.9; z-index 20; blend normal; }
+        }
+      }
+    }
+  }
+}

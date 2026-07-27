@@ -1,0 +1,53 @@
+project delivery-closed-sets {
+  settings {
+    canvas 320px by 180px;
+    frame-rate 24fps;
+    sample-rate 48000hz;
+    timebase 1/1000;
+  }
+  entry sequence main;
+  sequence main {
+    layer visual picture {
+      item background {
+        source generated solid { color #202020ff; }
+        record { at 0s; duration 1s; }
+      }
+    }
+    layer caption captions {
+      item caption {
+        source caption { content "Closed delivery sets"; }
+        record { at 0s; duration 1s; }
+      }
+    }
+  }
+
+  output video h264-mp4 { sequence main; file-name "h264.mp4"; encoding { container mp4; video { codec h264; } audio none; } }
+  output video h265-mkv { sequence main; file-name "h265.mkv"; encoding { container mkv; video { codec h265; } audio none; } }
+  output video vp9-webm { sequence main; file-name "vp9.webm"; encoding { container webm; video { codec vp9; } audio none; } }
+  output video av1-mkv { sequence main; file-name "av1.mkv"; encoding { container mkv; video { codec av1; } audio none; } }
+  output video prores-mov { sequence main; file-name "prores.mov"; encoding { container mov; video { codec prores; pixel-format yuva444p10le; alpha straight; profile prores-4444; rate-control lossless; } audio none; } }
+  output video dnxhr-mxf { sequence main; file-name "dnxhr.mxf"; encoding { container mxf; video { codec dnxhr; pixel-format yuv422p; profile dnxhr-hq; rate-control lossless; } audio none; } }
+
+  output video audio-aac { sequence main; file-name "aac.mp4"; encoding { container mp4; video { codec h264; } audio { codec aac; } } }
+  output video audio-opus { sequence main; file-name "opus.webm"; encoding { container webm; video { codec vp9; } audio { codec opus; } } }
+  output video audio-pcm16 { sequence main; file-name "pcm16.mov"; encoding { container mov; video { codec h264; } audio { codec pcm-s16le; } } }
+  output video audio-pcm24 { sequence main; file-name "pcm24.mov"; encoding { container mov; video { codec h264; } audio { codec pcm-s24le; } } }
+  output video audio-pcm32 { sequence main; file-name "pcm32.mov"; encoding { container mov; video { codec h264; } audio { codec pcm-s32le; } } }
+  output video audio-flac { sequence main; file-name "flac.mkv"; encoding { container mkv; video { codec h264; } audio { codec flac; } } }
+
+  output image-sequence image-png { sequence main; file-name "png-%04d.png"; encoding { format png; start-number 0; } }
+  output image-sequence image-jpeg { sequence main; file-name "jpeg-%04d.jpg"; encoding { format jpeg; start-number 0; } }
+  output image-sequence image-tiff { sequence main; file-name "tiff-%04d.tiff"; encoding { format tiff; start-number 0; } }
+  output image-sequence image-exr { sequence main; file-name "exr-%04d.exr"; encoding { format exr; start-number 0; } }
+
+  output caption-sidecar caption-srt { sequence main; file-name "captions.srt"; encoding { format srt; tracks { track captions; } } }
+  output caption-sidecar caption-webvtt { sequence main; file-name "captions.vtt"; encoding { format web-vtt; tracks { track captions; } } }
+  output caption-sidecar caption-ass { sequence main; file-name "captions.ass"; encoding { format ass; tracks { track captions; } } }
+
+  output audio-stem stem-wav { sequence main; file-name "master.wav"; encoding { format wav; audio { codec pcm-s16le; sample-rate 48000; channels 2; } source master; } }
+  output audio-stem stem-flac { sequence main; file-name "master.flac"; encoding { format flac; audio { codec flac; sample-rate 48000; channels 2; } source master; } }
+
+  output scope scope-waveform { sequence main; file-name "waveform.png"; encoding { scope waveform; at 0s; width 320; height 180; format png; } }
+  output scope scope-vectorscope { sequence main; file-name "vectorscope.png"; encoding { scope vectorscope; at 0s; width 320; height 180; format png; } }
+  output scope scope-histogram { sequence main; file-name "histogram.png"; encoding { scope histogram; at 0s; width 320; height 180; format png; } }
+}

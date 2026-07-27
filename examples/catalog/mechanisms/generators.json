@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "mechanisms": [
+    {"id":"generator.solid","title":"Solid color source","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.transparent","title":"Transparent source","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.silence","title":"Silent audio source","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.gradient.linear","title":"Linear gradient source","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.gradient.radial","title":"Radial gradient source","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.gradient.custom-geometry","title":"Custom gradient geometry","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.gradient.multi-stop","title":"Multi-stop gradient","family":"Generated sources","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.shape.rounded-rectangle","title":"Rounded rectangle shape","family":"Generated shapes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.shape.polygon","title":"Polygon shape","family":"Generated shapes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.shape.path","title":"Path shape","family":"Generated shapes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.shape.ellipse","title":"Ellipse shape","family":"Generated shapes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.shape.rectangle","title":"Rectangle shape","family":"Generated shapes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.paint","title":"Generated shape paint","family":"Shape paint","coverage":"workflow_evidence","evidence":"crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs"},
+    {"id":"generator.stroke.solid","title":"Solid shape stroke","family":"Shape strokes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"generator.stroke.gradient","title":"Gradient shape stroke","family":"Shape strokes","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"resource.kind.font","title":"Font resource kind","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac","capability_id":"P1-16"},
+    {"id":"resource.locator.remote","title":"Pinned remote resource locator","family":"Resource declarations","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac","capability_id":"P1-34"}
+  ]
+}

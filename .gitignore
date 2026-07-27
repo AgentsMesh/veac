@@ -16,6 +16,9 @@ demo-mix/
 
 # Rendered output
 /output.*
+/examples-preview/
+/examples-preview.staging.*/
+/examples-preview.previous.*/
 
 # IDE
 .idea/

@@ -1,0 +1,84 @@
+project text-layout {
+  settings {
+    timebase 1/1000;
+    canvas 1080px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual text {
+      item paragraph {
+        source text {
+          content "Structured text owns style, layout, writing mode, and path semantics.";
+          style {
+            font family "Inter";
+            fallback-font family "Arial";
+            size 52px;
+            weight semi-bold;
+            font-style normal;
+            fill #f8f9faff;
+            outline { color #14213dff; width 2px; }
+            background { color #14213dcc; padding 12px; }
+            tracking 1px;
+            line-height 1.25;
+            span { start 0; end 10; fill #48cae4ff; weight bold; }
+          }
+          layout {
+            box-width 860px;
+            box-height 520px;
+            wrap word;
+            overflow ellipsis;
+            horizontal-align left;
+            vertical-align middle;
+            writing-mode horizontal-tb;
+            orientation mixed;
+          }
+        }
+        record { at 0s; duration 6s; }
+        modifiers {
+          layout paragraph-placement {
+            placement anchor { at top-left; inset { x 48px; y 72px; } }
+          }
+        }
+      }
+    }
+  }
+  sequence vertical-demo {
+    layer visual vertical-text {
+      item vertical-label {
+        source text {
+          content "VEAC";
+          style { font family "Inter"; size 52px; fill #48cae4ff; }
+          layout {
+            writing-mode vertical-rl;
+            orientation upright;
+            horizontal-align center;
+            vertical-align middle;
+          }
+        }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+  sequence vertical-left-demo {
+    layer visual vertical-left-text {
+      item vertical-left-label {
+        source text {
+          content "LEFT";
+          style { font family "Inter"; size 52px; fill #ffd166ff; }
+          layout {
+            writing-mode vertical-lr;
+            orientation mixed;
+            wrap none;
+            overflow visible;
+            horizontal-align center;
+            vertical-align middle;
+          }
+        }
+        record { at 0s; duration 2s; }
+      }
+    }
+  }
+}

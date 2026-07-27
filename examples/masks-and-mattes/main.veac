@@ -1,0 +1,80 @@
+project masks-and-mattes {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual matte-source {
+      item matte {
+        source generated gradient radial {
+          center 50% 50%; radius 70%;
+          stop 0% #ffffffff; stop 100% #000000ff;
+        }
+        record { at 0s; duration 5s; }
+      }
+    }
+    layer visual content {
+      item masked {
+        source generated solid { color #ef476fff; }
+        record { at 0s; duration 5s; }
+        modifiers {
+          mask focus {
+            shape circle;
+            position { x 50%; y 50%; }
+            scale { x 70%; y 70%; }
+            rotation 0deg;
+            feather 18px;
+            expansion 4px;
+          }
+          mask crop-box { shape rectangle; scale { x 92%; y 82%; } }
+          mask rounded-box {
+            shape rounded-rectangle { radius 12%; }
+            scale { x 88%; y 76%; }
+          }
+          mask oval { shape ellipse; scale { x 80%; y 60%; } }
+          mask polygon {
+            shape polygon {
+              point { x 10%; y 10%; }
+              point { x 90%; y 15%; }
+              point { x 50%; y 90%; }
+            }
+          }
+          mask polygon-path {
+            shape path {
+              point { x 10%; y 10%; }
+              point { x 90%; y 20%; }
+              point { x 75%; y 90%; }
+              point { x 20%; y 80%; }
+            }
+          }
+        }
+      }
+    }
+    relation matte luminance-mask {
+      endpoints { producer item matte; consumer item masked; }
+      style { luma { invert false; } }
+    }
+  }
+  sequence alpha-demo {
+    layer visual alpha-source {
+      item alpha-matte {
+        source generated solid { color #ffffffff; }
+        record { at 0s; duration 2s; }
+      }
+    }
+    layer visual alpha-content {
+      item alpha-masked {
+        source generated solid { color #118ab2ff; }
+        record { at 0s; duration 2s; }
+      }
+    }
+    relation matte alpha-inverted {
+      endpoints { producer item alpha-matte; consumer item alpha-masked; }
+      style { alpha { invert true; } }
+    }
+  }
+}

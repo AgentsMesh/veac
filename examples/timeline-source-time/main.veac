@@ -1,0 +1,70 @@
+project timeline-source-time {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource video reel {
+    locator local { path "assets/reel.mp4"; }
+    streams { video auto; audio auto; }
+  }
+
+  sequence boundary-source {
+    layer visual frames {
+      item first-frame {
+        source generated solid { color #d1495bff; }
+        record { at 0s; duration 1s; }
+      }
+      item last-frame {
+        source generated solid { color #00798cff; }
+        record { at 1s; duration 1s; }
+      }
+    }
+  }
+
+  sequence main {
+    layer video edits {
+      item linear-trim {
+        source media resource reel;
+        record { at 0s; duration 3s; }
+        mapping linear { from 5s; to 8s; }
+      }
+      item speed-ramp {
+        source media resource reel;
+        record { at 3s; duration 3s; }
+        mapping curve {
+          key begin { at 0s; source 10s; interpolation linear; }
+          key ramp { at 1s; source 11s; interpolation linear; }
+          key finish { at 3s; source 15s; interpolation linear; }
+        }
+      }
+      item freeze {
+        source media resource reel;
+        record { at 6s; duration 2s; }
+        mapping freeze { source 18s; }
+      }
+      item fast-forward {
+        source media resource reel;
+        record { at 8s; duration 2s; }
+        mapping linear { from 20s; to 24s; }
+      }
+      item hold-first {
+        source sequence sequence boundary-source;
+        record { at 10s; duration 2s; }
+        mapping linear { from -1s; to 1s; outside hold-first; }
+      }
+      item hold-last {
+        source sequence sequence boundary-source;
+        record { at 12s; duration 2s; }
+        mapping linear { from 1s; to 3s; outside hold-last; }
+      }
+      item hold-both {
+        source sequence sequence boundary-source;
+        record { at 14s; duration 4s; }
+        mapping linear { from -1s; to 3s; outside hold-both; }
+      }
+    }
+  }
+}

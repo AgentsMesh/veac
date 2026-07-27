@@ -1,66 +1,37 @@
-# Project Declaration
+# Project and Resources
 
-The `project` block defines output configuration for the video.
-
-## Syntax
+Declaration heads contain only a stable kind and identifier. Ownership is expressed by blocks.
 
 ```veac
-project "name" {
-    resolution = "1920x1080"
-    fps        = 30
-    format     = "mp4"
-    codec      = "h264"
-    quality    = "high"
-    fit        = "fill"
+project documentary {
+  settings {
+    timebase 1/1000;
+    canvas 1920px by 1080px;
+    frame-rate 30000/1001fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  resource video interview {
+    locator local { path "assets/interview.mov"; }
+    identity { sha256 "<64 lowercase hex>"; }
+    streams { video auto; audio auto; }
+  }
+
+  sequence main { }
 }
 ```
 
-## Fields
+Resource kinds are closed:
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `resolution` | string | `"1920x1080"` | Output resolution in `"WIDTHxHEIGHT"` format |
-| `fps` | integer | `30` | Frames per second |
-| `format` | string | `"mp4"` | Output container format |
-| `codec` | string | `"h264"` | Video codec |
-| `quality` | string | `"high"` | Encoding quality preset |
-| `fit` | string | `"fill"` | How to fit source content to output resolution |
+```text
+video | audio | image | font | lut-1d | lut-3d
+```
 
-## Format Values
+Video and audio resources declare both stream intents. Each intent is `auto`, `disabled`, or an explicit stream index. Image resources implicitly select their visual stream. Font and LUT resources have no media streams.
 
-| Value | Extension | Description |
-|---|---|---|
-| `"mp4"` | `.mp4` | MPEG-4 container (most compatible) |
-| `"mkv"` | `.mkv` | Matroska container |
-| `"webm"` | `.webm` | WebM container |
-| `"mov"` | `.mov` | QuickTime container |
+Locators are `local` or `remote`. Remote resources require a content identity. Local basenames and output basenames reject traversal, path separators where disallowed, controls, and overlong values.
 
-## Codec Values
+The project `entry` is a typed sequence reference. IDs become canonical IDs with stable prefixes such as `prj_`, `med_`, `seq_`, `trk_`, `itm_`, `fx_`, `rel_`, `mcg_`, and `out_`.
 
-| Value | FFmpeg Encoder | Description |
-|---|---|---|
-| `"h264"` | `libx264` | H.264/AVC (most compatible) |
-| `"h265"` | `libx265` | H.265/HEVC (better compression) |
-| `"vp9"` | `libvpx-vp9` | VP9 (WebM) |
-| `"av1"` | `libaom-av1` | AV1 (best compression, slowest) |
-
-## Quality Values
-
-| Value | Preset | CRF | Description |
-|---|---|---|---|
-| `"low"` | ultrafast | 28 | Fast encoding, larger file |
-| `"medium"` | medium | 23 | Balanced |
-| `"high"` | slow | 18 | High quality, slower encoding |
-| `"lossless"` | veryslow | 0 | Lossless, largest file |
-
-## Fit Values
-
-| Value | Description |
-|---|---|
-| `"fill"` | Scale to fill the frame (may crop) |
-| `"letterbox"` | Scale to fit with black bars |
-| `"crop"` | Center-crop to fill |
-
-## Rules
-- Exactly one `project` block is required per compilation unit
-- The `name` string is used for logging and identification only
+Background is not a project setting. It is visible content and must be expressed as a generated source on a layer.

@@ -1,34 +1,36 @@
-// Color grading demo: brightness, contrast, saturation adjustments.
-project "color-grade" {
-    resolution = "1920x1080"
-    fps = 30
-    format = "mp4"
-    codec = "h264"
-    quality = "high"
-}
+project color-grade {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset footage = video("assets/footage.mp4")
-
-timeline main {
-    track video {
-        // Warm, slightly brighter look
-        clip footage {
-            from       = 0s
-            to         = 15s
-            brightness = 0.1
-            contrast   = 1.2
-            saturation = 1.5
+  sequence main {
+    layer visual picture {
+      item shot {
+        source generated gradient linear {
+          from 0% 50%; to 100% 50%;
+          stop 0% #33415cff; stop 100% #7d8597ff;
         }
-
-        transition { type = "dissolve" duration = 1s }
-
-        // Desaturated, low-contrast cinematic look
-        clip footage {
-            from       = 15s
-            to         = 30s
-            brightness = -0.05
-            contrast   = 0.8
-            saturation = 0.5
+        record { at 0s; duration 4s; }
+        modifiers {
+          color balanced {
+            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
+            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            basic {
+              exposure 0.25stops;
+              temperature 6800k;
+              tint 0.04;
+              highlights -0.08;
+              shadows 0.12;
+              fade 3%;
+            }
+          }
         }
+      }
     }
+  }
 }

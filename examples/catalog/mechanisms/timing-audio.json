@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "mechanisms": [
+    {"id":"source-time.out-of-range.reject","title":"Reject out-of-range source time","family":"Source-time boundaries","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-03"},
+    {"id":"source-time.out-of-range.hold-first","title":"Hold first source frame","family":"Source-time boundaries","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-03"},
+    {"id":"source-time.out-of-range.hold-last","title":"Hold last source frame","family":"Source-time boundaries","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-03"},
+    {"id":"source-time.out-of-range.hold-both","title":"Hold both source boundaries","family":"Source-time boundaries","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-03"},
+    {"id":"source-time.identity","title":"Identity source-time mapping","family":"Source-time mapping","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-24"},
+    {"id":"source-time.constant-speed","title":"Constant-speed source-time mapping","family":"Source-time mapping","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-24"},
+    {"id":"source-time.time-remap","title":"Keyframed source-time remap","family":"Source-time mapping","coverage":"preview_required","preview_target":"timeline-source-time","capability_id":"P1-25"},
+    {"id":"audio.volume-pan","title":"Audio volume and pan","family":"Audio level","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.fade","title":"Audio fade in and out","family":"Audio level","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.automation","title":"Audio automation","family":"Audio level","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.normalize","title":"Audio normalization processor","family":"Audio dynamics","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02"},
+    {"id":"audio.equalizer","title":"Audio equalizer","family":"Audio processing","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02"},
+    {"id":"audio.compressor","title":"Audio compressor","family":"Audio dynamics","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02"},
+    {"id":"audio.limiter","title":"Audio limiter","family":"Audio dynamics","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02"},
+    {"id":"audio.noise-gate","title":"Audio noise gate","family":"Audio dynamics","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02"},
+    {"id":"audio.routing","title":"Track and bus audio routing","family":"Audio routing","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-20"},
+    {"id":"audio.sidechain-ducking","title":"Sidechain ducking","family":"Audio routing","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-20"},
+    {"id":"animation.interpolation-hold","title":"Hold interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-linear","title":"Linear interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-ease-in","title":"Ease-in interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-ease-out","title":"Ease-out interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-ease-in-out","title":"Ease-in-out interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-cubic-bezier","title":"Cubic Bezier interpolation","family":"Animation interpolation","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"audio.pitch-policy-preserve","title":"Preserve audio pitch","family":"Audio pitch policy","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.pitch-policy-follow-speed","title":"Audio pitch follows speed","family":"Audio pitch policy","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.fade-curve-linear","title":"Linear audio fade","family":"Audio fade curves","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.fade-curve-exponential","title":"Exponential audio fade","family":"Audio fade curves","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"},
+    {"id":"audio.fade-curve-equal-power","title":"Equal-power audio fade","family":"Audio fade curves","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-21"}
+  ]
+}

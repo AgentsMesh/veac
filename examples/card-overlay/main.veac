@@ -1,35 +1,38 @@
-// Card overlays: fit + rounded corners + drop shadow + fade — a promo-grade "floating widget"
-// shot composed declaratively. A still on the main track now honors `duration`.
-project "card-overlay" {
-    resolution = "1080x1920"
-    fps        = 30
-    format     = "mp4"
-    codec      = "h264"
-    quality    = "high"
-}
+project card-overlay {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset bg      = image("assets/bg.png")       // a premium background still
-asset widget  = video("assets/widget.mov")   // a widget/app-capture clip
-asset caption = image("assets/caption.png")  // a pre-rendered caption strip (transparent PNG)
-
-timeline main {
-    track video {
-        clip bg { duration = 4s }            // looped to 4s — no more collapse to one frame
-    }
-    track overlay {
-        // The widget as a rounded, shadowed card, aspect-preserved inside its box.
-        pip widget {
-            at = 0s   duration = 4s
-            width = 740  height = 775  y = 900
-            fit    = "cover"
-            radius = 56
-            shadow = true  shadow_blur = 34  shadow_opacity = 0.5  shadow_y = 30
+  sequence main {
+    layer visual base {
+      item background {
+        source generated gradient linear {
+          from 0% 20%; to 100% 80%;
+          stop 0% #0b132bff; stop 100% #1c2541ff;
         }
-        // The caption dissolves in/out at an exact position.
-        image caption {
-            at = 0.3s  duration = 3.4s
-            y  = 150
-            fade_in = 0.3s  fade_out = 0.4s
-        }
+        record { at 0s; duration 4s; }
+      }
     }
+    layer visual card {
+      item panel {
+        source generated shape {
+          geometry rounded-rectangle { bounds 0% 0% 100% 100%; radius 18px; }
+          fill solid #f7f7f2ee;
+          stroke 3px solid #5bc0beff;
+        }
+        record { at 0s; duration 4s; }
+        modifiers {
+          layout card-frame {
+            placement absolute { position { x 280px; y 170px; } }
+            frame { width 720px; height 380px; fit contain; }
+          }
+          composite translucent { opacity 92%; z-index 10; }
+        }
+      }
+    }
+  }
 }

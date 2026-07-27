@@ -1,0 +1,43 @@
+project video-effects {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual effects {
+      item field {
+        source generated gradient linear {
+          from 0% 0%; to 100% 100%;
+          stop 0% #8338ecff; stop 100% #3a86ffff;
+        }
+        record { at 0s; duration 4s; }
+        modifiers {
+          effect animated-blur {
+            type video.blur;
+            enabled true;
+            record { at 0s; duration 1s; }
+            parameter radius curve {
+              key soft { at 0s; value 12; interpolation ease-out; }
+              key sharp { at 1s; value 0; interpolation linear; }
+            }
+          }
+          effect sharpen {
+            type video.sharpen;
+            enabled true;
+            parameter amount 0.35;
+          }
+          effect color-adjust { type video.color_adjust; enabled true; }
+          effect vignette { type video.vignette; enabled true; }
+          effect grain { type video.grain; enabled true; }
+          effect chroma-key { type video.chroma_key; enabled true; }
+          effect luma-key { type video.luma_key; enabled true; }
+          effect chroma-spill { type video.chroma_spill; enabled true; }
+        }
+      }
+    }
+  }
+}

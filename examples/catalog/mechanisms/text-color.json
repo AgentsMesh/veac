@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "mechanisms": [
+    {"id":"text.layout.position","title":"Text position","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-10"},
+    {"id":"text.layout.alignment","title":"Horizontal text alignment","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.writing-horizontal","title":"Horizontal writing mode","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.writing-vertical","title":"Vertical writing mode","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.wrap","title":"Text wrapping","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.overflow","title":"Text overflow handling","family":"Text layout","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.style.stroke","title":"Text stroke style","family":"Text styling","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-16"},
+    {"id":"text.style.background","title":"Text background style","family":"Text styling","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-16"},
+    {"id":"text.animation.typewriter","title":"Typewriter text reveal","family":"Text animation","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.fade","title":"Fade text reveal","family":"Text animation","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.slide","title":"Slide text reveal","family":"Text animation","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.scale","title":"Scale text reveal","family":"Text animation","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.highlight-progress","title":"Animated text highlight","family":"Text animation","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"color.adjust","title":"Color adjustment pipeline","family":"Color processing","coverage":"preview_required","preview_target":"advanced-color","capability_id":"P1-22"},
+    {"id":"color.lut-1d","title":"One-dimensional color LUT","family":"Color processing","coverage":"preview_required","preview_target":"advanced-color","capability_id":"P2-03"},
+    {"id":"color.lut-3d","title":"Three-dimensional color LUT","family":"Color processing","coverage":"preview_required","preview_target":"advanced-color","capability_id":"P2-03"},
+    {"id":"color.curves","title":"Color curves","family":"Color processing","coverage":"workflow_evidence","evidence":"crates/veac-codegen/src/unit_tests/emitter_tests/color_processing.rs"},
+    {"id":"color.wheels","title":"Color wheels","family":"Color processing","coverage":"workflow_evidence","evidence":"crates/veac-codegen/src/unit_tests/emitter_tests/color_processing.rs"},
+    {"id":"color.hsl","title":"Hue, saturation and lightness adjustment","family":"Color processing","coverage":"workflow_evidence","evidence":"crates/veac-codegen/src/unit_tests/emitter_tests/color_processing.rs"},
+    {"id":"color.high-bit-depth","title":"High-bit-depth color processing","family":"Color precision","coverage":"workflow_evidence","evidence":"crates/veac-codegen/src/unit_tests/emitter_tests/color_processing.rs"},
+    {"id":"color.alpha","title":"Alpha-aware color processing","family":"Color precision","coverage":"workflow_evidence","evidence":"crates/veac-codegen/src/unit_tests/emitter_tests/color_processing.rs"},
+    {"id":"text.animation.unit-whole","title":"Whole-block text animation","family":"Text animation units","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.unit-line","title":"Line text animation","family":"Text animation units","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.unit-word","title":"Word text animation","family":"Text animation units","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.animation.unit-grapheme","title":"Grapheme text animation","family":"Text animation units","coverage":"preview_required","preview_target":"text-animation","capability_id":"P1-18"},
+    {"id":"text.layout.writing-horizontal-tb","title":"Horizontal top-to-bottom writing","family":"Text writing modes","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.writing-vertical-rl","title":"Vertical right-to-left writing","family":"Text writing modes","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"},
+    {"id":"text.layout.writing-vertical-lr","title":"Vertical left-to-right writing","family":"Text writing modes","coverage":"preview_required","preview_target":"text-layout","capability_id":"P1-17"}
+  ]
+}

@@ -1,0 +1,75 @@
+project executable-mechanisms {
+  settings {
+    timebase 1/1000;
+    canvas 96px by 54px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual background {
+      item warm {
+        source generated gradient linear {
+          from 0% 50%; to 100% 50%; stop 0% #ff0000ff; stop 100% #ffff00ff;
+        }
+        record { at 0s; duration 1s; }
+      }
+      item cool {
+        source generated gradient linear {
+          from 0% 50%; to 100% 50%; stop 0% #0000ffff; stop 100% #00ffffff;
+        }
+        record { at 1s; duration 1s; }
+      }
+    }
+
+    layer visual graphics {
+      item badge {
+        source generated shape {
+          geometry ellipse { bounds 0% 0% 100% 100%; }
+          fill solid #00ff00ff;
+        }
+        record { at 500ms; duration 1s; }
+        modifiers {
+          transform badge-motion {
+            position curve {
+              key enter { at 0s; value { x -8px; y 0px; } interpolation linear; }
+              key settle { at 500ms; value { x 0px; y 0px; } interpolation linear; }
+            }
+            scale { x 0.35; y 0.35; }
+          }
+          composite badge-composite { opacity 85%; z-index 10; blend screen; }
+          mask badge-mask {
+            shape circle;
+            position { x 50%; y 50%; }
+            scale { x 45%; y 45%; }
+            rotation 0deg;
+            feather 1px;
+            expansion 0px;
+          }
+        }
+      }
+    }
+
+    layer audio sound {
+      item silence { source generated silence; record { at 0s; duration 2s; } }
+    }
+
+    relation transition dissolve {
+      endpoints { from item warm; to item cool; }
+      timing { duration 400ms; alignment centered; }
+      style { dissolve; }
+    }
+  }
+
+  output video main {
+    sequence main;
+    file-name "executable-mechanisms.mp4";
+    encoding {
+      container mp4; optimize-for-streaming true;
+      video { codec h264; pixel-format yuv420p; }
+      audio { codec aac; sample-rate 48000; channels 1; }
+      captions discard;
+    }
+  }
+}

@@ -2,5 +2,10 @@
 name = "veac-lang"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+veac-ir = { path = "../veac-ir" }
+
+[dev-dependencies]
+serde_json = "1"

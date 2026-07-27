@@ -2,16 +2,30 @@
 name = "veac-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "veac"
 path = "src/main.rs"
 
 [dependencies]
+veac-ir = { path = "../veac-ir" }
 veac-lang = { path = "../veac-lang" }
+veac-plan = { path = "../veac-plan" }
 veac-codegen = { path = "../veac-codegen" }
 veac-runtime = { path = "../veac-runtime" }
-clap = { version = "4", features = ["derive"] }
-csv = "1"
+veac-artifact = { path = "../veac-artifact" }
+veac-provider = { path = "../veac-provider" }
+veac-caption = { path = "../veac-caption" }
+veac-otio = { path = "../veac-otio" }
+veac-template = { path = "../veac-template" }
+clap = "4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_json_canonicalizer = "0.3"
+tempfile = "3"
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"

@@ -1,0 +1,59 @@
+project delivery-formats {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual picture {
+      item canvas { source generated solid { color #0d1b2aff; } record { at 0s; duration 3s; } }
+    }
+    layer audio mix {
+      item silence { source generated silence; record { at 0s; duration 3s; } }
+    }
+    layer caption subtitles {
+      item cue {
+        source caption {
+          content "Typed delivery outputs";
+          style { font family "Inter"; size 44px; fill #ffffffff; }
+        }
+        record { at 0s; duration 3s; }
+      }
+    }
+  }
+
+  output video master {
+    sequence main;
+    file-name "master.mp4";
+    encoding {
+      container mp4;
+      optimize-for-streaming true;
+      video { codec h264; pixel-format yuv420p; }
+      audio { codec aac; sample-rate 48000; channels 2; }
+      captions burn-in;
+    }
+  }
+  output image-sequence frames {
+    sequence main; file-name "frame-%04d.png";
+    encoding { format png; start-number 1; }
+  }
+  output caption-sidecar transcript {
+    sequence main; file-name "captions.vtt";
+    encoding { format web-vtt; tracks { track subtitles; } }
+  }
+  output audio-stem master-audio {
+    sequence main; file-name "master.wav";
+    encoding {
+      format wav;
+      audio { codec pcm-s24le; sample-rate 48000; channels 2; }
+      source master;
+    }
+  }
+  output scope luma-scope {
+    sequence main; file-name "waveform.png";
+    encoding { scope waveform; at 1s; width 1280; height 720; format png; }
+  }
+}

@@ -1,39 +1,49 @@
-// VEAC Text Overlay Example
-// Demonstrates text overlays on video.
+project text-overlay {
+  settings {
+    timebase 1/1000;
+    canvas 1920px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-project "text-demo" {
-    resolution = "1920x1080"
-    fps        = 30
-    format     = "mp4"
-}
-
-asset background = video("./assets/background.mp4")
-
-timeline main {
-    track video {
-        clip background {
-            from = 0s
-            to   = 30s
-        }
+  sequence main {
+    layer visual background {
+      item base {
+        source generated solid { color #1b263bff; }
+        record { at 0s; duration 5s; }
+      }
     }
-
-    track text {
-        text "Welcome to VEAC" {
-            at       = 2s
-            duration = 5s
-            font     = "Arial"
-            size     = 72
-            color    = #FFFFFF
-            position = "center"
+    layer visual typography {
+      item title {
+        source text {
+          content "Agent-friendly video editing";
+          style {
+            font family "Inter";
+            fallback-font family "Arial";
+            size 68px;
+            weight bold;
+            fill #ffffffff;
+            tracking 1px;
+            line-height 1.2;
+            background { color #00000099; padding 18px; }
+            outline { color #00b4d8ff; width 2px; }
+            shadow {
+              color #000000ff; opacity 65%; blur 8px;
+              offset { x 4px; y 6px; }
+            }
+          }
+          layout {
+            box-width 1540px;
+            box-height 240px;
+            wrap word;
+            overflow ellipsis;
+            horizontal-align center;
+            vertical-align middle;
+          }
         }
-
-        text "Video Editing as Code" {
-            at       = 8s
-            duration = 4s
-            font     = "Arial"
-            size     = 48
-            color    = #00FF00
-            position = "bottom"
-        }
+        record { at 0s; duration 5s; }
+      }
     }
+  }
 }

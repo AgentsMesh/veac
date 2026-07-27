@@ -1,30 +1,15 @@
 use std::path::Path;
-use std::process;
 
-/// Probe a media file using ffprobe and display its info.
-pub fn cmd_probe(file: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    if !file.exists() {
-        return Err(format!("file not found: {}", file.display()).into());
-    }
+use crate::environment::Environment;
+use crate::error::{CliError, CliResult};
 
-    let output = process::Command::new("ffprobe")
-        .args([
-            "-v",
-            "quiet",
-            "-print_format",
-            "json",
-            "-show_format",
-            "-show_streams",
-        ])
-        .arg(file)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("ffprobe failed: {stderr}").into());
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("{stdout}");
-    Ok(())
+pub(crate) fn run(file: &Path, environment: &dyn Environment) -> CliResult {
+    let file = crate::fs::canonical_file(file, "media")?;
+    let snapshot = environment.probe(&file, veac_runtime::asset::auto_stream_intent())?;
+    let mut json = match serde_json::to_string_pretty(&snapshot) {
+        Ok(json) => json,
+        Err(error) => return Err(CliError::new("PROBE_ENCODE", error.to_string())),
+    };
+    json.push('\n');
+    crate::fs::write_stdout(&json)
 }

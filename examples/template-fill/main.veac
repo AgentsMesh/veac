@@ -1,0 +1,39 @@
+project template-fill {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource video hero-placeholder {
+    locator local { path "assets/placeholder.mp4"; }
+    streams { video auto; audio disabled; }
+  }
+
+  sequence main {
+    layer video media-slots {
+      item hero {
+        source media resource hero-placeholder;
+        record { at 0s; duration 6s; }
+        mapping linear { from 0s; to 6s; }
+        template-slot media {
+          accepts video;
+          fill fit-duration;
+          label "Hero media";
+          minimum-source-duration 2s;
+        }
+      }
+    }
+    layer visual text-slots {
+      item title {
+        source text {
+          content "Replaceable title";
+          style { font family "Inter"; size 56px; fill #ffffffff; }
+        }
+        record { at 0s; duration 6s; }
+        template-slot text;
+      }
+    }
+  }
+}

@@ -1,153 +1,69 @@
 # CLI Reference
 
-Complete reference for all `veac` commands.
+The CLI exposes one pipeline: current `.veac` authoring source to canonical IR, plan, bundle, and artifacts.
 
-## veac build
-
-Compiles a `.veac` file and renders the output video using FFmpeg.
-
-```
-veac build <file> [-o, --output <path>]
-```
-
-| Option | Description | Default |
-|---|---|---|
-| `<file>` | Path to the `.veac` source file | (required) |
-| `-o, --output <path>` | Output file path | `output.mp4` |
-
-**Example:**
+## Source Commands
 
 ```bash
-veac build main.veac -o my-video.mp4
+veac check <source.veac> [--json]
+veac fmt <source.veac> [--check]
+veac compile <source.veac> --out <project.json> [--revision N]
 ```
 
----
+`check` parses, semantically validates, lowers, and canonical-validates without probing or rendering. `fmt --check` exits nonzero when the source is not canonical formatted. `compile` writes deterministic canonical JSON.
 
-## veac check
-
-Validates syntax and semantics without rendering.
-
-```
-veac check <file>
-```
-
-| Option | Description |
-|---|---|
-| `<file>` | Path to the `.veac` source file |
-
-Reports errors with line numbers and suggestions. This command is fast and does not invoke FFmpeg, making it suitable for CI/CD pipelines and editor integrations.
-
-**Example:**
+## Canonical Commands
 
 ```bash
-veac check main.veac
+veac validate <project.json> [--json]
+veac edit <project.json> --batch <edit.json> --out <project.json>
+veac template inventory <project.json> --out <inventory.json>
+veac template fill <project.json> --request <fill.json> --out <project.json>
 ```
 
----
+Edits and template fills are revision-aware, preconditioned, atomic, and followed by full canonical validation.
 
-## veac plan
-
-Dry-run mode that shows the FFmpeg commands that would be executed.
-
-```
-veac plan <file>
-```
-
-| Option | Description |
-|---|---|
-| `<file>` | Path to the `.veac` source file |
-
-Useful for debugging and understanding the compilation output. No video is rendered.
-
-**Example:**
+## Artifact and Plan Commands
 
 ```bash
-veac plan main.veac
+veac probe <project.json> --out <probe.json>
+veac plan <project.json> [--probe <probe.json>] [--config <id>] --out <plan.json>
+veac codegen <plan.json> --out <bundle.json>
 ```
 
----
+Probe snapshots bind media identity and stream metadata. Plan consumes canonical intent plus probe facts. Codegen emits a typed backend bundle and performs no process execution.
 
-## veac fmt
-
-Formats a `.veac` source file with consistent indentation and spacing.
-
-```
-veac fmt <file>
-```
-
-| Option | Description |
-|---|---|
-| `<file>` | Path to the `.veac` source file |
-
-Rewrites the file in place with canonical formatting.
-
-**Example:**
+## Render Commands
 
 ```bash
-veac fmt main.veac
+veac render <project.json> [--probe <probe.json>] [--config <id>] --out-dir <dir>
+veac execute <bundle.json> --out-dir <dir>
+veac resume <bundle.json> --out-dir <dir>
 ```
 
----
+`render` performs probe, plan, codegen, and execution. `execute` runs an existing bundle. `resume` reuses only checkpoint-compatible completed tasks. Output locks prevent two processes from writing the same destination concurrently.
 
-## veac probe
+## Diagnostics
 
-Probes a media file and displays its metadata.
+Human diagnostics use a stable shape:
 
+```text
+error[AUTHORING_REFERENCE_NOT_FOUND]: typed reference target does not exist
+  --> main.veac:18:23
+  help: correct the reported condition and retry
 ```
-veac probe <media-file>
-```
 
-| Option | Description |
-|---|---|
-| `<media-file>` | Path to a media file (video, audio, or image) |
+JSON diagnostics include code, message, source span or JSON pointer, object identity where available, and suggested repair. Exit status is nonzero if any error is emitted.
 
-Displays resolution, duration, codec, frame rate, audio channels, and other technical details. Uses FFmpeg's `ffprobe` under the hood.
-
-**Example:**
+## Examples and Tests
 
 ```bash
-veac probe assets/intro.mp4
+make check-examples
+make build-examples
+make serve-examples
+make e2e
 ```
 
-Sample output:
+`build-examples` writes only under the ignored `examples-preview/` directory. It uses cataloged sources and the real CLI pipeline.
 
-```
-File: assets/intro.mp4
-Duration: 00:01:30.00
-Video: h264, 1920x1080, 30 fps
-Audio: aac, 48000 Hz, stereo
-```
-
----
-
-## veac batch
-
-Batch rendering from a template `.veac` file with variable overrides.
-
-```
-veac batch <template> --params <csv-file> [-o, --output <dir>]
-```
-
-| Option | Description | Default |
-|---|---|---|
-| `<template>` | Path to the template `.veac` file | (required) |
-| `--params <csv-file>` | CSV file with variable overrides per row | (required) |
-| `-o, --output <dir>` | Output directory for rendered videos | (required) |
-
-Each row in the CSV file generates a separate video. Column headers correspond to variable names defined in the template.
-
-**Example:**
-
-```bash
-veac batch template.veac --params data.csv -o output/
-```
-
-Given a `data.csv` like:
-
-```csv
-name,subtitle
-"Episode 1","Welcome to the show"
-"Episode 2","Deep dive into VEAC"
-```
-
-This produces `output/1.mp4`, `output/2.mp4`, etc., each with the corresponding variable values substituted into the template.
+Run `veac <command> --help` for the exact installed flag set.
