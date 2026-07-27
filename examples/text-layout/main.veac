@@ -44,8 +44,6 @@ project text-layout {
         }
       }
     }
-  }
-  sequence vertical-demo {
     layer visual vertical-text {
       item vertical-label {
         source text {
@@ -59,10 +57,13 @@ project text-layout {
           }
         }
         record { at 0s; duration 2s; }
+        modifiers {
+          layout vertical-placement {
+            placement anchor { at top-right; inset { x 72px; y 72px; } }
+          }
+        }
       }
     }
-  }
-  sequence vertical-left-demo {
     layer visual vertical-left-text {
       item vertical-left-label {
         source text {
@@ -78,6 +79,11 @@ project text-layout {
           }
         }
         record { at 0s; duration 2s; }
+        modifiers {
+          layout vertical-left-placement {
+            placement anchor { at bottom-right; inset { x 72px; y 72px; } }
+          }
+        }
       }
     }
   }

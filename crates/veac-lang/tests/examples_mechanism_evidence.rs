@@ -4,6 +4,8 @@ mod composition;
 mod effects;
 #[path = "example_evidence/generators.rs"]
 mod generators;
+#[path = "example_evidence/project_structure.rs"]
+mod project_structure;
 #[path = "example_evidence/support.rs"]
 mod support;
 #[path = "example_evidence/text_color.rs"]

@@ -62,6 +62,43 @@ project executable-mechanisms {
     }
   }
 
+  annotation marker ann-01-marker {
+    target project; span untimed; payload { label "Agent marker"; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation language ann-02-language {
+    target sequence main; span untimed; payload { candidate "en" { confidence 1; } }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation scene-boundary ann-03-boundary {
+    target sequence main; span point { at 1s; } payload { confidence 1; hard-cut true; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation scene ann-04-scene {
+    target sequence main; span range { at 0s; duration 2s; } payload {}
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation beat ann-05-beat {
+    target sequence main; span point { at 1s; } payload { confidence 1; bar 1; beat-in-bar 1; tempo-bpm 120; meter 4; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation silence ann-06-silence {
+    target sequence main; span range { at 1s; duration 200ms; } payload { mean-db -60db; confidence 1; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation filler ann-07-filler {
+    target sequence main; span range { at 1.5s; duration 200ms; } payload { token "um"; confidence 1; suggestion tighten; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation highlight ann-08-highlight {
+    target sequence main; span range { at 0s; duration 2s; } payload { score 1; rationale "Primary example"; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+  annotation review ann-09-review {
+    target sequence main; span range { at 0s; duration 2s; } payload { action keep; rationale "Approved"; confidence 1; }
+    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
+  }
+
   output video main {
     sequence main;
     file-name "executable-mechanisms.mp4";

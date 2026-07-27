@@ -58,6 +58,7 @@
     "examples/catalog/mechanisms/transitions-composition.json",
     "examples/catalog/mechanisms/timing-audio.json",
     "examples/catalog/mechanisms/text-color.json",
-    "examples/catalog/mechanisms/delivery-workflows.json"
+    "examples/catalog/mechanisms/delivery-workflows.json",
+    "examples/catalog/mechanisms/project-structure.json"
   ]
 }

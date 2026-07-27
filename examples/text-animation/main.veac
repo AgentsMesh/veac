@@ -60,8 +60,6 @@ project text-animation {
         record { at 0s; duration 5s; }
       }
     }
-  }
-  sequence line-unit-demo {
     layer visual line-unit-text {
       item line-unit-label {
         source text {
@@ -69,11 +67,9 @@ project text-animation {
           style { font family "Inter"; size 48px; fill #ffffffff; }
           animation { unit line; stagger 80ms; }
         }
-        record { at 0s; duration 2s; }
+        record { at 5s; duration 2s; }
       }
     }
-  }
-  sequence word-unit-demo {
     layer visual word-unit-text {
       item word-unit-label {
         source text {
@@ -81,11 +77,9 @@ project text-animation {
           style { font family "Inter"; size 48px; fill #ffffffff; }
           animation { unit word; stagger 60ms; }
         }
-        record { at 0s; duration 2s; }
+        record { at 7s; duration 2s; }
       }
     }
-  }
-  sequence grapheme-unit-demo {
     layer visual grapheme-unit-text {
       item grapheme-unit-label {
         source text {
@@ -100,7 +94,7 @@ project text-animation {
             }
           }
         }
-        record { at 0s; duration 2s; }
+        record { at 9s; duration 2s; }
       }
     }
   }

@@ -44,6 +44,7 @@ pub fn clips(envelope: &ProjectEnvelope) -> impl Iterator<Item = &Clip> {
         .project
         .sequences
         .iter()
+        .filter(|sequence| sequence.id == envelope.project.entry_sequence_id)
         .flat_map(|sequence| &sequence.tracks)
         .flat_map(|track| &track.clips)
 }
@@ -60,6 +61,7 @@ fn every_preview_catalog_is_backed_by_a_typed_extractor() {
     const TYPED: &[&str] = &[
         "effects.json",
         "generators.json",
+        "project-structure.json",
         "text-color.json",
         "timing-audio.json",
         "transitions-composition.json",

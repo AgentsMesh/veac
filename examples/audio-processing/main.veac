@@ -16,8 +16,8 @@ project audio-processing {
       route bus dialogue-bus;
       item voiceover {
         source media resource voice;
-        record { at 0s; duration 8s; }
-        mapping linear { from 0s; to 8s; }
+        record { at 0s; duration 2s; }
+        mapping linear { from 0s; to 4s; }
         modifiers {
           audio voice-chain {
             gain curve {
@@ -55,12 +55,11 @@ project audio-processing {
       endpoints { key bus music-key; target item voiceover; }
       dynamics { threshold -24db; ratio 4; attack 20ms; release 120ms; }
     }
-  }
-  sequence gate-demo {
     layer audio gated {
       item gated-tone {
-        source generated silence;
-        record { at 0s; duration 1s; }
+        source media resource voice;
+        record { at 2s; duration 2s; }
+        mapping linear { from 0s; to 4s; }
         modifiers {
           audio gate-demo {
             pitch follow-speed;
@@ -72,12 +71,11 @@ project audio-processing {
         }
       }
     }
-  }
-  sequence loudness-demo {
     layer audio normalized {
       item normalized-tone {
-        source generated silence;
-        record { at 0s; duration 1s; }
+        source media resource voice;
+        record { at 4s; duration 2s; }
+        mapping linear { from 0s; to 2s; }
         modifiers {
           audio loudness-demo {
             pitch preserve;
@@ -87,12 +85,11 @@ project audio-processing {
         }
       }
     }
-  }
-  sequence normalize-effect-demo {
     layer audio normalized-effect {
       item normalized-effect-tone {
-        source generated silence;
-        record { at 0s; duration 1s; }
+        source media resource voice;
+        record { at 6s; duration 2s; }
+        mapping linear { from 2s; to 4s; }
         modifiers {
           effect normalize-effect {
             type audio.normalize;
