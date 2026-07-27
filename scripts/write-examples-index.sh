@@ -1,91 +1,73 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OUTPUT=${1:?preview directory is required}
+OUTPUT=${1:?output directory is required}
 EXPECTED=${2:?expected example count is required}
-TEMPORARY="$OUTPUT/index.html.tmp"
-COUNT=0
+GALLERY=${3:?gallery catalog is required}
+TEMP="$OUTPUT/index.html.tmp"
 
-[[ "$EXPECTED" =~ ^[1-9][0-9]*$ ]] || {
-  echo "examples preview: invalid expected count: $EXPECTED" >&2
+fail() {
+  echo "examples index: $*" >&2
   exit 1
 }
 
-{
-  cat <<'HTML'
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VEAC example previews</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; color: #20262e; background: #f3f5f7; font: 15px/1.5 system-ui, sans-serif; }
-    header { padding: 24px max(20px, calc((100% - 1180px) / 2)); color: #f8fafb; background: #20262e; }
-    h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
-    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 18px; max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; }
-    article { min-width: 0; overflow: hidden; border: 1px solid #d7dce1; border-radius: 6px; background: #fff; }
-    h2 { margin: 0; padding: 13px 14px; border-bottom: 1px solid #e2e6e9; font-size: 16px; letter-spacing: 0; }
-    video, img { display: block; width: 100%; aspect-ratio: 16 / 9; background: #101419; object-fit: contain; }
-    audio { display: block; width: calc(100% - 28px); margin: 20px 14px; }
-    nav { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 14px; }
-    a { color: #0b6e69; text-underline-offset: 3px; }
-  </style>
-</head>
-<body>
-  <header><h1>VEAC example previews</h1></header>
-  <main>
+[[ -f "$GALLERY" ]] || fail "missing gallery catalog: $GALLERY"
+[[ "$EXPECTED" =~ ^[0-9]+$ ]] || fail "expected count must be an integer"
+
+actual=$(find "$OUTPUT" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+[[ "$actual" -eq "$EXPECTED" ]] || fail "expected $EXPECTED example directories, found $actual"
+
+cat > "$TEMP" <<'HTML'
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VEAC Examples</title><style>
+:root{color-scheme:light;background:#f3f5f4;color:#17211c;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+body{margin:0}.page-header{max-width:1440px;margin:auto;padding:32px 24px 20px}.page-header h1{font-size:30px;margin:0 0 8px;letter-spacing:0}.page-header p{margin:0;color:#526159;max-width:760px;line-height:1.5}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px;max-width:1440px;margin:auto;padding:0 24px 40px}
+article{background:#fff;border:1px solid #d8dfdb;border-radius:6px;overflow:hidden;min-width:0;box-shadow:0 3px 14px #17211c12}
+.copy{padding:20px;border-bottom:1px solid #e2e7e4}.example-id{margin:0 0 8px;color:#66736c;font-size:12px;overflow-wrap:anywhere}.example-id code{font:inherit}
+h2{font-size:20px;line-height:1.25;margin:0 0 6px;letter-spacing:0}.summary{margin:0;color:#46544c;line-height:1.5;overflow-wrap:anywhere}
+h3{font-size:13px;text-transform:uppercase;color:#2b6a4c;margin:18px 0 8px;letter-spacing:0}.checks{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+.checks li{display:grid;gap:2px;line-height:1.4;overflow-wrap:anywhere}.cue{font-size:12px;font-weight:700;color:#2b6a4c}.expect{font-size:13px;color:#35443c}
+.outputs{display:grid;gap:1px;background:#e2e7e4}.output{background:#fff;padding-bottom:12px}.output-name{font-size:12px;font-weight:700;color:#526159;padding:10px 14px 8px;overflow-wrap:anywhere}
+video,img,audio{display:block;width:100%;background:#101713}video,img{aspect-ratio:16/9;object-fit:contain}audio{box-sizing:border-box;padding:10px 14px}
+.links{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px 18px}.links a,.artifact{font-size:12px;color:#1f5f43;text-decoration:none;border-bottom:1px solid #9db8a9;overflow-wrap:anywhere}.artifact{display:inline-block;margin:0 14px 12px}
+@media(max-width:520px){.page-header{padding:24px 16px 16px}main{padding:0 16px 28px}.copy{padding:18px}.links{padding:12px 18px 16px}}
+</style></head><body><header class="page-header"><h1>VEAC Examples</h1>
+<p>Each example names the editing mechanisms on display and the observable results that confirm a successful render.</p></header><main>
 HTML
 
-  for entry in "$OUTPUT"/*; do
-    [[ -d "$entry/rendered" ]] || continue
-    name=$(basename "$entry")
-    [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]] || continue
-    [[ -s "$entry/plan.json" ]] || {
-      echo "example has no primary render plan: $name" >&2
-      exit 1
-    }
-    media_count=0
-    printf '    <article>\n      <h2>%s</h2>\n' "$name"
-    for media in "$entry"/rendered/*; do
-      [[ -f "$media" ]] || continue
-      file=$(basename "$media")
-      [[ "$file" =~ ^[A-Za-z0-9._-]+$ ]] || {
-        echo "unsafe preview filename: $file" >&2
-        exit 1
-      }
-      case "${file##*.}" in
-        mp4|mov|mkv|webm)
-          printf '      <video controls preload="metadata" src="%s/rendered/%s"></video>\n' "$name" "$file" ;;
-        m4a|mp3|ogg|wav)
-          printf '      <audio controls preload="metadata" src="%s/rendered/%s"></audio>\n' "$name" "$file" ;;
-        jpg|jpeg|png|webp)
-          printf '      <img loading="lazy" src="%s/rendered/%s" alt="%s preview">\n' "$name" "$file" "$name" ;;
-        *)
-          printf '      <nav><a href="%s/rendered/%s">Artifact</a></nav>\n' "$name" "$file" ;;
-      esac
-      media_count=$((media_count + 1))
-    done
-    [[ $media_count -gt 0 ]] || {
-      echo "example has no rendered preview: $name" >&2
-      exit 1
-    }
-    printf '      <nav><a href="%s/project/main.veac">Source</a><a href="%s/project/project.veac.json">IR</a><a href="%s/plan.json">Plan</a><a href="%s/build.log">Log</a></nav>\n' "$name" "$name" "$name" "$name"
-    printf '    </article>\n'
-    COUNT=$((COUNT + 1))
-  done
+published=0
+while IFS= read -r name; do
+  dir="$OUTPUT/$name"
+  [[ -d "$dir" ]] || continue
+  metadata=$(jq -ce --arg id "$name" '.examples[] | select(.id == $id)' "$GALLERY") \
+    || fail "missing presentation for $name"
+  title=$(jq -r '.title | @html' <<<"$metadata")
+  summary=$(jq -r '.summary | @html' <<<"$metadata")
+  checks=$(jq -r '.checks[] | "<li><span class=\"cue\">\(.cue | @html)</span><span class=\"expect\">\(.expect | @html)</span></li>"' <<<"$metadata")
+  name_html=$(jq -nr --arg value "$name" '$value | @html')
+  {
+    printf '<article data-example="%s"><div class="copy"><p class="example-id"><code>%s</code></p>' "$name_html" "$name_html"
+    printf '<h2>%s</h2><p class="summary">%s</p><h3>What to verify</h3><ul class="checks">%s</ul></div>' "$title" "$summary" "$checks"
+    printf '<div class="outputs">'
+  } >> "$TEMP"
+  while IFS= read -r artifact; do
+    relative=${artifact#"$dir/rendered/"}
+    relative_html=$(jq -nr --arg value "$relative" '$value | @html')
+    printf '<div class="output"><div class="output-name">%s</div>' "$relative_html" >> "$TEMP"
+    case "$artifact" in
+      *.mp4|*.webm) printf '<video controls preload="metadata" src="%s/rendered/%s"></video>' "$name_html" "$relative_html" >> "$TEMP" ;;
+      *.png|*.jpg|*.jpeg) printf '<img loading="lazy" src="%s/rendered/%s" alt="%s output">' "$name_html" "$relative_html" "$name_html" >> "$TEMP" ;;
+      *.wav|*.mp3|*.m4a) printf '<audio controls preload="metadata" src="%s/rendered/%s"></audio>' "$name_html" "$relative_html" >> "$TEMP" ;;
+      *) printf '<a class="artifact" href="%s/rendered/%s">Open %s</a>' "$name_html" "$relative_html" "$relative_html" >> "$TEMP" ;;
+    esac
+    printf '</div>' >> "$TEMP"
+  done < <(find "$dir/rendered" -type f | sort)
+  printf '</div><nav class="links"><a href="%s/project/main.veac">Source</a><a href="%s/project/project.veac.json">IR</a><a href="%s/plan.json">Plan</a><a href="%s/build.log">Log</a></nav></article>\n' "$name_html" "$name_html" "$name_html" "$name_html" >> "$TEMP"
+  published=$((published + 1))
+done < <(jq -r '.examples[].id' "$GALLERY")
 
-  cat <<'HTML'
-  </main>
-</body>
-</html>
-HTML
-} > "$TEMPORARY"
-
-[[ $COUNT -eq $EXPECTED ]] || {
-  rm -f "$TEMPORARY"
-  echo "examples preview: expected $EXPECTED entries, built $COUNT" >&2
-  exit 1
-}
-mv "$TEMPORARY" "$OUTPUT/index.html"
+[[ "$published" -eq "$EXPECTED" ]] || fail "expected $EXPECTED cataloged examples, published $published"
+printf '</main></body></html>\n' >> "$TEMP"
+mv "$TEMP" "$OUTPUT/index.html"

@@ -11,18 +11,18 @@ project blend-modes {
     layer visual base {
       item dark {
         source generated solid { color #17324dff; }
-        record { at 0s; duration 22s; }
+        record { at 0s; duration 12s; }
       }
     }
     layer visual overlays {
       item screen-shape {
         source generated solid { color #ffcc00ff; }
-        record { at 0s; duration 2s; }
+        record { at 0s; duration 1s; }
         modifiers { composite screen { opacity 80%; z-index 10; blend screen; } }
       }
       item multiply-shape {
         source generated solid { color #00b4d8ff; }
-        record { at 2s; duration 2s; }
+        record { at 1s; duration 1s; }
         modifiers { composite multiply { opacity 75%; z-index 20; blend multiply; } }
       }
       item overlay-shape {
@@ -30,17 +30,18 @@ project blend-modes {
           center 50% 50%; radius 70%;
           stop 0% #f72585ff; stop 100% #7209b7ff;
         }
-        record { at 4s; duration 2s; }
+        record { at 2s; duration 1s; }
         modifiers { composite overlay { opacity 85%; z-index 30; blend overlay; } }
       }
-      item darken-shape { source generated solid { color #ef476fff; } record { at 6s; duration 2s; } modifiers { composite darken { blend darken; } } }
-      item lighten-shape { source generated solid { color #ffd166ff; } record { at 8s; duration 2s; } modifiers { composite lighten { blend lighten; } } }
-      item dodge-shape { source generated solid { color #06d6a0ff; } record { at 10s; duration 2s; } modifiers { composite dodge { blend color-dodge; } } }
-      item burn-shape { source generated solid { color #118ab2ff; } record { at 12s; duration 2s; } modifiers { composite burn { blend color-burn; } } }
-      item hard-light-shape { source generated solid { color #8338ecff; } record { at 14s; duration 2s; } modifiers { composite hard-light { blend hard-light; } } }
-      item soft-light-shape { source generated solid { color #f72585ff; } record { at 16s; duration 2s; } modifiers { composite soft-light { blend soft-light; } } }
-      item difference-shape { source generated solid { color #3a86ffff; } record { at 18s; duration 2s; } modifiers { composite difference { blend difference; } } }
-      item exclusion-shape { source generated solid { color #ff006eff; } record { at 20s; duration 2s; } modifiers { composite exclusion { blend exclusion; } } }
+      item darken-shape { source generated solid { color #ef476fff; } record { at 3s; duration 1s; } modifiers { composite darken { blend darken; } } }
+      item lighten-shape { source generated solid { color #ffd166ff; } record { at 4s; duration 1s; } modifiers { composite lighten { blend lighten; } } }
+      item dodge-shape { source generated solid { color #06d6a0ff; } record { at 5s; duration 1s; } modifiers { composite dodge { blend color-dodge; } } }
+      item burn-shape { source generated solid { color #118ab2ff; } record { at 6s; duration 1s; } modifiers { composite burn { blend color-burn; } } }
+      item hard-light-shape { source generated solid { color #8338ecff; } record { at 7s; duration 1s; } modifiers { composite hard-light { blend hard-light; } } }
+      item soft-light-shape { source generated solid { color #f72585ff; } record { at 8s; duration 1s; } modifiers { composite soft-light { blend soft-light; } } }
+      item difference-shape { source generated solid { color #3a86ffff; } record { at 9s; duration 1s; } modifiers { composite difference { blend difference; } } }
+      item exclusion-shape { source generated solid { color #ff006eff; } record { at 10s; duration 1s; } modifiers { composite exclusion { blend exclusion; } } }
+      item normal-shape { source generated solid { color #80ffdbff; } record { at 11s; duration 1s; } modifiers { composite normal { blend normal; } } }
     }
   }
 }

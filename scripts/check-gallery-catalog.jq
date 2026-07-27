@@ -1,5 +1,5 @@
 def nonempty:
-  type == "string" and length > 0;
+  type == "string" and test("\\S");
 
 def exact_keys($expected):
   (keys_unsorted | sort) == ($expected | sort);
@@ -15,13 +15,8 @@ def expected_artifact:
     else
       ($artifact | exact_keys(["kind"])) and
       ($artifact.kind as $kind | [
-        "canonical_project",
-        "resolved_plan",
-        "provider_observations",
-        "caption_sidecar",
-        "template_bindings",
-        "edit_outcome",
-        "probe_snapshot"
+        "canonical_project", "resolved_plan", "provider_observations",
+        "caption_sidecar", "template_bindings", "edit_outcome", "probe_snapshot"
       ] | index($kind) != null)
     end;
 
@@ -42,6 +37,17 @@ def source_artifacts:
   ([.expected_artifacts[] | select(.kind == "canonical_project")] | length == 1) and
   ([.expected_artifacts[] | select(.kind == "resolved_plan")] | length == 1) and
   any(.expected_artifacts[]; .kind == "authoring_output");
+
+def presentation_check:
+  exact_keys(["cue", "expect"]) and
+  (.cue | nonempty) and (.expect | nonempty);
+
+def example:
+  exact_keys(["checks", "id", "source", "summary", "title"]) and
+  (.id | nonempty and test("^[a-z][a-z0-9-]+$")) and
+  (.source == ("examples/" + .id + "/main.veac")) and
+  (.title | nonempty) and (.summary | nonempty) and
+  (.checks | type == "array" and length > 0 and all(.[]; presentation_check));
 
 def target:
   . as $target
@@ -65,6 +71,17 @@ def target:
       ($target.example | nonempty) and ($target.preview_window | preview_window)
     else $target.preview_window == null end);
 
-exact_keys(["schema_version", "targets"]) and
-.schema_version == 3 and
-(.targets | type == "array" and length > 0 and all(.[]; target))
+def unique_ids:
+  ([.[].id] | length) == ([.[].id] | unique | length);
+
+def examples_are_closed:
+  ([.examples[].source] | sort)
+  == ([.targets[] | select(.example | nonempty) | .example] | sort);
+
+exact_keys(["examples", "schema_version", "targets"]) and
+.schema_version == 4 and
+(.examples | type == "array" and length > 0 and unique_ids) and
+all(.examples[]; example) and
+(.targets | type == "array" and length > 0 and unique_ids) and
+all(.targets[]; target) and
+examples_are_closed

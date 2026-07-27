@@ -7,11 +7,11 @@ project nested-and-multicam {
   }
   entry sequence main;
   resource video host {
-    locator local { path "assets/host.mp4"; }
+    locator local { path "assets/clip-a.mp4"; }
     streams { video auto; audio auto; }
   }
   resource video guest {
-    locator local { path "assets/guest.mp4"; }
+    locator local { path "assets/clip-b.mp4"; }
     streams { video auto; audio auto; }
   }
 

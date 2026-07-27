@@ -6,7 +6,7 @@
     {"id":"apply.scope.layer","title":"Layer apply","family":"apply","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
     {"id":"apply.scope.items","title":"Item set apply","family":"apply","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
     {"id":"relation.group","title":"Item group","family":"relation","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
-    {"id":"relation.av-link","title":"Audio video link","family":"relation","coverage":"preview_required","capability_id":"P1-01","preview_target":"all-features"},
+    {"id":"relation.av-link","title":"Audio video link","family":"relation","coverage":"preview_required","capability_id":"P1-08","preview_target":"all-features"},
     {"id":"source.sequence","title":"Nested sequence source","family":"source","coverage":"preview_required","capability_id":"P1-07","preview_target":"nested-and-multicam"},
     {"id":"source.multicam","title":"Multicam source","family":"source","coverage":"preview_required","capability_id":"P1-07","preview_target":"nested-and-multicam"},
     {"id":"project.multicam","title":"Multicam declaration","family":"project","coverage":"workflow_evidence","evidence":"examples/nested-and-multicam/main.veac"},

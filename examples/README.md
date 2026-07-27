@@ -9,6 +9,9 @@ examples/capabilities.json
 ```
 
 The catalog and filesystem must contain exactly the same source set. There is no legacy example frontend.
+`gallery.json.examples` owns one title, summary, and non-empty set of `{ cue, expect }`
+checks for every source. A cue may identify media time, audio, IR, plan, or a rendered
+artifact; presentation copy must not claim that an invisible mechanism is pixel evidence.
 
 ## Commands
 

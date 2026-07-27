@@ -65,7 +65,13 @@ project text-animation {
         source text {
           content "Line one\nLine two";
           style { font family "Inter"; size 48px; fill #ffffffff; }
-          animation { unit line; stagger 80ms; }
+          animation {
+            unit line; stagger 80ms;
+            reveal curve {
+              key line-hidden { at 0s; value 0%; interpolation linear; }
+              key line-shown { at 700ms; value 100%; interpolation ease-out; }
+            }
+          }
         }
         record { at 5s; duration 2s; }
       }
@@ -75,7 +81,13 @@ project text-animation {
         source text {
           content "Word by word";
           style { font family "Inter"; size 48px; fill #ffffffff; }
-          animation { unit word; stagger 60ms; }
+          animation {
+            unit word; stagger 60ms;
+            reveal curve {
+              key word-hidden { at 0s; value 0%; interpolation linear; }
+              key word-shown { at 550ms; value 100%; interpolation ease-out; }
+            }
+          }
         }
         record { at 7s; duration 2s; }
       }

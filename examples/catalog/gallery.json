@@ -1,37 +1,174 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "examples": [
+    {
+      "id": "timeline-source-time", "source": "examples/timeline-source-time/main.veac", "title": "Source-time Mapping",
+      "summary": "Compare linear trims, a speed ramp, a freeze frame, fast-forward playback, and explicit source-boundary holds.",
+      "checks": [{"cue":"0-3s - Linear trim","expect":"The reel advances continuously from source time 5s to 8s at normal speed."},{"cue":"3-6s - Speed ramp","expect":"Motion accelerates as source time advances from 10s to 15s."},{"cue":"6-10s - Freeze and fast-forward","expect":"One frame holds for two seconds, then the reel plays at 2x speed."},{"cue":"10-18s - Boundary holds","expect":"The nested source holds its first frame before the range and its last frame after it."}]
+    },
+    {
+      "id": "transforms-and-animation", "source": "examples/transforms-and-animation/main.veac", "title": "Transforms & Keyframes",
+      "summary": "Animate a rounded graphic through typed position interpolation while retaining rotation, opacity, and placement.",
+      "checks": [{"cue":"0-1s - Motion","expect":"The teal rounded block moves through several easing phases before settling."},{"cue":"1-3s - Placement","expect":"The block remains in the lower-right area with a slight rotation and 90% opacity."},{"cue":"IR - Interpolation","expect":"The position curve retains hold, linear, easing, and cubic-bezier segments."}]
+    },
+    {
+      "id": "blend-modes", "source": "examples/blend-modes/main.veac", "title": "Blend Modes",
+      "summary": "Compare all twelve compositing modes over one dark-blue base.",
+      "checks": [{"cue":"0-3s - Screen, multiply, overlay","expect":"Each one-second segment produces a distinct brightening, darkening, or contrast mix."},{"cue":"3-6s - Darken, lighten, color dodge","expect":"Channel selection and dodge visibly change the flat overlay colors."},{"cue":"6-9s - Color burn, hard light, soft light","expect":"The three contrast families remain visually distinct."},{"cue":"9-12s - Difference, exclusion, normal","expect":"Difference and exclusion alter the relationship before the normal reference segment."}]
+    },
+    {
+      "id": "masks-and-mattes", "source": "examples/masks-and-mattes/main.veac", "title": "Masks & Track Mattes",
+      "summary": "Combine geometric masks with luma and inverted-alpha track mattes in the entry sequence.",
+      "checks": [{"cue":"0-5s - Compound masks","expect":"Pink content is constrained by the intersecting geometric masks."},{"cue":"0-5s - Luma matte","expect":"The radial matte produces a soft center-to-edge attenuation."},{"cue":"5-7s - Inverted alpha matte","expect":"The blue consumer remains around the transparent portion of the inverted radial alpha matte."},{"cue":"IR - Relations","expect":"The entry sequence owns both luma and inverted-alpha matte relations."}]
+    },
+    {
+      "id": "apply-scopes", "source": "examples/apply-scopes/main.veac", "title": "Apply Scopes",
+      "summary": "Apply ordered pipelines to a composite band, one layer, and an exact item set.",
+      "checks": [{"cue":"0-2s - Composite band","expect":"Contrast, blur, and a circular mix affect the composed band."},{"cue":"2-4s - Layer","expect":"Only the overlay layer receives the brightness adjustment."},{"cue":"4-6s - Item set","expect":"The selected item group receives contrast and multiply composition."},{"cue":"IR - Stage order","expect":"Each apply block preserves its authored pipeline order and scope."}]
+    },
+    {
+      "id": "video-effects", "source": "examples/video-effects/main.veac", "title": "Video Effect Stack",
+      "summary": "Run a gradient through animated blur and an ordered sharpen, color, vignette, grain, and keying stack.",
+      "checks": [{"cue":"0-1s - Animated blur","expect":"The image moves from visibly blurred toward a sharper result."},{"cue":"1-3s - Finishing stack","expect":"Sharpening, color adjustment, vignette, and grain remain visible without flicker."},{"cue":"IR - Effect order","expect":"All eight registry-backed effects retain their authored order and typed parameters."}]
+    },
+    {
+      "id": "audio-processing", "source": "examples/audio-processing/main.veac", "title": "Audio Processing & Routing",
+      "summary": "Compare gain automation, pitch policies, fade curves, EQ and dynamics, normalization, buses, and sidechain routing.",
+      "checks": [{"cue":"0-2s - Voice chain","expect":"Level rises from -12 dB to -2 dB while 2x playback preserves pitch and uses equal-power fades."},{"cue":"2-4s - Gate and pitch","expect":"The faster source follows playback pitch and passes through a gate with linear fades."},{"cue":"4-6s - Loudness","expect":"The segment uses the -16 LUFS processor with exponential fades."},{"cue":"6-8s - Normalize effect","expect":"The final segment applies the registry-backed -18 LUFS normalization effect."},{"cue":"IR - Routing","expect":"Bus routing, sidechain relation, compressor, and source mappings remain explicit."}]
+    },
+    {
+      "id": "text-layout", "source": "examples/text-layout/main.veac", "title": "Text Layout",
+      "summary": "Show a bounded horizontal paragraph plus both vertical writing directions.",
+      "checks": [{"cue":"Upper left - Horizontal","expect":"The paragraph wraps inside its box with background, outline, and styled spans."},{"cue":"Upper right - Vertical RL","expect":"VEAC is arranged vertically from right to left."},{"cue":"Lower right - Vertical LR","expect":"LEFT is arranged vertically from left to right."},{"cue":"Throughout - Bounds","expect":"All text remains inside its declared layout boxes without clipping."}]
+    },
+    {
+      "id": "text-animation", "source": "examples/text-animation/main.veac", "title": "Text Animation Units",
+      "summary": "Sequence visible reveals by whole block, line, word, and grapheme units.",
+      "checks": [{"cue":"0-5s - Whole block","expect":"The complete block fades, slides, scales, and highlights as one unit."},{"cue":"5-7s - Lines","expect":"The two lines reveal independently with a stagger."},{"cue":"7-9s - Words","expect":"Words reveal one after another rather than as one block."},{"cue":"9-11s - Graphemes","expect":"Characters appear progressively with the typewriter-style stagger."}]
+    },
+    {
+      "id": "advanced-color", "source": "examples/advanced-color/main.veac", "title": "Advanced Color & LUTs",
+      "summary": "Compare an ordered primary grade plus 3D LUT with a separate 1D tone-curve LUT.",
+      "checks": [{"cue":"0-5s - 3D grade","expect":"The gray-blue field passes through HSL, luma curves, color wheels, and the cinematic 3D LUT."},{"cue":"5-8s - 1D tone curve","expect":"The same source switches to the one-dimensional tone-curve LUT."},{"cue":"At 5s - Pipeline change","expect":"The grade changes cleanly at the cut without a gap."},{"cue":"IR - Stage order","expect":"Basic, matrix, HSL, curves, wheels, and LUT stages retain authoring order."}]
+    },
+    {
+      "id": "generated-graphics", "source": "examples/generated-graphics/main.veac", "title": "Generated Graphics",
+      "summary": "Sequence transparent, solid, gradient, shape, fill, and stroke generators.",
+      "checks": [{"cue":"0-2s - Transparent and solid","expect":"A blank frame is followed by a full teal field."},{"cue":"2-4s - Gradient and rounded rectangle","expect":"A radial multi-stop gradient is followed by a rounded rectangle with fill and stroke."},{"cue":"4-6s - Polygon and path","expect":"A filled triangle is followed by a path drawn with a radial-gradient stroke."},{"cue":"6-8s - Ellipse and rectangle","expect":"A teal ellipse and blue rectangle complete the geometry set; audio stays silent."}]
+    },
+    {
+      "id": "transition-gallery", "source": "examples/transition-gallery/main.veac", "title": "Transition Gallery",
+      "summary": "Compare dissolve, fade, wipe, slide, zoom, circle, and pixelize transitions in sequence.",
+      "checks": [{"cue":"1s / 3s - Dissolve and fade","expect":"The first cut cross-dissolves; the second passes through black."},{"cue":"5s / 7s - Wipe and slide","expect":"A leftward wipe is followed by an upward slide."},{"cue":"9s / 11s - Zoom and circle","expect":"The next cuts zoom inward and open through a soft circle."},{"cue":"13s - Pixelize","expect":"The final cut resolves through coarse pixel blocks."}]
+    },
+    {
+      "id": "delivery-formats", "source": "examples/delivery-formats/main.veac", "title": "Delivery Formats",
+      "summary": "Deliver one timeline as video, PNG frames, WebVTT, a WAV stem, and a waveform image.",
+      "checks": [{"cue":"master.mp4","expect":"The three-second H.264/AAC master contains the burned-in caption."},{"cue":"frames/","expect":"The image-sequence output contains one PNG for every preview frame."},{"cue":"captions.vtt","expect":"The WebVTT artifact contains the 0-3s delivery cue."},{"cue":"mix.wav","expect":"The 48 kHz stereo master stem spans the complete timeline."},{"cue":"waveform.png","expect":"The waveform scope is a non-empty 1280x720 image."}]
+    },
+    {
+      "id": "minimal", "source": "examples/minimal/main.veac", "title": "Minimal Project",
+      "summary": "Render the smallest typed project as a three-second navy canvas.",
+      "checks": [{"cue":"0-3s - Canvas","expect":"The frame remains a uniform navy color for the complete output."},{"cue":"Throughout - Structure","expect":"There are no cuts, overlays, or unexpected audio."},{"cue":"IR - Timeline","expect":"The project contains only main sequence, visual layer, and background item."}]
+    },
+    {
+      "id": "hello-world", "source": "examples/hello-world/main.veac", "title": "Hello, VEAC",
+      "summary": "Render centered text over a vertical dark gradient with the basic typed text source.",
+      "checks": [{"cue":"0-4s - Background","expect":"The canvas holds a smooth teal-to-near-black vertical gradient."},{"cue":"0-4s - Title","expect":"Hello, VEAC stays centered, white, and fully inside its text box."},{"cue":"IR - Layering","expect":"Separate background and title layers preserve their visual order."}]
+    },
+    {
+      "id": "all-features", "source": "examples/all-features/main.veac", "title": "Cross-mechanism Integration",
+      "summary": "Combine media trim, color, graphics, audio processing, captions, and AV relations in one delivery.",
+      "checks": [{"cue":"0-1s - Picture","expect":"The fixture footage is visible beneath the color grade and burned-in caption."},{"cue":"1-4s - Graphic layer","expect":"A deep-blue translucent overlay enters at one second and remains above the picture."},{"cue":"0-4s - Caption and audio","expect":"The caption remains readable while the processed music bed is audible."},{"cue":"Artifacts - Delivery","expect":"The project produces one H.264/AAC MP4 and retains group plus AV-link relations in IR."}]
+    },
+    {
+      "id": "agentsmesh-intro-15s", "source": "examples/agentsmesh-intro-15s/main.veac", "title": "AgentsMesh Intro",
+      "summary": "Preview a complete 15-second brand title, promise, and caption sequence.",
+      "checks": [{"cue":"0-5s - Brand","expect":"AgentsMesh is centered in white over a stable blue-green diagonal gradient."},{"cue":"5-15s - Promise","expect":"The supporting promise appears below the brand and remains fully readable."},{"cue":"2-12s - Caption","expect":"The bottom caption stays inside its padded semi-transparent panel."},{"cue":"IR - Animation","expect":"The brand retains grapheme granularity, stagger, and typed transform animation."}]
+    },
+    {
+      "id": "captions-and-sidecars", "source": "examples/captions-and-sidecars/main.veac", "title": "Captions & Sidecars",
+      "summary": "Burn in two speaker-tagged timeline captions and export the same layer as WebVTT.",
+      "checks": [{"cue":"0-3s - Opening cue","expect":"Captions are timeline sources appears with a translucent black background."},{"cue":"3-6s - Closing cue","expect":"Sidecars select typed caption layers replaces the opening cue."},{"cue":"captions.vtt","expect":"Two Narrator cues span 0-3s and 3-6s."},{"cue":"IR - Selection","expect":"The sidecar output selects only the subtitles caption layer."}]
+    },
+    {
+      "id": "card-overlay", "source": "examples/card-overlay/main.veac", "title": "Rounded Card Overlay",
+      "summary": "Place a translucent rounded card at an absolute position over a dark gradient.",
+      "checks": [{"cue":"0-4s - Placement","expect":"The card stays at x=280, y=170 with a 720x380 frame."},{"cue":"0-4s - Surface","expect":"The off-white panel remains translucent at 92% opacity."},{"cue":"0-4s - Edge","expect":"A 3 px teal stroke follows the 18 px rounded corners without clipping."}]
+    },
+    {
+      "id": "color-grade", "source": "examples/color-grade/main.veac", "title": "Basic Color Grade",
+      "summary": "Apply exposure, temperature, tint, highlight, shadow, and fade adjustments to a slate gradient.",
+      "checks": [{"cue":"0-4s - Graded image","expect":"The horizontal slate gradient remains continuous and appears warmer with lifted shadows."},{"cue":"0-4s - Stability","expect":"The grade holds for the full clip without cuts or flicker."},{"cue":"IR - Pipeline","expect":"BT.709 input and output surround a linear-RGB working stage with all six controls."}]
+    },
+    {
+      "id": "executable-mechanisms", "source": "examples/executable-mechanisms/main.veac", "title": "Executable Mechanisms & Annotations",
+      "summary": "Combine a transition, animated graphic, blend and mask modifiers, and nine typed analysis annotations.",
+      "checks": [{"cue":"0-2s - Scene transition","expect":"The warm gradient dissolves into the cool gradient around the one-second cut."},{"cue":"0.5-1.5s - Graphic","expect":"A green ellipse moves horizontally while screen-blended through a circular mask."},{"cue":"IR - Annotations","expect":"Marker, language, scene boundary, scene, beat, silence, filler, highlight, and review are all present."},{"cue":"Artifact - Duration","expect":"The authored media ends cleanly at two seconds."}]
+    },
+    {
+      "id": "image-overlay", "source": "examples/image-overlay/main.veac", "title": "Image Overlay",
+      "summary": "Anchor an image at bottom right with contain sizing, scaling, opacity, and screen blending.",
+      "checks": [{"cue":"0-4s - Placement","expect":"The image stays 48 px from the right and bottom edges."},{"cue":"0-4s - Sizing","expect":"The asset fits a 320x320 frame and is then scaled to 35%."},{"cue":"0-4s - Composite","expect":"The image remains at 90% opacity with screen blending over the navy background."}]
+    },
+    {
+      "id": "nested-and-multicam", "source": "examples/nested-and-multicam/main.veac", "title": "Nested Sequence & Multicam",
+      "summary": "Play a nested opener, then switch a typed multicam program from host to guest.",
+      "checks": [{"cue":"0-2s - Nested opener","expect":"The cyan slate is rendered from the intro sequence."},{"cue":"2-4s - Host angle","expect":"The program begins on the first motion fixture."},{"cue":"4-6s - Guest angle","expect":"The program cuts to the visibly different second fixture at clip-local two seconds."},{"cue":"IR - Sync model","expect":"Audio sync, both angles, and the 120 ms guest offset remain explicit."}]
+    },
+    {
+      "id": "speed-demo", "source": "examples/speed-demo/main.veac", "title": "Fast & Slow Motion",
+      "summary": "Play one source first at 2x speed and then at 0.5x speed.",
+      "checks": [{"cue":"0-2s - Fast segment","expect":"Four seconds of source motion are compressed into two seconds."},{"cue":"2-6s - Slow segment","expect":"The next source range advances at half speed for the complete segment."},{"cue":"At 2s - Cadence change","expect":"Motion visibly changes from fast to slow without a gap."},{"cue":"IR - Mapping","expect":"Both segments retain exact linear source ranges and record durations."}]
+    },
+    {
+      "id": "template-fill", "source": "examples/template-fill/main.veac", "title": "Typed Template Slots",
+      "summary": "Declare replaceable media and text slots over visible placeholder content.",
+      "checks": [{"cue":"0-4s - Placeholder","expect":"The placeholder video renders beneath the white Replaceable title text."},{"cue":"IR - Media slot","expect":"The hero slot accepts video, uses fit-duration, and requires at least two seconds of source."},{"cue":"IR - Text slot","expect":"The title item owns a typed text slot."},{"cue":"Workflow boundary","expect":"The preview is the unfilled template; no applied binding is implied."}]
+    },
+    {
+      "id": "text-overlay", "source": "examples/text-overlay/main.veac", "title": "Styled Text Overlay",
+      "summary": "Render centered text with a background, outline, and shadow over a navy canvas.",
+      "checks": [{"cue":"0-4s - Typography","expect":"The white bold title remains centered and fully readable."},{"cue":"0-4s - Outline and panel","expect":"A 2 px cyan outline and padded translucent-black background surround the text."},{"cue":"0-4s - Shadow","expect":"A soft black shadow remains offset down and right."},{"cue":"0-4s - Text box","expect":"The title stays within its declared box without clipping."}]
+    },
+    {
+      "id": "transitions", "source": "examples/transitions/main.veac", "title": "Basic Dissolve",
+      "summary": "Dissolve between two solid-color scenes across a 400 ms centered cut.",
+      "checks": [{"cue":"0-1.8s - First scene","expect":"The frame remains solid red before the transition."},{"cue":"1.8-2.2s - Dissolve","expect":"Red and blue cross-fade smoothly across the cut."},{"cue":"2.2-4s - Second scene","expect":"The frame settles to solid blue."},{"cue":"IR - Relation","expect":"The transition keeps first-to-second endpoints, centered alignment, and 400 ms duration."}]
+    }
+  ],
   "targets": [
-    {"id":"timeline-source-time","kind":"render","capability_ids":["P1-03","P1-24","P1-25"],"example":"examples/timeline-source-time/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"timeline-source-time","kind":"render","capability_ids":["P1-03","P1-24","P1-25"],"example":"examples/timeline-source-time/main.veac","preview_window":{"start_seconds":0,"duration_seconds":18},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"transforms-and-animation","kind":"render","capability_ids":["P1-09","P1-10","P1-11","P1-12"],"example":"examples/transforms-and-animation/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"blend-modes","kind":"render","capability_ids":["P1-13"],"example":"examples/blend-modes/main.veac","preview_window":{"start_seconds":0,"duration_seconds":3},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"masks-and-mattes","kind":"render","capability_ids":["P1-14"],"example":"examples/masks-and-mattes/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"blend-modes","kind":"render","capability_ids":["P1-13"],"example":"examples/blend-modes/main.veac","preview_window":{"start_seconds":0,"duration_seconds":12},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"masks-and-mattes","kind":"render","capability_ids":["P1-14"],"example":"examples/masks-and-mattes/main.veac","preview_window":{"start_seconds":0,"duration_seconds":7},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"apply-scopes","kind":"render","capability_ids":["P1-27"],"example":"examples/apply-scopes/main.veac","preview_window":{"start_seconds":0,"duration_seconds":6},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"video-effects","kind":"render","capability_ids":["P1-22","P1-23","P1-28"],"example":"examples/video-effects/main.veac","preview_window":{"start_seconds":0,"duration_seconds":3},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"keying-stabilization","kind":"workflow","capability_ids":["P1-23","P2-04"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"provider_observations"},{"kind":"canonical_project"}],"external_reason":"Stabilization observations are provider-supplied; local keying previews live in video-effects."},
-    {"id":"audio-processing","kind":"render","capability_ids":["P1-20","P1-21","P2-02"],"example":"examples/audio-processing/main.veac","preview_window":{"start_seconds":0,"duration_seconds":5},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"audio-processing","kind":"render","capability_ids":["P1-20","P1-21","P2-02"],"example":"examples/audio-processing/main.veac","preview_window":{"start_seconds":0,"duration_seconds":8},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"audio-routing-ducking","kind":"workflow","capability_ids":["P1-20","P1-21"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"resolved_plan"},{"kind":"authoring_output","id":"main"}],"workflow_evidence":["docs/capabilities/p1-evidence-b.md"]},
-    {"id":"text-layout","kind":"render","capability_ids":["P1-10","P1-16","P1-17"],"example":"examples/text-layout/main.veac","preview_window":{"start_seconds":0,"duration_seconds":3},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"text-layout","kind":"render","capability_ids":["P1-10","P1-16","P1-17"],"example":"examples/text-layout/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"text-animation","kind":"render","capability_ids":["P1-18"],"example":"examples/text-animation/main.veac","preview_window":{"start_seconds":0,"duration_seconds":11},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"captions-sidecars","kind":"workflow","capability_ids":["P1-19"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"caption_sidecar"}],"workflow_evidence":["docs/capabilities/p1-evidence-b.md"]},
-    {"id":"advanced-color","kind":"render","capability_ids":["P1-22","P2-03"],"example":"examples/advanced-color/main.veac","preview_window":{"start_seconds":0,"duration_seconds":3},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"generated-graphics","kind":"render","capability_ids":["P1-29"],"example":"examples/generated-graphics/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"transition-gallery","kind":"render","capability_ids":["P1-26"],"example":"examples/transition-gallery/main.veac","preview_window":{"start_seconds":0,"duration_seconds":5},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"advanced-color","kind":"render","capability_ids":["P1-22","P2-03"],"example":"examples/advanced-color/main.veac","preview_window":{"start_seconds":0,"duration_seconds":8},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"generated-graphics","kind":"render","capability_ids":["P1-29"],"example":"examples/generated-graphics/main.veac","preview_window":{"start_seconds":0,"duration_seconds":8},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"transition-gallery","kind":"render","capability_ids":["P1-26"],"example":"examples/transition-gallery/main.veac","preview_window":{"start_seconds":0,"duration_seconds":14},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"nested-multicam","kind":"workflow","capability_ids":["P1-07","P2-09"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"canonical_project"}],"external_reason":"Automatic synchronization requires provider timing observations."},
     {"id":"template-fill-workflow","kind":"workflow","capability_ids":["P1-05"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"canonical_project"},{"kind":"template_bindings"}],"workflow_evidence":["docs/capabilities/p1-evidence-a.md"]},
     {"id":"delivery-formats","kind":"workflow","capability_ids":["P1-30","P1-32"],"example":"examples/delivery-formats/main.veac","preview_window":null,"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"master"},{"kind":"authoring_output","id":"frames"},{"kind":"authoring_output","id":"transcript"},{"kind":"authoring_output","id":"master-audio"},{"kind":"authoring_output","id":"luma-scope"}]},
     {"id":"edit-operations","kind":"workflow","capability_ids":["P1-04","P1-08"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"canonical_project"},{"kind":"edit_outcome"}],"workflow_evidence":["docs/capabilities/p1-evidence-a.md"]},
     {"id":"probe-stream-selection","kind":"workflow","capability_ids":["P1-34"],"example":null,"preview_window":null,"expected_artifacts":[{"kind":"probe_snapshot"},{"kind":"resolved_plan"}],"workflow_evidence":["docs/capabilities/p1-evidence-b.md"]},
     {"id":"minimal","kind":"render","capability_ids":["P1-01"],"example":"examples/minimal/main.veac","preview_window":{"start_seconds":0,"duration_seconds":3},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"hello-world","kind":"render","capability_ids":["P1-15"],"example":"examples/hello-world/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"all-features","kind":"render","capability_ids":["P1-01","P1-30"],"example":"examples/all-features/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"master"}]},
-    {"id":"agentsmesh-intro-15s","kind":"render","capability_ids":["P1-18","P1-30"],"example":"examples/agentsmesh-intro-15s/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"captions-and-sidecars","kind":"render","capability_ids":["P1-19"],"example":"examples/captions-and-sidecars/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"},{"kind":"authoring_output","id":"transcript"}]},
+    {"id":"hello-world","kind":"render","capability_ids":["P1-29"],"example":"examples/hello-world/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"all-features","kind":"render","capability_ids":["P1-01","P1-08","P1-30"],"example":"examples/all-features/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"master"}]},
+    {"id":"agentsmesh-intro-15s","kind":"render","capability_ids":["P1-18","P1-30"],"example":"examples/agentsmesh-intro-15s/main.veac","preview_window":{"start_seconds":0,"duration_seconds":15},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"captions-and-sidecars","kind":"render","capability_ids":["P1-19"],"example":"examples/captions-and-sidecars/main.veac","preview_window":{"start_seconds":0,"duration_seconds":6},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"},{"kind":"authoring_output","id":"transcript"}]},
     {"id":"card-overlay","kind":"render","capability_ids":["P1-09","P1-29"],"example":"examples/card-overlay/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"color-grade","kind":"render","capability_ids":["P1-22"],"example":"examples/color-grade/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"executable-mechanisms","kind":"render","capability_ids":["P1-07","P1-08"],"example":"examples/executable-mechanisms/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"main"}]},
+    {"id":"executable-mechanisms","kind":"render","capability_ids":["P1-07","P1-08"],"example":"examples/executable-mechanisms/main.veac","preview_window":{"start_seconds":0,"duration_seconds":2},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"main"}]},
     {"id":"image-overlay","kind":"render","capability_ids":["P1-09","P1-13"],"example":"examples/image-overlay/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"nested-and-multicam","kind":"render","capability_ids":["P1-07","P2-09"],"example":"examples/nested-and-multicam/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
-    {"id":"speed-demo","kind":"render","capability_ids":["P1-03"],"example":"examples/speed-demo/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"nested-and-multicam","kind":"render","capability_ids":["P1-07","P2-09"],"example":"examples/nested-and-multicam/main.veac","preview_window":{"start_seconds":0,"duration_seconds":6},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
+    {"id":"speed-demo","kind":"render","capability_ids":["P1-03","P1-24"],"example":"examples/speed-demo/main.veac","preview_window":{"start_seconds":0,"duration_seconds":6},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"template-fill","kind":"render","capability_ids":["P1-05"],"example":"examples/template-fill/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"text-overlay","kind":"render","capability_ids":["P1-16","P1-17"],"example":"examples/text-overlay/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]},
     {"id":"transitions","kind":"render","capability_ids":["P1-26"],"example":"examples/transitions/main.veac","preview_window":{"start_seconds":0,"duration_seconds":4},"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"preview"}]}

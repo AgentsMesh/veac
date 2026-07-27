@@ -173,6 +173,6 @@ for source_dir in "${EXAMPLES[@]}"; do
   build_example "$source_dir" "$BUILD_OUTPUT" "$FIXTURES" "$VEAC"
 done
 rm -rf "$FIXTURES"
-bash "$ROOT/scripts/write-examples-index.sh" "$BUILD_OUTPUT" "${#EXAMPLES[@]}"
+bash "$ROOT/scripts/write-examples-index.sh" "$BUILD_OUTPUT" "${#EXAMPLES[@]}" "$GALLERY"
 publish_preview_staging "$ROOT" "$OUTPUT"
 echo "example previews: $OUTPUT/index.html"

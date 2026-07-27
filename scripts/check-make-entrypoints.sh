@@ -7,6 +7,8 @@ REQUIRED=(
   examples/catalog/gallery.json
   scripts/check-gallery-catalog.jq
   scripts/example-preview.jq
+  scripts/tests/example-index-contracts.sh
+  scripts/write-examples-index.sh
 )
 
 for relative in "${REQUIRED[@]}"; do
@@ -26,6 +28,7 @@ while IFS= read -r file; do SHELL_FILES+=("$file"); done < <(
 }
 bash -n "${SHELL_FILES[@]}"
 make -s -C "$ROOT" help >/dev/null
+rg -q '^test-example-index:' "$ROOT/Makefile"
 git -C "$ROOT" check-ignore -q -- examples-preview/.guard
 git -C "$ROOT" check-ignore -q -- examples-preview.staging.123/.guard
 jq -e -f "$ROOT/scripts/check-gallery-catalog.jq" \

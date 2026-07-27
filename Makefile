@@ -14,7 +14,7 @@ PORT ?= 8000
 .PHONY: help doctor build check fmt fmt-check structure clippy lint test e2e
 .PHONY: coverage-package coverage-packages coverage check-examples build-examples
 .PHONY: serve-examples clean-examples check-language-docs
-.PHONY: check-example-capabilities test-example-capabilities
+.PHONY: check-example-capabilities test-example-capabilities test-example-index
 
 help: ## Show the available repository commands.
 	@awk 'BEGIN {FS = ":.*## "; print "VEAC repository commands:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -82,7 +82,10 @@ check-example-capabilities: ## Validate example coverage against stable capabili
 test-example-capabilities: ## Exercise positive and negative catalog checks.
 	bash scripts/tests/check-example-capabilities.sh
 
-check-examples: check-example-capabilities ## Check catalog, compile, and format examples.
+test-example-index: ## Verify example presentation and generated HTML contracts.
+	bash scripts/tests/example-index-contracts.sh
+
+check-examples: check-example-capabilities test-example-capabilities test-example-index ## Check catalog, compile, and format examples.
 	$(CARGO) test -p veac-lang --test examples_authoring \
 		--test examples_mechanism_evidence
 

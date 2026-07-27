@@ -71,6 +71,12 @@ expect_gallery_failure missing-plan \
   '.targets[0].expected_artifacts |= map(select(.kind != "resolved_plan"))'
 expect_gallery_failure workflow-artifact-on-source \
   '.targets[0].expected_artifacts[2] = {"kind":"probe_snapshot"}'
+expect_gallery_failure missing-presentation 'del(.examples[0])'
+expect_gallery_failure empty-presentation-checks '.examples[0].checks = []'
+expect_gallery_failure blank-presentation-summary '.examples[0].summary = "   "'
+expect_gallery_failure blank-presentation-cue '.examples[0].checks[0].cue = " "'
+expect_gallery_failure extra-presentation-check-key \
+  '.examples[0].checks[0].note = "not canonical"'
 
 jq -s '[.[].mechanisms[]]' "$ROOT"/examples/catalog/mechanisms/*.json \
   > "$tmp/mechanisms.json"
