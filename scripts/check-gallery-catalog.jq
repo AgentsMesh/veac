@@ -1,6 +1,20 @@
 def nonempty:
   type == "string" and test("\\S");
 
+def chinese_presentation:
+  nonempty and test("[一-龥]");
+
+def without_standard_tokens:
+  gsub("VEAC|AgentsMesh|Apple ProRes|ALAC|AAC|BT\\.709|GIF|H\\.264|HSL|LUFS|LUT|PCM|PNG|RGB|WAV|WebVTT"; "");
+
+def chinese_explanation:
+  chinese_presentation and
+  ((without_standard_tokens | test("[A-Za-z]{2,}")) | not);
+
+def chinese_cue:
+  chinese_presentation and
+  (startswith("产物 - ") or chinese_explanation);
+
 def exact_keys($expected):
   (keys_unsorted | sort) == ($expected | sort);
 
@@ -40,13 +54,13 @@ def source_artifacts:
 
 def presentation_check:
   exact_keys(["cue", "expect"]) and
-  (.cue | nonempty) and (.expect | nonempty);
+  (.cue | chinese_cue) and (.expect | chinese_explanation);
 
 def example:
   exact_keys(["checks", "id", "source", "summary", "title"]) and
   (.id | nonempty and test("^[a-z][a-z0-9-]+$")) and
   (.source == ("examples/" + .id + "/main.veac")) and
-  (.title | nonempty) and (.summary | nonempty) and
+  (.title | chinese_explanation) and (.summary | chinese_explanation) and
   (.checks | type == "array" and length > 0 and all(.[]; presentation_check));
 
 def target:
@@ -78,8 +92,9 @@ def examples_are_closed:
   ([.examples[].source] | sort)
   == ([.targets[] | select(.example | nonempty) | .example] | sort);
 
-exact_keys(["examples", "schema_version", "targets"]) and
-.schema_version == 4 and
+exact_keys(["examples", "presentation_language", "schema_version", "targets"]) and
+.schema_version == 5 and
+.presentation_language == "zh-CN" and
 (.examples | type == "array" and length > 0 and unique_ids) and
 all(.examples[]; example) and
 (.targets | type == "array" and length > 0 and unique_ids) and

@@ -34,6 +34,9 @@ jq -e '
     ($entry.evidence | type == "array" and length > 0 and all(.[]; nonempty)) and
     ([$entry.example, ($entry.not_applicable // null)] |
       map(select(nonempty)) | length == 1) and
+    (if ($entry.not_applicable | type == "string") then
+      ($entry.not_applicable | nonempty and test("[一-龥]"))
+    else true end) and
     (if $entry.layer == "dsl" and $entry.status == "stable" then
       (($entry.example | nonempty) or ($entry.not_applicable | nonempty))
     else true end)
@@ -72,8 +75,8 @@ jq -e --slurpfile gallery "$gallery" '
   all(.[];
     . as $mechanism |
     ($mechanism.id | nonempty and test("^[a-z][a-z0-9.-]+$")) and
-    ($mechanism.title | nonempty) and
-    ($mechanism.family | nonempty) and
+    ($mechanism.title | nonempty and test("[一-龥]")) and
+    ($mechanism.family | nonempty and test("[一-龥]")) and
     ($mechanism.coverage as $coverage |
       ["preview_required", "workflow_evidence", "external"] |
       index($coverage) != null) and

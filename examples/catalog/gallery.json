@@ -1,140 +1,141 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
+  "presentation_language": "zh-CN",
   "examples": [
     {
-      "id": "timeline-source-time", "source": "examples/timeline-source-time/main.veac", "title": "Source-time Mapping",
-      "summary": "Compare linear trims, a speed ramp, a freeze frame, fast-forward playback, and explicit source-boundary holds.",
-      "checks": [{"cue":"0-3s - Linear trim","expect":"The reel advances continuously from source time 5s to 8s at normal speed."},{"cue":"3-6s - Speed ramp","expect":"Motion accelerates as source time advances from 10s to 15s."},{"cue":"6-10s - Freeze and fast-forward","expect":"One frame holds for two seconds, then the reel plays at 2x speed."},{"cue":"10-18s - Boundary holds","expect":"The nested source holds its first frame before the range and its last frame after it."}]
+      "id": "timeline-source-time", "source": "examples/timeline-source-time/main.veac", "title": "源时间映射",
+      "summary": "对比线性裁剪、变速曲线、定格、快进播放以及显式的源边界帧保持。",
+      "checks": [{"cue":"0-3 秒 - 线性裁剪","expect":"画面素材以正常速度连续播放，源时间从 5 秒前进到 8 秒。"},{"cue":"3-6 秒 - 变速曲线","expect":"随着源时间从 10 秒前进到 15 秒，画面运动逐渐加速。"},{"cue":"6-10 秒 - 定格与快进","expect":"同一帧保持 2 秒，随后画面素材以 2 倍速度播放。"},{"cue":"10-18 秒 - 边界帧保持","expect":"嵌套素材在指定范围之前保持首帧，在指定范围之后保持尾帧。"}]
     },
     {
-      "id": "transforms-and-animation", "source": "examples/transforms-and-animation/main.veac", "title": "Transforms & Keyframes",
-      "summary": "Animate a rounded graphic through typed position interpolation while retaining rotation, opacity, and placement.",
-      "checks": [{"cue":"0-1s - Motion","expect":"The teal rounded block moves through several easing phases before settling."},{"cue":"1-3s - Placement","expect":"The block remains in the lower-right area with a slight rotation and 90% opacity."},{"cue":"IR - Interpolation","expect":"The position curve retains hold, linear, easing, and cubic-bezier segments."}]
+      "id": "transforms-and-animation", "source": "examples/transforms-and-animation/main.veac", "title": "变换与关键帧",
+      "summary": "通过类型化的位置插值驱动圆角图形运动，同时保留旋转、不透明度和布局定位。",
+      "checks": [{"cue":"0-1 秒 - 运动","expect":"青绿色圆角块经过多个缓动阶段移动，随后停稳。"},{"cue":"1-3 秒 - 布局定位","expect":"图形保持在右下区域，带有轻微旋转和 90% 不透明度。"},{"cue":"中间表示 - 插值","expect":"位置曲线保留帧值保持、线性、缓动和三次贝塞尔插值段。"}]
     },
     {
-      "id": "blend-modes", "source": "examples/blend-modes/main.veac", "title": "Blend Modes",
-      "summary": "Compare all twelve compositing modes over one dark-blue base.",
-      "checks": [{"cue":"0-3s - Screen, multiply, overlay","expect":"Each one-second segment produces a distinct brightening, darkening, or contrast mix."},{"cue":"3-6s - Darken, lighten, color dodge","expect":"Channel selection and dodge visibly change the flat overlay colors."},{"cue":"6-9s - Color burn, hard light, soft light","expect":"The three contrast families remain visually distinct."},{"cue":"9-12s - Difference, exclusion, normal","expect":"Difference and exclusion alter the relationship before the normal reference segment."}]
+      "id": "blend-modes", "source": "examples/blend-modes/main.veac", "title": "混合模式",
+      "summary": "在同一深蓝底色上对比全部 12 种合成模式。",
+      "checks": [{"cue":"0-3 秒 - 基础对比：滤色、正片叠底、叠加","expect":"每个 1 秒片段分别呈现明显的提亮、压暗或对比度混合效果。"},{"cue":"3-6 秒 - 明暗选择：变暗、变亮、颜色减淡","expect":"通道取值和颜色减淡会明显改变纯色叠加层。"},{"cue":"6-9 秒 - 对比光效：颜色加深、强光、柔光","expect":"三类对比度混合效果在视觉上彼此可辨。"},{"cue":"9-12 秒 - 差异与参照：差值、排除、正常","expect":"差值和排除会先改变上下层关系，最后以正常混合片段作为对照。"}]
     },
     {
-      "id": "masks-and-mattes", "source": "examples/masks-and-mattes/main.veac", "title": "Masks & Track Mattes",
-      "summary": "Combine geometric masks with luma and inverted-alpha track mattes in the entry sequence.",
-      "checks": [{"cue":"0-5s - Compound masks","expect":"Pink content is constrained by the intersecting geometric masks."},{"cue":"0-5s - Luma matte","expect":"The radial matte produces a soft center-to-edge attenuation."},{"cue":"5-7s - Inverted alpha matte","expect":"The blue consumer remains around the transparent portion of the inverted radial alpha matte."},{"cue":"IR - Relations","expect":"The entry sequence owns both luma and inverted-alpha matte relations."}]
+      "id": "masks-and-mattes", "source": "examples/masks-and-mattes/main.veac", "title": "蒙版与轨道遮罩",
+      "summary": "在入口序列中组合几何蒙版、亮度轨道遮罩和反相透明度轨道遮罩。",
+      "checks": [{"cue":"0-5 秒 - 复合蒙版","expect":"粉色内容被相交的几何蒙版共同约束。"},{"cue":"0-5 秒 - 亮度遮罩","expect":"径向遮罩产生从中心到边缘的柔和衰减。"},{"cue":"5-7 秒 - 反相透明度遮罩","expect":"蓝色内容保留在反相径向透明度遮罩的透明区域周围。"},{"cue":"中间表示 - 关系","expect":"入口序列同时拥有亮度遮罩和反相透明度遮罩两种关系。"}]
     },
     {
-      "id": "apply-scopes", "source": "examples/apply-scopes/main.veac", "title": "Apply Scopes",
-      "summary": "Apply ordered pipelines to a composite band, one layer, and an exact item set.",
-      "checks": [{"cue":"0-2s - Composite band","expect":"Contrast, blur, and a circular mix affect the composed band."},{"cue":"2-4s - Layer","expect":"Only the overlay layer receives the brightness adjustment."},{"cue":"4-6s - Item set","expect":"The selected item group receives contrast and multiply composition."},{"cue":"IR - Stage order","expect":"Each apply block preserves its authored pipeline order and scope."}]
+      "id": "apply-scopes", "source": "examples/apply-scopes/main.veac", "title": "应用作用域",
+      "summary": "为合成时间带、单个图层和精确指定的条目集合分别应用有序处理管线。",
+      "checks": [{"cue":"0-2 秒 - 合成时间带","expect":"对比度、模糊和圆形混合共同作用于合成后的时间带。"},{"cue":"2-4 秒 - 图层","expect":"只有叠加图层接受亮度调整。"},{"cue":"4-6 秒 - 条目集合","expect":"选中的条目组接受对比度调整和正片叠底合成。"},{"cue":"中间表示 - 阶段顺序","expect":"每个应用块都保留创作时指定的管线顺序和作用域。"}]
     },
     {
-      "id": "video-effects", "source": "examples/video-effects/main.veac", "title": "Video Effect Stack",
-      "summary": "Run a gradient through animated blur and an ordered sharpen, color, vignette, grain, and keying stack.",
-      "checks": [{"cue":"0-1s - Animated blur","expect":"The image moves from visibly blurred toward a sharper result."},{"cue":"1-3s - Finishing stack","expect":"Sharpening, color adjustment, vignette, and grain remain visible without flicker."},{"cue":"IR - Effect order","expect":"All eight registry-backed effects retain their authored order and typed parameters."}]
+      "id": "video-effects", "source": "examples/video-effects/main.veac", "title": "视频效果栈",
+      "summary": "让渐变画面依次经过动画模糊以及有序的锐化、调色、暗角、颗粒和抠像效果栈。",
+      "checks": [{"cue":"0-1 秒 - 动画模糊","expect":"画面从明显模糊逐渐变得清晰。"},{"cue":"1-3 秒 - 收尾效果栈","expect":"锐化、调色、暗角和颗粒效果持续可见，画面没有闪烁。"},{"cue":"中间表示 - 效果顺序","expect":"效果注册表提供的全部 8 个效果都保留创作顺序和类型化参数。"}]
     },
     {
-      "id": "audio-processing", "source": "examples/audio-processing/main.veac", "title": "Audio Processing & Routing",
-      "summary": "Compare gain automation, pitch policies, fade curves, EQ and dynamics, normalization, buses, and sidechain routing.",
-      "checks": [{"cue":"0-2s - Voice chain","expect":"Level rises from -12 dB to -2 dB while 2x playback preserves pitch and uses equal-power fades."},{"cue":"2-4s - Gate and pitch","expect":"The faster source follows playback pitch and passes through a gate with linear fades."},{"cue":"4-6s - Loudness","expect":"The segment uses the -16 LUFS processor with exponential fades."},{"cue":"6-8s - Normalize effect","expect":"The final segment applies the registry-backed -18 LUFS normalization effect."},{"cue":"IR - Routing","expect":"Bus routing, sidechain relation, compressor, and source mappings remain explicit."}]
+      "id": "audio-processing", "source": "examples/audio-processing/main.veac", "title": "音频处理与路由",
+      "summary": "对比增益自动化、音高策略、淡入淡出曲线、均衡与动态处理、响度标准化、总线和侧链路由。",
+      "checks": [{"cue":"0-2 秒 - 人声处理链","expect":"电平从 -12 分贝升至 -2 分贝；2 倍速播放保持音高，并使用等功率淡入淡出。"},{"cue":"2-4 秒 - 门限与音高","expect":"加速后的素材按播放速度改变音高，并经过带线性淡入淡出的门限处理。"},{"cue":"4-6 秒 - 响度","expect":"该片段将相对满刻度响度目标设为 -16，并采用指数淡入淡出。"},{"cue":"6-8 秒 - 标准化效果","expect":"最后一段应用效果注册表中的响度标准化效果，目标值为相对满刻度 -18。"},{"cue":"中间表示 - 路由","expect":"总线路由、侧链关系、压缩器和源映射均保持显式可见。"}]
     },
     {
-      "id": "text-layout", "source": "examples/text-layout/main.veac", "title": "Text Layout",
-      "summary": "Show a bounded horizontal paragraph plus both vertical writing directions.",
-      "checks": [{"cue":"Upper left - Horizontal","expect":"The paragraph wraps inside its box with background, outline, and styled spans."},{"cue":"Upper right - Vertical RL","expect":"VEAC is arranged vertically from right to left."},{"cue":"Lower right - Vertical LR","expect":"LEFT is arranged vertically from left to right."},{"cue":"Throughout - Bounds","expect":"All text remains inside its declared layout boxes without clipping."}]
+      "id": "text-layout", "source": "examples/text-layout/main.veac", "title": "文本布局",
+      "summary": "展示受边界约束的横排段落，以及从右向左和从左向右两种竖排方向。",
+      "checks": [{"cue":"左上 - 横排","expect":"段落在文本框内自动换行，并带有背景、描边和局部样式。"},{"cue":"右上 - 从右向左竖排","expect":"右上文字按从右向左的方向竖排。"},{"cue":"右下 - 从左向右竖排","expect":"右下文字按从左向右的方向竖排。"},{"cue":"全程 - 边界","expect":"所有文字都位于声明的布局框内，没有裁切。"}]
     },
     {
-      "id": "text-animation", "source": "examples/text-animation/main.veac", "title": "Text Animation Units",
-      "summary": "Sequence visible reveals by whole block, line, word, and grapheme units.",
-      "checks": [{"cue":"0-5s - Whole block","expect":"The complete block fades, slides, scales, and highlights as one unit."},{"cue":"5-7s - Lines","expect":"The two lines reveal independently with a stagger."},{"cue":"7-9s - Words","expect":"Words reveal one after another rather than as one block."},{"cue":"9-11s - Graphemes","expect":"Characters appear progressively with the typewriter-style stagger."}]
+      "id": "text-animation", "source": "examples/text-animation/main.veac", "title": "文本动画粒度",
+      "summary": "依次展示以整块、行、词和字素为粒度的可见性揭示动画。",
+      "checks": [{"cue":"0-5 秒 - 整块文本","expect":"完整文本块作为一个整体执行淡入、滑动、缩放和高亮。"},{"cue":"5-7 秒 - 按行","expect":"两行文字通过错峰时序分别揭示。"},{"cue":"7-9 秒 - 按词","expect":"各个词依次揭示，而不是整块同时出现。"},{"cue":"9-11 秒 - 按字素","expect":"字符按打字机式错峰时序逐步出现。"}]
     },
     {
-      "id": "advanced-color", "source": "examples/advanced-color/main.veac", "title": "Advanced Color & LUTs",
-      "summary": "Compare an ordered primary grade plus 3D LUT with a separate 1D tone-curve LUT.",
-      "checks": [{"cue":"0-5s - 3D grade","expect":"The gray-blue field passes through HSL, luma curves, color wheels, and the cinematic 3D LUT."},{"cue":"5-8s - 1D tone curve","expect":"The same source switches to the one-dimensional tone-curve LUT."},{"cue":"At 5s - Pipeline change","expect":"The grade changes cleanly at the cut without a gap."},{"cue":"IR - Stage order","expect":"Basic, matrix, HSL, curves, wheels, and LUT stages retain authoring order."}]
+      "id": "advanced-color", "source": "examples/advanced-color/main.veac", "title": "高级调色与查找表",
+      "summary": "对比有序的一级调色加三维颜色查找表管线，以及独立的一维色调曲线查找表。",
+      "checks": [{"cue":"0-5 秒 - 三维调色","expect":"灰蓝画面依次经过色相、饱和度与明度调整、亮度曲线、色轮和电影风格三维颜色查找表。"},{"cue":"5-8 秒 - 一维色调曲线","expect":"同一素材切换到一维色调曲线查找表。"},{"cue":"5 秒 - 管线切换","expect":"调色效果在剪切点干净切换，没有空白帧。"},{"cue":"中间表示 - 阶段顺序","expect":"基础调整、颜色矩阵、色相饱和度明度调整、曲线、色轮和查找表各阶段保留创作顺序。"}]
     },
     {
-      "id": "generated-graphics", "source": "examples/generated-graphics/main.veac", "title": "Generated Graphics",
-      "summary": "Sequence transparent, solid, gradient, shape, fill, and stroke generators.",
-      "checks": [{"cue":"0-2s - Transparent and solid","expect":"A blank frame is followed by a full teal field."},{"cue":"2-4s - Gradient and rounded rectangle","expect":"A radial multi-stop gradient is followed by a rounded rectangle with fill and stroke."},{"cue":"4-6s - Polygon and path","expect":"A filled triangle is followed by a path drawn with a radial-gradient stroke."},{"cue":"6-8s - Ellipse and rectangle","expect":"A teal ellipse and blue rectangle complete the geometry set; audio stays silent."}]
+      "id": "generated-graphics", "source": "examples/generated-graphics/main.veac", "title": "生成式图形",
+      "summary": "依次展示透明画布、纯色、渐变、形状、填充和描边生成器。",
+      "checks": [{"cue":"0-2 秒 - 透明与纯色","expect":"空白帧之后出现铺满画面的青绿色纯色。"},{"cue":"2-4 秒 - 渐变与圆角矩形","expect":"多色标径向渐变之后出现带填充和描边的圆角矩形。"},{"cue":"4-6 秒 - 多边形与路径","expect":"填充三角形之后出现以径向渐变描边绘制的路径。"},{"cue":"6-8 秒 - 椭圆与矩形","expect":"青绿色椭圆和蓝色矩形补全几何图形集合；音频始终静音。"}]
     },
     {
-      "id": "transition-gallery", "source": "examples/transition-gallery/main.veac", "title": "Transition Gallery",
-      "summary": "Compare dissolve, fade, wipe, slide, zoom, circle, and pixelize transitions in sequence.",
-      "checks": [{"cue":"1s / 3s - Dissolve and fade","expect":"The first cut cross-dissolves; the second passes through black."},{"cue":"5s / 7s - Wipe and slide","expect":"A leftward wipe is followed by an upward slide."},{"cue":"9s / 11s - Zoom and circle","expect":"The next cuts zoom inward and open through a soft circle."},{"cue":"13s - Pixelize","expect":"The final cut resolves through coarse pixel blocks."}]
+      "id": "transition-gallery", "source": "examples/transition-gallery/main.veac", "title": "转场画廊",
+      "summary": "依次对比叠化、淡出、擦除、滑动、缩放、圆形展开和像素化转场。",
+      "checks": [{"cue":"1 秒 / 3 秒 - 叠化与淡出","expect":"第一次剪切使用交叉叠化，第二次经过黑场。"},{"cue":"5 秒 / 7 秒 - 擦除与滑动","expect":"先向左擦除，随后向上滑动。"},{"cue":"9 秒 / 11 秒 - 缩放与圆形展开","expect":"接下来的剪切先向内缩放，再通过柔边圆形展开。"},{"cue":"13 秒 - 像素化","expect":"最后一次剪切通过粗颗粒像素块完成过渡。"}]
     },
     {
-      "id": "delivery-formats", "source": "examples/delivery-formats/main.veac", "title": "Delivery Formats",
-      "summary": "Deliver one timeline as video, PNG frames, WebVTT, a WAV stem, and a waveform image.",
-      "checks": [{"cue":"master.mp4","expect":"The three-second H.264/AAC master contains the burned-in caption."},{"cue":"frames/","expect":"The image-sequence output contains one PNG for every preview frame."},{"cue":"captions.vtt","expect":"The WebVTT artifact contains the 0-3s delivery cue."},{"cue":"mix.wav","expect":"The 48 kHz stereo master stem spans the complete timeline."},{"cue":"waveform.png","expect":"The waveform scope is a non-empty 1280x720 image."}]
+      "id": "delivery-formats", "source": "examples/delivery-formats/main.veac", "title": "交付格式",
+      "summary": "将同一时间线交付为视频、图像帧序列、字幕伴随文件、音频分轨和波形图。",
+      "checks": [{"cue":"产物 - master.mp4","expect":"3 秒的 H.264/AAC 主文件包含烧录字幕。"},{"cue":"产物 - frames/","expect":"图像序列输出为每个预览帧生成一张图像。"},{"cue":"产物 - captions.vtt","expect":"字幕伴随文件包含 0-3 秒的交付字幕提示。"},{"cue":"产物 - mix.wav","expect":"48 千赫兹立体声主混音分轨覆盖完整时间线。"},{"cue":"产物 - waveform.png","expect":"波形示波图是一张非空的 1280×720 图像。"}]
     },
     {
-      "id": "minimal", "source": "examples/minimal/main.veac", "title": "Minimal Project",
-      "summary": "Render the smallest typed project as a two-second navy canvas.",
-      "checks": [{"cue":"0-2s - Canvas","expect":"The frame remains a uniform navy color for the complete output."},{"cue":"Throughout - Structure","expect":"There are no cuts, overlays, or unexpected audio."},{"cue":"IR - Timeline","expect":"The project contains only main sequence, visual layer, and background item."}]
+      "id": "minimal", "source": "examples/minimal/main.veac", "title": "最小项目",
+      "summary": "将最小的类型化项目渲染为 2 秒海军蓝画布。",
+      "checks": [{"cue":"0-2 秒 - 画布","expect":"完整输出期间，画面始终保持均匀的海军蓝。"},{"cue":"全程 - 结构","expect":"没有剪切、叠加层或意外音频。"},{"cue":"中间表示 - 时间线","expect":"项目只包含主序列、视觉图层和背景条目。"}]
     },
     {
-      "id": "hello-world", "source": "examples/hello-world/main.veac", "title": "Hello, VEAC",
-      "summary": "Render centered text over a vertical dark gradient with the basic typed text source.",
-      "checks": [{"cue":"0-4s - Background","expect":"The canvas holds a smooth teal-to-near-black vertical gradient."},{"cue":"0-4s - Title","expect":"Hello, VEAC stays centered, white, and fully inside its text box."},{"cue":"IR - Layering","expect":"Separate background and title layers preserve their visual order."}]
+      "id": "hello-world", "source": "examples/hello-world/main.veac", "title": "你好，VEAC",
+      "summary": "使用基础类型化文本源，在深色竖向渐变上渲染居中文字。",
+      "checks": [{"cue":"0-4 秒 - 背景","expect":"画布呈现从青绿色到近黑色的平滑竖向渐变。"},{"cue":"0-4 秒 - 标题","expect":"标题文本保持白色居中，并完整位于文本框内。"},{"cue":"中间表示 - 图层顺序","expect":"独立的背景图层和标题图层保留正确的视觉顺序。"}]
     },
     {
-      "id": "all-features", "source": "examples/all-features/main.veac", "title": "Cross-mechanism Integration",
-      "summary": "Combine media trim, color, graphics, audio processing, captions, and AV relations in one delivery.",
-      "checks": [{"cue":"0-1s - Picture","expect":"The fixture footage is visible beneath the color grade and burned-in caption."},{"cue":"1-4s - Graphic layer","expect":"A deep-blue translucent overlay enters at one second and remains above the picture."},{"cue":"0-4s - Caption and audio","expect":"The caption remains readable while the processed music bed is audible."},{"cue":"Artifacts - Delivery","expect":"The project produces one H.264/AAC MP4 and retains group plus AV-link relations in IR."}]
+      "id": "all-features", "source": "examples/all-features/main.veac", "title": "跨机制集成",
+      "summary": "在一次交付中组合媒体裁剪、调色、图形、音频处理、字幕和音视频关系。",
+      "checks": [{"cue":"0-1 秒 - 画面","expect":"测试视频显示在调色效果和烧录字幕下方。"},{"cue":"1-4 秒 - 图形图层","expect":"深蓝色半透明叠加层在 1 秒时进入，并持续位于画面上方。"},{"cue":"0-4 秒 - 字幕与音频","expect":"字幕始终清晰可读，同时可以听到处理后的背景音乐。"},{"cue":"产物 - 交付","expect":"项目生成一个 H.264/AAC 视频文件，并在中间表示中保留分组关系和音视频链接关系。"}]
     },
     {
-      "id": "agentsmesh-intro-15s", "source": "examples/agentsmesh-intro-15s/main.veac", "title": "AgentsMesh Intro",
-      "summary": "Preview a complete 15-second brand title, promise, and caption sequence.",
-      "checks": [{"cue":"0-5s - Brand","expect":"AgentsMesh is centered in white over a stable blue-green diagonal gradient."},{"cue":"5-15s - Promise","expect":"The supporting promise replaces the brand in the central text region and remains fully readable."},{"cue":"2-12s - Caption","expect":"The bottom caption stays inside its padded semi-transparent panel."},{"cue":"IR - Animation","expect":"The brand retains grapheme granularity, stagger, and typed transform animation."}]
+      "id": "agentsmesh-intro-15s", "source": "examples/agentsmesh-intro-15s/main.veac", "title": "AgentsMesh 片头",
+      "summary": "预览一段完整的 15 秒品牌标题、产品主张和字幕序列。",
+      "checks": [{"cue":"0-5 秒 - 品牌标题","expect":"白色 AgentsMesh 居中显示在稳定的蓝绿色对角渐变上。"},{"cue":"5-15 秒 - 产品主张","expect":"辅助主张替换中央文本区域中的品牌标题，并始终完整可读。"},{"cue":"2-12 秒 - 字幕","expect":"底部字幕始终位于带内边距的半透明面板中。"},{"cue":"中间表示 - 动画","expect":"品牌标题保留字素粒度、错峰时序和类型化变换动画。"}]
     },
     {
-      "id": "captions-and-sidecars", "source": "examples/captions-and-sidecars/main.veac", "title": "Captions & Sidecars",
-      "summary": "Burn in two speaker-tagged timeline captions and export the same layer as WebVTT.",
-      "checks": [{"cue":"0-3s - Opening cue","expect":"Captions are timeline sources appears with a translucent black background."},{"cue":"3-6s - Closing cue","expect":"Sidecars select typed caption layers replaces the opening cue."},{"cue":"captions.vtt","expect":"Two Narrator cues span 0-3s and 3-6s."},{"cue":"IR - Selection","expect":"The sidecar output selects only the subtitles caption layer."}]
+      "id": "captions-and-sidecars", "source": "examples/captions-and-sidecars/main.veac", "title": "字幕与伴随文件",
+      "summary": "烧录两条带说话人标记的时间线字幕，并将同一图层导出为字幕伴随文件。",
+      "checks": [{"cue":"0-3 秒 - 开场字幕","expect":"开场字幕带有半透明黑色背景。"},{"cue":"3-6 秒 - 结束字幕","expect":"结束字幕替换开场字幕，画面中不会同时出现两条字幕。"},{"cue":"产物 - captions.vtt","expect":"两条说话人为旁白的字幕提示分别覆盖 0-3 秒和 3-6 秒。"},{"cue":"中间表示 - 选择范围","expect":"伴随文件输出只选择字幕图层。"}]
     },
     {
-      "id": "card-overlay", "source": "examples/card-overlay/main.veac", "title": "Rounded Card Overlay",
-      "summary": "Place a translucent rounded card at an absolute position over a dark gradient.",
-      "checks": [{"cue":"0-4s - Placement","expect":"The card stays at x=280, y=170 with a 720x380 frame."},{"cue":"0-4s - Surface","expect":"The off-white panel remains translucent at 92% opacity."},{"cue":"0-4s - Edge","expect":"A 3 px teal stroke follows the 18 px rounded corners without clipping."}]
+      "id": "card-overlay", "source": "examples/card-overlay/main.veac", "title": "圆角卡片叠加层",
+      "summary": "在深色渐变上以绝对坐标放置一张半透明圆角卡片。",
+      "checks": [{"cue":"0-4 秒 - 布局定位","expect":"卡片保持在横坐标 280、纵坐标 170，画框尺寸为 720×380 像素。"},{"cue":"0-4 秒 - 表面","expect":"米白色面板始终为半透明，且不透明度保持 92%。"},{"cue":"0-4 秒 - 边缘","expect":"3 像素青绿色描边沿着 18 像素圆角完整显示，没有裁切。"}]
     },
     {
-      "id": "color-grade", "source": "examples/color-grade/main.veac", "title": "Basic Color Grade",
-      "summary": "Apply exposure, temperature, tint, highlight, shadow, and fade adjustments to a slate gradient.",
-      "checks": [{"cue":"0-4s - Graded image","expect":"The horizontal slate gradient remains continuous and appears warmer with lifted shadows."},{"cue":"0-4s - Stability","expect":"The grade holds for the full clip without cuts or flicker."},{"cue":"IR - Pipeline","expect":"BT.709 input and output surround a linear-RGB working stage with all six controls."}]
+      "id": "color-grade", "source": "examples/color-grade/main.veac", "title": "基础调色",
+      "summary": "为石板灰渐变应用曝光、色温、色调、高光、阴影和褪色调整。",
+      "checks": [{"cue":"0-4 秒 - 调色画面","expect":"横向石板灰渐变保持连续，阴影被抬升，整体观感更暖。"},{"cue":"0-4 秒 - 稳定性","expect":"调色效果覆盖完整片段，没有剪切或闪烁。"},{"cue":"中间表示 - 管线","expect":"BT.709 输入和输出包围包含全部 6 个控制项的线性红绿蓝工作阶段。"}]
     },
     {
-      "id": "executable-mechanisms", "source": "examples/executable-mechanisms/main.veac", "title": "Executable Mechanisms & Annotations",
-      "summary": "Combine a transition, animated graphic, blend and mask modifiers, and nine typed analysis annotations.",
-      "checks": [{"cue":"0-2s - Scene transition","expect":"The warm gradient dissolves into the cool gradient around the one-second cut."},{"cue":"0.5-1.5s - Graphic","expect":"A green ellipse moves horizontally while screen-blended through a circular mask."},{"cue":"IR - Annotations","expect":"Marker, language, scene boundary, scene, beat, silence, filler, highlight, and review are all present."},{"cue":"Artifact - Duration","expect":"The authored media ends cleanly at two seconds."}]
+      "id": "executable-mechanisms", "source": "examples/executable-mechanisms/main.veac", "title": "可执行机制与标注",
+      "summary": "组合转场、动画图形、混合与蒙版修饰器，以及 9 种类型化分析标注。",
+      "checks": [{"cue":"0-2 秒 - 场景转场","expect":"暖色渐变在 1 秒剪切点附近叠化为冷色渐变。"},{"cue":"0.5-1.5 秒 - 图形","expect":"绿色椭圆水平移动，同时通过圆形蒙版以滤色模式混合。"},{"cue":"中间表示 - 标注","expect":"标记、语言、场景边界、场景、节拍、静音、口头填充词、精彩片段和审核标注全部存在。"},{"cue":"产物 - 时长","expect":"创作媒体在 2 秒处干净结束。"}]
     },
     {
-      "id": "image-overlay", "source": "examples/image-overlay/main.veac", "title": "Image Overlay",
-      "summary": "Anchor an image at bottom right with contain sizing, scaling, opacity, and screen blending.",
-      "checks": [{"cue":"0-4s - Placement","expect":"The image stays 48 px from the right and bottom edges."},{"cue":"0-4s - Sizing","expect":"The asset fits a 320x320 frame and is then scaled to 35%."},{"cue":"0-4s - Composite","expect":"The image remains at 90% opacity with screen blending over the navy background."}]
+      "id": "image-overlay", "source": "examples/image-overlay/main.veac", "title": "图像叠加层",
+      "summary": "将图像锚定在右下角，并展示完整适配、缩放、不透明度和滤色混合。",
+      "checks": [{"cue":"0-4 秒 - 布局定位","expect":"图像与右边缘、下边缘均保持 48 像素距离。"},{"cue":"0-4 秒 - 尺寸","expect":"素材先适配进 320×320 像素画框，再缩放到 35%。"},{"cue":"0-4 秒 - 合成","expect":"图像以 90% 不透明度和滤色混合模式叠加在海军蓝背景上。"}]
     },
     {
-      "id": "nested-and-multicam", "source": "examples/nested-and-multicam/main.veac", "title": "Nested Sequence & Multicam",
-      "summary": "Play a nested opener, then switch a typed multicam program from host to guest.",
-      "checks": [{"cue":"0-2s - Nested opener","expect":"The cyan slate is rendered from the intro sequence."},{"cue":"2-4s - Host angle","expect":"The program begins on the first motion fixture."},{"cue":"4-6s - Guest angle","expect":"The program cuts to the visibly different second fixture at clip-local two seconds."},{"cue":"IR - Sync model","expect":"Audio sync, both angles, and the 120 ms guest offset remain explicit."}]
+      "id": "nested-and-multicam", "source": "examples/nested-and-multicam/main.veac", "title": "嵌套序列与多机位",
+      "summary": "先播放嵌套片头，再让类型化多机位节目从主持人机位切换到嘉宾机位。",
+      "checks": [{"cue":"0-2 秒 - 嵌套片头","expect":"青色画面由片头序列渲染。"},{"cue":"2-4 秒 - 主持人机位","expect":"节目从第一段动态测试素材开始。"},{"cue":"4-6 秒 - 嘉宾机位","expect":"节目在片段局部时间 2 秒处切换到视觉上明显不同的第二段测试素材。"},{"cue":"中间表示 - 同步模型","expect":"音频同步、两个机位以及嘉宾机位的 120 毫秒偏移均保持显式可见。"}]
     },
     {
-      "id": "speed-demo", "source": "examples/speed-demo/main.veac", "title": "Fast & Slow Motion",
-      "summary": "Play one source first at 2x speed and then at 0.5x speed.",
-      "checks": [{"cue":"0-2s - Fast segment","expect":"Four seconds of source motion are compressed into two seconds."},{"cue":"2-6s - Slow segment","expect":"The next source range advances at half speed for the complete segment."},{"cue":"At 2s - Cadence change","expect":"Motion visibly changes from fast to slow without a gap."},{"cue":"IR - Mapping","expect":"Both segments retain exact linear source ranges and record durations."}]
+      "id": "speed-demo", "source": "examples/speed-demo/main.veac", "title": "快动作与慢动作",
+      "summary": "同一素材先以 2 倍速度播放，再以 0.5 倍速度播放。",
+      "checks": [{"cue":"0-2 秒 - 快速片段","expect":"4 秒源画面运动被压缩到 2 秒内。"},{"cue":"2-6 秒 - 慢速片段","expect":"下一段源时间范围在整个片段内以半速前进。"},{"cue":"2 秒 - 节奏变化","expect":"运动节奏从快速明显变为慢速，中间没有空隙。"},{"cue":"中间表示 - 映射","expect":"两个片段都保留精确的线性源时间范围和记录时长。"}]
     },
     {
-      "id": "template-fill", "source": "examples/template-fill/main.veac", "title": "Typed Template Slots",
-      "summary": "Declare replaceable media and text slots over visible placeholder content.",
-      "checks": [{"cue":"0-4s - Placeholder","expect":"The placeholder video renders beneath the white Replaceable title text."},{"cue":"IR - Media slot","expect":"The hero slot accepts video, uses fit-duration, and requires at least two seconds of source."},{"cue":"IR - Text slot","expect":"The title item owns a typed text slot."},{"cue":"Workflow boundary","expect":"The preview is the unfilled template; no applied binding is implied."}]
+      "id": "template-fill", "source": "examples/template-fill/main.veac", "title": "类型化模板插槽",
+      "summary": "在可见的占位内容上声明可替换的媒体插槽和文本插槽。",
+      "checks": [{"cue":"0-4 秒 - 占位内容","expect":"占位视频渲染在白色标题文本下方。"},{"cue":"中间表示 - 媒体插槽","expect":"主视觉媒体插槽接收视频，使用适配时长策略，并要求源素材至少为 2 秒。"},{"cue":"中间表示 - 文本插槽","expect":"标题条目拥有类型化文本插槽。"},{"cue":"工作流边界","expect":"预览展示的是尚未填充的模板，不表示已经应用任何绑定。"}]
     },
     {
-      "id": "text-overlay", "source": "examples/text-overlay/main.veac", "title": "Styled Text Overlay",
-      "summary": "Render centered text with a background, outline, and shadow over a navy canvas.",
-      "checks": [{"cue":"0-4s - Typography","expect":"The white bold title remains centered and fully readable."},{"cue":"0-4s - Outline and panel","expect":"A 2 px cyan outline and padded translucent-black background surround the text."},{"cue":"0-4s - Shadow","expect":"A soft black shadow remains offset down and right."},{"cue":"0-4s - Text box","expect":"The title stays within its declared box without clipping."}]
+      "id": "text-overlay", "source": "examples/text-overlay/main.veac", "title": "样式化文本叠加层",
+      "summary": "在海军蓝画布上渲染带背景、描边和阴影的居中文字。",
+      "checks": [{"cue":"0-4 秒 - 字体样式","expect":"白色粗体标题保持居中并始终完整可读。"},{"cue":"0-4 秒 - 描边与面板","expect":"2 像素青色描边和带内边距的半透明黑色背景包围文字。"},{"cue":"0-4 秒 - 阴影","expect":"柔和黑色阴影始终向右下方偏移。"},{"cue":"0-4 秒 - 文本框","expect":"标题始终位于声明的文本框内，没有裁切。"}]
     },
     {
-      "id": "transitions", "source": "examples/transitions/main.veac", "title": "Basic Dissolve",
-      "summary": "Dissolve between two solid-color scenes across a 400 ms centered cut.",
-      "checks": [{"cue":"0-1.8s - First scene","expect":"The frame remains solid red before the transition."},{"cue":"1.8-2.2s - Dissolve","expect":"Red and blue cross-fade smoothly across the cut."},{"cue":"2.2-4s - Second scene","expect":"The frame settles to solid blue."},{"cue":"IR - Relation","expect":"The transition keeps first-to-second endpoints, centered alignment, and 400 ms duration."}]
+      "id": "transitions", "source": "examples/transitions/main.veac", "title": "基础叠化",
+      "summary": "在两个纯色场景之间执行以剪切点为中心、时长 400 毫秒的叠化。",
+      "checks": [{"cue":"0-1.8 秒 - 第一个场景","expect":"转场开始前，画面保持纯红色。"},{"cue":"1.8-2.2 秒 - 叠化","expect":"红色和蓝色在剪切点附近平滑交叉淡化。"},{"cue":"2.2-4 秒 - 第二个场景","expect":"画面最终稳定为纯蓝色。"},{"cue":"中间表示 - 关系","expect":"转场保留从第一个场景到第二个场景的端点、居中对齐方式和 400 毫秒时长。"}]
     }
   ],
   "targets": [

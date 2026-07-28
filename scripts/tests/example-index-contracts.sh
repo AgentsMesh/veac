@@ -12,15 +12,15 @@ cat > "$GALLERY" <<'JSON'
   "examples": [
     {
       "id": "zeta",
-      "title": "<Zeta & \"quoted\">",
-      "summary": "<script>alert('x')</script>",
-      "checks": [{"cue":"0 < 1","expect":"A & B \"quoted\" 'single'"}]
+      "title": "<示例 & \"引号\">",
+      "summary": "<script>alert('测试')</script>",
+      "checks": [{"cue":"0 < 1","expect":"甲 & 乙 \"双引号\" '单引号'"}]
     },
     {
       "id": "alpha",
-      "title": "Alpha title",
-      "summary": "Alpha summary",
-      "checks": [{"cue":"Artifact","expect":"The output exists."}]
+      "title": "阿尔法示例",
+      "summary": "阿尔法摘要",
+      "checks": [{"cue":"成品","expect":"输出文件存在。"}]
     }
   ]
 }
@@ -40,11 +40,21 @@ bash "$WRITER" "$FULL" 2 "$GALLERY"
 
 [[ $(rg -o 'data-example="[^"]+"' "$FULL/index.html" | wc -l | tr -d ' ') -eq 2 ]]
 [[ $(rg -o 'data-example="[^"]+"' "$FULL/index.html" | sed -n '1p') == 'data-example="zeta"' ]]
-rg -F '&lt;Zeta &amp; &quot;quoted&quot;&gt;' "$FULL/index.html" >/dev/null
-rg -F '&lt;script&gt;alert(&apos;x&apos;)&lt;/script&gt;' "$FULL/index.html" >/dev/null
+rg -F '<html lang="zh-CN">' "$FULL/index.html" >/dev/null
+rg -F '<h1>VEAC 示例集</h1>' "$FULL/index.html" >/dev/null
+rg -F '<h3>验收要点</h3>' "$FULL/index.html" >/dev/null
+rg -F '&lt;示例 &amp; &quot;引号&quot;&gt;' "$FULL/index.html" >/dev/null
+rg -F '&lt;script&gt;alert(&apos;测试&apos;)&lt;/script&gt;' "$FULL/index.html" >/dev/null
 rg -F '0 &lt; 1' "$FULL/index.html" >/dev/null
-rg -F 'A &amp; B &quot;quoted&quot; &apos;single&apos;' "$FULL/index.html" >/dev/null
+rg -F '甲 &amp; 乙 &quot;双引号&quot; &apos;单引号&apos;' "$FULL/index.html" >/dev/null
 rg -F '<div class="output-name">tone.wav</div>' "$FULL/index.html" >/dev/null
+rg -F '>打开 output.txt</a>' "$FULL/index.html" >/dev/null
+rg -F '>源码</a>' "$FULL/index.html" >/dev/null
+rg -F '>中间表示</a>' "$FULL/index.html" >/dev/null
+if rg -F 'What to verify' "$FULL/index.html" >/dev/null; then
+  echo "example index emitted English presentation chrome" >&2
+  exit 1
+fi
 if rg -F '<script>alert' "$FULL/index.html" >/dev/null; then
   echo "example index emitted unescaped presentation HTML" >&2
   exit 1

@@ -7,7 +7,8 @@ REGISTRY_CHECKER="$ROOT/scripts/check-example-registry.sh"
 CATALOG="$ROOT/examples/capabilities.json"
 tmp="$(mktemp -d)"
 gallery_test="$ROOT/examples/catalog/.gallery-contract-test.$$.json"
-trap 'rm -rf "$tmp"; rm -f "$gallery_test"' EXIT
+mechanism_test="$ROOT/examples/catalog/.mechanism-contract-test.$$.json"
+trap 'rm -rf "$tmp"; rm -f "$gallery_test" "$mechanism_test"' EXIT
 
 expect_failure() {
   local name="$1"
@@ -18,6 +19,11 @@ expect_failure() {
   fi
 }
 
+jq '.capabilities[0].not_applicable = "English explanation"' "$CATALOG" \
+  > "$tmp/English-capability-explanation-catalog.json"
+expect_failure English-capability-explanation \
+  "$tmp/English-capability-explanation-catalog.json"
+
 expect_gallery_failure() {
   local name=$1
   local filter=$2
@@ -25,6 +31,17 @@ expect_gallery_failure() {
   jq "$filter" "$ROOT/examples/catalog/gallery.json" > "$gallery_test"
   jq --arg gallery "examples/catalog/$(basename "$gallery_test")" \
     '.gallery_catalog = $gallery' "$CATALOG" > "$catalog"
+  expect_failure "$name" "$catalog"
+}
+
+expect_mechanism_failure() {
+  local name=$1
+  local filter=$2
+  local catalog="$tmp/$name-catalog.json"
+  jq "$filter" "$ROOT/examples/catalog/mechanisms/delivery-workflows.json" \
+    > "$mechanism_test"
+  jq --arg fragment "examples/catalog/$(basename "$mechanism_test")" \
+    '.mechanism_catalogs[0] = $fragment' "$CATALOG" > "$catalog"
   expect_failure "$name" "$catalog"
 }
 
@@ -53,6 +70,12 @@ jq '.mechanism_catalogs[0] = "examples/catalog/missing-mechanisms.json"' \
 expect_failure missing-mechanisms "$tmp/missing-mechanisms.json"
 
 expect_gallery_failure legacy-schema '.schema_version = 1'
+expect_gallery_failure missing-presentation-language 'del(.presentation_language)'
+expect_gallery_failure English-presentation-title '.examples[0].title = "English title"'
+expect_gallery_failure English-presentation-summary '.examples[0].summary = "English summary"'
+expect_gallery_failure English-presentation-cue '.examples[0].checks[0].cue = "Timeline"'
+expect_gallery_failure mixed-English-presentation-cue '.examples[0].checks[0].cue = "时间 - Timeline"'
+expect_gallery_failure English-presentation-expect '.examples[0].checks[0].expect = "Visible result"'
 expect_gallery_failure legacy-artifacts \
   '.targets[0] += {"expected_deliverables":["preview"]}'
 expect_gallery_failure unknown-artifact \
@@ -77,6 +100,10 @@ expect_gallery_failure blank-presentation-summary '.examples[0].summary = "   "'
 expect_gallery_failure blank-presentation-cue '.examples[0].checks[0].cue = " "'
 expect_gallery_failure extra-presentation-check-key \
   '.examples[0].checks[0].note = "not canonical"'
+expect_mechanism_failure English-mechanism-title \
+  '.mechanisms[0].title = "English title"'
+expect_mechanism_failure English-mechanism-family \
+  '.mechanisms[0].family = "English family"'
 
 jq -s '[.[].mechanisms[]]' "$ROOT"/examples/catalog/mechanisms/*.json \
   > "$tmp/mechanisms.json"
