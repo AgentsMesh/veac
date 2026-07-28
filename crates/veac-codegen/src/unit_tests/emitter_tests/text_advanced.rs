@@ -32,7 +32,6 @@ fn box_alignment_line_height_and_unit_alpha_are_encoded_in_ass() {
         "PlayResY: 60",
         "\\1a&HFF&",
         "\\3a&HFF&",
-        "\\4a&HFF&",
         "\\pos(",
     ] {
         assert!(ass.contains(marker), "missing {marker}: {ass}");

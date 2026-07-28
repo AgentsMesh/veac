@@ -1,9 +1,9 @@
-use veac_plan::canonical::{Animatable, FitMode, Mask};
+use veac_plan::canonical::{Animatable, Mask};
 use veac_plan::{EffectiveVisualProperties, ResolvedClip};
 
 use super::{
-    animation, color, effects, geometry, mask, process_owner::ProcessOwner, time, CodegenErrors,
-    EmitContext,
+    animation, color, effects, mask, process_owner::ProcessOwner, time, visual_frame,
+    CodegenErrors, EmitContext,
 };
 
 pub(super) struct PreparedLayer {
@@ -18,16 +18,18 @@ pub(super) fn apply(
     visual: &EffectiveVisualProperties,
     label: String,
 ) -> Result<PreparedLayer, CodegenErrors> {
-    apply_inner(context, clip, visual, label, true)
+    let geometry = visual_frame::SourceGeometry::framed(visual.transform.anchor);
+    apply_source(context, clip, visual, label, geometry)
 }
 
-pub(super) fn apply_unframed(
+pub(super) fn apply_source(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     label: String,
+    geometry: visual_frame::SourceGeometry,
 ) -> Result<PreparedLayer, CodegenErrors> {
-    apply_inner(context, clip, visual, label, false)
+    apply_inner(context, clip, visual, label, geometry)
 }
 
 pub(super) fn apply_alpha(
@@ -45,7 +47,7 @@ fn apply_inner(
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     mut label: String,
-    apply_frame: bool,
+    geometry: visual_frame::SourceGeometry,
 ) -> Result<PreparedLayer, CodegenErrors> {
     label = color::apply(
         context,
@@ -54,15 +56,14 @@ fn apply_inner(
         visual.color_pipeline.as_ref(),
     )?;
     label = super::visual_crop::apply(context, &label, &visual.transform.crop);
-    if apply_frame {
-        label = frame(context, &label, visual);
-    }
+    label = visual_frame::apply(context, &label, visual, geometry.mode);
     label = effects::video(context, clip, label)?;
     label = flip(context, &label, visual);
     label = scale(context, &label, visual);
     label = corners(context, &label, visual);
     label = mask::apply(context, &label, &visual.masks);
-    let (rotated, pivot_x, pivot_y) = rotate(context, &label, visual);
+    let (rotated, pivot_x, pivot_y) =
+        rotate(context, &label, visual, geometry.pivot_x, geometry.pivot_y);
     label = opacity(context, &rotated, visual);
     Ok(PreparedLayer {
         label,
@@ -84,24 +85,6 @@ fn flip(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProp
     context.graph.filter(&[input], filter, "flipv")
 }
 
-fn frame(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProperties) -> String {
-    let Some(frame) = visual.frame else {
-        return input.to_owned();
-    };
-    let width = geometry::pixel_count(frame.width, context.canvas.width);
-    let height = geometry::pixel_count(frame.height, context.canvas.height);
-    let filter = match frame.fit {
-        FitMode::Fill => format!("scale={width}:{height}"),
-        FitMode::Contain => format!(
-            "scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black@0,format=rgba"
-        ),
-        FitMode::Cover => format!(
-            "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
-        ),
-    };
-    context.graph.filter(&[input], filter, "framev")
-}
-
 fn scale(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProperties) -> String {
     let x = animation::vec_x(&visual.transform.scale, "t");
     let y = animation::vec_y(&visual.transform.scale, "t");
@@ -121,17 +104,18 @@ fn rotate(
     context: &mut EmitContext<'_>,
     input: &str,
     visual: &EffectiveVisualProperties,
+    pivot_x: f64,
+    pivot_y: f64,
 ) -> (String, f64, f64) {
-    let anchor = visual.transform.anchor;
     if matches!(&visual.transform.rotation_degrees, Animatable::Constant { value } if *value == 0.0)
     {
-        return (input.to_owned(), anchor.x, anchor.y);
+        return (input.to_owned(), pivot_x, pivot_y);
     }
     let padded = context.graph.filter(
         &[input],
         format!(
             "pad=w='2*max({ax}*iw\\,(1-{ax})*iw)':h='2*max({ay}*ih\\,(1-{ay})*ih)':x='ow/2-{ax}*iw':y='oh/2-{ay}*ih':color=black@0",
-            ax = time::number(anchor.x), ay = time::number(anchor.y)
+            ax = time::number(pivot_x), ay = time::number(pivot_y)
         ),
         "pivotv",
     );

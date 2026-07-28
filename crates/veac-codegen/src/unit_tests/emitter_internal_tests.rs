@@ -171,3 +171,6 @@ fn process_owner_preserves_clip_and_apply_identity() {
     assert_eq!(apply_owner.kind(), "apply");
     assert!(apply_owner.as_clip().is_none());
 }
+
+#[path = "emitter_internal_coverage_tests.rs"]
+mod coverage_tests;

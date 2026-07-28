@@ -7,7 +7,10 @@ use veac_plan::ResolvedTextStyle;
 
 use super::animation::Sample;
 use super::ass_fonts;
-use super::ass_tags::{alpha, color, decoration, piece as piece_tags, text as escaped_text};
+use super::ass_tags::{
+    alpha, color, fill_decoration, piece as piece_tags, shadow_decoration, shadow_piece,
+    text as escaped_text,
+};
 use super::escape::{ass_name, filter_escape};
 use super::fonts::EmbeddedFont;
 use super::model::{AnimatedLine, AssLayout};
@@ -26,19 +29,37 @@ pub(super) fn script(
     output.push_str(&ass_fonts::section(fonts));
     output.push_str("[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n");
     match layout {
-        AssLayout::Lines(lines) => {
-            for sample in samples {
-                for line in lines {
-                    if let Some(background) = &style.background {
-                        background_event(&mut output, line, sample, background);
-                    }
-                    text_event(&mut output, line, sample, style);
-                }
-            }
-        }
+        AssLayout::Lines(lines) => line_events(&mut output, lines, samples, style),
         AssLayout::Placed(pieces) => placed::events(&mut output, pieces, samples, style),
     }
     output
+}
+
+fn line_events(
+    output: &mut String,
+    lines: &[AnimatedLine],
+    samples: &[Sample],
+    style: &ResolvedTextStyle,
+) {
+    for sample in samples {
+        for line in lines {
+            if let Some(background) = &style.background {
+                background_event(output, line, sample, background);
+            }
+        }
+    }
+    if let Some(shadow) = &style.shadow {
+        for sample in samples {
+            for line in lines {
+                shadow_event(output, line, sample, shadow);
+            }
+        }
+    }
+    for sample in samples {
+        for line in lines {
+            fill_event(output, line, sample, style);
+        }
+    }
 }
 
 pub(super) fn filter(script: &str, font_directory: &Path) -> String {
@@ -67,7 +88,7 @@ fn header(surface: (u32, u32), layout: &AssLayout) -> String {
     )
 }
 
-fn text_event(
+fn fill_event(
     output: &mut String,
     line: &AnimatedLine,
     sample: &Sample,
@@ -77,13 +98,36 @@ fn text_event(
         "{{\\an7\\q2\\pos({},{}){}}}",
         time::number(line.x),
         time::number(line.y),
-        decoration(style)
+        fill_decoration(style)
     );
     for piece in &line.pieces {
         let unit = sample.units.get(piece.unit);
         let opacity = unit.map_or(0.0, |value| value.opacity);
         let fill = unit.and_then(|value| value.fill_override);
         text.push_str(&piece_tags(piece, opacity, fill, style));
+        text.push_str(&escaped_text(&piece.text));
+    }
+    event(output, 2, sample, &text);
+}
+
+fn shadow_event(
+    output: &mut String,
+    line: &AnimatedLine,
+    sample: &Sample,
+    shadow: &veac_plan::canonical::Shadow,
+) {
+    let mut text = format!(
+        "{{\\an7\\q2\\pos({},{}){}}}",
+        time::number(line.x + shadow.offset.x),
+        time::number(line.y + shadow.offset.y),
+        shadow_decoration(shadow)
+    );
+    for piece in &line.pieces {
+        let opacity = sample
+            .units
+            .get(piece.unit)
+            .map_or(0.0, |unit| unit.opacity);
+        text.push_str(&shadow_piece(piece, opacity, shadow));
         text.push_str(&escaped_text(&piece.text));
     }
     event(output, 1, sample, &text);

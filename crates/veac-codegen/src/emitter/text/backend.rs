@@ -6,13 +6,11 @@ use super::animation;
 use super::error::TextError;
 use super::fonts::FontBook;
 use super::model::AssLayout;
-use super::{ass, layout, lines, placement, styled, units};
+use super::{ass, layout, lines, placement, styled, surface, units};
 use crate::emitter::canvas::Canvas;
-use crate::emitter::geometry;
 
 pub(super) struct Backend {
-    pub width: u32,
-    pub height: u32,
+    pub surface: surface::Surface,
     pub script: String,
     pub font_directory: std::path::PathBuf,
     pub font_paths: Vec<std::path::PathBuf>,
@@ -35,7 +33,8 @@ pub(super) fn build(
     ))?;
     let fps = canvas.frame_rate.numerator as f64 / f64::from(canvas.frame_rate.denominator);
     limits::frame_rate(sample_count, fps)?;
-    let (surface, origin) = surface(canvas, visual, content);
+    let surface = surface::resolve(canvas, visual, content);
+    let dimensions = surface.dimensions();
     validate_layout(content)?;
     let mut fonts = FontBook::load(content, bindings)?;
     let styled = styled::resolve(content, &fonts)?;
@@ -55,8 +54,8 @@ pub(super) fn build(
         &styled,
         &shaped,
         content.style.layout,
-        surface,
-        origin,
+        dimensions,
+        surface.origin,
         &mut fonts,
     )?;
     let granularity = content
@@ -71,8 +70,8 @@ pub(super) fn build(
             &animated,
             &content.style,
             &mut fonts,
-            surface,
-            origin,
+            dimensions,
+            surface.origin,
         )?)
     } else {
         AssLayout::Lines(animated)
@@ -82,10 +81,13 @@ pub(super) fn build(
         clip.record_range.duration,
         canvas.frame_rate,
         unit_count,
-        surface,
+        dimensions,
         sample_count,
     );
-    let layers = usize::from(content.style.background.is_some()) + 1;
+    let layers = event_layers(
+        content.style.background.is_some(),
+        content.style.shadow.is_some(),
+    );
     let items = match &ass_layout {
         AssLayout::Lines(lines) => lines.len(),
         AssLayout::Placed(pieces) => pieces.len(),
@@ -93,7 +95,7 @@ pub(super) fn build(
     let events = samples.len().saturating_mul(items).saturating_mul(layers);
     limits::events(events)?;
     let script = ass::script(
-        surface,
+        dimensions,
         &content.style,
         &ass_layout,
         &samples,
@@ -101,12 +103,15 @@ pub(super) fn build(
     );
     limits::script(script.len())?;
     Ok(Backend {
-        width: surface.0,
-        height: surface.1,
+        surface,
         script,
         font_directory: fonts.directory,
         font_paths: fonts.paths,
     })
+}
+
+pub(crate) fn event_layers(has_background: bool, has_shadow: bool) -> usize {
+    1 + usize::from(has_background) + usize::from(has_shadow)
 }
 
 fn validate_layout(content: &ResolvedText) -> Result<(), TextError> {
@@ -128,38 +133,4 @@ fn validate_layout(content: &ResolvedText) -> Result<(), TextError> {
     Ok(())
 }
 
-fn surface(
-    canvas: Canvas,
-    visual: &veac_plan::EffectiveVisualProperties,
-    content: &ResolvedText,
-) -> ((u32, u32), (f64, f64)) {
-    let layout = content.style.layout;
-    if let (Some(width), Some(height)) = (layout.box_width_pixels, layout.box_height_pixels) {
-        if layout.overflow == TextOverflow::Visible {
-            let surface = (canvas.width, canvas.height);
-            return (
-                surface,
-                (
-                    (f64::from(surface.0) - width) / 2.0,
-                    (f64::from(surface.1) - height) / 2.0,
-                ),
-            );
-        }
-        return (
-            (
-                width.round().max(1.0) as u32,
-                height.round().max(1.0) as u32,
-            ),
-            (0.0, 0.0),
-        );
-    }
-    let surface = match visual.frame {
-        Some(frame) => (
-            geometry::pixel_count(frame.width, canvas.width),
-            geometry::pixel_count(frame.height, canvas.height),
-        ),
-        None => (canvas.width, canvas.height),
-    };
-    (surface, (0.0, 0.0))
-}
 mod limits;

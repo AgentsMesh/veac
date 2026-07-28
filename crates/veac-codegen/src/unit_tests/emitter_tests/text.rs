@@ -26,7 +26,8 @@ fn text_and_caption_emit_inline_ass_with_decorations_and_common_visual_pipeline(
             "ScriptType: v4.00+",
             "\\bord1.5",
             "\\blur2",
-            "\\xshad2\\yshad3",
+            "Dialogue: 1",
+            "Dialogue: 2",
             "\\p1",
             "a'b:c%d\\\\e",
         ] {
@@ -36,7 +37,7 @@ fn text_and_caption_emit_inline_ass_with_decorations_and_common_visual_pipeline(
 }
 
 #[test]
-fn zero_blur_shadow_skips_blur_and_unframed_text_keeps_full_canvas() {
+fn zero_blur_shadow_uses_clean_events_and_unframed_text_keeps_full_canvas() {
     let mut plan = resolved(&text_fixture(false));
     text_content(&mut plan)
         .style
@@ -49,8 +50,10 @@ fn zero_blur_shadow_skips_blur_and_unframed_text_keeps_full_canvas() {
         .filter_graph
         .unwrap();
     let ass = ass_script(&graph);
-    assert!(!ass.contains("\\blur"), "ass={ass}");
-    assert!(ass.contains("\\xshad2\\yshad3"), "ass={ass}");
+    assert!(ass.contains("Dialogue: 1"), "ass={ass}");
+    assert!(ass.contains("Dialogue: 2"), "ass={ass}");
+    assert!(ass.contains("\\blur0"), "ass={ass}");
+    assert!(!ass.contains("\\xshad"), "ass={ass}");
     assert!(graph.contains("s=1920x1080"), "graph={graph}");
     assert!(!graph.contains("framev"), "graph={graph}");
 }

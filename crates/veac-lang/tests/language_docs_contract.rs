@@ -1,8 +1,9 @@
 use std::{fs, path::PathBuf};
 
-use veac_ir::decode_edit_batch_json;
+use veac_ir::{decode_edit_batch_json, EditOperation, ItemId};
 use veac_lang::authoring::{lower_document, parse};
 
+const EDIT_BATCH_FENCE: &str = "json,canonical-edit-batch";
 const EDIT_BATCH_DOCS: &[&str] = &[
     "docs/language-design/agent-authoring.md",
     "docs/language-design/mapping.md",
@@ -12,10 +13,16 @@ const EDIT_BATCH_DOCS: &[&str] = &[
 fn documented_edit_batches_decode_with_the_production_contract() {
     for relative in EDIT_BATCH_DOCS {
         let source = read(relative);
-        let blocks = fenced_blocks(&source, "json");
+        let blocks = fenced_blocks(&source, EDIT_BATCH_FENCE);
         assert_eq!(blocks.len(), 1, "{relative} must contain one EditBatch");
-        decode_edit_batch_json(blocks[0])
+        let batch = decode_edit_batch_json(blocks[0])
             .unwrap_or_else(|error| panic!("{relative} has an invalid EditBatch: {error}"));
+        assert!(batch.operation_id.as_str().starts_with("op_"));
+        let [EditOperation::SetClipEnabled { clip_id, .. }] = batch.operations.as_slice() else {
+            panic!("{relative} must demonstrate one set_clip_enabled operation");
+        };
+        ItemId::new(clip_id.as_str())
+            .unwrap_or_else(|error| panic!("{relative} has a non-canonical clip ID: {error}"));
     }
 }
 

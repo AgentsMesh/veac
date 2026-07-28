@@ -68,8 +68,8 @@
     },
     {
       "id": "minimal", "source": "examples/minimal/main.veac", "title": "Minimal Project",
-      "summary": "Render the smallest typed project as a three-second navy canvas.",
-      "checks": [{"cue":"0-3s - Canvas","expect":"The frame remains a uniform navy color for the complete output."},{"cue":"Throughout - Structure","expect":"There are no cuts, overlays, or unexpected audio."},{"cue":"IR - Timeline","expect":"The project contains only main sequence, visual layer, and background item."}]
+      "summary": "Render the smallest typed project as a two-second navy canvas.",
+      "checks": [{"cue":"0-2s - Canvas","expect":"The frame remains a uniform navy color for the complete output."},{"cue":"Throughout - Structure","expect":"There are no cuts, overlays, or unexpected audio."},{"cue":"IR - Timeline","expect":"The project contains only main sequence, visual layer, and background item."}]
     },
     {
       "id": "hello-world", "source": "examples/hello-world/main.veac", "title": "Hello, VEAC",
@@ -84,7 +84,7 @@
     {
       "id": "agentsmesh-intro-15s", "source": "examples/agentsmesh-intro-15s/main.veac", "title": "AgentsMesh Intro",
       "summary": "Preview a complete 15-second brand title, promise, and caption sequence.",
-      "checks": [{"cue":"0-5s - Brand","expect":"AgentsMesh is centered in white over a stable blue-green diagonal gradient."},{"cue":"5-15s - Promise","expect":"The supporting promise appears below the brand and remains fully readable."},{"cue":"2-12s - Caption","expect":"The bottom caption stays inside its padded semi-transparent panel."},{"cue":"IR - Animation","expect":"The brand retains grapheme granularity, stagger, and typed transform animation."}]
+      "checks": [{"cue":"0-5s - Brand","expect":"AgentsMesh is centered in white over a stable blue-green diagonal gradient."},{"cue":"5-15s - Promise","expect":"The supporting promise replaces the brand in the central text region and remains fully readable."},{"cue":"2-12s - Caption","expect":"The bottom caption stays inside its padded semi-transparent panel."},{"cue":"IR - Animation","expect":"The brand retains grapheme granularity, stagger, and typed transform animation."}]
     },
     {
       "id": "captions-and-sidecars", "source": "examples/captions-and-sidecars/main.veac", "title": "Captions & Sidecars",

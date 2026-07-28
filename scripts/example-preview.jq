@@ -116,7 +116,7 @@ def valid_inputs:
       ($window.duration_seconds | type == "number" and . > 0)));
 
 if valid_inputs | not then error("invalid preview parameters") else . end
-| .project.sequences[].settings |= (resized($edge) | preview_rate($fps))
+| .project.sequences[].settings |= preview_rate($fps)
 | .project.sequences[].tracks[] |= if .kind == "video" then
     .clips |= map(
       .audio = null

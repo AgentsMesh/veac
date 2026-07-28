@@ -2,7 +2,9 @@ use veac_plan::ResolvedTextStyle;
 
 use super::event;
 use crate::emitter::text::animation::{Sample, UnitSample};
-use crate::emitter::text::ass_tags::{alpha, color, decoration, glyph, text};
+use crate::emitter::text::ass_tags::{
+    alpha, color, fill_decoration, glyph, shadow_decoration, shadow_glyph, text,
+};
 use crate::emitter::text::model::PlacedPiece;
 use crate::emitter::time;
 
@@ -20,12 +22,27 @@ pub(super) fn events(
             if let Some(background) = &style.background {
                 background_event(output, piece, sample, unit, background);
             }
-            text_event(output, piece, sample, unit, style);
+        }
+    }
+    if let Some(shadow) = &style.shadow {
+        for sample in samples {
+            for piece in pieces {
+                if let Some(unit) = sample.units.get(piece.unit) {
+                    shadow_event(output, piece, sample, unit, shadow);
+                }
+            }
+        }
+    }
+    for sample in samples {
+        for piece in pieces {
+            if let Some(unit) = sample.units.get(piece.unit) {
+                fill_event(output, piece, sample, unit, style);
+            }
         }
     }
 }
 
-fn text_event(
+fn fill_event(
     output: &mut String,
     piece: &PlacedPiece,
     sample: &Sample,
@@ -40,7 +57,7 @@ fn text_event(
         time::number(rotation),
         time::number(unit.scale.0 * 100.0),
         time::number(unit.scale.1 * 100.0),
-        decoration(style),
+        fill_decoration(style),
     );
     value.push_str(&glyph(
         &piece.style,
@@ -48,6 +65,28 @@ fn text_event(
         unit.fill_override,
         style,
     ));
+    value.push_str(&text(&piece.text));
+    event(output, 2, sample, &value);
+}
+
+fn shadow_event(
+    output: &mut String,
+    piece: &PlacedPiece,
+    sample: &Sample,
+    unit: &UnitSample,
+    shadow: &veac_plan::canonical::Shadow,
+) {
+    let (x, y, rotation) = transformed(piece, unit);
+    let mut value = format!(
+        "{{\\an5\\q2\\pos({},{})\\frz{}\\fscx{}\\fscy{}{}}}",
+        time::number(x + shadow.offset.x),
+        time::number(y + shadow.offset.y),
+        time::number(rotation),
+        time::number(unit.scale.0 * 100.0),
+        time::number(unit.scale.1 * 100.0),
+        shadow_decoration(shadow),
+    );
+    value.push_str(&shadow_glyph(&piece.style, unit.opacity, shadow));
     value.push_str(&text(&piece.text));
     event(output, 1, sample, &value);
 }

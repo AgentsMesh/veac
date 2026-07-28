@@ -2,7 +2,7 @@ mod animation;
 mod ass;
 mod ass_fonts;
 mod ass_tags;
-mod backend;
+pub(super) mod backend;
 mod error;
 mod escape;
 mod font_face;
@@ -12,6 +12,7 @@ mod lines;
 mod model;
 mod placement;
 mod styled;
+mod surface;
 mod units;
 
 use std::path::Path;
@@ -30,19 +31,31 @@ pub(super) fn prepare(
     let rendered = backend::build(content, clip, context.bindings, context.canvas)
         .map_err(|failure| error::codegen(clip, failure))?;
     let duration = time::seconds(clip.record_range.duration);
-    let canvas = transparent_canvas(context, rendered.width, rendered.height, &duration);
+    let canvas = transparent_canvas(
+        context,
+        rendered.surface.width,
+        rendered.surface.height,
+        &duration,
+    );
     let font_token = context.filter_directory(
         rendered.font_directory,
         rendered.font_paths,
         BackendFilterEscape::Quoted,
     );
     let filter = ass::filter(&rendered.script, Path::new(&font_token));
-    let source = context.graph.filter(&[&canvas], filter, "textassv");
-    Ok(if content.style.layout.box_width_pixels.is_some() {
-        visual_pipeline::apply(context, clip, visual, source)?
-    } else {
-        visual_pipeline::apply_unframed(context, clip, visual, source)?
-    })
+    let premultiplied = context.graph.filter(&[&canvas], filter, "textassv");
+    let source = context.graph.filter(
+        &[&premultiplied],
+        "unpremultiply=inplace=1:planes=7",
+        "textstraightv",
+    );
+    visual_pipeline::apply_source(
+        context,
+        clip,
+        visual,
+        source,
+        rendered.surface.source_geometry,
+    )
 }
 
 fn transparent_canvas(

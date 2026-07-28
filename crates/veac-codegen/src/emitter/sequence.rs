@@ -63,7 +63,14 @@ pub(super) fn conform_output(
     let output = &context.plan.output;
     let mut filters = Vec::new();
     if sequence.width != output.width || sequence.height != output.height {
-        filters.push(format!("scale={}:{}", output.width, output.height));
+        filters.push(format!(
+            concat!(
+                "scale={width}:{height}:force_original_aspect_ratio=decrease,",
+                "pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+            ),
+            width = output.width,
+            height = output.height
+        ));
     }
     if sequence.frame_rate != output.frame_rate {
         filters.push(format!(

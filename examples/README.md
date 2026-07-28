@@ -32,7 +32,12 @@ parse -> format -> parse -> format-idempotence
 
 It also validates capability metadata, gallery target ownership, workflow evidence, unique directory registration, and one `.veac` source per example directory.
 
-`build-examples` compiles and renders every cataloged example into the ignored `examples-preview/` directory. It prepares generated fixture media and a deterministic preview font inside that directory, plans/renders with the real CLI and FFmpeg, verifies declared deliverables, and creates `examples-preview/index.html`.
+`build-examples` compiles and renders every cataloged example into the ignored `examples-preview/` directory. It prepares generated fixture media and a deterministic preview font inside that directory, plans/renders with the real CLI and FFmpeg, verifies declared deliverables, and creates `examples-preview/index.html`. Preview deliveries default to a 480-pixel longest edge; set `PREVIEW_MAX_EDGE` to exercise another delivery size.
+
+Preview output may use a smaller render config for faster delivery, but the transform
+preserves every sequence's spatial canvas. Composition, text, and spatial parameters
+are evaluated at authored dimensions before final output conformance scales the frame;
+only the preview frame rate may be reduced before composition.
 
 The build never rewrites canonical relation facts or deletes embedded projections. For projects without a video deliverable, it injects a typed preview output into the generated `.veac` copy before compilation; the checked-in example remains unchanged.
 

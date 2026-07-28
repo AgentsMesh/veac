@@ -158,7 +158,7 @@ owned by a sequence.
 
 There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
 
-```json
+```json,canonical-edit-batch
 {
   "operation_id": "op_disable_host",
   "base_revision": 12,
@@ -167,7 +167,7 @@ There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
   "operations": [
     {
       "type": "set_clip_enabled",
-      "clip_id": "clip_host_shot",
+      "clip_id": "itm_host_shot",
       "enabled": false
     }
   ]

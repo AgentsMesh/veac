@@ -26,6 +26,14 @@ jq -e '
   .[0].id == "keep" and .[0].record_range.duration.value == 2
 ' "$tmp/preview.json" >/dev/null || fail "catalog window did not trim clips"
 jq -e '
+  .project.sequences[0].settings == {
+    "width": 1280, "height": 720,
+    "frame_rate": {"numerator": 12, "denominator": 1}
+  } and
+  (.project.render_configs[0] | .width == 240 and .height == 134 and
+    .frame_rate == {"numerator": 12, "denominator": 1})
+' "$tmp/preview.json" >/dev/null || fail "preview changed spatial authoring dimensions"
+jq -e '
   (.project.sequences[0].applies | length) == 1 and
   .project.sequences[0].applies[0].target.item_ids == ["keep"] and
   (.project.relations | length) == 1 and

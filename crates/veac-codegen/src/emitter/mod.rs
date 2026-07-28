@@ -59,6 +59,7 @@ mod video_source;
 mod video_time_map;
 mod visual;
 mod visual_crop;
+mod visual_frame;
 mod visual_pipeline;
 
 #[cfg(test)]

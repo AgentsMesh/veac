@@ -78,6 +78,10 @@ pub(crate) fn video_frame_count(media: &Path) -> u64 {
 }
 
 pub(crate) fn rgb_frame(media: &Path, second: f64) -> Vec<u8> {
+    rgb_frame_sized(media, second, WIDTH, HEIGHT)
+}
+
+pub(crate) fn rgb_frame_sized(media: &Path, second: f64, width: u32, height: u32) -> Vec<u8> {
     let output = Command::new("ffmpeg")
         .args(["-hide_banner", "-loglevel", "error", "-i"])
         .arg(media)
@@ -99,7 +103,7 @@ pub(crate) fn rgb_frame(media: &Path, second: f64) -> Vec<u8> {
         "frame extraction failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(output.stdout.len(), (WIDTH * HEIGHT * 3) as usize);
+    assert_eq!(output.stdout.len(), (width * height * 3) as usize);
     output.stdout
 }
 

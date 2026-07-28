@@ -55,7 +55,10 @@ fn nested_sequence_uses_its_canvas_and_entry_conforms_output() {
     plan.output.frame_rate = Rational::new(30, 1).unwrap();
     plan.sequences.insert(0, child);
     let graph = graph(&plan);
-    for marker in ["black@0:s=320x180:r=24/1", "scale=640:360,fps=30/1"] {
+    for marker in [
+        "black@0:s=320x180:r=24/1",
+        "pad=640:360:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30/1",
+    ] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
     }
 }

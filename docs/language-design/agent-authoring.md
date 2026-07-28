@@ -152,7 +152,7 @@ veac validate build/project.veac.json
 
 For an IR edit, generate canonical JSON, not invented syntax:
 
-```json
+```json,canonical-edit-batch
 {
   "operation_id": "op_disable_host",
   "base_revision": 0,
@@ -161,7 +161,7 @@ For an IR edit, generate canonical JSON, not invented syntax:
   "operations": [
     {
       "type": "set_clip_enabled",
-      "clip_id": "clip_host_shot",
+      "clip_id": "itm_host_shot",
       "enabled": false
     }
   ]

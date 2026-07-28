@@ -36,6 +36,7 @@ reject 'optional `base_revision`' 'EditBatch base_revision is required'
 reject '"(sequence_id|track_id)"' 'set_clip_enabled has unknown owner fields'
 
 for path in docs/language-design/{agent-authoring,mapping}.md; do
+  require_in "$path" '^```json,canonical-edit-batch$' 'EditBatch fence is not test-addressable'
   require_in "$path" '"operation_id"' 'EditBatch operation_id is undocumented'
   require_in "$path" '"atomic"' 'EditBatch atomic mode is undocumented'
 done

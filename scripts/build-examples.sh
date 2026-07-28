@@ -6,6 +6,7 @@ source "$ROOT/scripts/example-preview-fixtures.sh"
 source "$ROOT/scripts/example-preview-lock.sh"
 source "$ROOT/scripts/example-preview-process.sh"
 source "$ROOT/scripts/example-preview-artifacts.sh"
+source "$ROOT/scripts/example-preview-cli.sh"
 source "$ROOT/scripts/example-preview-publish.sh"
 GALLERY="$ROOT/examples/catalog/gallery.json"
 GALLERY_SCHEMA="$ROOT/scripts/check-gallery-catalog.jq"
@@ -14,7 +15,7 @@ PREVIEW_FILTER="$ROOT/scripts/example-preview.jq"
 ACTION=${1:-build}
 OUTPUT_INPUT=${2:-"$ROOT/examples-preview"}
 ONLY_EXAMPLES=${VEAC_EXAMPLES:-}
-PREVIEW_EDGE=${VEAC_PREVIEW_MAX_EDGE:-240}
+PREVIEW_EDGE=${VEAC_PREVIEW_MAX_EDGE:-480}
 PREVIEW_FPS=${VEAC_PREVIEW_FPS:-12}
 TOOLCHAIN=${RUSTUP_TOOLCHAIN:-1.85.0}
 fail() {
@@ -137,13 +138,12 @@ case "$ACTION" in
   *) fail "usage: $0 {build|clean} [preview-directory]" ;;
 esac
 
-for command in cargo ffmpeg ffprobe jq pgrep rg; do require_command "$command"; done
+for command in ffmpeg ffprobe jq pgrep rg; do require_command "$command"; done
 [[ -f "$GALLERY" && ! -L "$GALLERY" ]] || fail "gallery catalog must be a regular file"
 jq -e -f "$GALLERY_SCHEMA" "$GALLERY" >/dev/null || fail "invalid gallery catalog"
 [[ "$PREVIEW_EDGE" =~ ^[1-9][0-9]*$ ]] || fail "preview edge must be a positive integer"
 [[ "$PREVIEW_FPS" =~ ^[1-9][0-9]*$ ]] || fail "preview FPS must be a positive integer"
-TARGET_DIR=$(cargo +"$TOOLCHAIN" metadata --format-version 1 --no-deps | jq -r '.target_directory')
-VEAC=${VEAC_BIN:-"$TARGET_DIR/debug/veac"}
+VEAC=$(prepare_example_preview_cli "$ROOT" "$TOOLCHAIN")
 [[ -x "$VEAC" ]] || fail "VEAC CLI not built: $VEAC"
 
 SELECTOR=${ONLY_EXAMPLES//,/ }

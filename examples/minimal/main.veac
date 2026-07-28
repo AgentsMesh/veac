@@ -8,9 +8,9 @@ project minimal {
   entry sequence main;
 
   sequence main {
-    layer visual canvas {
+    layer visual base {
       item background {
-        source generated solid { color #18202aff; }
+        source generated solid { color #1b3a57ff; }
         record { at 0s; duration 3s; }
       }
     }

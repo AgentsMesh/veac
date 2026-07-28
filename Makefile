@@ -7,7 +7,7 @@ CARGO := cargo +$(RUST_TOOLCHAIN)
 PACKAGE ?=
 EXAMPLES ?=
 PREVIEW_DIR ?= $(CURDIR)/examples-preview
-PREVIEW_MAX_EDGE ?= 240
+PREVIEW_MAX_EDGE ?= 480
 PREVIEW_FPS ?= 12
 PORT ?= 8000
 
@@ -89,9 +89,10 @@ check-examples: check-example-capabilities test-example-capabilities test-exampl
 	$(CARGO) test -p veac-lang --test examples_authoring \
 		--test examples_mechanism_evidence
 
-build-examples: build check-examples ## Render every example and generate a preview index.
+build-examples: check-examples ## Render every example and generate a preview index.
 	VEAC_PREVIEW_MAX_EDGE=$(PREVIEW_MAX_EDGE) VEAC_PREVIEW_FPS=$(PREVIEW_FPS) \
 		VEAC_EXAMPLES="$(EXAMPLES)" \
+		RUSTUP_TOOLCHAIN=$(RUST_TOOLCHAIN) \
 		bash scripts/build-examples.sh build "$(PREVIEW_DIR)"
 
 serve-examples: ## Serve previously built previews on localhost.

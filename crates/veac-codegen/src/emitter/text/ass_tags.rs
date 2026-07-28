@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use veac_plan::canonical::{Color, FontStyle, FontWeight};
+use veac_plan::canonical::{Color, FontStyle, FontWeight, Shadow};
 use veac_plan::ResolvedTextStyle;
 
 use super::escape::ass_name;
@@ -13,7 +13,7 @@ pub(super) fn piece(
     fill: Option<Color>,
     decoration: &ResolvedTextStyle,
 ) -> String {
-    piece_style(&piece.style, opacity, fill, decoration)
+    piece_style(&piece.style, opacity, fill, Some(decoration))
 }
 
 pub(super) fn glyph(
@@ -22,14 +22,31 @@ pub(super) fn glyph(
     fill: Option<Color>,
     decoration: &ResolvedTextStyle,
 ) -> String {
-    piece_style(style, opacity, fill, decoration)
+    piece_style(style, opacity, fill, Some(decoration))
+}
+
+pub(super) fn shadow_piece(piece: &AnimatedPiece, opacity: f64, shadow: &Shadow) -> String {
+    piece_style(
+        &piece.style,
+        opacity * shadow.opacity,
+        Some(shadow.color),
+        None,
+    )
+}
+
+pub(super) fn shadow_glyph(
+    style: &super::model::GlyphStyle,
+    opacity: f64,
+    shadow: &Shadow,
+) -> String {
+    piece_style(style, opacity * shadow.opacity, Some(shadow.color), None)
 }
 
 fn piece_style(
     style: &super::model::GlyphStyle,
     opacity: f64,
     fill: Option<Color>,
-    decoration: &ResolvedTextStyle,
+    decoration: Option<&ResolvedTextStyle>,
 ) -> String {
     let fill = fill.unwrap_or(style.color);
     let mut tags = format!(
@@ -43,22 +60,15 @@ fn piece_style(
         alpha(fill, opacity),
     );
     tags.pop();
-    if let Some(outline) = &decoration.outline {
+    if let Some(outline) = decoration.and_then(|value| value.outline.as_ref()) {
         let _ = write!(tags, "\\3a{}", alpha(outline.color, opacity));
-    }
-    if let Some(shadow) = &decoration.shadow {
-        let _ = write!(
-            tags,
-            "\\4a{}",
-            alpha(shadow.color, shadow.opacity * opacity)
-        );
     }
     tags.push('}');
     tags
 }
 
-pub(super) fn decoration(style: &ResolvedTextStyle) -> String {
-    let mut tags = String::new();
+pub(super) fn fill_decoration(style: &ResolvedTextStyle) -> String {
+    let mut tags = String::from("\\shad0\\blur0");
     if let Some(outline) = &style.outline {
         let _ = write!(
             tags,
@@ -67,21 +77,14 @@ pub(super) fn decoration(style: &ResolvedTextStyle) -> String {
             color(outline.color),
             alpha(outline.color, 1.0)
         );
-    }
-    if let Some(shadow) = &style.shadow {
-        if shadow.blur_pixels > 0.0 {
-            let _ = write!(tags, "\\blur{}", time::number(shadow.blur_pixels));
-        }
-        let _ = write!(
-            tags,
-            "\\xshad{}\\yshad{}\\4c{}\\4a{}",
-            time::number(shadow.offset.x),
-            time::number(shadow.offset.y),
-            color(shadow.color),
-            alpha(shadow.color, shadow.opacity)
-        );
+    } else {
+        tags.push_str("\\bord0");
     }
     tags
+}
+
+pub(super) fn shadow_decoration(shadow: &Shadow) -> String {
+    format!("\\bord0\\shad0\\blur{}", time::number(shadow.blur_pixels))
 }
 
 pub(super) fn color(value: Color) -> String {

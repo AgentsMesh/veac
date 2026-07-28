@@ -12,6 +12,8 @@ mod audio_sidechain;
 mod auto_reframe;
 #[path = "render_e2e/bezier.rs"]
 mod bezier;
+#[path = "render_e2e/canvas_delivery.rs"]
+mod canvas_delivery;
 #[path = "render_e2e/color_curves.rs"]
 mod color_curves;
 #[path = "render_e2e/color_lut_resources.rs"]
@@ -88,6 +90,10 @@ mod text_advanced;
 mod text_filter_script;
 #[path = "render_e2e/text_geometry.rs"]
 mod text_geometry;
+#[path = "render_e2e/text_overflow_frame.rs"]
+mod text_overflow_frame;
+#[path = "render_e2e/text_shadow_pixels.rs"]
+mod text_shadow_pixels;
 #[path = "render_e2e/transition.rs"]
 mod transition;
 #[path = "render_e2e/transition_typed.rs"]
