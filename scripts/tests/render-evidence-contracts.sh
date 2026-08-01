@@ -159,6 +159,27 @@ expect_fail mismatched_delivery_stem "$MISMATCHED_STEM"
 
 # shellcheck source=scripts/tests/typed-delivery-render-evidence-contracts.sh
 source "$ROOT_DIR/scripts/tests/typed-delivery-render-evidence-contracts.sh"
+assert_delivery_caption_geometry_contract() {
+  local checker=$1 metrics
+  (
+    frame_bright_bbox() {
+      [[ ${4:-} == 500 ]] || exit 1
+      printf '40 68 9\n'
+    }
+    "$checker" "$VALID/delivery-formats"
+  )
+  for metrics in '39 68 9' '40 67 9' '40 68 8'; do
+    if (
+      frame_bright_bbox() { printf '%s\n' "$metrics"; }
+      "$checker" "$VALID/delivery-formats"
+    ) >/dev/null 2>&1; then
+      echo "invalid delivery caption metrics passed: $checker $metrics" >&2
+      exit 1
+    fi
+  done
+}
+assert_delivery_caption_geometry_contract check_delivery_burn_in
+assert_delivery_caption_geometry_contract check_delivery_cover
 run_typed_delivery_contracts
 
 bash "$ROOT_DIR/scripts/tests/showcase-render-evidence-contracts.sh"

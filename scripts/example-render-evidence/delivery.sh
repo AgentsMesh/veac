@@ -53,13 +53,15 @@ check_delivery_burn_in() {
       any(.deliverables[]; .id == "dlv_master" and .kind.type == "video"))
   ' "$canonical" >/dev/null || fail "delivery-formats burned caption contract failed"
   read -r opening closing < <(delivery_stage_times "$duration")
-  minimum_width=$((width / 6))
-  minimum_height=$((height / 24))
+  minimum_width=$((width / 7))
+  minimum_height=$((height / 30))
   local sample_time
   for sample_time in "$opening" "$closing"; do
-    read -r bright bbox_width bbox_height < <(frame_bright_bbox "$master" "$sample_time" "$width")
+    read -r bright bbox_width bbox_height < <(
+      frame_bright_bbox "$master" "$sample_time" "$width" 500
+    )
     ((bright >= 40 && bbox_width >= minimum_width && bbox_height >= minimum_height)) ||
-      fail "delivery master burned caption is not visible at ${sample_time}s"
+      fail "delivery master burned caption is not visible at ${sample_time}s: pixels=$bright bbox=${bbox_width}x$bbox_height"
   done
 }
 

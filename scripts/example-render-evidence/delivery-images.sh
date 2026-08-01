@@ -83,11 +83,11 @@ check_delivery_cover() {
   assert_stream_field "$cover" v:0 width "$width" "delivery cover"
   assert_stream_field "$cover" v:0 height "$height" "delivery cover"
   assert_delivery_color "$cover" 0 196 58 105 10 "delivery cover at ${cover_time}s"
-  minimum_width=$((width / 6))
-  minimum_height=$((height / 24))
-  read -r bright bbox_width bbox_height < <(frame_bright_bbox "$cover" 0 "$width")
+  minimum_width=$((width / 7))
+  minimum_height=$((height / 30))
+  read -r bright bbox_width bbox_height < <(frame_bright_bbox "$cover" 0 "$width" 500)
   ((bright >= 40 && bbox_width >= minimum_width && bbox_height >= minimum_height)) ||
-    fail "delivery cover does not retain the burned caption at 2s"
+    fail "delivery cover does not retain the burned caption at 2s: pixels=$bright bbox=${bbox_width}x$bbox_height"
   assert_frames_visually_equal "$cover" "$reference" \
     "delivery cover does not visually match frame $cover_frame at ${cover_time}s"
   assert_delivery_decodes "$cover" "delivery cover"

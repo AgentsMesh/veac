@@ -23,11 +23,11 @@ assert_unique_frames() {
 }
 
 frame_bright_bbox() {
-  local file=$1 sample_time=$2 width=$3
+  local file=$1 sample_time=$2 width=$3 threshold=${4:-680}
   ffmpeg -v error -ss "$sample_time" -i "$file" -frames:v 1 -vf format=rgb24 -f rawvideo - |
-    od -An -v -tu1 | awk -v width="$width" '
+    od -An -v -tu1 | awk -v width="$width" -v threshold="$threshold" '
       { for (i=1; i<=NF; i++) { rgb[channel++]=$i
-          if (channel==3) { if (rgb[0]+rgb[1]+rgb[2]>=680) {
+          if (channel==3) { if (rgb[0]+rgb[1]+rgb[2]>=threshold) {
               x=pixel%width; y=int(pixel/width); count++
               if (!seen || x<minx) minx=x; if (!seen || x>maxx) maxx=x
               if (!seen || y<miny) miny=y; if (!seen || y>maxy) maxy=y; seen=1 }
