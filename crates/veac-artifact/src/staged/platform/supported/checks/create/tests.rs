@@ -86,3 +86,36 @@ fn cleanup_requires_a_bound_directory_identity() {
     );
     created.armed = false;
 }
+
+#[test]
+fn open_requires_a_bound_directory_identity() {
+    let temp = tempfile::tempdir().unwrap();
+    let parent = super::super::super::open_directory(temp.path()).unwrap();
+    std::fs::create_dir(temp.path().join("unbound")).unwrap();
+    let created = CreatedDirectory {
+        parent: &parent,
+        name: "unbound".into(),
+        identity: None,
+        armed: true,
+    };
+
+    assert_eq!(
+        created.open().unwrap_err().kind,
+        ArtifactErrorKind::UnsafePath
+    );
+}
+
+#[test]
+fn nonempty_created_directory_cleanup_can_be_retried() {
+    let temp = tempfile::tempdir().unwrap();
+    let parent = super::super::super::open_directory(temp.path()).unwrap();
+    let name = OsString::from("created");
+    let path = temp.path().join(&name);
+    std::fs::create_dir(&path).unwrap();
+    let mut created = CreatedDirectory::new(&parent, name).unwrap();
+    std::fs::write(path.join("child"), b"child").unwrap();
+
+    assert_eq!(created.cleanup().unwrap_err().kind, ArtifactErrorKind::Io);
+    std::fs::remove_file(path.join("child")).unwrap();
+    created.cleanup().unwrap();
+}

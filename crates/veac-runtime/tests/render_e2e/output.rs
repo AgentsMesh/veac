@@ -58,7 +58,11 @@ fn structured_export_settings_reach_ffmpeg_and_the_output_bitstream() {
     assert!(probe.status.success());
     let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
     let stream = &value["streams"][0];
-    assert_eq!(stream["profile"], "High");
+    assert!(
+        matches!(stream["profile"].as_str(), Some("High" | "100")),
+        "unexpected H.264 High profile: {}",
+        stream["profile"]
+    );
     assert_eq!(stream["pix_fmt"], "yuv420p");
     assert_eq!(stream["level"], 31);
     let bytes = std::fs::read(path).unwrap();

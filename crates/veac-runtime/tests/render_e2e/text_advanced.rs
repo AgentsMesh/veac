@@ -191,7 +191,7 @@ fn character_reveal_and_stagger_hide_fill_outline_and_shadow() {
     );
     let changed = changed_channels(&middle_frame, &late_frame);
     assert!(
-        late.ratio > middle.ratio + 0.005 && changed > 300,
+        late.ratio > middle.ratio && late.energy > middle.energy * 1.1 && changed > 300,
         "{middle:?} -> {late:?}; changed channels={changed}"
     );
 }

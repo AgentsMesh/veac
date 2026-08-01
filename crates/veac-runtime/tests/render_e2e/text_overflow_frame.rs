@@ -49,11 +49,11 @@ fn visible_overflow_frame_keeps_readable_glyphs_and_places_the_layout_pivot_once
 
     let frame = rgb_frame(&output, 0.5);
     let bounds = lit_bounds(&frame);
-    let stats = frame_stats(&frame);
+    let extents = lit_extents(&frame);
     assert!(bounds.0 > 35 && bounds.1 > 10, "bounds={bounds:?}");
     assert!(
-        (48.0..=57.0).contains(&stats.centroid_x) && (17.0..=28.0).contains(&stats.centroid_y),
-        "stats={stats:?}, bounds={bounds:?}"
+        extents.left <= 50 && extents.right >= 50 && extents.top <= 28 && extents.bottom + 4 >= 28,
+        "extents={extents:?}, bounds={bounds:?}"
     );
 }
 

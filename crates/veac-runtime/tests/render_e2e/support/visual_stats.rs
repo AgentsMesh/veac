@@ -10,6 +10,14 @@ pub(crate) struct FrameStats {
     pub right_strip_ratio: f64,
 }
 
+#[derive(Debug)]
+pub(crate) struct LitExtents {
+    pub left: usize,
+    pub right: usize,
+    pub top: usize,
+    pub bottom: usize,
+}
+
 pub(crate) fn frame_stats(frame: &[u8]) -> FrameStats {
     frame_stats_with_threshold(frame, 60)
 }
@@ -56,6 +64,14 @@ pub(crate) fn changed_channels(left: &[u8], right: &[u8]) -> usize {
 }
 
 pub(crate) fn lit_bounds(frame: &[u8]) -> (usize, usize) {
+    let extents = lit_extents(frame);
+    (
+        extents.right - extents.left + 1,
+        extents.bottom - extents.top + 1,
+    )
+}
+
+pub(crate) fn lit_extents(frame: &[u8]) -> LitExtents {
     let background = [frame[0], frame[1], frame[2]];
     let points: Vec<_> = frame
         .chunks_exact(3)
@@ -70,10 +86,10 @@ pub(crate) fn lit_bounds(frame: &[u8]) -> (usize, usize) {
         })
         .map(|(index, _)| (index % WIDTH as usize, index / WIDTH as usize))
         .collect();
-    let x = points.iter().map(|point| point.0);
-    let y = points.iter().map(|point| point.1);
-    (
-        x.clone().max().unwrap() - x.min().unwrap() + 1,
-        y.clone().max().unwrap() - y.min().unwrap() + 1,
-    )
+    LitExtents {
+        left: points.iter().map(|point| point.0).min().unwrap(),
+        right: points.iter().map(|point| point.0).max().unwrap(),
+        top: points.iter().map(|point| point.1).min().unwrap(),
+        bottom: points.iter().map(|point| point.1).max().unwrap(),
+    }
 }
