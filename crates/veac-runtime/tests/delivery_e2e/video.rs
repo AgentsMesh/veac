@@ -49,7 +49,7 @@ fn prores_4444_preserves_a_real_transparent_region() {
     let output = delivery.path("dlv_main");
     let stream = video_stream(output);
     assert_eq!(stream["codec_name"], "prores");
-    assert_eq!(stream["profile"], "4444");
+    assert_profile(&stream["profile"], &["4444", "4"]);
     assert_eq!(stream["pix_fmt"], "yuva444p12le");
     validate_segment(&delivery.plan, output);
 

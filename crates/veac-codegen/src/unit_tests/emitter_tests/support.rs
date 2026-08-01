@@ -177,6 +177,7 @@ pub fn test_font_path() -> PathBuf {
 pub fn alternate_test_font_path() -> PathBuf {
     [
         "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
     ]

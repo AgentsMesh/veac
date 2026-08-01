@@ -70,7 +70,7 @@ fn dnxhr_hqx_mxf_with_pcm24_is_a_real_probeable_master() {
     let streams = value["streams"].as_array().unwrap();
     let video = stream(streams, "video");
     assert_eq!(video["codec_name"], "dnxhd");
-    assert_eq!(video["profile"], "DNXHR HQX");
+    assert_profile(&video["profile"], &["DNXHR HQX", "4"]);
     assert_eq!(video["pix_fmt"], "yuv422p10le");
     let audio = stream(streams, "audio");
     assert_eq!(audio["codec_name"], "pcm_s24le");

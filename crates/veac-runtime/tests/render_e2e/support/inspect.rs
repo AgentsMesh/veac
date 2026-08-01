@@ -35,6 +35,14 @@ pub(crate) fn assert_media_contract(media: &Path, audio_streams: usize, duration
     assert!((actual - duration).abs() <= 0.12, "duration {actual}");
 }
 
+pub(crate) fn assert_profile(value: &Value, expected: &[&str]) {
+    let actual = value.as_str().expect("FFprobe profile string");
+    assert!(
+        expected.contains(&actual),
+        "unexpected profile {actual:?}; expected one of {expected:?}"
+    );
+}
+
 pub(crate) fn rgb_at(media: &Path, second: f64, x: u32, y: u32) -> [u8; 3] {
     let filter = format!("crop=2:2:{x}:{y},scale=1:1,format=rgb24");
     let output = Command::new("ffmpeg")

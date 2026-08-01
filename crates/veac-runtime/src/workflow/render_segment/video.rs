@@ -116,20 +116,21 @@ fn profile_matches(expected: Option<VideoProfile>, actual: Option<&str>) -> bool
         return false;
     };
     let candidates: &[&str] = match expected {
-        VideoProfile::H264Baseline => &["Baseline", "Constrained Baseline"],
-        VideoProfile::H264Main | VideoProfile::H265Main => &["Main"],
-        VideoProfile::H264High => &["High"],
-        VideoProfile::H264High10 => &["High 10", "High 10 Intra"],
-        VideoProfile::H265Main10 => &["Main 10", "Main 10 Intra"],
-        VideoProfile::Vp9Profile0 => &["Profile 0"],
-        VideoProfile::Vp9Profile2 => &["Profile 2"],
-        VideoProfile::Av1Main => &["Main"],
-        VideoProfile::ProRes4444 => &["4444"],
-        VideoProfile::DnxHrLb => &["DNXHR LB"],
-        VideoProfile::DnxHrSq => &["DNXHR SQ"],
-        VideoProfile::DnxHrHq => &["DNXHR HQ"],
-        VideoProfile::DnxHrHqx => &["DNXHR HQX"],
-        VideoProfile::DnxHr444 => &["DNXHR 444"],
+        VideoProfile::H264Baseline => &["Baseline", "Constrained Baseline", "66", "578"],
+        VideoProfile::H264Main => &["Main", "77"],
+        VideoProfile::H264High => &["High", "100"],
+        VideoProfile::H264High10 => &["High 10", "High 10 Intra", "110", "2158"],
+        VideoProfile::H265Main => &["Main", "1"],
+        VideoProfile::H265Main10 => &["Main 10", "Main 10 Intra", "2"],
+        VideoProfile::Vp9Profile0 => &["Profile 0", "0"],
+        VideoProfile::Vp9Profile2 => &["Profile 2", "2"],
+        VideoProfile::Av1Main => &["Main", "0"],
+        VideoProfile::ProRes4444 => &["4444", "4"],
+        VideoProfile::DnxHrLb => &["DNXHR LB", "1"],
+        VideoProfile::DnxHrSq => &["DNXHR SQ", "2"],
+        VideoProfile::DnxHrHq => &["DNXHR HQ", "3"],
+        VideoProfile::DnxHrHqx => &["DNXHR HQX", "4"],
+        VideoProfile::DnxHr444 => &["DNXHR 444", "5"],
     };
     candidates
         .iter()
