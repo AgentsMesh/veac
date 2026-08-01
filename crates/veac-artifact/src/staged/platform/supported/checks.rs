@@ -56,13 +56,9 @@ pub(super) fn verify_owned_regular(expected: &File, current: &File) -> ArtifactR
 
 pub(super) fn publish_error(mode: PublishMode, error: rustix::io::Errno) -> ArtifactError {
     if matches!(mode, PublishMode::NoClobber)
-        && matches!(
-            error,
-            rustix::io::Errno::NOSYS
-                | rustix::io::Errno::INVAL
-                | rustix::io::Errno::NOTSUP
-                | rustix::io::Errno::OPNOTSUPP
-        )
+        && (matches!(error, rustix::io::Errno::NOSYS | rustix::io::Errno::INVAL)
+            || error == rustix::io::Errno::NOTSUP
+            || error == rustix::io::Errno::OPNOTSUPP)
     {
         return unsafe_io("atomic no-clobber publication is unsupported", error);
     }

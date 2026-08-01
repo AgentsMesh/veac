@@ -143,14 +143,21 @@ expect_failure missing-delivery-example "$tmp/missing-delivery-example.json"
 
 presentation_root="$tmp/presentation"
 mkdir -p "$presentation_root/examples/demo"
-printf '%s\n' 'project demo {' '  sequence main {' \
-  '    layer visual copy {' '      item title {' \
-  '        source text { content "English explanation"; }' \
-  '        record { at 0s; duration 1s; }' '      }' '    }' '  }' '}' \
-  > "$presentation_root/examples/demo/main.veac"
 printf '%s\n' '{"examples":[{"source":"examples/demo/main.veac"}]}' \
   > "$presentation_root/gallery.json"
-if "$PRESENTATION_CHECKER" "$presentation_root" \
+write_presentation_example() {
+  local content=$1
+  printf '%s\n' 'project demo {' '  sequence main {' \
+    '    layer visual copy {' '      item title {' \
+    "        source text { content \"$content\"; }" \
+    '        record { at 0s; duration 1s; }' '      }' '    }' '  }' '}' \
+    > "$presentation_root/examples/demo/main.veac"
+}
+write_presentation_example '中文排版 · مرحبا · VEAC'
+LC_ALL=C "$PRESENTATION_CHECKER" "$presentation_root" \
+  "$presentation_root/gallery.json" >/dev/null
+write_presentation_example 'English explanation'
+if LC_ALL=C "$PRESENTATION_CHECKER" "$presentation_root" \
   "$presentation_root/gallery.json" >/dev/null 2>&1; then
   echo "expected English-only visible explanation failure" >&2
   exit 1

@@ -1,9 +1,9 @@
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 
-use rustix::fs::{fstat, mkdirat, openat, statat, unlinkat, AtFlags, FileType, Mode, Stat};
+use rustix::fs::{fstat, mkdirat, openat, statat, unlinkat, AtFlags, FileType, Mode};
 
-use super::{directory_flags, io_error, unsafe_io, unsafe_path};
+use super::{directory_flags, io_error, unsafe_io, unsafe_path, verify_identity};
 use crate::{ArtifactError, ArtifactErrorKind, ArtifactResult};
 
 pub(in crate::staged) fn create_private_directory(
@@ -35,27 +35,21 @@ fn create_private_directory_with(
 struct CreatedDirectory<'a> {
     parent: &'a File,
     name: OsString,
-    identity: Option<Stat>,
+    identity: Option<File>,
     armed: bool,
 }
 
 impl<'a> CreatedDirectory<'a> {
     fn new(parent: &'a File, name: OsString) -> ArtifactResult<Self> {
-        let mut created = Self {
+        let identity = openat(parent, &name, directory_flags(), Mode::empty())
+            .map(File::from)
+            .map_err(|error| unsafe_io("bind created private directory", error))?;
+        Ok(Self {
             parent,
             name,
-            identity: None,
+            identity: Some(identity),
             armed: true,
-        };
-        let identity = statat(parent, &created.name, AtFlags::SYMLINK_NOFOLLOW)
-            .map_err(|error| unsafe_io("bind created private directory", error))?;
-        if FileType::from_raw_mode(identity.st_mode) != FileType::Directory {
-            return Err(unsafe_path(
-                "created staging entry is no longer a directory",
-            ));
-        }
-        created.identity = Some(identity);
-        Ok(created)
+        })
     }
 
     fn open(mut self) -> ArtifactResult<(OsString, File)> {
@@ -66,16 +60,17 @@ impl<'a> CreatedDirectory<'a> {
             Ok(directory) => directory,
             Err(primary) => return Err(self.cleanup_after(primary)),
         };
-        let current =
-            fstat(&directory).map_err(|error| io_error("inspect created private directory", error));
-        match current {
-            Ok(current) if self.matches(&current) => {
+        let expected = self
+            .identity
+            .as_ref()
+            .ok_or_else(|| unsafe_path("created staging directory has no bound open identity"));
+        match expected
+            .and_then(|expected| verify_identity(expected, &directory, FileType::Directory))
+        {
+            Ok(()) => {
                 self.armed = false;
                 Ok((self.name.clone(), directory))
             }
-            Ok(_) => Err(self.cleanup_after(unsafe_path(
-                "created staging directory changed before it was opened",
-            ))),
             Err(primary) => Err(self.cleanup_after(primary)),
         }
     }
@@ -94,9 +89,11 @@ impl<'a> CreatedDirectory<'a> {
         if !self.armed {
             return Ok(());
         }
-        let expected = self.identity.as_ref().ok_or_else(|| {
+        let identity = self.identity.as_ref().ok_or_else(|| {
             unsafe_path("created staging directory has no bound cleanup identity")
         })?;
+        let expected =
+            fstat(identity).map_err(|error| unsafe_io("inspect bound created directory", error))?;
         let current = match statat(self.parent, &self.name, AtFlags::SYMLINK_NOFOLLOW) {
             Ok(current) => current,
             Err(rustix::io::Errno::NOENT) => {
@@ -117,14 +114,6 @@ impl<'a> CreatedDirectory<'a> {
             .map_err(|error| io_error("remove created private directory", error))?;
         self.armed = false;
         Ok(())
-    }
-
-    fn matches(&self, current: &Stat) -> bool {
-        self.identity.as_ref().is_some_and(|expected| {
-            expected.st_dev == current.st_dev
-                && expected.st_ino == current.st_ino
-                && FileType::from_raw_mode(current.st_mode) == FileType::Directory
-        })
     }
 }
 

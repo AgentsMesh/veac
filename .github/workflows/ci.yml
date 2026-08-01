@@ -58,6 +58,9 @@ jobs:
           ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
           ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
 
+      - name: Verify pinned FFmpeg execution
+        run: cargo test -p veac-runtime --lib executor::tests::reports_installed_ffmpeg_version -- --exact
+
       - name: Install cargo-llvm-cov 0.8.4
         uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
         with:
@@ -98,6 +101,9 @@ jobs:
         run: |
           ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
           ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
+
+      - name: Verify pinned FFmpeg execution
+        run: cargo test -p veac-runtime --lib executor::tests::reports_installed_ffmpeg_version -- --exact
 
       - name: Run FFmpeg-backed integration tests
         run: make e2e

@@ -13,13 +13,15 @@ pub(super) struct SymlinkGuard {
     parent: File,
     name: OsString,
     identity: Stat,
+    target: Vec<u8>,
 }
 
 impl SymlinkGuard {
     pub(super) fn verify(&self) -> ArtifactResult<()> {
-        let current = statat(&self.parent, &self.name, AtFlags::SYMLINK_NOFOLLOW)
-            .map_err(|error| corrupt_io("reinspect cache root symlink", error))?;
-        if !same_link(&self.identity, &current) {
+        let Some((current, target)) = inspect(&self.parent, &self.name)? else {
+            return corrupt("bound cache root symlink is no longer a symbolic link");
+        };
+        if !same_link(&self.identity, &current) || self.target != target {
             return corrupt("cache root symlink identity changed during operation");
         }
         Ok(())
@@ -30,6 +32,7 @@ impl SymlinkGuard {
             parent: self.parent.try_clone()?,
             name: self.name.clone(),
             identity: self.identity,
+            target: self.target.clone(),
         })
     }
 }
@@ -38,6 +41,22 @@ pub(super) fn resolve(
     parent: &File,
     name: &OsStr,
 ) -> ArtifactResult<Option<(SymlinkGuard, Vec<OsString>)>> {
+    let Some((identity, target)) = inspect(parent, name)? else {
+        return Ok(None);
+    };
+    let names = relative_names(Path::new(OsStr::from_bytes(&target)))?;
+    Ok(Some((
+        SymlinkGuard {
+            parent: parent.try_clone()?,
+            name: name.to_owned(),
+            identity,
+            target,
+        },
+        names,
+    )))
+}
+
+fn inspect(parent: &File, name: &OsStr) -> ArtifactResult<Option<(Stat, Vec<u8>)>> {
     let before = statat(parent, name, AtFlags::SYMLINK_NOFOLLOW)
         .map_err(|error| corrupt_io("inspect cache root symlink", error))?;
     if FileType::from_raw_mode(before.st_mode) != FileType::Symlink {
@@ -50,15 +69,7 @@ pub(super) fn resolve(
     if !same_link(&before, &after) {
         return corrupt("cache root symlink changed while it was resolved");
     }
-    let names = relative_names(Path::new(OsStr::from_bytes(target.to_bytes())))?;
-    Ok(Some((
-        SymlinkGuard {
-            parent: parent.try_clone()?,
-            name: name.to_owned(),
-            identity: before,
-        },
-        names,
-    )))
+    Ok(Some((before, target.to_bytes().to_vec())))
 }
 
 fn relative_names(path: &Path) -> ArtifactResult<Vec<OsString>> {

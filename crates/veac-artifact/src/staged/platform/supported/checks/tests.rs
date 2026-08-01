@@ -9,14 +9,21 @@ fn missing_directories_and_unsupported_publication_are_classified() {
             .kind,
         ArtifactErrorKind::Io
     );
-    assert_eq!(
-        publish_error(PublishMode::NoClobber, rustix::io::Errno::NOSYS).kind,
-        ArtifactErrorKind::UnsafePath
-    );
-    assert_eq!(
-        publish_error(PublishMode::Replace, rustix::io::Errno::NOSYS).kind,
-        ArtifactErrorKind::Io
-    );
+    for error in [
+        rustix::io::Errno::NOSYS,
+        rustix::io::Errno::INVAL,
+        rustix::io::Errno::NOTSUP,
+        rustix::io::Errno::OPNOTSUPP,
+    ] {
+        assert_eq!(
+            publish_error(PublishMode::NoClobber, error).kind,
+            ArtifactErrorKind::UnsafePath
+        );
+        assert_eq!(
+            publish_error(PublishMode::Replace, error).kind,
+            ArtifactErrorKind::Io
+        );
+    }
 }
 
 #[test]

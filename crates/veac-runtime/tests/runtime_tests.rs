@@ -18,10 +18,7 @@ fn test_parse_non_progress_line() {
 
 #[test]
 fn test_check_ffmpeg_installed() {
-    // This test verifies ffmpeg is available on the system.
-    // It will fail in CI environments without ffmpeg, which is acceptable.
-    let result = veac_runtime::executor::check_ffmpeg();
-    if let Ok(version) = result {
-        assert!(version.contains("ffmpeg"));
-    }
+    let version = veac_runtime::executor::check_ffmpeg()
+        .expect("FFmpeg is required by the integration test environment");
+    assert!(version.contains("ffmpeg"));
 }

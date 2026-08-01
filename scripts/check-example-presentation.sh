@@ -17,7 +17,7 @@ while IFS= read -r source; do
   [[ $source == examples/*/main.veac ]] || fail "invalid example path: $source"
   [[ -f $ROOT/$source ]] || fail "missing example: $source"
   while IFS= read -r declaration; do
-    if [[ $declaration =~ [一-龥] ]] ||
+    if rg -q '\p{Script=Han}' <<<"$declaration" ||
       [[ $declaration == *'content "AgentsMesh";'* ]]; then
       continue
     fi

@@ -48,3 +48,20 @@ fn missing_links_and_removed_bound_links_fail_as_corruption() {
         ArtifactErrorKind::CorruptCache
     );
 }
+
+#[test]
+fn bound_link_target_is_verified_when_metadata_identity_matches() {
+    use std::os::unix::fs::symlink;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("linked");
+    symlink("target", &path).unwrap();
+    let parent = File::open(temp.path()).unwrap();
+    let (mut guard, _) = resolve(&parent, OsStr::new("linked")).unwrap().unwrap();
+
+    guard.target = b"different".to_vec();
+    assert_eq!(
+        guard.verify().unwrap_err().kind,
+        ArtifactErrorKind::CorruptCache
+    );
+}

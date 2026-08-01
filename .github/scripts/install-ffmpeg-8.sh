@@ -25,8 +25,8 @@ trap - EXIT
 for command in ffmpeg ffprobe; do
   wrapper="$BIN/$command"
   {
-    printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
-    printf '%s\n' 'root=$(CDPATH= cd -- "$(dirname -- "$0")/../ffmpeg-8-root" && pwd)'
+    printf '%s\n' '#!/bin/bash' 'set -euo pipefail'
+    printf '%s\n' 'root="${RUNNER_TEMP:?RUNNER_TEMP is required}/ffmpeg-8-root"'
     printf 'exec "$root/lib/ld-musl-x86_64.so.1" --library-path "$root/lib:$root/usr/lib" "$root/bin/%s" "$@"\n' "$command"
   } >"$wrapper"
   chmod +x "$wrapper"
