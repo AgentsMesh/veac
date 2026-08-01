@@ -4,7 +4,7 @@ use veac_codegen::emitter::BackendProduct;
 
 use super::super::{
     invalidate,
-    manifest::{self, CheckpointManifest},
+    manifest::{self, CheckpointManifest, CheckpointOutput},
     resume, store, validate_cached, StagedFile,
 };
 use super::support::{deadline, digest, entry, identity_for, write_task};
@@ -48,6 +48,7 @@ fn fresh_output_hash_expiry_does_not_publish_a_checkpoint() {
         &[StagedFile {
             source: staged,
             target: output,
+            allow_empty: true,
         }],
         Instant::now() + Duration::from_micros(100),
     )
@@ -86,6 +87,7 @@ fn checkpoint_store_and_resume_report_real_store_failures() {
         &[StagedFile {
             source: staging,
             target: temp.path().join("caption.srt"),
+            allow_empty: true,
         }],
         deadline(),
     )
@@ -109,6 +111,7 @@ fn changed_descriptor_and_missing_outputs_invalidate_cached_entries() {
         &[StagedFile {
             source: staged,
             target: output.clone(),
+            allow_empty: true,
         }],
         deadline(),
     )
@@ -142,9 +145,12 @@ fn cached_output_path_and_descriptor_tampering_fail_closed() {
     let path = output.to_string_lossy().into_owned();
 
     let mut wrong_path = entry(&path);
-    wrong_path.path.push_str(".other");
+    match &mut wrong_path {
+        CheckpointOutput::File { path, .. } => path.push_str(".other"),
+        CheckpointOutput::Package { .. } => panic!("fixture is a file checkpoint"),
+    }
     let payload = manifest::encode(&CheckpointManifest {
-        schema_version: 1,
+        schema_version: 2,
         outputs: vec![wrong_path],
     })
     .unwrap();
@@ -154,9 +160,12 @@ fn cached_output_path_and_descriptor_tampering_fail_closed() {
         .contains("path changed"));
 
     let mut wrong_descriptor = entry(&path);
-    wrong_descriptor.descriptor.parameters = serde_json::json!({"index": 1, "path": path});
+    let CheckpointOutput::File { descriptor, .. } = &mut wrong_descriptor else {
+        panic!("fixture is a file checkpoint");
+    };
+    descriptor.parameters = serde_json::json!({"index": 1, "path": path});
     let payload = manifest::encode(&CheckpointManifest {
-        schema_version: 1,
+        schema_version: 2,
         outputs: vec![wrong_descriptor],
     })
     .unwrap();

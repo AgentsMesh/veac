@@ -115,6 +115,30 @@ fn outputs_may_not_enter_the_artifact_store_directory() {
 }
 
 #[test]
+fn bundle_cannot_publish_across_output_directories() {
+    let temp = tempfile::tempdir().unwrap();
+    let left = path(temp.path(), "left");
+    let right = path(temp.path(), "right");
+    std::fs::create_dir(&left).unwrap();
+    std::fs::create_dir(&right).unwrap();
+    let executor = BundleExecutor::new(FakeFfmpeg::default());
+
+    let error = executor
+        .execute_runtime(
+            &bundle(vec![
+                video_task("left", &path(&left, "left.bin")),
+                video_task("right", &path(&right, "right.bin")),
+            ]),
+            &ArtifactStore::new(path(temp.path(), "store")),
+        )
+        .unwrap_err();
+
+    assert!(error.message.contains("one output directory"));
+    assert_eq!(executor.environment().fingerprint_calls.get(), 0);
+    assert!(executor.environment().calls.borrow().is_empty());
+}
+
+#[test]
 fn existing_unsafe_static_and_pattern_targets_fail_contract_preflight() {
     let temp = tempfile::tempdir().unwrap();
     let static_directory = path(temp.path(), "master.bin");

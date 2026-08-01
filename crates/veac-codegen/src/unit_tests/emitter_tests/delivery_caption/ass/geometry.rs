@@ -22,8 +22,8 @@ fn every_ass_alignment_and_placement_anchor_is_emitted() {
             let ResolvedClipSource::Caption { content, .. } = &mut clip.source else {
                 unreachable!()
             };
-            content.style.layout.horizontal_alignment = horizontal;
-            content.style.layout.vertical_alignment = vertical;
+            content.styled_mut().unwrap().layout.horizontal_alignment = horizontal;
+            content.styled_mut().unwrap().layout.vertical_alignment = vertical;
         }
         assert!(rendered(&plan, &bindings).contains(&format!("\\an{tag}")));
     }
@@ -77,9 +77,9 @@ fn absolute_units_and_style_variants_have_stable_ass_output() {
     let ResolvedClipSource::Caption { content, .. } = &mut clips[0].source else {
         unreachable!()
     };
-    content.style.size_pixels = 33.0;
-    content.style.outline = None;
-    content.style.shadow = None;
+    content.styled_mut().unwrap().size_pixels = 33.0;
+    content.styled_mut().unwrap().outline = None;
+    content.styled_mut().unwrap().shadow = None;
     let output = rendered(&plan, &bindings);
     assert_eq!(
         output

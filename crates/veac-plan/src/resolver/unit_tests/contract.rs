@@ -83,7 +83,9 @@ fn resolving_all_configs_returns_stable_id_order() {
     let mut alpha = value.project.render_configs[0].clone();
     alpha.id = RenderConfigId::new("out_alpha").unwrap();
     alpha.deliverables[0].id = DeliverableId::new("dlv_alpha").unwrap();
-    alpha.deliverables[0].file_name = "alpha.mp4".to_owned();
+    alpha.deliverables[0].target = DeliverableTarget::File {
+        name: "alpha.mp4".to_owned(),
+    };
     value.project.render_configs[0].id = RenderConfigId::new("out_zulu").unwrap();
     value.project.render_configs.push(alpha);
 

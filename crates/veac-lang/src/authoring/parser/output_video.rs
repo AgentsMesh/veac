@@ -1,101 +1,136 @@
+mod options;
+
 use crate::authoring::{
-    AudioCodec, AudioOutput, HardwareBackend, HardwareSelection, OutputKeyword, SemanticBlock,
-    SemanticEntry, SemanticValue, VideoEncoding, VideoOutput,
+    AudioCodec, AudioOutput, HardwareBackend, HardwareSelection, OutputFormat, OutputKeyword,
+    SemanticBlock, SemanticEntry, SemanticValue, VideoCodec, VideoEncoding, VideoOutput,
 };
 
 use super::output_fields::*;
-use super::semantic::{finish, take};
+use super::semantic::{finish, number, required, take, word};
 use super::Parser;
 
 impl Parser {
-    pub(super) fn video_encoding(&mut self, mut block: SemanticBlock) -> VideoEncoding {
-        let mut output = VideoEncoding::default();
-        field_enum(self, &mut block, "container", &mut output.container);
-        if let Some(video) = take_block(self, &mut block, "video") {
-            self.video_settings(video, &mut output.video);
-        }
-        if let Some(entry) = take(self, &mut block, "audio") {
-            output.audio = self.optional_audio(entry, output.audio);
-        }
-        field_enum(self, &mut block, "captions", &mut output.captions);
-        field_bool(
-            self,
-            &mut block,
-            "optimize-for-streaming",
-            &mut output.optimize_for_streaming,
-        );
-        field_enum(self, &mut block, "pass-mode", &mut output.pass_mode);
-        if let Some(value) = take_word(self, &mut block, "hardware") {
-            output.hardware = match value.value.as_str() {
-                "auto" => HardwareSelection::Auto,
-                "software" => HardwareSelection::Software,
-                _ => match HardwareBackend::parse(&value.value) {
-                    Some(backend) => HardwareSelection::Explicit { backend },
-                    None => {
-                        self.error(
-                            "AUTHORING_OUTPUT_ENUM",
-                            format!("invalid hardware value '{}'", value.value),
-                            value.span,
-                        );
-                        output.hardware
-                    }
-                },
+    pub(super) fn video_recipe(&mut self, body: &mut SemanticBlock) -> Option<VideoEncoding> {
+        let entry = required(self, body, "mux", "video artifact")?;
+        let (container, mut mux) = tagged_block(self, entry, "video mux")?;
+        let container = OutputFormat::parse(&container.value)
+            .or_else(|| self.invalid_recipe("video mux", &container))?;
+        let mut output = VideoEncoding {
+            container,
+            ..VideoEncoding::default()
+        };
+        if let Some(layout) = take_word(self, &mut mux, "layout") {
+            output.optimize_for_streaming = match layout.value.as_str() {
+                "standard" => false,
+                "fast-start" => true,
+                _ => return self.invalid_recipe("mux layout", &layout),
             };
         }
-        finish(self, block, "video encoding");
-        output
+        let video = required(self, &mut mux, "video", "video mux")?;
+        let (codec, settings) = tagged_block(self, video, "video stream")?;
+        output.video.codec = VideoCodec::parse(&codec.value)
+            .or_else(|| self.invalid_recipe("video codec", &codec))?;
+        self.video_settings(settings, &mut output.video);
+        let audio = required(self, &mut mux, "audio", "video mux")?;
+        output.audio = self.optional_audio_recipe(audio)?;
+        field_enum(self, &mut mux, "passes", &mut output.pass_mode);
+        if let Some(value) = take_word(self, &mut mux, "accelerator") {
+            output.hardware = self.hardware(&value)?;
+        }
+        finish(self, mux, "video mux");
+        Some(output)
     }
 
-    fn video_settings(&mut self, mut block: SemanticBlock, output: &mut VideoOutput) {
-        field_enum(self, &mut block, "codec", &mut output.codec);
+    pub(super) fn video_settings(&mut self, mut block: SemanticBlock, output: &mut VideoOutput) {
         field_enum(self, &mut block, "pixel-format", &mut output.pixel_format);
         field_enum(self, &mut block, "alpha", &mut output.alpha);
-        if let Some(value) = take_block(self, &mut block, "color-space") {
-            output.color_space = Some(self.color_space(value));
+        if let Some(entry) = take(self, &mut block, "color-space") {
+            output.color_space = match (entry.values.as_slice(), entry.block) {
+                ([SemanticValue::Identifier(value)], None) if value.value == "source" => None,
+                ([], Some(block)) => Some(self.color_space(block)),
+                _ => {
+                    self.error(
+                        "AUTHORING_OUTPUT_COLOR_SPACE",
+                        "color-space must be source or a settings block".into(),
+                        entry.span,
+                    );
+                    output.color_space
+                }
+            };
         }
         if let Some(entry) = take(self, &mut block, "rate-control") {
             output.rate_control = self.rate_control(entry);
         }
-        if let Some(value) = take_u64(self, &mut block, "gop-size") {
-            output.gop_size = u32::try_from(value).ok();
+        output.gop_size = self.optional_u32(&mut block, "gop", output.gop_size);
+        output.b_frames = self.optional_u8(&mut block, "b-frames", output.b_frames);
+        if let Some(entry) = take(self, &mut block, "profile") {
+            output.profile = self.optional_profile(entry, output.profile);
         }
-        if let Some(value) = take_u64(self, &mut block, "b-frames") {
-            output.b_frames = u8::try_from(value).ok();
+        if let Some(entry) = take(self, &mut block, "level") {
+            output.level = self.optional_level(entry, output.level.clone());
         }
-        field_optional_enum(self, &mut block, "profile", &mut output.profile);
-        field_string(self, &mut block, "level", &mut output.level);
-        finish(self, block, "video settings");
+        finish(self, block, "video encode");
     }
 
-    fn optional_audio(
+    pub(super) fn audio_settings(
         &mut self,
-        entry: SemanticEntry,
-        fallback: Option<AudioOutput>,
+        codec: AudioCodec,
+        mut block: SemanticBlock,
     ) -> Option<AudioOutput> {
+        let sample = required(self, &mut block, "sample-rate", "audio encode")
+            .and_then(|entry| number(self, &entry, "audio sample-rate"))?;
+        let sample_rate = sample_rate(self, &sample, "audio sample-rate")?;
+        let layout = required(self, &mut block, "channel-layout", "audio encode")
+            .and_then(|entry| word(self, &entry, "audio channel-layout"))?;
+        let channels = self.output_channel_count(&layout)?;
+        finish(self, block, "audio encode");
+        Some(AudioOutput {
+            codec,
+            sample_rate,
+            channels,
+        })
+    }
+
+    fn optional_audio_recipe(&mut self, entry: SemanticEntry) -> Option<Option<AudioOutput>> {
         match (entry.values.as_slice(), entry.block) {
-            ([SemanticValue::Identifier(value)], None) if value.value == "none" => None,
-            ([], Some(block)) => Some(self.audio_settings(block)),
+            ([SemanticValue::Identifier(value)], None) if value.value == "none" => Some(None),
+            ([SemanticValue::Identifier(codec)], Some(block)) => {
+                let codec = AudioCodec::parse(&codec.value)
+                    .or_else(|| self.invalid_recipe("audio codec", codec))?;
+                self.audio_settings(codec, block).map(Some)
+            }
             _ => {
                 self.error(
                     "AUTHORING_OUTPUT_AUDIO",
-                    "audio must be `none` or a settings block".into(),
+                    "audio must be `none` or `<codec> { ... }`".into(),
                     entry.span,
                 );
-                fallback
+                None
             }
         }
     }
 
-    pub(super) fn audio_settings(&mut self, mut block: SemanticBlock) -> AudioOutput {
-        let mut output = AudioOutput {
-            codec: AudioCodec::Aac,
-            sample_rate: 48_000,
-            channels: 2,
-        };
-        field_enum(self, &mut block, "codec", &mut output.codec);
-        field_u32(self, &mut block, "sample-rate", &mut output.sample_rate);
-        field_u8(self, &mut block, "channels", &mut output.channels);
-        finish(self, block, "audio settings");
-        output
+    fn hardware(&mut self, value: &crate::authoring::Identifier) -> Option<HardwareSelection> {
+        match value.value.as_str() {
+            "auto" => Some(HardwareSelection::Auto),
+            "software" => Some(HardwareSelection::Software),
+            _ => HardwareBackend::parse(&value.value)
+                .map(|backend| HardwareSelection::Explicit { backend })
+                .or_else(|| self.invalid_recipe("accelerator", value)),
+        }
+    }
+
+    fn output_channel_count(&mut self, value: &crate::authoring::Identifier) -> Option<u8> {
+        match value.value.as_str() {
+            "mono" => Some(1),
+            "stereo" => Some(2),
+            "discrete-3" => Some(3),
+            "discrete-4" => Some(4),
+            "discrete-5" => Some(5),
+            "surround-5-1" => Some(6),
+            "discrete-7" => Some(7),
+            "surround-7-1" => Some(8),
+            _ => self.invalid_recipe("audio channel-layout", value),
+        }
     }
 }

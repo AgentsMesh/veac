@@ -14,6 +14,7 @@ fn partial_authority_executes_track_stem_and_plain_caption_end_to_end() {
     let music = tone_fixture(temp.path(), "scoped-music", 880);
     let font = font_fixture();
     let mut canonical = project(false);
+    canonical.project.render_configs[0].raster = None;
     canonical.project.materials.extend([
         material(
             "med_scoped_dialogue",
@@ -91,11 +92,9 @@ fn partial_authority_executes_track_stem_and_plain_caption_end_to_end() {
         .unwrap();
     bindings.bind_original(selected, dialogue).unwrap();
     for deliverable in &plan.output.deliverables {
+        let name = deliverable.target.file_name().expect("file deliverable");
         bindings
-            .bind_output(
-                deliverable.id.clone(),
-                temp.path().join(&deliverable.file_name),
-            )
+            .bind_output(deliverable.id.clone(), temp.path().join(name))
             .unwrap();
     }
     let bundle = emit_all(&plan, &bindings).unwrap();
@@ -118,7 +117,9 @@ fn deliverables() -> Vec<Deliverable> {
     vec![
         Deliverable {
             id: DeliverableId::new("dlv_scoped_caption").unwrap(),
-            file_name: "captions.srt".to_owned(),
+            target: DeliverableTarget::File {
+                name: "captions.srt".to_owned(),
+            },
             kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
                 format: CaptionSidecarFormat::Srt,
                 track_ids: vec![TrackId::new("trk_scoped_caption").unwrap()],
@@ -126,7 +127,9 @@ fn deliverables() -> Vec<Deliverable> {
         },
         Deliverable {
             id: DeliverableId::new("dlv_scoped_dialogue").unwrap(),
-            file_name: "dialogue.wav".to_owned(),
+            target: DeliverableTarget::File {
+                name: "dialogue.wav".to_owned(),
+            },
             kind: DeliverableKind::AudioStem(AudioStemOutput {
                 format: AudioStemFormat::Wav,
                 audio: AudioOutput {
@@ -134,7 +137,7 @@ fn deliverables() -> Vec<Deliverable> {
                     sample_rate: 48_000,
                     channels: 1,
                 },
-                source: AudioStemSource::Track {
+                source: AudioMixSource::Track {
                     track_id: TrackId::new("trk_scoped_dialogue").unwrap(),
                 },
             }),

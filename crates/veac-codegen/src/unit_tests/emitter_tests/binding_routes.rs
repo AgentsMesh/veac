@@ -88,7 +88,7 @@ fn a_missing_required_audio_role_fails_before_command_emission() {
 pub(super) fn av_plan() -> ResolvedRenderPlan {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

@@ -33,7 +33,7 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
 }
 
 fn specific_contract_error(content: &ResolvedText) -> Option<(&'static str, &'static str)> {
-    let style = &content.style;
+    let style = content.styled()?;
     if let Some(path) = &style.path {
         if !(2..=256).contains(&path.points.len()) {
             return Some((
@@ -60,10 +60,13 @@ fn specific_contract_error(content: &ResolvedText) -> Option<(&'static str, &'st
 }
 
 fn style_valid(plan: &ResolvedRenderPlan, content: &ResolvedText) -> bool {
-    let style = &content.style;
-    !content.text.is_empty()
+    let text_valid = !content.text.is_empty()
         && content.text.len() <= veac_plan::canonical::MAX_TEXT_BYTES
-        && content.text.chars().count() <= veac_plan::canonical::MAX_TEXT_SCALARS
+        && content.text.chars().count() <= veac_plan::canonical::MAX_TEXT_SCALARS;
+    let Some(style) = content.styled() else {
+        return text_valid;
+    };
+    text_valid
         && style.fallback_fonts.len() <= veac_plan::canonical::MAX_FALLBACK_FONTS
         && style.spans.len() <= veac_plan::canonical::MAX_TEXT_SPANS
         && style.size_pixels.is_finite()
@@ -100,7 +103,7 @@ fn style_valid(plan: &ResolvedRenderPlan, content: &ResolvedText) -> bool {
                     .contains(&value.width_pixels)
         })
         && style.shadow.as_ref().is_none_or(visual::shadow)
-        && spans_valid(plan, content)
+        && spans_valid(plan, content, style)
 }
 
 fn layout_valid(value: veac_plan::canonical::TextLayout) -> bool {
@@ -112,10 +115,14 @@ fn layout_valid(value: veac_plan::canonical::TextLayout) -> bool {
             || (value.wrap == TextWrap::None && value.overflow != TextOverflow::Ellipsis))
 }
 
-fn spans_valid(plan: &ResolvedRenderPlan, content: &ResolvedText) -> bool {
+fn spans_valid(
+    plan: &ResolvedRenderPlan,
+    content: &ResolvedText,
+    style: &veac_plan::ResolvedTextStyle,
+) -> bool {
     let length = content.text.chars().count() as u32;
     let mut previous_end = 0;
-    content.style.spans.iter().all(|span| {
+    style.spans.iter().all(|span| {
         let valid = span.start < span.end
             && span.start >= previous_end
             && span.end <= length

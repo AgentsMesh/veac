@@ -15,4 +15,28 @@ project minimal {
       }
     }
   }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

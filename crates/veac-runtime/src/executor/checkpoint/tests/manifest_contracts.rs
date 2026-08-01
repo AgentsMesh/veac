@@ -4,7 +4,7 @@ use super::support::entry;
 #[test]
 fn manifest_round_trip_is_strict_canonical_and_sorted() {
     let manifest = CheckpointManifest {
-        schema_version: 1,
+        schema_version: 2,
         outputs: vec![entry("a.srt"), entry("b.srt")],
     };
     let bytes = manifest::encode(&manifest).unwrap();
@@ -18,14 +18,14 @@ fn manifest_round_trip_is_strict_canonical_and_sorted() {
         .contains("strict canonical"));
 
     let wrong_version = CheckpointManifest {
-        schema_version: 2,
+        schema_version: 1,
         ..manifest.clone()
     };
     assert!(manifest::decode(&manifest::encode(&wrong_version).unwrap()).is_err());
 
     for outputs in [vec![], vec![entry("b.srt"), entry("a.srt")]] {
         let invalid = CheckpointManifest {
-            schema_version: 1,
+            schema_version: 2,
             outputs,
         };
         assert!(manifest::decode(&manifest::encode(&invalid).unwrap())

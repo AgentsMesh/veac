@@ -1,6 +1,6 @@
 use veac_artifact::ExecutionBindings;
 use veac_plan::canonical::{TextGranularity, TextOverflow, TextWrap, TextWritingMode};
-use veac_plan::{ResolvedClip, ResolvedText};
+use veac_plan::{ResolvedClip, ResolvedText, ResolvedTextStyle};
 
 use super::animation;
 use super::error::TextError;
@@ -26,21 +26,24 @@ pub(super) fn build(
         .visual
         .as_ref()
         .ok_or_else(|| TextError::invalid("text has no visual properties"))?;
+    let style = content
+        .styled()
+        .ok_or_else(|| TextError::invalid("visual text requires styled presentation"))?;
     let sample_count = limits::samples(animation::sample_count(
-        content.style.animation.as_ref(),
+        style.animation.as_ref(),
         clip.record_range.duration,
         canvas.frame_rate,
     ))?;
     let fps = canvas.frame_rate.numerator as f64 / f64::from(canvas.frame_rate.denominator);
     limits::frame_rate(sample_count, fps)?;
-    let surface = surface::resolve(canvas, visual, content);
+    let surface = surface::resolve(canvas, visual, style);
     let dimensions = surface.dimensions();
-    validate_layout(content)?;
+    validate_layout(style)?;
     let mut fonts = FontBook::load(content, bindings)?;
-    let styled = styled::resolve(content, &fonts)?;
-    let authored_layout = content.style.layout;
-    let geometry_layout = content.style.path.is_some()
-        || authored_layout.writing_mode != TextWritingMode::HorizontalTb;
+    let styled = styled::resolve(content, style, &fonts)?;
+    let authored_layout = style.layout;
+    let geometry_layout =
+        style.path.is_some() || authored_layout.writing_mode != TextWritingMode::HorizontalTb;
     let box_width = (!geometry_layout)
         .then_some(authored_layout.box_width_pixels)
         .flatten();
@@ -53,22 +56,21 @@ pub(super) fn build(
     let rendered = lines::compose(
         &styled,
         &shaped,
-        content.style.layout,
+        style.layout,
         dimensions,
         surface.origin,
         &mut fonts,
     )?;
-    let granularity = content
-        .style
+    let granularity = style
         .animation
         .as_ref()
         .map_or(TextGranularity::Whole, |value| value.granularity);
     let (animated, unit_count) = units::annotate(&rendered, granularity);
     limits::unit_samples(sample_count, unit_count)?;
-    let ass_layout = if placement::required(&content.style) {
+    let ass_layout = if placement::required(style) {
         AssLayout::Placed(placement::place(
             &animated,
-            &content.style,
+            style,
             &mut fonts,
             dimensions,
             surface.origin,
@@ -77,30 +79,21 @@ pub(super) fn build(
         AssLayout::Lines(animated)
     };
     let samples = animation::samples(
-        content.style.animation.as_ref(),
+        style.animation.as_ref(),
         clip.record_range.duration,
         canvas.frame_rate,
         unit_count,
         dimensions,
         sample_count,
     );
-    let layers = event_layers(
-        content.style.background.is_some(),
-        content.style.shadow.is_some(),
-    );
+    let layers = event_layers(style.background.is_some(), style.shadow.is_some());
     let items = match &ass_layout {
         AssLayout::Lines(lines) => lines.len(),
         AssLayout::Placed(pieces) => pieces.len(),
     };
     let events = samples.len().saturating_mul(items).saturating_mul(layers);
     limits::events(events)?;
-    let script = ass::script(
-        dimensions,
-        &content.style,
-        &ass_layout,
-        &samples,
-        &fonts.embedded,
-    );
+    let script = ass::script(dimensions, style, &ass_layout, &samples, &fonts.embedded);
     limits::script(script.len())?;
     Ok(Backend {
         surface,
@@ -114,8 +107,8 @@ pub(crate) fn event_layers(has_background: bool, has_shadow: bool) -> usize {
     1 + usize::from(has_background) + usize::from(has_shadow)
 }
 
-fn validate_layout(content: &ResolvedText) -> Result<(), TextError> {
-    let layout = content.style.layout;
+fn validate_layout(style: &ResolvedTextStyle) -> Result<(), TextError> {
+    let layout = style.layout;
     if layout.writing_mode != TextWritingMode::HorizontalTb
         && (layout.wrap != TextWrap::None || layout.overflow == TextOverflow::Ellipsis)
     {
@@ -124,7 +117,7 @@ fn validate_layout(content: &ResolvedText) -> Result<(), TextError> {
             "vertical text requires wrap none and does not support ellipsis overflow",
         ));
     }
-    if content.style.path.is_some() && layout.wrap != TextWrap::None {
+    if style.path.is_some() && layout.wrap != TextWrap::None {
         return Err(TextError::new(
             "TEXT_PATH_LAYOUT_INVALID",
             "text path requires wrap none",

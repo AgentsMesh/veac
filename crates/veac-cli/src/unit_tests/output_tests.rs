@@ -38,7 +38,9 @@ fn outputs_cannot_alias_projects_or_materials() {
     std::fs::write(temp.path().join("clip.mp4"), "fixture").unwrap();
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
-    envelope.project.render_configs[0].deliverables[0].file_name = "clip.mp4".to_owned();
+    envelope.project.render_configs[0].deliverables[0].target = veac_ir::DeliverableTarget::File {
+        name: "clip.mp4".to_owned(),
+    };
     std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
     let mut prepared =
         crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();

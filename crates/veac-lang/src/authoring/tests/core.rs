@@ -71,26 +71,52 @@ fn accepts_integer_and_rational_frame_rates() {
 }
 
 #[test]
-fn accepts_only_the_five_canonical_output_types() {
-    let outputs = r#"
-  output video video-out {
-    sequence main; file-name "preview.mp4"; encoding {}
-  }
-  output image-sequence frames {
-    sequence main; file-name "frame-%d.png"; encoding {}
-  }
-  output caption-sidecar captions-out {
-    sequence main; file-name "captions.vtt";
-    encoding { tracks { track captions; } }
-  }
-  output audio-stem master-stem {
-    sequence main; file-name "master.wav"; encoding {}
-  }
-  output scope waveform {
-    sequence main; file-name "waveform.png"; encoding {}
+fn accepts_all_nine_canonical_artifact_recipes() {
+    let delivery = r#"
+  delivery preview {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video video-out {
+      target file "preview.mp4"; mux mp4 { video h264 {} audio none; }
+    }
+    artifact image-sequence frames {
+      target pattern "frame-%d.png"; numbering from 1; encode png;
+    }
+    artifact caption-sidecar captions-out {
+      target file "captions.vtt"; source caption-tracks { track captions; } encode web-vtt;
+    }
+    artifact audio-stem master-stem {
+      target file "master.wav"; source master;
+      encode wav { sample-format pcm-s24le; sample-rate 48khz; channel-layout stereo; }
+    }
+    artifact scope waveform {
+      target file "waveform.png"; analyze waveform; frame containing 0s;
+      canvas 640px by 360px; encode png;
+    }
+    artifact audio-file podcast {
+      target file "podcast.mp3"; source master;
+      encode mp3 { bitrate 192kbps; sample-rate 48khz; channel-layout stereo; }
+    }
+    artifact animated-image loop {
+      target file "loop.gif"; encode gif { playback forever; dither sierra2; }
+    }
+    artifact still-image cover {
+      target file "cover.png"; frame containing 0s; encode png;
+    }
+    artifact adaptive-package stream {
+      target package "stream";
+      package hls {
+        segment-duration 2s; audio none;
+        rendition hd {
+          canvas 1280px by 720px;
+          encode h264 { rate-control capped { target 3mbps; max 3210kbps; buffer 6mbit; } }
+        }
+      }
+    }
   }
 "#;
-    let body = format!("sequence main {{ layer caption captions {{}} }}\n{outputs}");
+    let body = format!("sequence main {{ layer caption captions {{}} }}\n{delivery}");
     let parsed = parse(&project(&body)).unwrap();
-    assert_eq!(parsed.project.outputs.len(), 5);
+    assert_eq!(parsed.project.deliveries.len(), 1);
+    assert_eq!(parsed.project.deliveries[0].artifacts.len(), 9);
 }

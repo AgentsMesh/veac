@@ -12,7 +12,7 @@ where
 {
     let (color, source_alpha) = split_input(context, input);
     let processed = apply_effect(context, color)?;
-    if matches!(effect.effect_type, "video.chroma_key" | "video.luma_key") {
+    if super::effect_kind(effect.effect_type).is_some_and(super::EffectKind::replaces_alpha) {
         combine_key_alpha(context, &processed, &source_alpha)
     } else {
         Ok(attach(
@@ -26,9 +26,7 @@ where
 
 fn split_input(context: &mut EmitContext<'_>, input: &str) -> (String, String) {
     let (color, alpha) = context.graph.split(input, "effectalphasplitv");
-    let color = context
-        .graph
-        .filter(&[&color], "format=gbrp16le", "effectcolorv");
+    let color = super::super::rgb_planes::without_alpha(&mut context.graph, &color, "effectcolorv");
     let alpha = extract(context, &alpha, "effectsourcealphav");
     (color, alpha)
 }
@@ -57,8 +55,7 @@ fn extract(context: &mut EmitContext<'_>, input: &str, prefix: &str) -> String {
 }
 
 fn attach(context: &mut EmitContext<'_>, color: &str, alpha: &str, prefix: &str) -> String {
-    let color = context
-        .graph
-        .filter(&[color], "format=gbrp16le", "effectoutputcolorv");
+    let color =
+        super::super::rgb_planes::without_alpha(&mut context.graph, color, "effectoutputcolorv");
     super::super::alpha_merge::apply(context, &color, alpha, "gbrap16le", prefix)
 }

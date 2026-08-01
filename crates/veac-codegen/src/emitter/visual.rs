@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
-use veac_plan::canonical::TrackKind;
+use veac_plan::canonical::{BlendMode, TrackKind};
 use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedSequence, ResolvedTrack};
 
 use super::{apply_stack::ApplyStack, blend, layer, time, transition, CodegenErrors, EmitContext};
@@ -90,24 +90,42 @@ fn overlay(
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
 ) -> Result<String, CodegenErrors> {
-    let rendered = layer::render(context, sequence, clip, visual)?;
+    let rendered = layer::render_with_shadow(context, sequence, clip, visual)?;
     let layer = context.graph.filter(
-        &[&rendered],
+        &[&rendered.foreground],
         format!("setpts=PTS+{}/TB", time::seconds(clip.record_range.start)),
         "offsetv",
     );
     let start = time::seconds(clip.record_range.start);
+    let end = time::end(clip.record_range);
+    let base = match rendered.shadow {
+        Some(shadow) => {
+            let shadow = context.graph.filter(
+                &[&shadow],
+                format!("setpts=PTS+{start}/TB"),
+                "shadowoffsetv",
+            );
+            blend::composite(
+                context,
+                base.to_owned(),
+                &shadow,
+                blend::Placement {
+                    start: start.clone(),
+                    end: end.clone(),
+                    mode: BlendMode::Normal,
+                },
+            )
+        }
+        None => base.to_owned(),
+    };
     Ok(blend::composite(
         context,
-        base.to_owned(),
+        base,
         &layer,
         blend::Placement {
-            x: "0",
-            y: "0",
             start,
-            end: time::end(clip.record_range),
+            end,
             mode: visual.compositing.blend_mode,
-            shadow: None,
         },
     ))
 }

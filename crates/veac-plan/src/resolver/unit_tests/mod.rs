@@ -13,6 +13,7 @@ mod mechanism_helpers;
 mod mechanisms;
 mod multicam;
 mod output;
+mod output_delivery_demand;
 mod output_selection;
 mod source_time;
 mod text_geometry;

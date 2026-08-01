@@ -8,8 +8,9 @@ use veac_plan::canonical::{Deliverable, DeliverableKind};
 use veac_plan::ResolvedRenderPlan;
 
 use super::{
-    delivery_audio, delivery_caption, delivery_image, delivery_scope, BackendAction, BackendBundle,
-    BackendOutput, BackendPhase, BackendProduct, BackendTask, CodegenErrors,
+    delivery_animated, delivery_audio, delivery_audio_file, delivery_caption, delivery_hls,
+    delivery_image, delivery_scope, delivery_still, BackendAction, BackendBundle, BackendOutput,
+    BackendPhase, BackendProduct, BackendTask, CodegenErrors,
 };
 
 pub fn emit_all(
@@ -52,6 +53,24 @@ pub fn emit_all(
             }
             DeliverableKind::Scope(settings) => {
                 tasks.push(delivery_scope::task(plan, bindings, deliverable, settings)?)
+            }
+            DeliverableKind::AudioFile(settings) => tasks.push(delivery_audio_file::task(
+                plan,
+                bindings,
+                deliverable,
+                settings,
+            )?),
+            DeliverableKind::AnimatedImage(settings) => tasks.push(delivery_animated::task(
+                plan,
+                bindings,
+                deliverable,
+                settings,
+            )?),
+            DeliverableKind::StillImage(settings) => {
+                tasks.push(delivery_still::task(plan, bindings, deliverable, settings)?)
+            }
+            DeliverableKind::AdaptivePackage(settings) => {
+                tasks.push(delivery_hls::task(plan, bindings, deliverable, settings)?)
             }
         }
     }

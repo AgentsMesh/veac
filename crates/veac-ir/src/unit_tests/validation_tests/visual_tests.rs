@@ -21,6 +21,10 @@ fn visual_text_and_audio_values_are_validated_at_boundaries() {
         },
     });
     visual.transform.scale = Animatable::constant(Vec2 { x: 0.0, y: 1.0 });
+    visual.transform.shear = Vec2 {
+        x: MAX_VISUAL_SHEAR + 0.1,
+        y: 0.0,
+    };
     visual.transform.rotation_degrees = Animatable::constant(f64::INFINITY);
     visual.transform.anchor = Vec2 { x: 2.0, y: 0.5 };
     visual.transform.crop = Some(Animatable::constant(Rect {
@@ -69,6 +73,7 @@ fn visual_text_and_audio_values_are_validated_at_boundaries() {
         "FRAME",
         "ANIMATION_VALUE",
         "ANCHOR",
+        "SHEAR",
         "CROP",
         "CARD",
         "SHADOW",

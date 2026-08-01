@@ -64,12 +64,6 @@ fn parameter_kinds_match_only_their_typed_value_variants() {
                 },
             },
         ),
-        (
-            ParameterType::Text,
-            ParameterValue::Text {
-                value: "typed".to_owned(),
-            },
-        ),
     ];
     for (kind, value) in values {
         let specification = ParameterSpec {
@@ -82,9 +76,27 @@ fn parameter_kinds_match_only_their_typed_value_variants() {
         assert!(parameter_matches(specification, &value));
         assert!(!parameter_matches(
             specification,
-            &ParameterValue::Integer { value: 1 }
+            &ParameterValue::Number { value: 1.0 }
         ));
     }
+}
+
+#[test]
+fn registry_consumes_every_declared_parameter_kind() {
+    let mut number = false;
+    let mut boolean = false;
+    let mut color = false;
+    for parameter in built_in_effects()
+        .iter()
+        .flat_map(|effect| effect.parameters)
+    {
+        match parameter.value_type {
+            ParameterType::Number => number = true,
+            ParameterType::Boolean => boolean = true,
+            ParameterType::Color => color = true,
+        }
+    }
+    assert!((number && boolean && color));
 }
 
 #[test]

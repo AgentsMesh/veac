@@ -17,12 +17,17 @@ fn every_video_encoder_argument_has_an_exact_capability_requirement() {
         } else {
             OutputFormat::Mkv
         };
-        plan.output.deliverables[0].file_name = match container {
-            OutputFormat::Webm => "master.webm",
-            _ => "master.mkv",
-        }
-        .to_owned();
-        let delivery = plan.output.video_deliverable_mut().unwrap();
+        plan.output.deliverables[0].target = DeliverableTarget::File {
+            name: match container {
+                OutputFormat::Webm => "master.webm",
+                _ => "master.mkv",
+            }
+            .to_owned(),
+        };
+        let delivery = plan
+            .output
+            .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+            .unwrap();
         delivery.container = container;
         delivery.video.codec = codec;
         delivery.audio = None;
@@ -44,8 +49,13 @@ fn every_video_encoder_argument_has_an_exact_capability_requirement() {
     }
 
     let mut plan = resolved(&fixture());
-    plan.output.deliverables[0].file_name = "master.mov".to_owned();
-    let delivery = plan.output.video_deliverable_mut().unwrap();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.mov".to_owned(),
+    };
+    let delivery = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     delivery.container = OutputFormat::Mov;
     delivery.audio = None;
     delivery.video = VideoOutput {
@@ -75,15 +85,20 @@ fn every_audio_encoder_argument_has_an_exact_capability_requirement() {
         (AudioCodec::PcmS32Le, OutputFormat::Mov, "pcm_s32le"),
     ] {
         let mut plan = resolved(&fixture());
-        plan.output.deliverables[0].file_name = match container {
-            OutputFormat::Mp4 => "master.mp4",
-            OutputFormat::Mov => "master.mov",
-            OutputFormat::Mkv => "master.mkv",
-            OutputFormat::Webm => "master.webm",
-            OutputFormat::Mxf => unreachable!(),
-        }
-        .to_owned();
-        let delivery = plan.output.video_deliverable_mut().unwrap();
+        plan.output.deliverables[0].target = DeliverableTarget::File {
+            name: match container {
+                OutputFormat::Mp4 => "master.mp4",
+                OutputFormat::Mov => "master.mov",
+                OutputFormat::Mkv => "master.mkv",
+                OutputFormat::Webm => "master.webm",
+                OutputFormat::Mxf => unreachable!(),
+            }
+            .to_owned(),
+        };
+        let delivery = plan
+            .output
+            .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+            .unwrap();
         delivery.container = container;
         delivery.video.codec = if container == OutputFormat::Webm {
             VideoCodec::Vp9
@@ -116,7 +131,9 @@ fn every_image_encoder_argument_has_an_exact_capability_requirement() {
         (ImageFormat::Exr, "exr", "exr"),
     ] {
         let mut plan = resolved(&fixture());
-        plan.output.deliverables[0].file_name = format!("frame-%d.{extension}");
+        plan.output.deliverables[0].target = DeliverableTarget::ImageSequence {
+            pattern: format!("frame-%d.{extension}"),
+        };
         plan.output.deliverables[0].kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
             format,
             start_number: 1,

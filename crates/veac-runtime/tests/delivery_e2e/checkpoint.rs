@@ -19,15 +19,18 @@ fn real_two_pass_render_resumes_and_revalidates_logs_and_master() {
         0,
         vec![solid_clip("itm_source", color(20, 100, 220), 0, 1_000)],
     ));
+    let deliverable_id = canonical.project.render_configs[0].deliverables[0]
+        .id
+        .clone();
     let video = canonical.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&deliverable_id)
         .unwrap();
     video.pass_mode = PassMode::TwoPass;
     video.hardware = HardwareSelection::Software;
     video.video.rate_control = VideoRateControl::Bitrate {
         target_bps: 250_000,
         max_bps: Some(350_000),
-        buffer_bps: Some(500_000),
+        buffer_size_bits: Some(500_000),
     };
     let delivery = prepare_delivery(canonical, &BTreeMap::new(), temp.path());
     let store = ArtifactStore::new(temp.path().join("store"));

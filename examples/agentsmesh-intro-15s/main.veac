@@ -25,7 +25,8 @@ project agentsmesh-intro-15s {
         source text {
           content "AgentsMesh";
           style {
-            font family "Arial";
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
             weight bold;
             size 112px;
             fill #f7fbffff;
@@ -46,28 +47,28 @@ project agentsmesh-intro-15s {
             unit grapheme;
             stagger 45ms;
             reveal curve {
-              key brand-hidden { at 0s; value 0%; interpolation linear; }
-              key brand-revealed { at 900ms; value 100%; interpolation ease-out; }
+              key brand-visible { at 0s; value 10%; interpolation ease-out; }
+              key brand-revealed { at 900ms; value 100%; interpolation linear; }
             }
             opacity curve {
-              key brand-transparent { at 0s; value 0%; interpolation linear; }
-              key brand-opaque { at 700ms; value 100%; interpolation ease-out; }
+              key brand-soft { at 0s; value 75%; interpolation ease-out; }
+              key brand-opaque { at 700ms; value 100%; interpolation linear; }
             }
             transform {
               position curve {
                 key brand-low {
-                  at 0s; value { x 0px; y 28px; } interpolation ease-out;
+                  at 0s; value { x 0px; y 48px; } interpolation ease-out;
                 }
                 key brand-centered {
-                  at 900ms; value { x 0px; y 0px; } interpolation ease-out;
+                  at 900ms; value { x 0px; y 0px; } interpolation linear;
                 }
               }
               scale curve {
                 key brand-small {
-                  at 0s; value { x 88%; y 88%; } interpolation ease-out;
+                  at 0s; value { x 50%; y 50%; } interpolation ease-out;
                 }
                 key brand-full {
-                  at 900ms; value { x 100%; y 100%; } interpolation ease-out;
+                  at 900ms; value { x 100%; y 100%; } interpolation linear;
                 }
               }
               rotation 0deg;
@@ -81,9 +82,10 @@ project agentsmesh-intro-15s {
     layer visual promise {
       item promise {
         source text {
-          content "Build systems once. Ship typed products repeatedly.";
+          content "一次构建系统，持续交付类型化产品。";
           style {
-            font family "Arial";
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
             weight bold;
             size 64px;
             fill #d8f3efff;
@@ -114,9 +116,10 @@ project agentsmesh-intro-15s {
     layer caption captions {
       item caption {
         source caption {
-          content "Video editing as typed, reviewable code.";
+          content "视频编辑成为类型化、可审查的代码。";
           style {
-            font family "Arial";
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
             weight bold;
             size 44px;
             fill #ffffffff;
@@ -138,6 +141,30 @@ project agentsmesh-intro-15s {
             frame { width 1600px; height 160px; fit contain; }
           }
         }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

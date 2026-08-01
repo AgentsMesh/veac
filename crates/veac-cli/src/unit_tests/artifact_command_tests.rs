@@ -88,7 +88,7 @@ fn manifest_contains_every_authored_deliverable() {
         .output
         .deliverables
         .iter()
-        .map(|value| value.file_name.as_str())
+        .map(|value| value.target.file_name().unwrap())
         .collect();
     assert_eq!(names, ["render.mp4", "second.mp4"]);
 }

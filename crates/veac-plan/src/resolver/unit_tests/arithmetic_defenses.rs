@@ -62,7 +62,14 @@ fn private_time_font_and_empty_sequence_invariants_are_total() {
     let style = text_style(FontRef::Material {
         material_id: MaterialId::new("med_video").unwrap(),
     });
-    assert!(resolver.resolve_text("bad font", &style, "/clip").is_none());
+    assert!(resolver
+        .resolve_text(
+            "bad font",
+            &style,
+            super::super::reachability::TextDemand::Styled,
+            "/clip",
+        )
+        .is_none());
     assert!(resolver
         .diagnostics
         .iter()

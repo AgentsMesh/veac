@@ -54,7 +54,12 @@ pub(crate) fn prepare_delivery(
     let mut bindings = ExecutionBindings::from_originals(&plan, &input_paths).unwrap();
     let mut outputs = BTreeMap::new();
     for deliverable in &plan.output.deliverables {
-        let path = output_directory.join(&deliverable.file_name);
+        let path = match &deliverable.target {
+            DeliverableTarget::File { name } | DeliverableTarget::Package { name } => {
+                output_directory.join(name)
+            }
+            DeliverableTarget::ImageSequence { pattern } => output_directory.join(pattern),
+        };
         bindings
             .bind_output(deliverable.id.clone(), path.clone())
             .unwrap();

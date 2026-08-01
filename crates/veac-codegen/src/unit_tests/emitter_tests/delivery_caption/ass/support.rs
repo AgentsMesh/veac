@@ -12,22 +12,22 @@ pub(super) fn normalize(plan: &mut ResolvedRenderPlan) {
         let ResolvedClipSource::Caption { content, .. } = &mut clip.source else {
             continue;
         };
-        content.style.fallback_fonts.clear();
-        content.style.font_weight = FontWeight::Medium;
-        content.style.font_style = FontStyle::Italic;
-        content.style.size_pixels = 32.0;
-        content.style.color = color(0x12, 0x34, 0x56, 200);
-        content.style.tracking_pixels = 1.25;
-        content.style.line_height = 1.0;
-        content.style.layout = TextLayout {
+        content.styled_mut().unwrap().fallback_fonts.clear();
+        content.styled_mut().unwrap().font_weight = FontWeight::Medium;
+        content.styled_mut().unwrap().font_style = FontStyle::Italic;
+        content.styled_mut().unwrap().size_pixels = 32.0;
+        content.styled_mut().unwrap().color = color(0x12, 0x34, 0x56, 200);
+        content.styled_mut().unwrap().tracking_pixels = 1.25;
+        content.styled_mut().unwrap().line_height = 1.0;
+        content.styled_mut().unwrap().layout = TextLayout {
             horizontal_alignment: HorizontalTextAlignment::Right,
             vertical_alignment: VerticalTextAlignment::Bottom,
             ..TextLayout::default()
         };
-        content.style.path = None;
-        content.style.background = None;
-        content.style.animation = None;
-        content.style.spans.clear();
+        content.styled_mut().unwrap().path = None;
+        content.styled_mut().unwrap().background = None;
+        content.styled_mut().unwrap().animation = None;
+        content.styled_mut().unwrap().spans.clear();
         clip.effects.clear();
         normalize_visual(clip.visual.as_mut().unwrap());
     }
@@ -44,6 +44,7 @@ fn normalize_visual(visual: &mut veac_plan::EffectiveVisualProperties) {
         y: pixels(-8.0),
     });
     visual.transform.scale = Animatable::constant(Vec2 { x: 1.0, y: 1.0 });
+    visual.transform.shear = Vec2 { x: 0.0, y: 0.0 };
     visual.transform.rotation_degrees = Animatable::constant(0.0);
     visual.transform.anchor = Vec2 { x: 0.5, y: 0.5 };
     visual.transform.flip_horizontal = false;

@@ -22,11 +22,17 @@ impl Directory {
     ) -> Result<(Vec<u8>, EntryIdentity), RuntimeError> {
         let expected = match self.state(name)? {
             EntryState::Regular(identity) => identity,
+            EntryState::Directory(_) => {
+                return Err(RuntimeError::new(
+                    "descriptor-relative bounded read requires a regular file",
+                ))
+            }
             EntryState::Missing => {
                 return Err(RuntimeError::new("descriptor-relative file is missing"))
             }
         };
-        if expected.size_bytes > maximum {
+        let size_bytes = expected.size_bytes().expect("regular identity has a size");
+        if size_bytes > maximum {
             return Err(RuntimeError::new(
                 "descriptor-relative file exceeds its bounded read limit",
             ));
@@ -45,7 +51,7 @@ impl Directory {
                 "opened transaction file changed identity before bounded read",
             ));
         }
-        let capacity = match usize::try_from(expected.size_bytes) {
+        let capacity = match usize::try_from(size_bytes) {
             Ok(capacity) => capacity,
             Err(_) => {
                 return Err(RuntimeError::new(
@@ -60,7 +66,7 @@ impl Directory {
                 "cannot read transaction file: {error}"
             )));
         }
-        if bytes.len() as u64 != expected.size_bytes {
+        if bytes.len() as u64 != size_bytes {
             return Err(RuntimeError::new(
                 "descriptor-relative file changed while it was read",
             ));
@@ -99,6 +105,9 @@ impl Directory {
         match self.state(name) {
             Ok(EntryState::Missing) => Ok(()),
             Ok(EntryState::Regular(identity)) => self.remove_bound(name, identity),
+            Ok(EntryState::Directory(_)) => Err(RuntimeError::new(
+                "descriptor-relative path must be a regular file",
+            )),
             Err(error) => Err(error),
         }
     }

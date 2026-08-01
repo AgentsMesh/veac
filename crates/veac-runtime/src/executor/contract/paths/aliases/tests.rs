@@ -90,6 +90,76 @@ fn policy_probe_and_name_folding_are_deterministic() {
     assert!(!temp.path().join("VEAC-Case-A").exists());
 }
 
+#[test]
+fn tree_overlap_is_symmetric_for_every_declaration_kind() {
+    let root = tree("/outputs/render");
+    for nested in [
+        fixed("/outputs/render/final.mov"),
+        tree("/outputs/render/segments"),
+        pattern("/outputs/render/frames", b"frame-", b".png"),
+        passlog("/outputs/render/pass", b"encode"),
+    ] {
+        assert_symmetric_overlap(&root, &nested, true);
+    }
+    for outside in [
+        fixed("/outputs/preview.mov"),
+        tree("/outputs/preview"),
+        pattern("/outputs/preview", b"frame-", b".png"),
+        passlog("/outputs/preview", b"encode"),
+    ] {
+        assert_symmetric_overlap(&root, &outside, false);
+    }
+
+    let numbered_tree = tree("/outputs/frame-42.png");
+    assert_symmetric_overlap(
+        &numbered_tree,
+        &pattern("/outputs", b"frame-", b".png"),
+        true,
+    );
+    let passlog_tree = tree("/outputs/encode-7.log.audit");
+    assert_symmetric_overlap(&passlog_tree, &passlog("/outputs", b"encode"), true);
+}
+
+#[test]
+fn passlog_overlap_is_symmetric_for_static_and_dynamic_outputs() {
+    let logs = passlog("/outputs", b"encode");
+    assert_symmetric_overlap(&logs, &fixed("/outputs/encode-12.log.audit"), true);
+    assert_symmetric_overlap(&logs, &fixed("/outputs/encode.log"), false);
+    assert_symmetric_overlap(&logs, &pattern("/outputs", b"encode-", b".log"), true);
+    assert_symmetric_overlap(&logs, &pattern("/outputs", b"frame-", b".png"), false);
+    assert_symmetric_overlap(&logs, &passlog("/outputs", b"encode-1.log.part"), true);
+    assert_symmetric_overlap(&logs, &passlog("/outputs", b"audio"), false);
+}
+
+fn assert_symmetric_overlap(left: &Declaration, right: &Declaration, expected: bool) {
+    assert_eq!(declaration::overlaps(left, right), expected);
+    assert_eq!(declaration::overlaps(right, left), expected);
+}
+
+fn fixed(path: &str) -> Declaration {
+    Declaration::Static(path.into())
+}
+
+fn tree(path: &str) -> Declaration {
+    Declaration::Tree(path.into())
+}
+
+fn pattern(parent: &str, prefix: &[u8], suffix: &[u8]) -> Declaration {
+    Declaration::Pattern {
+        parent: parent.into(),
+        prefix: prefix.to_vec(),
+        suffix: suffix.to_vec(),
+        minimum_width: None,
+    }
+}
+
+fn passlog(parent: &str, prefix: &[u8]) -> Declaration {
+    Declaration::Passlog {
+        parent: parent.into(),
+        prefix: prefix.to_vec(),
+    }
+}
+
 fn insensitive() -> Policy {
     Policy {
         case_insensitive: true,

@@ -84,6 +84,7 @@ fn validate_with(
 fn fold(value: &Declaration, policy: &Policy) -> Declaration {
     match value {
         Declaration::Static(path) => Declaration::Static(fold_path(path, policy)),
+        Declaration::Tree(path) => Declaration::Tree(fold_path(path, policy)),
         Declaration::Pattern {
             parent,
             prefix,
@@ -128,7 +129,9 @@ fn fold_name(value: &str, policy: &Policy) -> String {
 
 fn reserved(value: &Declaration) -> bool {
     match value {
-        Declaration::Static(path) => reserved_prefix(path.file_name().unwrap().as_encoded_bytes()),
+        Declaration::Static(path) | Declaration::Tree(path) => {
+            reserved_prefix(path.file_name().unwrap().as_encoded_bytes())
+        }
         Declaration::Pattern { prefix, .. } | Declaration::Passlog { prefix, .. } => {
             reserved_prefix(prefix)
         }

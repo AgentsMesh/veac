@@ -7,8 +7,10 @@ use rustix::io::Errno;
 use crate::RuntimeError;
 
 mod entry;
+mod hash;
 mod io;
 mod list;
+mod tree;
 
 pub(in crate::executor) use entry::{EntryIdentity, EntryState};
 

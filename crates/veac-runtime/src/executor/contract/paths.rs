@@ -15,7 +15,7 @@ mod existing;
 pub(super) fn validate(
     bundle: &RuntimeBundle,
     protected: &BTreeSet<PathBuf>,
-) -> Result<Vec<PathBuf>, RuntimeError> {
+) -> Result<PathBuf, RuntimeError> {
     validate_command_inputs(bundle, protected)?;
     let declarations = declaration::collect(bundle)?;
     for (index, declaration) in declarations.iter().enumerate() {
@@ -36,7 +36,10 @@ pub(super) fn validate(
         .iter()
         .map(declaration::parent)
         .collect::<BTreeSet<_>>();
-    Ok(parents.into_iter().collect())
+    if parents.len() != 1 {
+        return invalid("one backend bundle must publish into one output directory");
+    }
+    Ok(parents.into_iter().next().unwrap())
 }
 
 pub(super) fn validate_filesystem(

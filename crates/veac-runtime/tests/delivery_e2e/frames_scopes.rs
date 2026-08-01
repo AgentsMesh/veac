@@ -113,7 +113,9 @@ fn scope_at_the_last_timeline_tick_selects_the_containing_frame() {
 fn sequence(id: &str, file: &str, format: ImageFormat, start_number: u32) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::ImageSequence {
+            pattern: file.to_owned(),
+        },
         kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
             format,
             start_number,
@@ -124,7 +126,9 @@ fn sequence(id: &str, file: &str, format: ImageFormat, start_number: u32) -> Del
 fn scope(id: &str, file: &str, scope: VideoScope, format: ImageFormat) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::Scope(ScopeOutput {
             scope,
             at: time(500),

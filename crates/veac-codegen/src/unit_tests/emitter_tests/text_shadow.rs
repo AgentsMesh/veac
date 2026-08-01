@@ -7,6 +7,12 @@ fn shadow_blur_is_emitted_before_a_clean_fill_event() {
         .unwrap()
         .filter_graph
         .unwrap();
+    let alpha_fix = graph.find("sqrt(lum").unwrap();
+    let straight = graph.find("unpremultiply=inplace=1:planes=7").unwrap();
+    assert!(
+        alpha_fix < straight,
+        "ASS alpha must be restored before {graph}"
+    );
     assert!(graph.contains("unpremultiply=inplace=1:planes=7"));
     let ass = ass_script(&graph);
     let background = ass.find("Dialogue: 0").unwrap();

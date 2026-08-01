@@ -99,7 +99,7 @@ fn graph(plan: &veac_plan::ResolvedRenderPlan) -> String {
 
 fn enable_audio(project: &mut ProjectEnvelope) {
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

@@ -53,10 +53,10 @@ fn public_schema_and_strict_decoder_are_available_to_tools() {
     assert!(schema_text.contains("^prj_"));
     assert!(schema_text.contains("9007199254740991"));
 
-    let with_unknown = FIXTURE.replacen(
-        "\"schema_version\": 3,",
-        "\"schema_version\": 3, \"unknown\": true,",
-        1,
-    );
-    assert!(decode_canonical_json(&with_unknown).is_err());
+    let mut with_unknown: serde_json::Value = serde_json::from_str(FIXTURE).unwrap();
+    with_unknown
+        .as_object_mut()
+        .unwrap()
+        .insert("unknown".to_owned(), serde_json::Value::Bool(true));
+    assert!(decode_canonical_json(&with_unknown.to_string()).is_err());
 }

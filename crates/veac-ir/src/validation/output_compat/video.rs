@@ -11,12 +11,14 @@ pub fn video_settings_valid(video: &VideoOutput) -> bool {
         VideoRateControl::Bitrate {
             target_bps,
             max_bps,
-            buffer_bps,
+            buffer_size_bits,
         } => {
+            let complete_cap = max_bps.is_some() == buffer_size_bits.is_some();
             target_bps > 0
                 && target_bps <= MAX_VIDEO_BITRATE
+                && complete_cap
                 && max_bps.is_none_or(|value| value >= target_bps && value <= MAX_VIDEO_BITRATE)
-                && buffer_bps.is_none_or(|value| value > 0 && value <= MAX_VIDEO_BUFFER)
+                && buffer_size_bits.is_none_or(|value| value > 0 && value <= MAX_VIDEO_BUFFER)
         }
         VideoRateControl::Lossless => true,
     };
@@ -25,6 +27,8 @@ pub fn video_settings_valid(video: &VideoOutput) -> bool {
             .gop_size
             .is_none_or(|value| value > 0 && value <= i32::MAX as u32)
         && video.b_frames.is_none_or(|value| value <= 16)
+        && !(video.profile == Some(VideoProfile::H264Baseline)
+            && video.b_frames.is_some_and(|value| value > 0))
         && video
             .profile
             .is_none_or(|value| profile_codec(value) == video.codec)

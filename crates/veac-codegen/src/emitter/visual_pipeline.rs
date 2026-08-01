@@ -1,9 +1,9 @@
 use veac_plan::canonical::{Animatable, Mask};
-use veac_plan::{EffectiveVisualProperties, ResolvedClip};
+use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedClipSource};
 
 use super::{
-    animation, color, effects, mask, process_owner::ProcessOwner, time, visual_frame,
-    CodegenErrors, EmitContext,
+    animation, color, effects, mask, process_owner::ProcessOwner, time, visual_frame, visual_pivot,
+    visual_shear, CodegenErrors, EmitContext,
 };
 
 pub(super) struct PreparedLayer {
@@ -18,7 +18,12 @@ pub(super) fn apply(
     visual: &EffectiveVisualProperties,
     label: String,
 ) -> Result<PreparedLayer, CodegenErrors> {
-    let geometry = visual_frame::SourceGeometry::framed(visual.transform.anchor);
+    let geometry =
+        if matches!(clip.source, ResolvedClipSource::Generated { .. }) && visual.frame.is_none() {
+            visual_frame::SourceGeometry::already_sized(visual.transform.anchor)
+        } else {
+            visual_frame::SourceGeometry::framed(visual.transform.anchor)
+        };
     apply_source(context, clip, visual, label, geometry)
 }
 
@@ -62,8 +67,14 @@ fn apply_inner(
     label = scale(context, &label, visual);
     label = corners(context, &label, visual);
     label = mask::apply(context, &label, &visual.masks);
-    let (rotated, pivot_x, pivot_y) =
-        rotate(context, &label, visual, geometry.pivot_x, geometry.pivot_y);
+    let (sheared, pivot_x, pivot_y) = visual_shear::apply(
+        context,
+        &label,
+        visual.transform.shear,
+        geometry.pivot_x,
+        geometry.pivot_y,
+    );
+    let (rotated, pivot_x, pivot_y) = rotate(context, &sheared, visual, pivot_x, pivot_y);
     label = opacity(context, &rotated, visual);
     Ok(PreparedLayer {
         label,
@@ -111,14 +122,7 @@ fn rotate(
     {
         return (input.to_owned(), pivot_x, pivot_y);
     }
-    let padded = context.graph.filter(
-        &[input],
-        format!(
-            "pad=w='2*max({ax}*iw\\,(1-{ax})*iw)':h='2*max({ay}*ih\\,(1-{ay})*ih)':x='ow/2-{ax}*iw':y='oh/2-{ay}*ih':color=black@0",
-            ax = time::number(pivot_x), ay = time::number(pivot_y)
-        ),
-        "pivotv",
-    );
+    let padded = visual_pivot::center(context, input, pivot_x, pivot_y, "pivotv");
     let angle = animation::number(&visual.transform.rotation_degrees, "t");
     let rotated = context.graph.filter(
         &[&padded],

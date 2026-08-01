@@ -5,15 +5,18 @@ fn video_deliverable_accessors_return_none_without_a_video() {
     let mut output = sample_project().project.render_configs.remove(0);
     output.deliverables = vec![Deliverable {
         id: DeliverableId::new("dlv_frames").unwrap(),
-        file_name: "frame-%d.png".to_owned(),
+        target: DeliverableTarget::ImageSequence {
+            pattern: "frame-%d.png".to_owned(),
+        },
         kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
             format: ImageFormat::Png,
             start_number: 1,
         }),
     }];
 
-    assert_eq!(output.video_deliverable(), None);
-    assert_eq!(output.video_deliverable_mut(), None);
+    let id = DeliverableId::new("dlv_frames").unwrap();
+    assert_eq!(output.video_deliverable(&id), None);
+    assert_eq!(output.video_deliverable_mut(&id), None);
 }
 
 #[test]
@@ -23,7 +26,9 @@ fn video_deliverable_accessors_find_and_mutate_a_non_first_video() {
         0,
         Deliverable {
             id: DeliverableId::new("dlv_captions").unwrap(),
-            file_name: "captions.srt".to_owned(),
+            target: DeliverableTarget::File {
+                name: "captions.srt".to_owned(),
+            },
             kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
                 format: CaptionSidecarFormat::Srt,
                 track_ids: vec![TrackId::new("trk_captions").unwrap()],
@@ -32,10 +37,16 @@ fn video_deliverable_accessors_find_and_mutate_a_non_first_video() {
     );
 
     assert_eq!(
-        output.video_deliverable().unwrap().container,
+        output
+            .video_deliverable(&DeliverableId::new("dlv_main").unwrap())
+            .unwrap()
+            .container,
         OutputFormat::Mp4
     );
-    output.video_deliverable_mut().unwrap().container = OutputFormat::Mov;
+    output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
+        .container = OutputFormat::Mov;
     let DeliverableKind::Video(video) = &output.deliverables[1].kind else {
         panic!("second deliverable must remain the video")
     };

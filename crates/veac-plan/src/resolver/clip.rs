@@ -1,32 +1,37 @@
-use veac_ir::{Clip, ClipSource, SequenceId, TrackKind};
+use veac_ir::{Clip, ClipSource, SequenceId};
 
 use super::{components, error, material::InputUsage, PlanResolver};
-use crate::{EffectiveTrackState, ResolvedClip, ResolvedClipSource, ResolvedSourceMapping};
+use crate::{ResolvedClip, ResolvedClipSource, ResolvedSourceMapping};
+
+use super::reachability::{ClipDemand, TextDemand};
 
 impl PlanResolver<'_> {
     pub(super) fn resolve_clip(
         &mut self,
         sequence_id: &SequenceId,
         clip: &Clip,
-        track_kind: TrackKind,
-        track_state: EffectiveTrackState,
+        demand: ClipDemand,
         source_order: u32,
     ) -> Option<ResolvedClip> {
         let path = format!("/project/sequences/tracks/clips/{}", clip.id);
-        let visual_enabled = track_state.visual_enabled;
-        let audio_enabled =
-            track_state.audio_enabled && (track_kind == TrackKind::Audio || clip.audio.is_some());
+        let audio_demand = demand.audio();
         let (source, source_mapping) =
-            self.resolve_source(clip, visual_enabled, audio_enabled, &path)?;
-        let retain_visual = visual_enabled || track_kind == TrackKind::Caption;
+            self.resolve_source(clip, demand.visual, audio_demand, demand.text, &path)?;
+        let retain_visual = demand.visual || demand.text == TextDemand::Styled;
         let visual = retain_visual.then(|| {
             let mut value = self.resolve_visual(clip.visual.as_ref());
-            value.track_matte = self.resolved_matte(sequence_id, &clip.id);
+            value.track_matte = demand
+                .visual
+                .then(|| self.resolved_matte(sequence_id, &clip.id))
+                .flatten();
             value
         });
-        let audio = audio_enabled.then(|| {
+        let audio = audio_demand.then(|| {
             let mut value = super::defaults::audio(clip.audio.as_ref());
-            value.sidechain = self.resolved_sidechain(sequence_id, &clip.id);
+            value.sidechain = demand
+                .audio_output
+                .then(|| self.resolved_sidechain(sequence_id, &clip.id))
+                .flatten();
             value
         });
         Some(ResolvedClip {
@@ -37,7 +42,7 @@ impl PlanResolver<'_> {
             source_mapping,
             visual,
             audio,
-            effects: super::effects::resolve_effects(clip, retain_visual, audio_enabled),
+            effects: super::effects::resolve_effects(clip, demand.visual, audio_demand),
         })
     }
 
@@ -46,6 +51,7 @@ impl PlanResolver<'_> {
         clip: &Clip,
         visual: bool,
         audio: bool,
+        text_demand: TextDemand,
         path: &str,
     ) -> Option<(ResolvedClipSource, Option<ResolvedSourceMapping>)> {
         match &clip.source {
@@ -139,7 +145,7 @@ impl PlanResolver<'_> {
                 .map(|source| (source, None)),
             ClipSource::Text { text, style } => Some((
                 ResolvedClipSource::Text {
-                    content: self.resolve_text(text, style, path)?,
+                    content: self.resolve_text(text, style, text_demand, path)?,
                 },
                 None,
             )),
@@ -149,7 +155,7 @@ impl PlanResolver<'_> {
                 style,
             } => Some((
                 ResolvedClipSource::Caption {
-                    content: self.resolve_text(text, style, path)?,
+                    content: self.resolve_text(text, style, text_demand, path)?,
                     speaker: speaker.clone(),
                 },
                 None,

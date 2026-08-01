@@ -48,11 +48,15 @@ fn text_content(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut veac_plan::Res
 }
 
 fn add_fallback_input(plan: &mut veac_plan::ResolvedRenderPlan, id: &str) -> PlanInputId {
-    let primary = text_content(plan).style.font.clone();
+    let primary = text_content(plan).styled_mut().unwrap().font.clone();
     let id = PlanInputId::new(id).unwrap();
     let mut fallback = primary.clone();
     fallback.input_id = id.clone();
-    text_content(plan).style.fallback_fonts.push(fallback);
+    text_content(plan)
+        .styled_mut()
+        .unwrap()
+        .fallback_fonts
+        .push(fallback);
     let mut input = plan
         .inputs
         .iter()

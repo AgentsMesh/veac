@@ -73,7 +73,7 @@ pub enum VideoRateControl {
     Bitrate {
         target_bps: u64,
         max_bps: Option<u64>,
-        buffer_bps: Option<u64>,
+        buffer_size_bits: Option<u64>,
     },
     Lossless,
 }

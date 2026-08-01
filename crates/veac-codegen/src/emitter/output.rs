@@ -1,11 +1,9 @@
 use std::path::PathBuf;
 
+use super::error::{diagnostic, CodegenErrorKind};
+use super::{canvas::Canvas, CodegenErrors};
 use veac_artifact::ExecutionBindings;
 use veac_plan::canonical::{AudioCodec, Deliverable, OutputFormat, VideoDeliverable};
-use veac_plan::ResolvedOutput;
-
-use super::error::{diagnostic, CodegenErrorKind};
-use super::CodegenErrors;
 
 pub(super) fn validate_binding(
     deliverable: &Deliverable,
@@ -31,7 +29,7 @@ pub(super) fn bound_path(
         })
 }
 
-pub(super) fn arguments(output: &ResolvedOutput, settings: &VideoDeliverable) -> Vec<String> {
+pub(super) fn arguments(output: Canvas, settings: &VideoDeliverable) -> Vec<String> {
     let mut args = super::output_video::arguments(&settings.video, settings.hardware);
     args.extend([
         "-r".to_owned(),

@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use veac_plan::canonical::{MulticamAngleId, MulticamGroupId, MulticamSyncBasis, RationalTime};
+use veac_plan::canonical::{MulticamAngleId, MulticamGroupId, RationalTime};
 use veac_plan::{ResolvedClip, ResolvedClipSource, ResolvedMulticamSource, ResolvedRenderPlan};
 
 use super::{input_streams, source_time, Check};
@@ -27,7 +27,7 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
 
 fn valid(plan: &ResolvedRenderPlan, clip: &ResolvedClip, source: &ResolvedMulticamSource) -> bool {
     if MulticamGroupId::new(source.group_id.as_str()).is_err()
-        || source.angles.len() < 2
+        || source.angles.is_empty()
         || !source.angles.windows(2).all(|pair| pair[0].id < pair[1].id)
     {
         return false;
@@ -38,8 +38,7 @@ fn valid(plan: &ResolvedRenderPlan, clip: &ResolvedClip, source: &ResolvedMultic
             || !ids.insert(angle.id.to_string())
             || !local_point(angle.source_offset, plan.header.source.timebase)
             || input_streams::trusted_angle(plan, angle, clip.audio.is_some()).is_none()
-            || (source.sync.basis == MulticamSyncBasis::Audio && angle.audio_stream.is_none())
-    }) || !ids.contains(source.sync.reference_angle_id.as_str())
+    }) || MulticamAngleId::new(source.sync.reference_angle_id.as_str()).is_err()
     {
         return false;
     }
@@ -47,6 +46,7 @@ fn valid(plan: &ResolvedRenderPlan, clip: &ResolvedClip, source: &ResolvedMultic
         value: 0,
         timescale: plan.header.source.timebase,
     };
+    let mut switched = BTreeSet::new();
     for switch in &source.switches {
         let Some(angle) = source
             .angles
@@ -55,6 +55,7 @@ fn valid(plan: &ResolvedRenderPlan, clip: &ResolvedClip, source: &ResolvedMultic
         else {
             return false;
         };
+        switched.insert(switch.angle_id.to_string());
         if switch.range.start != expected
             || !local_duration(switch.range.duration, plan.header.source.timebase)
         {
@@ -74,7 +75,7 @@ fn valid(plan: &ResolvedRenderPlan, clip: &ResolvedClip, source: &ResolvedMultic
         }
         expected = end;
     }
-    !source.switches.is_empty() && expected == clip.record_range.duration
+    !source.switches.is_empty() && expected == clip.record_range.duration && switched == ids
 }
 
 fn local_point(value: RationalTime, timebase: u32) -> bool {

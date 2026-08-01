@@ -1,7 +1,8 @@
 use veac_artifact::MediaRole;
-use veac_plan::canonical::{AudioOutput, RationalTime};
+use veac_plan::canonical::RationalTime;
 use veac_plan::{ResolvedClip, ResolvedMulticamAngle, ResolvedMulticamSource};
 
+use super::audio::AudioRenderSpec;
 use super::{source::unsupported, time, CodegenErrors, EmitContext};
 
 pub(super) fn video(
@@ -57,7 +58,7 @@ pub(super) fn audio(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
     source: &ResolvedMulticamSource,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<String, CodegenErrors> {
     let mut labels = Vec::with_capacity(source.switches.len());
     for value in &source.switches {

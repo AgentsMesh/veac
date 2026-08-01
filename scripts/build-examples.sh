@@ -8,6 +8,7 @@ source "$ROOT/scripts/example-preview-process.sh"
 source "$ROOT/scripts/example-preview-artifacts.sh"
 source "$ROOT/scripts/example-preview-cli.sh"
 source "$ROOT/scripts/example-preview-publish.sh"
+source "$ROOT/scripts/example-preview-entry.sh"
 GALLERY="$ROOT/examples/catalog/gallery.json"
 GALLERY_SCHEMA="$ROOT/scripts/check-gallery-catalog.jq"
 PREPARE_SOURCE="$ROOT/scripts/prepare-example-source.sh"
@@ -17,6 +18,14 @@ OUTPUT_INPUT=${2:-"$ROOT/examples-preview"}
 ONLY_EXAMPLES=${VEAC_EXAMPLES:-}
 PREVIEW_EDGE=${VEAC_PREVIEW_MAX_EDGE:-480}
 PREVIEW_FPS=${VEAC_PREVIEW_FPS:-12}
+if [[ ! $PREVIEW_EDGE =~ ^[1-9][0-9]*$ ]] || (( PREVIEW_EDGE < 160 )); then
+  echo "VEAC_PREVIEW_MAX_EDGE must be an integer of at least 160" >&2
+  exit 2
+fi
+if [[ ! $PREVIEW_FPS =~ ^[1-9][0-9]*$ ]] || (( PREVIEW_FPS < 8 )); then
+  echo "VEAC_PREVIEW_FPS must be an integer of at least 8" >&2
+  exit 2
+fi
 TOOLCHAIN=${RUSTUP_TOOLCHAIN:-1.85.0}
 fail() {
   echo "examples preview: $*" >&2
@@ -68,63 +77,6 @@ safe_remove_output() {
   rm -rf "$output"
 }
 
-build_example() {
-  local source_dir=$1
-  local output=$2
-  local fixtures=$3
-  local veac=$4
-  local name entry project source raw canonical plan rendered log config config_plan primary_config
-  local target window
-  name=$(basename "$source_dir")
-  [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "unsafe example name: $name"
-  target=$(jq -ce --arg id "$name" '.targets[] | select(.id == $id)' "$GALLERY")
-  [[ -n "$target" ]] || fail "gallery target missing for example: $name"
-  window=$(jq -c '.preview_window' <<<"$target")
-  entry="$output/$name"
-  project="$entry/project"
-  source="$project/main.veac"
-  raw="$project/project.raw.json"
-  canonical="$project/project.veac.json"
-  plan="$entry/plan.json"
-  rendered="$entry/rendered"
-  log="$entry/build.log"
-  mkdir -p "$project" "$rendered"
-  [[ -f "$source_dir/main.veac" && ! -L "$source_dir/main.veac" ]] || \
-    fail "example source must be a regular non-symlink file: $name"
-  cp "$source_dir/main.veac" "$source"
-  "$PREPARE_SOURCE" "$source"
-  echo "[$name] compile -> plan -> render -> probe"
-  if ! (
-    "$veac" compile --emit-ir "$raw" "$source" || exit 1
-    jq --argjson edge "$PREVIEW_EDGE" --argjson fps "$PREVIEW_FPS" \
-      --argjson window "$window" \
-      -f "$PREVIEW_FILTER" "$raw" > "$canonical" || exit 1
-    materialize_preview_assets "$project" "$canonical" "$fixtures" || exit 1
-    pad_preview_audio "$project" "$canonical" 65 || exit 1
-    rm "$raw"
-    primary_config=$(jq -r '
-      ([.project.render_configs[] |
-        select(any(.deliverables[]; .kind.type == "video")) |
-        .id][0]) // .project.render_configs[0].id // empty
-    ' "$canonical") || exit 1
-    [[ -n "$primary_config" ]] || exit 1
-    while IFS= read -r config; do
-      config_plan="$entry/plan.$config.json"
-      (cd "$project" && "$veac" plan --config "$config" "$canonical") > "$config_plan" || exit 1
-      run_example_preview_process "$project" "$veac" render \
-        --config "$config" --destination "$rendered" "$canonical" || exit 1
-      if [[ "$config" == "$primary_config" ]]; then
-        cp "$config_plan" "$plan" || exit 1
-      fi
-    done < <(jq -r '.project.render_configs[].id' "$canonical")
-    rm -f "$rendered/.veac-render.lock"
-    verify_expected_preview_artifacts "$target" "$canonical" "$plan" "$rendered" || exit 1
-  ) > "$log" 2>&1; then
-    cat "$log" >&2
-    return 1
-  fi
-}
-
 OUTPUT=$(normalize_output "$OUTPUT_INPUT")
 acquire_example_preview_lock "$ROOT"
 trap cleanup EXIT
@@ -138,11 +90,12 @@ case "$ACTION" in
   *) fail "usage: $0 {build|clean} [preview-directory]" ;;
 esac
 
-for command in ffmpeg ffprobe jq pgrep rg; do require_command "$command"; done
+for command in ffmpeg ffprobe git jq pgrep rg; do require_command "$command"; done
 [[ -f "$GALLERY" && ! -L "$GALLERY" ]] || fail "gallery catalog must be a regular file"
 jq -e -f "$GALLERY_SCHEMA" "$GALLERY" >/dev/null || fail "invalid gallery catalog"
 [[ "$PREVIEW_EDGE" =~ ^[1-9][0-9]*$ ]] || fail "preview edge must be a positive integer"
 [[ "$PREVIEW_FPS" =~ ^[1-9][0-9]*$ ]] || fail "preview FPS must be a positive integer"
+unset VEAC_BIN
 VEAC=$(prepare_example_preview_cli "$ROOT" "$TOOLCHAIN")
 [[ -x "$VEAC" ]] || fail "VEAC CLI not built: $VEAC"
 
@@ -172,6 +125,7 @@ prepare_preview_fixtures "$FIXTURES"
 for source_dir in "${EXAMPLES[@]}"; do
   build_example "$source_dir" "$BUILD_OUTPUT" "$FIXTURES" "$VEAC"
 done
+bash "$ROOT/scripts/check-example-render-evidence.sh" "$BUILD_OUTPUT"
 rm -rf "$FIXTURES"
 bash "$ROOT/scripts/write-examples-index.sh" "$BUILD_OUTPUT" "${#EXAMPLES[@]}" "$GALLERY"
 publish_preview_staging "$ROOT" "$OUTPUT"

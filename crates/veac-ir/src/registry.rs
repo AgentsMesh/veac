@@ -8,7 +8,6 @@ pub enum ParameterType {
     Number,
     Boolean,
     Color,
-    Text,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -155,24 +154,38 @@ pub fn parameter_matches(spec: ParameterSpec, value: &ParameterValue) -> bool {
     match (spec.value_type, value) {
         (ParameterType::Number, ParameterValue::Number { value }) => in_range(spec, *value),
         (ParameterType::Number, ParameterValue::NumberCurve { value }) if spec.supports_curve => {
-            value_values(value).all(|number| in_range(spec, number))
+            curve_in_range(spec, value)
         }
         (ParameterType::Boolean, ParameterValue::Boolean { .. })
-        | (ParameterType::Color, ParameterValue::Color { .. })
-        | (ParameterType::Text, ParameterValue::Text { .. }) => true,
+        | (ParameterType::Color, ParameterValue::Color { .. }) => true,
         _ => false,
     }
 }
 
-fn value_values(value: &crate::Animatable<f64>) -> impl Iterator<Item = f64> + '_ {
-    let values: &[crate::Keyframe<f64>] = value.keyframes().unwrap_or_default();
-    let constant = match value {
-        crate::Animatable::Constant { value } => Some(*value),
-        crate::Animatable::Keyframes { .. } => None,
+fn curve_in_range(spec: ParameterSpec, value: &crate::Animatable<f64>) -> bool {
+    let crate::Animatable::Keyframes { keyframes } = value else {
+        let crate::Animatable::Constant { value } = value else {
+            unreachable!()
+        };
+        return in_range(spec, *value);
     };
-    constant
-        .into_iter()
-        .chain(values.iter().map(|keyframe| keyframe.value))
+    keyframes.iter().all(|key| in_range(spec, key.value))
+        && keyframes.windows(2).all(|pair| {
+            if !matches!(pair[0].interpolation, crate::Interpolation::Spring { .. }) {
+                return true;
+            }
+            pair[0]
+                .interpolation
+                .spring_extrema()
+                .is_some_and(|amounts| {
+                    amounts.into_iter().all(|amount| {
+                        in_range(
+                            spec,
+                            pair[0].value + (pair[1].value - pair[0].value) * amount,
+                        )
+                    })
+                })
+        })
 }
 
 fn in_range(spec: ParameterSpec, value: f64) -> bool {

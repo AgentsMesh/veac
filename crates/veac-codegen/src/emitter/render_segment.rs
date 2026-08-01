@@ -42,6 +42,7 @@ pub(super) fn command(
         output_args.extend(["-movflags".to_owned(), "+faststart".to_owned()]);
     }
     Ok(BackendCommand {
+        preparations: Vec::new(),
         inputs: vec![BackendInput {
             path: segment.resource().path().to_owned(),
         }],

@@ -40,12 +40,15 @@ fn unused_forged_binding_never_enters_caption_task_authority() {
         .clone();
     plan.output.deliverables = vec![Deliverable {
         id: DeliverableId::new("dlv_provenance_caption").unwrap(),
-        file_name: "provenance.srt".to_owned(),
+        target: DeliverableTarget::File {
+            name: "provenance.srt".to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format: CaptionSidecarFormat::Srt,
             track_ids: vec![caption_track],
         }),
     }];
+    plan.output.raster = None;
     let mut bindings = output_bindings(&plan);
     let mut forged = plan
         .inputs

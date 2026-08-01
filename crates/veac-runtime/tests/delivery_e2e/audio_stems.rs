@@ -13,6 +13,7 @@ fn master_track_and_bus_stems_have_real_codec_routing_and_energy() {
     let dialogue = tone_fixture(temp.path(), "dialogue", 440);
     let music = tone_fixture(temp.path(), "music", 880);
     let mut canonical = project(false);
+    canonical.project.render_configs[0].raster = None;
     canonical.project.materials.extend([
         material(
             "med_dialogue",
@@ -50,7 +51,7 @@ fn master_track_and_bus_stems_have_real_codec_routing_and_energy() {
             "dlv_bus",
             "dialogue.flac",
             AudioStemFormat::Flac,
-            AudioStemSource::Bus {
+            AudioMixSource::Bus {
                 bus_id: BusId::new("bus_dialogue").unwrap(),
             },
         ),
@@ -58,13 +59,13 @@ fn master_track_and_bus_stems_have_real_codec_routing_and_energy() {
             "dlv_master",
             "master.wav",
             AudioStemFormat::Wav,
-            AudioStemSource::Master,
+            AudioMixSource::Master,
         ),
         stem(
             "dlv_track",
             "track.wav",
             AudioStemFormat::Wav,
-            AudioStemSource::Track {
+            AudioMixSource::Track {
                 track_id: TrackId::new("trk_dialogue").unwrap(),
             },
         ),
@@ -95,10 +96,12 @@ fn master_track_and_bus_stems_have_real_codec_routing_and_energy() {
     assert!(tone_power(&master, 880.0) > 0.005);
 }
 
-fn stem(id: &str, file: &str, format: AudioStemFormat, source: AudioStemSource) -> Deliverable {
+fn stem(id: &str, file: &str, format: AudioStemFormat, source: AudioMixSource) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format,
             audio: AudioOutput {

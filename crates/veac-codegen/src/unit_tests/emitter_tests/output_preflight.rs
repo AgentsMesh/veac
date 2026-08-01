@@ -41,7 +41,9 @@ fn emits_every_compatible_container_video_and_audio_codec() {
     ];
     for (format, video, audio, container, video_encoder, audio_encoder) in cases {
         let mut plan = resolved(&fixture());
-        plan.output.deliverables[0].file_name = format!("output.{}", extension(format));
+        plan.output.deliverables[0].target = DeliverableTarget::File {
+            name: format!("output.{}", extension(format)),
+        };
         let delivery = delivery(&mut plan);
         delivery.container = format;
         delivery.video.codec = video;
@@ -135,7 +137,9 @@ fn preflight_rejects_audio_channel_overflow_and_output_mismatch() {
 }
 
 fn delivery(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut VideoDeliverable {
-    plan.output.video_deliverable_mut().unwrap()
+    plan.output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
 }
 
 fn codes(plan: &veac_plan::ResolvedRenderPlan) -> Vec<&'static str> {

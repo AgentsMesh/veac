@@ -59,7 +59,9 @@ fn ten_bit_luma_matte_retains_more_than_eight_bit_alpha_precision() {
 
 fn configure_alpha_output(value: &mut ProjectEnvelope) {
     let deliverable = &mut value.project.render_configs[0].deliverables[0];
-    deliverable.file_name = "matte-precision.mov".to_owned();
+    deliverable.target = DeliverableTarget::File {
+        name: "matte-precision.mov".to_owned(),
+    };
     let DeliverableKind::Video(settings) = &mut deliverable.kind else {
         panic!("video fixture")
     };

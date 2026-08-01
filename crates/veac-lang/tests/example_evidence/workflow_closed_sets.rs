@@ -2,8 +2,8 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use serde_json::Value;
 use veac_lang::authoring::{
-    lower_document, parse, AudioCodec, AudioStemFormat, CaptionSidecarFormat, Document,
-    ImageFormat, OutputDecl, OutputEncoding, OutputFormat, ResourceKind, ResourceLocator,
+    lower_document, parse, ArtifactDecl, ArtifactRecipe, AudioCodec, AudioStemFormat,
+    CaptionSidecarFormat, Document, ImageFormat, OutputFormat, ResourceKind, ResourceLocator,
     VideoCodec, VideoScope,
 };
 
@@ -17,6 +17,15 @@ fn load_fixture(name: &str) -> Document {
     let document = parse(&source).unwrap_or_else(|error| panic!("{path:?}: {error}"));
     let envelope = lower_document(&document).unwrap_or_else(|error| panic!("{path:?}: {error}"));
     veac_ir::validate(&envelope).unwrap_or_else(|error| panic!("{path:?}: {error}"));
+    document
+}
+
+fn load_delivery_fixture() -> Document {
+    let source = include_str!("../fixtures/delivery_closed_sets.veac");
+    let document = parse(source).unwrap_or_else(|error| panic!("delivery fixture: {error}"));
+    let envelope =
+        lower_document(&document).unwrap_or_else(|error| panic!("delivery fixture: {error}"));
+    veac_ir::validate(&envelope).unwrap_or_else(|error| panic!("delivery fixture: {error}"));
     document
 }
 
@@ -51,45 +60,36 @@ fn resource_workflow_fixture_matches_catalog() {
 
 #[test]
 fn delivery_workflow_fixture_matches_catalog() {
-    let document = load_fixture("delivery-closed-sets.veac");
+    let document = load_delivery_fixture();
     let mut actual = BTreeSet::new();
-    for output in &document.project.outputs {
-        output_ids(output, &mut actual);
+    for delivery in &document.project.deliveries {
+        for artifact in &delivery.artifacts {
+            artifact_ids(artifact, &mut actual);
+        }
     }
-    let expected = catalog_ids("delivery-workflows.json", |id| {
-        [
-            "delivery.container.",
-            "delivery.video-codec.",
-            "delivery.audio-codec.",
-            "delivery.image-format.",
-            "delivery.caption-format.",
-            "delivery.audio-stem-format.",
-            "delivery.scope.",
-        ]
-        .iter()
-        .any(|prefix| id.starts_with(prefix))
-            && id != "delivery.audio-codec.mp3"
-    });
+    let expected = catalog_ids("delivery-workflows.json", |_| true);
     assert_eq!(actual, expected);
 }
 
-fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
-    match &output.encoding {
-        OutputEncoding::Video(value) => {
+fn artifact_ids(artifact: &ArtifactDecl, ids: &mut BTreeSet<String>) {
+    match &artifact.recipe {
+        ArtifactRecipe::Video(value) => {
             ids.insert(container_id(value.container).to_owned());
             ids.insert(video_codec_id(value.video.codec).to_owned());
             if let Some(audio) = &value.audio {
                 ids.insert(audio_codec_id(audio.codec).to_owned());
             }
         }
-        OutputEncoding::AudioStem(value) => {
+        ArtifactRecipe::AudioStem(value) => {
+            ids.insert("delivery.audio-only".to_owned());
             let id = match value.format {
                 AudioStemFormat::Wav => "delivery.audio-stem-format.wav",
                 AudioStemFormat::Flac => "delivery.audio-stem-format.flac",
             };
             ids.insert(id.to_owned());
         }
-        OutputEncoding::ImageSequence(value) => {
+        ArtifactRecipe::ImageSequence(value) => {
+            ids.insert("delivery.image-sequence".to_owned());
             let id = match value.format {
                 ImageFormat::Png => "delivery.image-format.png",
                 ImageFormat::Jpeg => "delivery.image-format.jpeg",
@@ -98,7 +98,8 @@ fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
             };
             ids.insert(id.to_owned());
         }
-        OutputEncoding::CaptionSidecar(value) => {
+        ArtifactRecipe::CaptionSidecar(value) => {
+            ids.insert("delivery.sidecar.captions".to_owned());
             let id = match value.format {
                 CaptionSidecarFormat::Srt => "delivery.caption-format.srt",
                 CaptionSidecarFormat::WebVtt => "delivery.caption-format.web-vtt",
@@ -106,13 +107,26 @@ fn output_ids(output: &OutputDecl, ids: &mut BTreeSet<String>) {
             };
             ids.insert(id.to_owned());
         }
-        OutputEncoding::Scope(value) => {
+        ArtifactRecipe::Scope(value) => {
             let id = match value.scope {
                 VideoScope::Waveform => "delivery.scope.waveform",
                 VideoScope::Vectorscope => "delivery.scope.vectorscope",
                 VideoScope::Histogram => "delivery.scope.histogram",
             };
             ids.insert(id.to_owned());
+        }
+        ArtifactRecipe::AudioFile(_) => {
+            ids.insert("delivery.audio-codec.mp3".to_owned());
+            ids.insert("delivery.audio-only".to_owned());
+        }
+        ArtifactRecipe::AnimatedImage(_) => {
+            ids.insert("delivery.gif".to_owned());
+        }
+        ArtifactRecipe::StillImage(_) => {
+            ids.insert("delivery.single-frame".to_owned());
+        }
+        ArtifactRecipe::AdaptivePackage(_) => {
+            ids.insert("delivery.multiresolution-hls".to_owned());
         }
     }
 }

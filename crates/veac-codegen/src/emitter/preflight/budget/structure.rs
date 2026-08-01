@@ -76,7 +76,7 @@ fn text_keys(source: &ResolvedClipSource) -> u64 {
         }
         _ => return 0,
     };
-    let Some(animation) = &content.style.animation else {
+    let Some(animation) = content.styled().and_then(|style| style.animation.as_ref()) else {
         return 0;
     };
     keys(&animation.reveal)

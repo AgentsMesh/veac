@@ -1,7 +1,12 @@
 use std::time::Duration;
 
 use tempfile::tempdir;
-use veac_ir::{AudioCodec, AudioOutput, AudioStreamInfo, StreamDisposition, StreamSelection};
+use veac_artifact::{ContentDigest, DigestAlgorithm};
+use veac_ir::{
+    AudioCodec, AudioMixSource, AudioOutput, AudioStemFormat, AudioStemOutput, AudioStreamInfo,
+    CaptionSidecarFormat, CaptionSidecarOutput, Deliverable, DeliverableId, DeliverableKind,
+    DeliverableTarget, HashAlgorithm, StreamDisposition, StreamSelection,
+};
 use veac_plan::ResolvedAudioStream;
 
 use super::*;
@@ -38,11 +43,8 @@ fn audio_only_inputs_build_an_exact_proxy_request() {
     let mut environment = FakeEnvironment::success();
     environment.observed = veac_runtime::asset::sha256_identity(&media).unwrap();
     let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
-    prepared.plan.output.video_deliverable_mut().unwrap().audio = Some(AudioOutput {
-        codec: AudioCodec::Aac,
-        sample_rate: 48_000,
-        channels: 2,
-    });
+    prepared.plan.output.raster = None;
+    prepared.plan.output.deliverables = vec![audio_stem()];
     add_audio(&mut prepared.plan);
     prepared.plan.inputs[0].video = None;
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
@@ -57,6 +59,31 @@ fn audio_only_inputs_build_an_exact_proxy_request() {
     )
     .unwrap_err();
     assert!(error.to_string().contains("PROXY_REQUIRED_MISSING"));
+}
+
+#[test]
+fn caption_only_delivery_is_a_proxy_noop_before_deadline_and_identity_checks() {
+    let temp = tempdir().unwrap();
+    std::fs::write(temp.path().join("clip.mp4"), b"source").unwrap();
+    let project = canonical_project(&temp, MEDIA_SOURCE);
+    let environment = FakeEnvironment::success();
+    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    prepared.plan.output.raster = None;
+    prepared.plan.output.deliverables = vec![caption_sidecar()];
+    prepared.plan.inputs[0].observed_identity.algorithm = HashAlgorithm::Blake3;
+    let original = prepared.bindings.inputs().len();
+
+    apply(
+        &mut prepared,
+        &veac_artifact::ArtifactStore::new(temp.path().join("store")),
+        SubstitutionPolicy::Require,
+        None,
+        &environment,
+        Instant::now(),
+    )
+    .unwrap();
+    assert_eq!(prepared.bindings.inputs().len(), original);
+    assert!(environment.executed.borrow().is_empty());
 }
 
 #[test]
@@ -116,4 +143,35 @@ fn add_audio(plan: &mut veac_plan::ResolvedRenderPlan) {
             channel_layout: "stereo".into(),
         },
     });
+}
+
+fn audio_stem() -> Deliverable {
+    Deliverable {
+        id: DeliverableId::new("dlv_stem").unwrap(),
+        target: DeliverableTarget::File {
+            name: "stem.wav".into(),
+        },
+        kind: DeliverableKind::AudioStem(AudioStemOutput {
+            format: AudioStemFormat::Wav,
+            audio: AudioOutput {
+                codec: AudioCodec::PcmS16Le,
+                sample_rate: 48_000,
+                channels: 2,
+            },
+            source: AudioMixSource::Master,
+        }),
+    }
+}
+
+fn caption_sidecar() -> Deliverable {
+    Deliverable {
+        id: DeliverableId::new("dlv_caption").unwrap(),
+        target: DeliverableTarget::File {
+            name: "captions.srt".into(),
+        },
+        kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
+            format: CaptionSidecarFormat::Srt,
+            track_ids: vec![],
+        }),
+    }
 }

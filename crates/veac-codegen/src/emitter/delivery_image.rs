@@ -14,7 +14,7 @@ pub(super) fn command(
         ImageFormat::Png | ImageFormat::Tiff | ImageFormat::Exr => AlphaMode::Straight,
         ImageFormat::Jpeg => AlphaMode::Opaque,
     };
-    let mut context = EmitContext::new(plan, bindings, deliverable, alpha)?;
+    let mut context = EmitContext::new_visual(plan, bindings, deliverable, alpha)?;
     let Some(resolved) = context
         .plan
         .sequences
@@ -27,23 +27,26 @@ pub(super) fn command(
     };
     let video = sequence::build_entry(&mut context, resolved)?;
     let video = sequence::conform_output(&mut context, video, resolved);
+    let raster = context.canvas;
     let inputs = context.input_routes.backend_inputs().to_vec();
     let output_path = output::bound_path(deliverable, bindings)?;
     let mut output_args = vec![
         "-r".to_owned(),
         format!(
             "{}/{}",
-            plan.output.frame_rate.numerator, plan.output.frame_rate.denominator
+            raster.frame_rate.numerator, raster.frame_rate.denominator
         ),
         "-s".to_owned(),
-        format!("{}x{}", plan.output.width, plan.output.height),
+        format!("{}x{}", raster.width, raster.height),
         "-start_number".to_owned(),
         settings.start_number.to_string(),
     ];
     output_args.extend(encoding_arguments(settings.format));
     output_args.extend(["-t".to_owned(), time::seconds(resolved.duration)]);
     let (filter_graph, filter_contract) = context.filter_graph()?;
+    let preparations = context.take_preparations(&inputs);
     Ok(BackendCommand {
+        preparations,
         inputs,
         filter_graph,
         filter_contract,

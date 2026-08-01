@@ -5,6 +5,8 @@ ROOT="${VEAC_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 CATALOG="${1:-$ROOT/examples/capabilities.json}"
 MATRIX="$ROOT/docs/capability-matrix-roadmap.md"
 GALLERY_SCHEMA="$ROOT/scripts/check-gallery-catalog.jq"
+PRESENTATION_CHECKER="$ROOT/scripts/check-example-presentation.sh"
+DELIVERY_CHECKER="$ROOT/scripts/check-delivery-example-catalog.jq"
 
 fail() {
   echo "example capability check failed: $*" >&2
@@ -56,6 +58,7 @@ gallery="$ROOT/$gallery_rel"
 [[ -f "$gallery" && ! -L "$gallery" ]] || fail "missing gallery catalog: $gallery_rel"
 jq -e -f "$GALLERY_SCHEMA" "$gallery" >/dev/null ||
   fail "gallery catalog schema is invalid"
+"$PRESENTATION_CHECKER" "$ROOT" "$gallery" >/dev/null
 
 : > "$tmp/mechanisms.jsonl"
 while IFS= read -r fragment_rel; do
@@ -68,6 +71,9 @@ while IFS= read -r fragment_rel; do
   jq -c '.mechanisms[]' "$fragment" >> "$tmp/mechanisms.jsonl"
 done < <(jq -r '.mechanism_catalogs[]' "$CATALOG")
 jq -s '.' "$tmp/mechanisms.jsonl" > "$tmp/mechanisms.json"
+jq -e --slurpfile capabilities "$CATALOG" \
+  --slurpfile mechanisms "$tmp/mechanisms.json" -f "$DELIVERY_CHECKER" \
+  "$gallery" >/dev/null || fail "delivery example catalog mapping is invalid"
 
 jq -e --slurpfile gallery "$gallery" '
   def nonempty: type == "string" and length > 0;
@@ -80,7 +86,8 @@ jq -e --slurpfile gallery "$gallery" '
     ($mechanism.coverage as $coverage |
       ["preview_required", "workflow_evidence", "external"] |
       index($coverage) != null) and
-    ($mechanism | has("gallery_target") or has("capability_ids") | not) and
+    (($mechanism | has("gallery_target") | not) and
+     ($mechanism | has("capability_ids") | not)) and
     (if $mechanism.coverage == "preview_required" then
       ($mechanism.preview_target | nonempty) and
       ($mechanism.capability_id | nonempty and test("^(P1|P2)-[0-9]{2}$")) and
@@ -89,9 +96,14 @@ jq -e --slurpfile gallery "$gallery" '
         .id == $mechanism.preview_target and .kind == "render" and
         (.example | nonempty) and .preview_window != null and
         (.capability_ids | index($mechanism.capability_id)) != null)
-    else
+    elif $mechanism.coverage == "workflow_evidence" then
       ($mechanism.evidence | nonempty) and
-      ($mechanism | has("preview_target") or has("capability_id") | not)
+      (($mechanism | has("preview_target") | not) and
+       ($mechanism | has("capability_id") | not))
+    else
+      ($mechanism.external_reason | nonempty and test("[一-龥]")) and
+      (($mechanism | has("preview_target") | not) and
+       ($mechanism | has("capability_id") | not))
     end)
   ) and
   count_prefix("effect.") >= 10 and count_prefix("transition.") >= 7 and

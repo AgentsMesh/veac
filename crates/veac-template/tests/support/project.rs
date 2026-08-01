@@ -23,12 +23,17 @@ pub fn project(fill: FillMode, editable_text: bool) -> ProjectEnvelope {
         render_configs: vec![RenderConfig {
             id: RenderConfigId::new("out_main").unwrap(),
             sequence_id: sequence_id.clone(),
-            width: 1080,
-            height: 1920,
-            frame_rate: Rational::new(30, 1).unwrap(),
+            raster: Some(RasterSettings {
+                width: 1080,
+                height: 1920,
+                frame_rate: Rational::new(30, 1).unwrap(),
+                captions: CaptionOutput::BurnIn,
+            }),
             deliverables: vec![Deliverable {
                 id: DeliverableId::new("dlv_main").unwrap(),
-                file_name: "main.mp4".to_owned(),
+                target: DeliverableTarget::File {
+                    name: "main.mp4".to_owned(),
+                },
                 kind: DeliverableKind::Video(VideoDeliverable::default()),
             }],
         }],
@@ -136,6 +141,7 @@ fn visual() -> VisualProperties {
         transform: Transform2D {
             position: Animatable::constant(position),
             scale: Animatable::constant(Vec2 { x: 1.0, y: 1.0 }),
+            shear: Vec2 { x: 0.0, y: 0.0 },
             flip_horizontal: false,
             flip_vertical: false,
             rotation_degrees: Animatable::constant(0.0),

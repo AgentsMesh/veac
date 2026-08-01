@@ -11,7 +11,8 @@ mod coverage_annotation_support;
 mod coverage_annotation_targets;
 mod coverage_ast;
 mod coverage_color_enums;
-mod coverage_effect_format;
+mod coverage_delivery_defaults;
+mod coverage_effect_registry;
 mod coverage_interpolation;
 mod coverage_lexer;
 mod coverage_lower_settings;
@@ -28,6 +29,8 @@ mod coverage_resources_lower;
 mod coverage_template_slots;
 mod coverage_text_animation;
 mod coverage_text_enums;
+mod delivery_contract;
+mod delivery_extended;
 mod diagnostics;
 mod example_values;
 mod examples;
@@ -43,8 +46,10 @@ mod outputs;
 mod relations_typed;
 mod sources;
 mod structures;
+mod surface;
 mod template_slots;
 mod text;
+mod timeline_state;
 
 pub(super) const SETTINGS: &str = r#"
   settings {

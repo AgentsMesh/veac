@@ -10,21 +10,68 @@ project audio-processing {
     locator local { path "assets/voice.wav"; }
     streams { video disabled; audio auto; }
   }
+  resource audio music {
+    locator local { path "assets/music.wav"; }
+    streams { video disabled; audio auto; }
+  }
+  resource audio key {
+    locator local { path "assets/key.wav"; }
+    streams { video disabled; audio auto; }
+  }
 
   sequence main {
+    layer visual monitor {
+      item monitor-background {
+        source generated solid { color #111318ff; }
+        record { at 0s; duration 8s; }
+      }
+      item processing-phases {
+        source generated gradient linear {
+          from 0% 50%; to 100% 50%;
+          stop 0% #13b8a6ff; stop 24% #13b8a6ff;
+          stop 26% #f4c95dff; stop 49% #f4c95dff;
+          stop 51% #e968a1ff; stop 74% #e968a1ff;
+          stop 76% #5c8df6ff; stop 100% #5c8df6ff;
+        }
+        record { at 0s; duration 8s; }
+        modifiers {
+          layout phase-strip {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 960px; height 120px; fit fill; }
+          }
+        }
+      }
+      item processing-playhead {
+        source generated solid { color #ffffffff; }
+        record { at 0s; duration 8s; }
+        modifiers {
+          layout playhead-frame {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 12px; height 176px; fit fill; }
+          }
+          transform playhead-motion {
+            position curve {
+              key start { at 0s; value { x -474px; y 0px; } interpolation linear; }
+              key finish { at 8s; value { x 474px; y 0px; } interpolation linear; }
+            }
+          }
+        }
+      }
+    }
+
     layer audio dialogue {
       route bus dialogue-bus;
       item voiceover {
         source media resource voice;
         record { at 0s; duration 2s; }
-        mapping linear { from 0s; to 4s; }
+        mapping linear { from 0s; to 2s; }
         modifiers {
           audio voice-chain {
             gain curve {
               key intro { at 0s; value -12db; interpolation linear; }
               key full { at 1s; value -2db; interpolation linear; }
             }
-            pan 0;
+            pan -0.65;
             muted false;
             normalize true;
             pitch preserve;
@@ -36,13 +83,17 @@ project audio-processing {
         }
       }
     }
-    layer audio music-key {
-      route bus music-key;
-      item key-tone {
-        source generated silence;
-        record { at 0s; duration 8s; }
+    layer audio music {
+      route bus music-bus;
+      item music-bed {
+        source media resource music;
+        record { at 0s; duration 2s; }
+        mapping linear { from 0s; to 2s; }
         modifiers {
-          audio compressor-demo {
+          audio compressed-bed {
+            gain 0.7;
+            pan 0.25;
+            pitch preserve;
             processor compressor {
               threshold -18db; ratio 3; attack 10ms; release 120ms;
               knee 6db; makeup-gain 2db; mix 100%;
@@ -51,9 +102,20 @@ project audio-processing {
         }
       }
     }
+    layer audio key {
+      route bus key-bus;
+      item key-pulse {
+        source media resource key;
+        record { at 0s; duration 2s; }
+        mapping linear { from 0s; to 2s; }
+        modifiers {
+          audio sidechain-key { gain 0.8; pan 0.7; pitch preserve; }
+        }
+      }
+    }
     relation sidechain duck {
-      endpoints { key bus music-key; target item voiceover; }
-      dynamics { threshold -24db; ratio 4; attack 20ms; release 120ms; }
+      endpoints { key bus key-bus; target item music-bed; }
+      dynamics { threshold -30db; ratio 8; attack 10ms; release 100ms; }
     }
     layer audio gated {
       item gated-tone {
@@ -65,7 +127,7 @@ project audio-processing {
             pitch follow-speed;
             crossfade { fade-in 90ms; fade-out 90ms; curve linear; }
             processor gate {
-              threshold -48db; ratio 2; attack 5ms; release 100ms; range -36db;
+              threshold -38db; ratio 4; attack 5ms; release 80ms; range -48db;
             }
           }
         }
@@ -73,9 +135,9 @@ project audio-processing {
     }
     layer audio normalized {
       item normalized-tone {
-        source media resource voice;
+        source media resource music;
         record { at 4s; duration 2s; }
-        mapping linear { from 0s; to 2s; }
+        mapping linear { from 4s; to 6s; }
         modifiers {
           audio loudness-demo {
             pitch preserve;
@@ -89,7 +151,7 @@ project audio-processing {
       item normalized-effect-tone {
         source media resource voice;
         record { at 6s; duration 2s; }
-        mapping linear { from 2s; to 4s; }
+        mapping linear { from 6s; to 8s; }
         modifiers {
           effect normalize-effect {
             type audio.normalize;
@@ -97,6 +159,33 @@ project audio-processing {
             parameter target_lufs -18;
           }
         }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
       }
     }
   }

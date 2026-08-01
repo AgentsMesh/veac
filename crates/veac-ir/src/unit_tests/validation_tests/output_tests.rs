@@ -77,12 +77,12 @@ fn video_setting_validation_covers_rate_profile_pixel_and_level_rules() {
         VideoRateControl::Bitrate {
             target_bps: 0,
             max_bps: None,
-            buffer_bps: None,
+            buffer_size_bits: None,
         },
         VideoRateControl::Bitrate {
             target_bps: 2_000,
             max_bps: Some(1_000),
-            buffer_bps: Some(0),
+            buffer_size_bits: Some(0),
         },
     ] {
         assert!(!video_settings_valid(&VideoOutput {
@@ -160,7 +160,7 @@ fn video_setting_validation_covers_rate_profile_pixel_and_level_rules() {
         rate_control: VideoRateControl::Bitrate {
             target_bps: 2_000,
             max_bps: Some(3_000),
-            buffer_bps: Some(4_000),
+            buffer_size_bits: Some(4_000),
         },
         ..VideoOutput::default()
     }));
@@ -171,7 +171,9 @@ fn render_config_reports_all_export_contract_failures() {
     let mut project = sample_project();
     let output = &mut project.project.render_configs[0];
     let deliverable = &mut output.deliverables[0];
-    deliverable.file_name = "delivery.mp4".to_owned();
+    deliverable.target = DeliverableTarget::File {
+        name: "delivery.mp4".to_owned(),
+    };
     let DeliverableKind::Video(settings) = &mut deliverable.kind else {
         panic!("sample project must contain a video deliverable")
     };

@@ -54,6 +54,45 @@ pub(crate) fn frame_window_start(end: RationalTime, frame_rate: Rational) -> Str
     decimal_ratio(numerator, u128::try_from(scale * rate).unwrap_or(0))
 }
 
+pub(crate) fn frame_interval_has_sample(
+    start: RationalTime,
+    duration: RationalTime,
+    frame_rate: Rational,
+) -> bool {
+    if start.value < 0
+        || duration.value <= 0
+        || start.timescale == 0
+        || start.timescale != duration.timescale
+        || !frame_rate.is_positive()
+    {
+        return false;
+    }
+    let rate = i128::from(frame_rate.numerator);
+    let tick = i128::from(start.timescale) * i128::from(frame_rate.denominator);
+    let scaled_start = i128::from(start.value) * rate;
+    let first_frame = (scaled_start + tick - 1) / tick;
+    let Some(end) = start.value.checked_add(duration.value) else {
+        return false;
+    };
+    first_frame * tick < i128::from(end) * rate
+}
+
+pub(crate) fn seconds_at_least_one_frame(time: RationalTime, frame_rate: Rational) -> String {
+    if time.timescale == 0 || !frame_rate.is_positive() {
+        return seconds(time);
+    }
+    let rate = i128::from(frame_rate.numerator);
+    let authored = i128::from(time.value) * rate;
+    let frame = i128::from(time.timescale) * i128::from(frame_rate.denominator);
+    if authored >= frame {
+        return seconds(time);
+    }
+    decimal_ratio(
+        i128::from(frame_rate.denominator),
+        u128::try_from(frame_rate.numerator).unwrap_or(0),
+    )
+}
+
 fn decimal_ratio(numerator: i128, denominator: u128) -> String {
     const SCALE: u128 = 1_000_000_000_000;
     if numerator == 0 || denominator == 0 {

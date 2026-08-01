@@ -60,22 +60,15 @@ fn text_fonts_layout_spans_and_animation_resolve_as_owned_plan_data() {
     let ResolvedClipSource::Text { content } = &plan.sequences[0].tracks[1].clips[0].source else {
         panic!("resolved text")
     };
+    let style = content.styled().unwrap();
+    assert_eq!(style.fallback_fonts[0].input_id.as_str(), "pin_fallback");
     assert_eq!(
-        content.style.fallback_fonts[0].input_id.as_str(),
-        "pin_fallback"
-    );
-    assert_eq!(
-        content.style.spans[0]
-            .font
-            .as_ref()
-            .unwrap()
-            .input_id
-            .as_str(),
+        style.spans[0].font.as_ref().unwrap().input_id.as_str(),
         "pin_span"
     );
-    assert_eq!(content.style.layout.box_width_pixels, Some(400.0));
+    assert_eq!(style.layout.box_width_pixels, Some(400.0));
     assert_eq!(
-        content.style.animation.as_ref().unwrap().opacity,
+        style.animation.as_ref().unwrap().opacity,
         Animatable::constant(0.5)
     );
     let json = crate::canonical_plan_json(&plan).unwrap();

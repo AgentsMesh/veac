@@ -42,6 +42,15 @@ fn interpolation(ctx: &mut Context, value: &InterpolationDecl) -> Option<Interpo
         InterpolationKind::EaseIn => Interpolation::EaseIn,
         InterpolationKind::EaseOut => Interpolation::EaseOut,
         InterpolationKind::EaseInOut => Interpolation::EaseInOut,
+        InterpolationKind::Spring {
+            frequency,
+            decay,
+            initial_velocity,
+        } => Interpolation::Spring {
+            frequency: value::unitless(ctx, frequency)?,
+            decay: value::unitless(ctx, decay)?,
+            initial_velocity: value::unitless(ctx, initial_velocity)?,
+        },
         InterpolationKind::CubicBezier { x1, y1, x2, y2 } => Interpolation::CubicBezier {
             x1: value::unitless(ctx, x1)?,
             y1: value::unitless(ctx, y1)?,

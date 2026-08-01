@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR/example-preview-layout.sh"
+source "$SCRIPT_DIR/example-preview-provenance.sh"
+
 OUTPUT=${1:?output directory is required}
 EXPECTED=${2:?expected example count is required}
 GALLERY=${3:?gallery catalog is required}
@@ -43,6 +47,18 @@ while IFS= read -r name; do
   [[ -d "$dir" ]] || continue
   metadata=$(jq -ce --arg id "$name" '.examples[] | select(.id == $id)' "$GALLERY") \
     || fail "missing presentation for $name"
+  target=$(jq -ce --arg id "$name" '.targets[] | select(.id == $id)' "$GALLERY") \
+    || fail "missing build target for $name"
+  verify_example_preview_layout "$dir" || fail "invalid preview layout for $name"
+  require_preview_regular_file "$dir/build.log" "build log" || exit 1
+  primary_delivery=$(jq -er '
+    [.expected_artifacts[] | select(.kind == "authoring_delivery") | .id]
+    | if length == 1 then .[0] else error("expected one authoring delivery") end
+  ' <<<"$target") || fail "missing primary delivery for $name"
+  primary_config="out_$primary_delivery"
+  primary_plan=$(example_preview_plan "$dir" "$primary_config") ||
+    fail "unsafe primary preview config for $name"
+  require_preview_regular_file "$primary_plan" "primary preview plan" || exit 1
   title=$(jq -r '.title | @html' <<<"$metadata")
   summary=$(jq -r '.summary | @html' <<<"$metadata")
   checks=$(jq -r '.checks[] | "<li><span class=\"cue\">\(.cue | @html)</span><span class=\"expect\">\(.expect | @html)</span></li>"' <<<"$metadata")
@@ -64,7 +80,18 @@ while IFS= read -r name; do
     esac
     printf '</div>' >> "$TEMP"
   done < <(find "$dir/rendered" -type f | sort)
-  printf '</div><nav class="links"><a href="%s/project/main.veac">源码</a><a href="%s/project/project.veac.json">中间表示</a><a href="%s/plan.json">渲染计划</a><a href="%s/build.log">构建日志</a></nav></article>\n' "$name_html" "$name_html" "$name_html" "$name_html" >> "$TEMP"
+  {
+    printf '</div><nav class="links"><a href="%s/project/main.veac">创作源码</a>' "$name_html"
+    printf '<a href="%s/project/main.preview.veac">预览适配源码</a>' "$name_html"
+    printf '<a href="%s/project/project.veac.json">创作 canonical IR</a>' "$name_html"
+    printf '<a href="%s/project/project.preview.veac.json">预览派生 IR</a>' "$name_html"
+    while IFS= read -r config; do
+      config_html=$(jq -nr --arg value "$config" '$value | @html')
+      printf '<a href="%s/plans/preview/%s.json">预览计划 %s</a>' \
+        "$name_html" "$config_html" "$config_html"
+    done < <(jq -r '.project.render_configs[].id' "$(example_preview_canonical "$dir")" | sort)
+    printf '<a href="%s/build.log">构建日志</a></nav></article>\n' "$name_html"
+  } >> "$TEMP"
   published=$((published + 1))
 done < <(jq -r '.examples[].id' "$GALLERY")
 

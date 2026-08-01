@@ -7,10 +7,23 @@ impl PlanResolver<'_> {
             id,
             render_config_id: self.config.id.clone(),
             sequence_id: self.config.sequence_id.clone(),
-            width: self.config.width,
-            height: self.config.height,
-            frame_rate: self.config.frame_rate,
+            raster: self.config.raster.clone(),
             deliverables: self.config.deliverables.clone(),
+        }
+    }
+
+    pub(super) fn output_id(&mut self) -> Option<PlanOutputId> {
+        let suffix = self.config.id.as_str().strip_prefix("out_")?;
+        match PlanOutputId::new(format!("pout_{suffix}")) {
+            Ok(id) => Some(id),
+            Err(error) => {
+                self.push_internal(
+                    "PLAN_OUTPUT_ID",
+                    self.config.id.to_string(),
+                    error.to_string(),
+                );
+                None
+            }
         }
     }
 }

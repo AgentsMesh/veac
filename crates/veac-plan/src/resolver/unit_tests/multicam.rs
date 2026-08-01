@@ -15,7 +15,7 @@ fn multicam_resolution_owns_sync_angles_streams_and_switches() {
     value.project.materials.push(wide);
     value.project.multicam_groups.push(group());
     value.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
@@ -58,7 +58,7 @@ fn multicam_resolution_owns_sync_angles_streams_and_switches() {
 }
 
 #[test]
-fn audio_sync_keeps_angle_streams_when_the_clip_does_not_emit_audio() {
+fn authored_audio_sync_does_not_force_runtime_audio_inputs() {
     let mut value = project();
     let mut wide = value.project.materials[0].clone();
     wide.id = MaterialId::new("med_wide").unwrap();
@@ -89,7 +89,7 @@ fn audio_sync_keeps_angle_streams_when_the_clip_does_not_emit_audio() {
     assert!(source
         .angles
         .iter()
-        .all(|angle| angle.audio_stream.is_some()));
+        .all(|angle| angle.audio_stream.is_none()));
 }
 
 fn group() -> MulticamGroup {

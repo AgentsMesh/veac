@@ -24,6 +24,22 @@ fn media_producer_binds_tool_configuration_and_workflow_contract() {
     assert!(media_artifact_producer(&invalid).is_err());
 }
 
+#[test]
+fn media_producer_binds_codegen_render_contract() {
+    let value = fingerprint("version", b"configuration");
+    let current = media_artifact_producer_for_contract(
+        &value,
+        veac_codegen::RENDER_IMPLEMENTATION_CONTRACT_VERSION,
+    )
+    .unwrap();
+    let previous = media_artifact_producer_for_contract(
+        &value,
+        veac_codegen::RENDER_IMPLEMENTATION_CONTRACT_VERSION.wrapping_add(1),
+    )
+    .unwrap();
+    assert_ne!(current.configuration, previous.configuration);
+}
+
 fn fingerprint(version: &str, configuration: &[u8]) -> FfmpegFingerprint {
     FfmpegFingerprint {
         version: version.into(),

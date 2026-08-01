@@ -27,6 +27,7 @@ pub fn visual() -> VisualProperties {
                 ],
             },
             scale: Animatable::constant(Vec2 { x: 0.8, y: 0.9 }),
+            shear: Vec2 { x: 0.0, y: 0.0 },
             flip_horizontal: false,
             flip_vertical: false,
             rotation_degrees: Animatable::constant(12.0),

@@ -53,10 +53,13 @@ fn text_uses_the_common_animated_composition_pipeline() {
         assert!(graph.contains(mechanism), "missing {mechanism}: {graph}");
     }
     assert_media_contract(&output, 0, 2.0);
-    let early = frame_stats(&rgb_frame(&output, 0.2));
-    let middle = frame_stats(&rgb_frame(&output, 1.0));
-    let late = frame_stats(&rgb_frame(&output, 1.8));
-    assert!(early.ratio > 0.01 && middle.ratio > 0.01 && late.ratio > 0.01);
+    let early = frame_stats_with_threshold(&rgb_frame(&output, 0.2), 12);
+    let middle = frame_stats_with_threshold(&rgb_frame(&output, 1.0), 12);
+    let late = frame_stats_with_threshold(&rgb_frame(&output, 1.8), 12);
+    assert!(
+        early.ratio > 0.01 && middle.ratio > 0.01 && late.ratio > 0.01,
+        "early={early:?}, middle={middle:?}, late={late:?}"
+    );
     assert!(early.centroid_x < 40.0, "early={early:?}");
     assert!(
         (40.0..=56.0).contains(&middle.centroid_x),
@@ -109,6 +112,7 @@ fn text_visual() -> VisualProperties {
         transform: Transform2D {
             position: point_curve(),
             scale: Animatable::constant(Vec2 { x: 1.0, y: 1.0 }),
+            shear: Vec2 { x: 0.0, y: 0.0 },
             flip_horizontal: false,
             flip_vertical: false,
             rotation_degrees: Animatable::constant(8.0),

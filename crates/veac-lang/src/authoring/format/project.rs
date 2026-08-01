@@ -1,8 +1,8 @@
 use crate::authoring::{ProjectDecl, ProjectSettings};
 
 use super::annotation::annotation;
+use super::delivery::delivery;
 use super::multicam::declaration as multicam;
-use super::output::output;
 use super::resource::resource;
 use super::timeline::sequence;
 use super::writer::Writer;
@@ -30,9 +30,9 @@ pub(super) fn project(writer: &mut Writer, value: &ProjectDecl) {
             writer.blank();
             annotation(writer, annotation_value);
         }
-        for output_value in &value.outputs {
+        for delivery_value in &value.deliveries {
             writer.blank();
-            output(writer, output_value);
+            delivery(writer, delivery_value);
         }
     });
 }

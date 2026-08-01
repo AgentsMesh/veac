@@ -16,7 +16,11 @@ fn animated_text_renders_through_a_large_filter_script() {
     let mut canonical = project(false);
     add_font_materials(&mut canonical, &["filter_script_font"]);
     canonical.project.sequences[0].settings.frame_rate = ratio(30, 1);
-    canonical.project.render_configs[0].frame_rate = ratio(30, 1);
+    let raster = canonical.project.render_configs[0]
+        .raster
+        .as_mut()
+        .expect("raster fixture");
+    raster.frame_rate = ratio(30, 1);
     let mut style = advanced_style("filter_script_font", 12.0);
     style.animation = Some(TextAnimation {
         granularity: TextGranularity::Grapheme,

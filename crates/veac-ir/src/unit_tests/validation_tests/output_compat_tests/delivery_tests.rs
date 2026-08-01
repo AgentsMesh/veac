@@ -126,6 +126,6 @@ fn bitrate() -> VideoRateControl {
     VideoRateControl::Bitrate {
         target_bps: 1_000_000,
         max_bps: None,
-        buffer_bps: None,
+        buffer_size_bits: None,
     }
 }

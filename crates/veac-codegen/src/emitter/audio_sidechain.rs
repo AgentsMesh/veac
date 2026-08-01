@@ -1,8 +1,9 @@
-use veac_plan::canonical::{AudioOutput, SidechainSource, TrackKind};
+use veac_plan::canonical::{SidechainSource, TrackKind};
 use veac_plan::{
     ResolvedAudioRoute, ResolvedClip, ResolvedSequence, ResolvedSidechain, ResolvedTrack,
 };
 
+use super::audio::AudioRenderSpec;
 use super::error::{diagnostic, CodegenErrorKind};
 use super::{
     audio, audio_filters, audio_source, audio_transition_fades, time, CodegenErrors, EmitContext,
@@ -20,8 +21,14 @@ pub(super) fn source(
     target_track: &ResolvedTrack,
     target: &ResolvedClip,
     value: &ResolvedSidechain,
-    output: &AudioOutput,
-) -> Result<String, CodegenErrors> {
+    output: &AudioRenderSpec,
+) -> Result<Option<String>, CodegenErrors> {
+    let active = active_window(target, value).ok_or_else(|| {
+        unsupported(
+            target,
+            "sidechain active range overflows the sequence timeline",
+        )
+    })?;
     let tracks: Vec<_> = sequence
         .tracks
         .iter()
@@ -29,7 +36,11 @@ pub(super) fn source(
         .collect();
     let mut labels = Vec::new();
     for track in tracks {
-        for clip in &track.clips {
+        for clip in track
+            .clips
+            .iter()
+            .filter(|clip| intersects(clip.record_range, active))
+        {
             let fades = transition_fades(track, clip);
             if let Some(label) = audio_source::build(context, clip, output, fades, None)? {
                 labels.push(label);
@@ -37,10 +48,10 @@ pub(super) fn source(
         }
     }
     if labels.is_empty() {
-        return Err(unsupported(target, "sidechain source produces no audio"));
+        return Ok(None);
     }
     let mixed = audio::mix(context, &labels, "sidechainsourcemix");
-    Ok(context.graph.filter(
+    Ok(Some(context.graph.filter(
         &[&mixed],
         format!(
             "atrim=start={}:duration={},asetpts=PTS-STARTPTS,apad=whole_dur={},atrim=duration={}",
@@ -50,7 +61,31 @@ pub(super) fn source(
             time::seconds(target.record_range.duration)
         ),
         "sidechainsourcea",
-    ))
+    )))
+}
+
+pub(super) fn active_window(
+    clip: &ResolvedClip,
+    value: &ResolvedSidechain,
+) -> Option<veac_plan::canonical::TimeRange> {
+    let Some(local) = value.active_range else {
+        return Some(clip.record_range);
+    };
+    let start = clip.record_range.start.checked_add(local.start).ok()?;
+    Some(veac_plan::canonical::TimeRange {
+        start,
+        duration: local.duration,
+    })
+}
+
+fn intersects(
+    left: veac_plan::canonical::TimeRange,
+    right: veac_plan::canonical::TimeRange,
+) -> bool {
+    left.end()
+        .ok()
+        .zip(right.end().ok())
+        .is_some_and(|(left_end, right_end)| left.start < right_end && right.start < left_end)
 }
 
 pub(super) fn apply(

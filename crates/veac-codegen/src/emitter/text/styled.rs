@@ -1,29 +1,32 @@
 use std::collections::BTreeSet;
 
 use unicode_segmentation::UnicodeSegmentation;
-use veac_plan::{ResolvedText, ResolvedTextSpan};
+use veac_plan::{ResolvedText, ResolvedTextSpan, ResolvedTextStyle};
 
 use super::error::TextError;
 use super::fonts::FontBook;
 use super::model::{GlyphStyle, StyledRun, StyledText};
 
-pub(super) fn resolve(content: &ResolvedText, fonts: &FontBook) -> Result<StyledText, TextError> {
-    validate_span_boundaries(content)?;
+pub(super) fn resolve(
+    content: &ResolvedText,
+    style: &ResolvedTextStyle,
+    fonts: &FontBook,
+) -> Result<StyledText, TextError> {
+    validate_span_boundaries(content, style)?;
     let mut styles = Vec::new();
     let mut runs: Vec<StyledRun> = Vec::new();
     let mut scalar = 0_u32;
     for (byte, grapheme) in content.text.grapheme_indices(true) {
-        let span = content
-            .style
+        let span = style
             .spans
             .iter()
             .find(|span| span.start <= scalar && scalar < span.end);
-        let style = glyph_style(content, span, grapheme, fonts)?;
+        let glyph = glyph_style(style, span, grapheme, fonts)?;
         let style_index = styles
             .iter()
-            .position(|candidate| candidate == &style)
+            .position(|candidate| candidate == &glyph)
             .unwrap_or_else(|| {
-                styles.push(style);
+                styles.push(glyph);
                 styles.len() - 1
             });
         let end = byte + grapheme.len();
@@ -38,7 +41,7 @@ pub(super) fn resolve(content: &ResolvedText, fonts: &FontBook) -> Result<Styled
         scalar += grapheme.chars().count() as u32;
     }
     if content.text.is_empty() {
-        styles.push(glyph_style(content, None, "", fonts)?);
+        styles.push(glyph_style(style, None, "", fonts)?);
     }
     Ok(StyledText {
         text: content.text.clone(),
@@ -48,12 +51,11 @@ pub(super) fn resolve(content: &ResolvedText, fonts: &FontBook) -> Result<Styled
 }
 
 fn glyph_style(
-    content: &ResolvedText,
+    style: &ResolvedTextStyle,
     span: Option<&ResolvedTextSpan>,
     grapheme: &str,
     fonts: &FontBook,
 ) -> Result<GlyphStyle, TextError> {
-    let style = &content.style;
     let primary = span
         .and_then(|span| span.font.as_ref())
         .unwrap_or(&style.font);
@@ -94,15 +96,17 @@ fn glyph_style(
     })
 }
 
-fn validate_span_boundaries(content: &ResolvedText) -> Result<(), TextError> {
+fn validate_span_boundaries(
+    content: &ResolvedText,
+    style: &ResolvedTextStyle,
+) -> Result<(), TextError> {
     let mut boundaries = BTreeSet::from([0_u32]);
     let mut scalar = 0_u32;
     for grapheme in content.text.graphemes(true) {
         scalar += grapheme.chars().count() as u32;
         boundaries.insert(scalar);
     }
-    if let Some(span) = content
-        .style
+    if let Some(span) = style
         .spans
         .iter()
         .find(|span| !boundaries.contains(&span.start) || !boundaries.contains(&span.end))

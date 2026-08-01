@@ -33,12 +33,10 @@ fn writing_path_and_unit_transform_are_owned_plan_data() {
     let ResolvedClipSource::Text { content } = &plan.sequences[0].tracks[1].clips[0].source else {
         panic!("resolved text")
     };
+    let style = content.styled().unwrap();
+    assert_eq!(style.layout.writing_mode, TextWritingMode::VerticalLr);
     assert_eq!(
-        content.style.layout.writing_mode,
-        TextWritingMode::VerticalLr
-    );
-    assert_eq!(
-        content.style.animation.as_ref().unwrap().transform.scale,
+        style.animation.as_ref().unwrap().transform.scale,
         Animatable::constant(Vec2 { x: 1.1, y: 0.9 })
     );
 
@@ -58,7 +56,17 @@ fn writing_path_and_unit_transform_are_owned_plan_data() {
     let ResolvedClipSource::Text { content } = &plan.sequences[0].tracks[1].clips[0].source else {
         panic!("resolved text")
     };
-    assert_eq!(content.style.path.as_ref().unwrap().points.len(), 2);
+    assert_eq!(
+        content
+            .styled()
+            .unwrap()
+            .path
+            .as_ref()
+            .unwrap()
+            .points
+            .len(),
+        2
+    );
     assert_eq!(
         serde_json::from_str::<crate::ResolvedRenderPlan>(
             &crate::canonical_plan_json(&plan).unwrap()

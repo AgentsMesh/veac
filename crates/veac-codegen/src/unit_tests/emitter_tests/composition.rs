@@ -46,21 +46,27 @@ fn every_mask_shape_and_inversion_emits_alpha_math() {
     };
     let graph = graph(&plan);
     for marker in [
-        "X/W",
-        "X/W-",
-        "0.5-abs",
-        "0.5-hypot",
-        "min(0.5-abs",
+        "X-W*(",
+        "Y-H*(",
+        "W*(1)",
+        "H*(1)",
+        "min(W*(",
+        ")-abs(",
+        "hypot((",
+        "abs((",
         "pow(pow",
-        "cos(5*atan2",
+        "cos(5*(atan2",
         "mod(",
         "max(2*(1)",
     ] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
     }
-    assert!(graph.contains("if(lte(T\\,0)\\,0.4"));
-    assert!(graph.contains("if(lte(T\\,0)\\,15"));
-    assert!(graph.contains("enable='gte(t,0)*lt(t,1)'"));
+    for marker in ["X-W*(0.4)", "Y-H*(0.6)", "((15)*PI/180)"] {
+        assert!(graph.contains(marker), "missing {marker}: {graph}");
+    }
+    assert!(!graph.contains("if(lte(T\\,0)\\,0.4"), "{graph}");
+    assert!(!graph.contains("if(lte(T\\,0)\\,15"), "{graph}");
+    assert!(graph.contains("geq=lum='if(gte(T\\,0)*lt(T\\,1)"));
     assert!(!graph.contains("enable='between(t,"));
 }
 

@@ -8,16 +8,33 @@ project transforms-and-animation {
   entry sequence main;
 
   sequence main {
+    layer visual background {
+      order 0;
+      item field {
+        source generated solid { color #123a34ff; }
+        record { at 0s; duration 4s; }
+      }
+    }
+
     layer visual graphics {
+      order 1;
       item badge {
         source generated shape {
-          geometry rounded-rectangle { bounds 0% 0% 100% 100%; radius 24px; }
-          fill solid #06d6a0ff;
+          geometry polygon {
+            point 4% 8%;
+            point 78% 8%;
+            point 96% 50%;
+            point 78% 92%;
+            point 4% 92%;
+            point 20% 50%;
+          }
+          fill solid #f2483dff;
+          stroke 10px solid #fff4e8ff;
         }
         record { at 0s; duration 4s; }
         modifiers {
           layout badge-layout {
-            placement anchor { at bottom-right; inset { x 48px; y 48px; } }
+            placement anchor { at bottom-right; inset { x 80px; y 80px; } }
             frame { width 360px; height 200px; fit contain; }
           }
           transform motion {
@@ -35,17 +52,46 @@ project transforms-and-animation {
                   x1 0.42; y1 0; x2 0.58; y2 1;
                 }
               }
-              key settle { at 800ms; value { x 0px; y 0px; } interpolation linear; }
+              key settle {
+                at 800ms; value { x -120px; y -80px; }
+                interpolation spring { frequency 1.5; decay 6; initial-velocity 0; }
+              }
+              key rest { at 4s; value { x 0px; y 0px; } interpolation linear; }
             }
-            scale { x 1; y 1; }
+            scale { x 1.12; y 0.92; }
+            shear { x 0.22; y -0.08; }
             rotation 5deg;
-            anchor { x 0.5; y 0.5; }
-            crop { x 0; y 0; width 1; height 1; }
-            flip-horizontal false;
+            anchor { x 1; y 1; }
+            crop { x 0.14; y 0.04; width 0.84; height 0.92; }
+            flip-horizontal true;
             flip-vertical false;
           }
-          composite top { opacity 0.9; z-index 20; blend normal; }
+          composite top { opacity 1; z-index 20; blend normal; }
         }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

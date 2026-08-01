@@ -5,11 +5,11 @@
     {"id":"effect.video.color-adjust","title":"视频色彩调整","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.color_adjust"},
     {"id":"effect.video.chroma-key","title":"色度键","family":"视频抠像","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-23","registry_key":"video.chroma_key"},
     {"id":"effect.video.chroma-spill","title":"色溢抑制","family":"视频抠像","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-23","registry_key":"video.chroma_spill"},
-    {"id":"effect.video.luma-key","title":"亮度键","family":"视频抠像","coverage":"workflow_evidence","evidence":"crates/veac-runtime/tests/render_e2e/keying.rs","registry_key":"video.luma_key"},
+    {"id":"effect.video.luma-key","title":"亮度键","family":"视频抠像","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-23","registry_key":"video.luma_key"},
     {"id":"effect.video.grain","title":"胶片颗粒","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.grain"},
     {"id":"effect.video.sharpen","title":"视频锐化","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.sharpen"},
     {"id":"effect.video.vignette","title":"视频暗角","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.vignette"},
     {"id":"effect.audio.normalize","title":"音频归一化","family":"音频效果","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02","registry_key":"audio.normalize"},
-    {"id":"effect.video.stabilize","title":"视频防抖","family":"视频效果","coverage":"workflow_evidence","evidence":"crates/veac-runtime/tests/render_e2e/effects.rs","registry_key":"video.stabilize"}
+    {"id":"effect.video.stabilize","title":"视频防抖","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-28","registry_key":"video.stabilize"}
   ]
 }

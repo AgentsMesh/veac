@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use veac_artifact::MediaRole;
-use veac_plan::canonical::{AudioStemSource, SequenceId, SidechainSource, TrackId, TrackKind};
+use veac_plan::canonical::{AudioMixSource, SequenceId, SidechainSource, TrackId, TrackKind};
 use veac_plan::{ResolvedAudioRoute, ResolvedClip, ResolvedClipSource, ResolvedRenderPlan};
 
 use super::Usage;
@@ -13,12 +13,12 @@ pub(in crate::emitter) enum Selection<'a> {
     Bus(&'a str),
 }
 
-impl<'a> From<&'a AudioStemSource> for Selection<'a> {
-    fn from(value: &'a AudioStemSource) -> Self {
+impl<'a> From<&'a AudioMixSource> for Selection<'a> {
+    fn from(value: &'a AudioMixSource) -> Self {
         match value {
-            AudioStemSource::Master => Self::Master,
-            AudioStemSource::Track { track_id } => Self::Track(track_id),
-            AudioStemSource::Bus { bus_id } => Self::Bus(bus_id.as_str()),
+            AudioMixSource::Master => Self::Master,
+            AudioMixSource::Track { track_id } => Self::Track(track_id),
+            AudioMixSource::Bus { bus_id } => Self::Bus(bus_id.as_str()),
         }
     }
 }
@@ -136,10 +136,42 @@ impl<'a, F: FnMut(&'a ResolvedClip)> Walker<'a, '_, F> {
                 && matches!(track.kind, TrackKind::Video | TrackKind::Audio)
                 && source_matches(track, &source.source)
             {
-                self.track(sequence, track, false);
+                self.control_track(sequence, track, clip, source);
             }
         }
     }
+
+    fn control_track(
+        &mut self,
+        sequence: &'a veac_plan::ResolvedSequence,
+        track: &'a veac_plan::ResolvedTrack,
+        target: &'a ResolvedClip,
+        sidechain: &'a veac_plan::ResolvedSidechain,
+    ) {
+        let Some(active) = crate::emitter::audio_sidechain::active_window(target, sidechain) else {
+            return;
+        };
+        for clip in track.clips.iter().filter(|clip| {
+            crate::emitter::audio_source::can_build(clip) && intersects(clip.record_range, active)
+        }) {
+            if self.clips.insert((sequence.id.clone(), clip.id.clone())) {
+                (self.visitor)(clip);
+                if let ResolvedClipSource::Sequence { sequence_id } = &clip.source {
+                    self.sequence(sequence_id, Selection::Master);
+                }
+            }
+        }
+    }
+}
+
+fn intersects(
+    left: veac_plan::canonical::TimeRange,
+    right: veac_plan::canonical::TimeRange,
+) -> bool {
+    left.end()
+        .ok()
+        .zip(right.end().ok())
+        .is_some_and(|(left_end, right_end)| left.start < right_end && right.start < left_end)
 }
 
 fn source_matches(track: &veac_plan::ResolvedTrack, source: &SidechainSource) -> bool {

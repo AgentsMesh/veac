@@ -1,5 +1,5 @@
 use super::{
-    AnnotationDecl, Identifier, MulticamDecl, NumberLiteral, OutputDecl, SequenceDecl, Spanned,
+    AnnotationDecl, DeliveryDecl, Identifier, MulticamDecl, NumberLiteral, SequenceDecl, Spanned,
     TypedReference,
 };
 
@@ -16,7 +16,7 @@ pub struct ProjectDecl {
     pub resources: Vec<ResourceDecl>,
     pub multicams: Vec<MulticamDecl>,
     pub sequences: Vec<SequenceDecl>,
-    pub outputs: Vec<OutputDecl>,
+    pub deliveries: Vec<DeliveryDecl>,
     pub annotations: Vec<AnnotationDecl>,
     pub span: super::Span,
 }

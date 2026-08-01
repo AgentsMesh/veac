@@ -1,4 +1,4 @@
-use veac_plan::canonical::{Length, Placement, Shadow};
+use veac_plan::canonical::{visual_shear_valid, Length, Placement, Shadow};
 use veac_plan::ResolvedSequence;
 
 use super::Check;
@@ -24,11 +24,19 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence) {
             && anchor.y.is_finite()
             && (0.0..=1.0).contains(&anchor.x)
             && (0.0..=1.0).contains(&anchor.y);
+        let shear = visual_shear_valid(visual.transform.shear);
         let card = visual.card.as_ref().is_none_or(|value| {
             value.corner_radius_pixels.is_finite()
                 && value.corner_radius_pixels >= 0.0
                 && value.shadow.as_ref().is_none_or(shadow)
         });
+        if !shear {
+            check.push(
+                "PLAN_VISUAL_INVALID",
+                Some(clip.id.to_string()),
+                "visual shear x/y factors must each be finite and within [-2, 2]",
+            );
+        }
         if !(placement && frame && anchor && card) {
             check.push(
                 "PLAN_VISUAL_INVALID",

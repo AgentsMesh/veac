@@ -1,16 +1,40 @@
 use std::collections::BTreeMap;
 
-use veac_plan::canonical::{AudioOutput, AudioStemOutput, AudioStemSource, TrackKind};
+use veac_plan::canonical::{AudioMixSource, AudioOutput, TrackKind};
 use veac_plan::{ResolvedAudioRoute, ResolvedSequence, ResolvedTrack};
 
 use super::{
     audio_sidechain, audio_source, audio_transition_fades, time, CodegenErrors, EmitContext,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct AudioRenderSpec {
+    pub sample_rate: u32,
+    pub channels: u8,
+}
+
+impl From<&AudioOutput> for AudioRenderSpec {
+    fn from(value: &AudioOutput) -> Self {
+        Self {
+            sample_rate: value.sample_rate,
+            channels: value.channels,
+        }
+    }
+}
+
 pub(super) fn build_audio(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
     output: &AudioOutput,
+) -> Result<String, CodegenErrors> {
+    let output = AudioRenderSpec::from(output);
+    build_master(context, sequence, &output)
+}
+
+pub(super) fn build_master(
+    context: &mut EmitContext<'_>,
+    sequence: &ResolvedSequence,
+    output: &AudioRenderSpec,
 ) -> Result<String, CodegenErrors> {
     let mut routes: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for track in &sequence.tracks {
@@ -30,7 +54,7 @@ pub(super) fn build_audio(
     let labels: Vec<_> = routes
         .into_values()
         .filter(|labels| !labels.is_empty())
-        .map(|labels| mix(context, &labels, "busmix"))
+        .map(|labels| route_mix(context, &labels, output))
         .collect();
     Ok(finish(context, sequence, output, labels))
 }
@@ -38,32 +62,33 @@ pub(super) fn build_audio(
 pub(super) fn build_stem(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
-    stem: &AudioStemOutput,
+    source: &AudioMixSource,
+    output: AudioRenderSpec,
 ) -> Result<String, CodegenErrors> {
-    if stem.source == AudioStemSource::Master {
-        return build_audio(context, sequence, &stem.audio);
+    if *source == AudioMixSource::Master {
+        return build_master(context, sequence, &output);
     }
     let mut labels = Vec::new();
     for track in &sequence.tracks {
-        let selected = match &stem.source {
-            AudioStemSource::Track { track_id } => track.id == *track_id,
-            AudioStemSource::Bus { bus_id } => matches!(
+        let selected = match source {
+            AudioMixSource::Track { track_id } => track.id == *track_id,
+            AudioMixSource::Bus { bus_id } => matches!(
                 &track.routing.audio,
                 Some(ResolvedAudioRoute::Bus { bus_id: value }) if value == bus_id.as_str()
             ),
-            AudioStemSource::Master => false,
+            AudioMixSource::Master => false,
         };
         if selected && track.state.audio_enabled {
-            labels.extend(build_track(context, sequence, track, &stem.audio)?);
+            labels.extend(build_track(context, sequence, track, &output)?);
         }
     }
-    Ok(finish(context, sequence, &stem.audio, labels))
+    Ok(finish(context, sequence, &output, labels))
 }
 
 fn finish(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     mut labels: Vec<String>,
 ) -> String {
     labels.push(silence(context, sequence, output));
@@ -94,11 +119,23 @@ pub(super) fn mix(context: &mut EmitContext<'_>, labels: &[String], prefix: &str
     )
 }
 
+fn route_mix(context: &mut EmitContext<'_>, labels: &[String], output: &AudioRenderSpec) -> String {
+    let mixed = mix(context, labels, "busmix");
+    context.graph.filter(
+        &[&mixed],
+        format!(
+            "aresample={},asetnsamples=n=1024:p=1,asetpts=N/SR/TB",
+            output.sample_rate
+        ),
+        "busout",
+    )
+}
+
 fn build_track(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
     track: &ResolvedTrack,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<Vec<String>, CodegenErrors> {
     let mut labels = Vec::new();
     for clip in &track.clips {
@@ -122,9 +159,7 @@ fn build_track(
             .as_ref()
             .and_then(|audio| audio.sidechain.as_ref())
         {
-            Some(value) => Some(audio_sidechain::source(
-                context, sequence, track, clip, value, output,
-            )?),
+            Some(value) => audio_sidechain::source(context, sequence, track, clip, value, output)?,
             None => None,
         };
         if let Some(label) = audio_source::build(context, clip, output, fades, sidechain)? {
@@ -137,7 +172,7 @@ fn build_track(
 fn silence(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> String {
     context.graph.source(
         format!(

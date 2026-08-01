@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use crate::authoring::{ItemDecl, LayerDecl, LayerKind, MappingDecl, SequenceDecl, SourceDecl};
+use crate::authoring::{
+    AudioStateDecl, EditingStateDecl, IsolationStateDecl, ItemDecl, LayerDecl, LayerKind,
+    MappingDecl, PlacementModeDecl, PlaybackStateDecl, SequenceDecl, SourceDecl, TrackStateDecl,
+};
 use veac_ir::{
     Clip, ClipSource, PlacementMode, Sequence, SequenceSettings, Track, TrackKind, TrackRouting,
     TrackState,
@@ -45,13 +48,11 @@ fn track(ctx: &mut Context, declaration: &LayerDecl, index: usize) -> Option<Tra
         id: ids::track(ctx, &declaration.id)?,
         kind,
         order,
-        placement_mode: PlacementMode::Free,
-        state: TrackState {
-            enabled: true,
-            muted: false,
-            solo: false,
-            locked: false,
-        },
+        placement_mode: declaration
+            .placement
+            .as_ref()
+            .map_or(PlacementMode::Free, |value| placement(value.value)),
+        state: track_state(declaration.state.as_ref()),
         routing: match &declaration.route_bus {
             Some(bus) => TrackRouting::AudioBus {
                 bus_id: ids::bus_id(ctx, bus)?,
@@ -69,7 +70,12 @@ fn clip(ctx: &mut Context, value: &ItemDecl, kind: TrackKind, z: i32) -> Option<
     let source_mapping = source_mapping(ctx, value, &source)?;
     let modifiers = modifier::lower(ctx, &value.modifiers, z)?;
     let audio = timeline_audio::resolve(ctx, value, kind, modifiers.audio)?;
-    if kind == TrackKind::Audio && has_visual_modifier(value) {
+    if kind == TrackKind::Audio
+        && value
+            .modifiers
+            .iter()
+            .any(super::timeline_modifier::is_visual_domain)
+    {
         ctx.error(
             "AUTHORING_LOWER_TRACK_COMPONENT",
             "audio-layer items cannot contain visual modifiers",
@@ -78,7 +84,10 @@ fn clip(ctx: &mut Context, value: &ItemDecl, kind: TrackKind, z: i32) -> Option<
     }
     Some(Clip {
         id: ids::item(ctx, &value.id)?,
-        enabled: true,
+        enabled: value
+            .state
+            .as_ref()
+            .is_none_or(|state| state.playback.value == PlaybackStateDecl::Enabled),
         record_range: value::range(ctx, &value.record.at, &value.record.duration)?,
         source,
         source_mapping,
@@ -133,22 +142,35 @@ fn mapping_span(value: &MappingDecl) -> crate::authoring::Span {
     }
 }
 
-fn has_visual_modifier(value: &ItemDecl) -> bool {
-    value.modifiers.iter().any(|modifier| {
-        matches!(
-            modifier,
-            crate::authoring::ModifierDecl::Layout(_)
-                | crate::authoring::ModifierDecl::Transform(_)
-                | crate::authoring::ModifierDecl::Composite(_)
-        )
-    })
-}
-
 fn track_kind(value: LayerKind) -> TrackKind {
     match value {
         LayerKind::Video => TrackKind::Video,
         LayerKind::Audio => TrackKind::Audio,
         LayerKind::Visual => TrackKind::Visual,
         LayerKind::Caption => TrackKind::Caption,
+    }
+}
+
+fn placement(value: PlacementModeDecl) -> PlacementMode {
+    match value {
+        PlacementModeDecl::Free => PlacementMode::Free,
+        PlacementModeDecl::Magnetic => PlacementMode::Magnetic,
+    }
+}
+
+fn track_state(value: Option<&TrackStateDecl>) -> TrackState {
+    TrackState {
+        enabled: value
+            .and_then(|state| state.playback.as_ref())
+            .is_none_or(|state| state.value == PlaybackStateDecl::Enabled),
+        muted: value
+            .and_then(|state| state.audio.as_ref())
+            .is_some_and(|state| state.value == AudioStateDecl::Muted),
+        solo: value
+            .and_then(|state| state.isolation.as_ref())
+            .is_some_and(|state| state.value == IsolationStateDecl::Solo),
+        locked: value
+            .and_then(|state| state.editing.as_ref())
+            .is_some_and(|state| state.value == EditingStateDecl::Locked),
     }
 }

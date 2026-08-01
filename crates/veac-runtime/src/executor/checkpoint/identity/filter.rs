@@ -1,6 +1,7 @@
 use serde_json::{json, Value};
 use veac_codegen::emitter::{
     BackendCommand, BackendFilterBinding, BackendFilterContract, BackendFilterEscape,
+    BackendInternalAccess,
 };
 
 use crate::executor::output;
@@ -44,6 +45,25 @@ fn binding(value: &BackendFilterBinding) -> Value {
             "files": files.iter().map(|path| output::path_string(path)).collect::<Vec<_>>(),
             "escape": escape_name(*escape),
         }),
+        BackendFilterBinding::InternalFile {
+            token,
+            path,
+            access,
+            escape,
+        } => json!({
+            "type": "internal_file",
+            "token": token,
+            "path": output::path_string(path),
+            "access": access_name(*access),
+            "escape": escape_name(*escape),
+        }),
+    }
+}
+
+fn access_name(value: BackendInternalAccess) -> &'static str {
+    match value {
+        BackendInternalAccess::Produce => "produce",
+        BackendInternalAccess::Consume => "consume",
     }
 }
 

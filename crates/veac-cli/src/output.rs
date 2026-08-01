@@ -31,7 +31,7 @@ pub(crate) fn bind_render_outputs(
     );
     for (deliverable, candidate) in deliverables.iter().zip(&candidates) {
         contract::validate(deliverable, candidate, &protected)?;
-        if candidate.starts_with(&store_root) {
+        if candidate.starts_with(&store_root) || store_root.starts_with(candidate) {
             return Err(CliError::new(
                 "OUTPUT_RESERVED_DIRECTORY",
                 format!(
@@ -81,12 +81,28 @@ fn candidates(
             let directory = path::output_directory(directory)?;
             deliverables
                 .iter()
-                .map(|value| path::destination(&directory.join(&value.file_name)))
+                .map(|value| destination(value, &directory.join(target_name(value))))
                 .collect()
         }
         None => deliverables
             .iter()
-            .map(|value| path::destination(&project_directory.join(&value.file_name)))
+            .map(|value| destination(value, &project_directory.join(target_name(value))))
             .collect(),
+    }
+}
+
+fn target_name(value: &veac_ir::Deliverable) -> &str {
+    match &value.target {
+        veac_ir::DeliverableTarget::File { name } => name,
+        veac_ir::DeliverableTarget::ImageSequence { pattern } => pattern,
+        veac_ir::DeliverableTarget::Package { name } => name,
+    }
+}
+
+fn destination(value: &veac_ir::Deliverable, candidate: &Path) -> CliResult<PathBuf> {
+    if matches!(value.target, veac_ir::DeliverableTarget::Package { .. }) {
+        path::package_destination(candidate)
+    } else {
+        path::destination(candidate)
     }
 }

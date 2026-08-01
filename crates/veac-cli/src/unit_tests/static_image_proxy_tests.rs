@@ -21,13 +21,16 @@ project image-proxy-test {
       }
     }
   }
-  output video main {
-    sequence main; file-name "render.mp4";
-    encoding {
-      container mp4; optimize-for-streaming true;
-      video { codec h264; pixel-format yuv420p; }
-      audio none;
-      captions discard;
+  delivery main {
+    sequence main;
+    raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
+    artifact video main {
+      target file "render.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; }
+        audio none; passes single; accelerator auto;
+      }
     }
   }
 }

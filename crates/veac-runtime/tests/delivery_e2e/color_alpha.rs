@@ -119,7 +119,9 @@ fn color_stabilize_and_key_effects_preserve_or_multiply_real_alpha() {
 
 fn configure_alpha_output(value: &mut ProjectEnvelope) {
     let deliverable = &mut value.project.render_configs[0].deliverables[0];
-    deliverable.file_name = "color-alpha.mov".to_owned();
+    deliverable.target = DeliverableTarget::File {
+        name: "color-alpha.mov".to_owned(),
+    };
     let DeliverableKind::Video(settings) = &mut deliverable.kind else {
         panic!("video fixture")
     };

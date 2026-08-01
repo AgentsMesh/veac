@@ -30,7 +30,7 @@ video | audio | image | font | lut-1d | lut-3d
 
 Video and audio resources declare both stream intents. Each intent is `auto`, `disabled`, or an explicit stream index. Image resources implicitly select their visual stream. Font and LUT resources have no media streams.
 
-Locators are `local` or `remote`. Remote resources require a content identity. Local basenames and output basenames reject traversal, path separators where disallowed, controls, and overlong values.
+Locators are `local` or `remote`. Remote resources require a content identity. Local resource names and artifact target basenames reject traversal, disallowed path separators, controls, and overlong values.
 
 The project `entry` is a typed sequence reference. IDs become canonical IDs with stable prefixes such as `prj_`, `med_`, `seq_`, `trk_`, `itm_`, `fx_`, `rel_`, `mcg_`, and `out_`.
 

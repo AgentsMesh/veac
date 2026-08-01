@@ -9,6 +9,18 @@ pub fn write(writer: &mut Writer, value: &InterpolationDecl) {
         InterpolationKind::EaseIn => "ease-in",
         InterpolationKind::EaseOut => "ease-out",
         InterpolationKind::EaseInOut => "ease-in-out",
+        InterpolationKind::Spring {
+            frequency,
+            decay,
+            initial_velocity,
+        } => {
+            writer.block("interpolation spring", |writer| {
+                writer.line(format!("frequency {};", frequency.raw));
+                writer.line(format!("decay {};", decay.raw));
+                writer.line(format!("initial-velocity {};", initial_velocity.raw));
+            });
+            return;
+        }
         InterpolationKind::CubicBezier { x1, y1, x2, y2 } => {
             writer.block("interpolation cubic-bezier", |writer| {
                 writer.line(format!("x1 {};", x1.raw));

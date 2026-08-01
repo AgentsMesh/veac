@@ -39,7 +39,12 @@ fn pixelize_amount_changes_the_rendered_block_size() {
     let coarse = patterned_frame(TransitionKind::Pixelize { amount: 1.0 });
 
     assert!(changed_channels(&subtle, &coarse, 12) > 1_000);
-    assert!(horizontal_changes(&subtle, 12) > horizontal_changes(&coarse, 12));
+    let subtle_changes = horizontal_changes(&subtle, 4);
+    let coarse_changes = horizontal_changes(&coarse, 4);
+    assert!(
+        subtle_changes > coarse_changes * 2,
+        "expected finer blocks at low amount: subtle={subtle_changes}, coarse={coarse_changes}"
+    );
 }
 
 #[test]
@@ -58,6 +63,22 @@ fn circle_softness_changes_the_rendered_boundary() {
     let soft = patterned_frame(circle(0.8));
 
     assert!(changed_channels(&hard, &soft, 12) > 300);
+}
+
+#[test]
+fn custom_transition_progresses_from_outgoing_to_incoming() {
+    super::render_with(wipe(180.0, 0.05), "wipe-progress", |output| {
+        let early = rgb_at(output, 0.8, WIDTH / 2, HEIGHT / 2);
+        let late = rgb_at(output, 1.2, WIDTH / 2, HEIGHT / 2);
+        assert!(
+            u16::from(early[0]) > u16::from(early[2]) + 100,
+            "wipe starts from incoming instead of outgoing: {early:?}"
+        );
+        assert!(
+            u16::from(late[2]) > u16::from(late[0]) + 100,
+            "wipe returns to outgoing before completion: {late:?}"
+        );
+    });
 }
 
 fn patterned_frame(kind: TransitionKind) -> Vec<u8> {

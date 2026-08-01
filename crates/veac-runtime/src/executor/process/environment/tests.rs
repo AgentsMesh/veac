@@ -39,9 +39,15 @@ impl FfmpegEnvironment for FakeEnvironment {
 fn invocation_exposes_only_validated_arguments_and_deadline() {
     let arguments = vec!["-version".to_owned()];
     let deadline = future();
-    let invocation = FfmpegInvocation::render(&arguments, Path::new("output"), deadline);
+    let invocation = FfmpegInvocation::render(
+        &arguments,
+        Path::new("output"),
+        Path::new("working"),
+        deadline,
+    );
     assert_eq!(invocation.arguments(), arguments);
     assert_eq!(invocation.output_root, Some(Path::new("output")));
+    assert_eq!(invocation.working_directory(), Some(Path::new("working")));
     assert_eq!(invocation.deadline(), deadline);
 }
 

@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use veac_ir::{CaptionSidecarFormat, CaptionSidecarOutput, DeliverableKind, SequenceId};
+use veac_ir::{
+    CaptionSidecarFormat, CaptionSidecarOutput, Deliverable, DeliverableId, DeliverableKind,
+    DeliverableTarget, SequenceId,
+};
 
 use crate::{test_support, *};
 
@@ -14,11 +17,26 @@ fn full_segment_rejects_non_entry_multi_and_non_video_outputs() {
     assert_invalid(&wrong_sequence, proof.clone());
 
     let mut multiple = base.clone();
-    multiple
-        .output
-        .deliverables
-        .push(multiple.output.deliverables[0].clone());
+    let mut second = multiple.output.deliverables[0].clone();
+    second.id = DeliverableId::new("dlv_second").unwrap();
+    second.target = DeliverableTarget::File {
+        name: "second.mp4".into(),
+    };
+    multiple.output.deliverables.push(second);
     assert_invalid(&multiple, proof.clone());
+
+    let mut mixed = base.clone();
+    mixed.output.deliverables.push(Deliverable {
+        id: DeliverableId::new("dlv_sidecar").unwrap(),
+        target: DeliverableTarget::File {
+            name: "captions.srt".into(),
+        },
+        kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
+            format: CaptionSidecarFormat::Srt,
+            track_ids: vec![],
+        }),
+    });
+    assert_invalid(&mixed, proof.clone());
 
     let mut non_video = base;
     non_video.output.deliverables[0].kind = DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
@@ -87,9 +105,10 @@ fn full_segment_accessors_miss_and_binding_contract_are_exact() {
     };
     assert_eq!(contract.has_audio(), video.audio.is_some());
     let profile = contract.media_profile();
-    assert_eq!(profile.width(), plan.output.width);
-    assert_eq!(profile.height(), plan.output.height);
-    assert_eq!(profile.frame_rate(), plan.output.frame_rate);
+    let raster = plan.output.raster.as_ref().unwrap();
+    assert_eq!(profile.width(), raster.width);
+    assert_eq!(profile.height(), raster.height);
+    assert_eq!(profile.frame_rate(), raster.frame_rate);
     assert_eq!(profile.deliverable(), &plan.output.deliverables[0]);
 
     let temp = tempfile::tempdir().unwrap();

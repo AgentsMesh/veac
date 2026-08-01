@@ -87,6 +87,7 @@ pub(in crate::executor) fn two_pass_tasks(id: &str, output: &Path) -> Vec<Backen
 
 pub(in crate::executor) fn command(path: &Path) -> BackendCommand {
     BackendCommand {
+        preparations: vec![],
         inputs: vec![],
         filter_graph: None,
         filter_contract: None,
@@ -119,6 +120,31 @@ pub(super) fn path(parent: &Path, name: &str) -> PathBuf {
 
 pub(super) fn deliverable_id(value: &str) -> DeliverableId {
     DeliverableId::new(format!("dlv_{value}")).unwrap()
+}
+
+pub(super) fn assert_no_checkpoint_payload(root: &Path) {
+    fn contains_payload(path: &Path) -> bool {
+        std::fs::read_dir(path).is_ok_and(|entries| {
+            entries.filter_map(Result::ok).any(|entry| {
+                entry.file_name() == "payload.bin"
+                    || (entry.path().is_dir() && contains_payload(&entry.path()))
+            })
+        })
+    }
+    assert!(!contains_payload(root));
+}
+
+pub(super) fn assert_no_staging(root: &Path) {
+    let staged = std::fs::read_dir(root)
+        .unwrap()
+        .filter_map(Result::ok)
+        .any(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".veac-stage-")
+        });
+    assert!(!staged);
 }
 
 fn appended(path: &Path, suffix: &str) -> PathBuf {

@@ -47,13 +47,27 @@ project intro {
     }
   }
 
-  output video preview {
+  delivery preview {
     sequence main;
-    file-name "preview.mp4";
-    encoding {
-      container mp4; optimize-for-streaming true;
-      video { codec h264; pixel-format yuv420p; }
-      captions discard;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
   }
 }
@@ -77,7 +91,9 @@ cargo run -p veac-cli -- plan project.json --config out_preview --out plan.json
 cargo run -p veac-cli -- render project.json --out-dir output
 ```
 
-Compilation does not probe media or invoke FFmpeg. Planning resolves media, stream selection, clocks, graph structure, and output compatibility. Rendering executes the typed backend bundle and direct artifact writers.
+Compilation emits canonical project IR schema version 5 and does not probe media
+or invoke FFmpeg. Planning resolves media, stream selection, clocks, graph
+structure, and artifact compatibility. Rendering executes typed backend tasks.
 
 ## Explore Mechanisms
 

@@ -30,17 +30,20 @@ A flat attribute language makes every declaration look like a JSON object with d
 ## Core Model
 
 ```text
-Project   = settings + resources + entry + multicams + sequences + annotations + outputs
+Project   = settings + resources + entry + multicams + sequences + annotations + deliveries
+Delivery  = sequence + optional raster + typed artifacts
 Sequence  = layers + relations + applies
 Layer     = ordered items + optional bus route
 Item      = source + record + optional mapping + modifiers + optional template slot
 ```
 
-Source, modifier, relation, annotation, generator, audio processor, color stage, text layout, and output are closed variants.
+Source, modifier, relation, annotation, generator, audio processor, color stage,
+text layout, artifact, target, and recipe are closed variants.
 
 ## Canonical Boundary
 
 Canonical IR uses exact rational time, stable typed IDs, deterministic ordering, and serde schemas. It is the boundary for editing, template filling, planning, caching, signatures, and external tooling.
+The current project envelope is schema version 5 with minimum reader version 5.
 
 The following accepted media fragment is kept executable by the IR documentation test:
 
@@ -66,7 +69,10 @@ The authoring AST does not reuse canonical structs. Surface values may have rich
 
 ## Time
 
-Record time, item-local time, source time, and output frame/sample time are distinct domains. Authoring literals lower exactly to the project timescale. Parameters use item-local time. Source mappings map item-local record duration into source time. Multicam switches partition item-local time.
+Record time, item-local time, source time, and delivery frame/sample time are
+distinct domains. Authoring literals lower exactly to the project timescale.
+Parameters use item-local time. Source mappings map item-local record duration
+into source time. Multicam switches partition item-local time.
 
 ## Relations
 
@@ -76,9 +82,13 @@ Transition, matte, sidechain, group, and AV-link are relation facts. Planner pro
 
 Template slots are item-owned constraints; the item ID is slot identity. Bindings are separate versioned request artifacts. Fill proposals produce atomic edit batches and validate the candidate project before commit.
 
-## Outputs
+## Deliveries
 
-Each authoring output owns one closed encoding variant. Lowering creates stable render config and deliverable IDs. Output compatibility, filenames, image patterns, caption track selection, and audio source kinds are validated before execution.
+Each project delivery selects a sequence and owns typed artifacts. An artifact
+has one target and one closed recipe composed from domain primitives such as
+`mux`, `encode`, `source`, `frame`, `canvas`, `numbering`, and `package`.
+Lowering creates stable render config and deliverable IDs. Target compatibility,
+image patterns, caption tracks, and audio source kinds validate before execution.
 
 ## Consequences
 

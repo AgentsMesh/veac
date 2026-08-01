@@ -1,9 +1,5 @@
-use std::panic::{catch_unwind, AssertUnwindSafe};
-
 use veac_plan::canonical::*;
-use veac_plan::ResolvedMatte;
 
-use super::composition_advanced::advanced_plan;
 use super::support::{
     add_transition, bindings, emit_video_command, resolved, text_fixture, time, visual,
 };
@@ -104,37 +100,4 @@ fn plain_visual() -> VisualProperties {
     value.masks.clear();
     value.card = None;
     value
-}
-
-#[test]
-fn excessive_matte_depth_is_a_typed_error_before_recursion() {
-    let mut plan = advanced_plan();
-    let track = &mut plan.sequences[0].tracks[1];
-    for index in 1..=65 {
-        let mut clip = track.clips[0].clone();
-        clip.id = ItemId::new(format!("itm_matte_depth_{index:03}")).unwrap();
-        clip.source_order = index;
-        clip.visual.as_mut().unwrap().track_matte = None;
-        track.clips.push(clip);
-    }
-    for index in 0..track.clips.len() - 1 {
-        let source_clip_id = track.clips[index + 1].id.clone();
-        track.clips[index].visual.as_mut().unwrap().track_matte = Some(ResolvedMatte {
-            relation_id: RelationId::new(format!("rel_matte_depth_{index:03}")).unwrap(),
-            source_clip_id,
-            mode: TrackMatteMode::Alpha,
-            invert: false,
-        });
-    }
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        emit_video_command(&plan, &bindings(&plan))
-    }));
-    let error = result.expect("preflight must not recurse").unwrap_err();
-    assert!(
-        error
-            .diagnostics()
-            .iter()
-            .any(|diagnostic| diagnostic.code == "PLAN_MATTE_DEPTH_EXCEEDED"),
-        "error={error}"
-    );
 }

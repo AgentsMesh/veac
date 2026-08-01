@@ -162,15 +162,19 @@ fn clip_shape_valid(
             matches!(track.kind, TrackKind::Video | TrackKind::Visual)
         }
     };
-    let text_ok = match &clip.source {
-        ResolvedClipSource::Text { content } => !content.text.is_empty() && clip.visual.is_some(),
-        ResolvedClipSource::Caption { content, .. } => !content.text.is_empty(),
-        _ => true,
+    let (text_ok, styled) = match &clip.source {
+        ResolvedClipSource::Text { content } => {
+            (!content.text.is_empty() && content.styled().is_some(), true)
+        }
+        ResolvedClipSource::Caption { content, .. } => {
+            (!content.text.is_empty(), content.styled().is_some())
+        }
+        _ => (true, false),
     };
     source_ok
         && text_ok
         && (clip.audio.is_none() || audio_capable(&clip.source))
-        && clip.visual.is_some() == (track.state.visual_enabled || track.kind == TrackKind::Caption)
+        && clip.visual.is_some() == (track.state.visual_enabled || styled)
         && (clip.audio.is_none() || track.state.audio_enabled)
         && (track.kind != TrackKind::Audio || clip.visual.is_none())
         && (!matches!(track.kind, TrackKind::Visual | TrackKind::Caption) || clip.audio.is_none())

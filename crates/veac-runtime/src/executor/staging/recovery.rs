@@ -3,13 +3,14 @@ use std::time::Instant;
 
 use super::directory::{Directory, EntryState};
 use super::journal::{self, Journal, JournalEntry, JournalState, JOURNAL_NAME};
+use super::ownership::STAGE_PREFIX;
 use crate::executor::locking::OutputLocks;
 use crate::RuntimeError;
 
-const STAGE_PREFIX: &str = ".veac-stage-";
 const MAX_PARENT_ENTRIES: usize = 65_536;
 
 mod cleanup;
+mod orphan;
 
 pub(super) fn recover_until(
     locks: &OutputLocks,
@@ -38,7 +39,10 @@ fn recover_parent(output: &Directory, deadline: Instant) -> Result<(), RuntimeEr
             .map_err(|_| invalid_error("reserved staging path must be a non-symlink directory"))?;
         match stage.state(JOURNAL_NAME)? {
             EntryState::Regular(_) => recover_bound_stage(output, name, stage, deadline)?,
-            EntryState::Missing => {}
+            EntryState::Missing => orphan::discard_if_owned(output, name, &stage, deadline)?,
+            EntryState::Directory(_) => {
+                return invalid("reserved staging journal must be a regular file")
+            }
         }
     }
     Ok(())
@@ -87,18 +91,20 @@ fn rollback(
         active(deadline)?;
         let backup_name = index.to_string();
         match (entry.original, backup.state(&backup_name)?) {
-            (Some(original), EntryState::Regular(actual)) if actual == original => {
+            (Some(original), EntryState::Regular(actual) | EntryState::Directory(actual))
+                if actual == original =>
+            {
                 remove_installed(output, entry)?;
                 backup
                     .rename_bound_to(&backup_name, original, output, &entry.target)
                     .map_err(|failure| failure.error)?;
             }
             (Some(original), EntryState::Missing) => output.require(&entry.target, original)?,
-            (Some(_), EntryState::Regular(_)) => {
+            (Some(_), EntryState::Regular(_) | EntryState::Directory(_)) => {
                 return invalid("recovery backup changed identity")
             }
             (None, EntryState::Missing) => remove_installed(output, entry)?,
-            (None, EntryState::Regular(_)) => {
+            (None, EntryState::Regular(_) | EntryState::Directory(_)) => {
                 return invalid("new output unexpectedly has a recovery backup")
             }
         }
@@ -123,8 +129,15 @@ fn finalize(
         }
         let backup_name = index.to_string();
         match (entry.original, backup.state(&backup_name)?) {
-            (Some(expected), EntryState::Regular(actual)) if actual == expected => {
-                backup.remove_bound(&backup_name, expected)?;
+            (Some(expected), EntryState::Regular(actual) | EntryState::Directory(actual))
+                if actual == expected =>
+            {
+                backup.remove_tree_bound(
+                    &backup_name,
+                    expected,
+                    veac_artifact::MAX_DELIVERY_PACKAGE_MEMBERS + 1,
+                    || Instant::now() < deadline,
+                )?;
             }
             (_, EntryState::Missing) => {}
             _ => return invalid("committed recovery backup changed identity"),
@@ -135,11 +148,20 @@ fn finalize(
 
 fn remove_installed(output: &Directory, entry: &JournalEntry) -> Result<(), RuntimeError> {
     match (entry.source_identity, output.state(&entry.target)?) {
-        (Some(expected), EntryState::Regular(actual)) if actual == expected => {
-            output.remove_bound(&entry.target, expected)
+        (Some(expected), EntryState::Regular(actual) | EntryState::Directory(actual))
+            if actual == expected =>
+        {
+            output.remove_tree_bound(
+                &entry.target,
+                expected,
+                veac_artifact::MAX_DELIVERY_PACKAGE_MEMBERS + 1,
+                || true,
+            )
         }
         (_, EntryState::Missing) => Ok(()),
-        (None, EntryState::Regular(_)) => invalid("stale output reappeared during rollback"),
+        (None, EntryState::Regular(_) | EntryState::Directory(_)) => {
+            invalid("stale output reappeared during rollback")
+        }
         _ => invalid("installed recovery output changed identity"),
     }
 }

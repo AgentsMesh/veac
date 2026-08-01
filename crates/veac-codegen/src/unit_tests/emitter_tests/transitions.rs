@@ -1,10 +1,9 @@
-use veac_codegen::emitter::CodegenErrorKind;
-use veac_plan::canonical::*;
-use veac_plan::ResolvedClipSource;
-
 use super::support::{
     add_transition, bindings, emit_video_command, fixture, resolved, time, visual,
 };
+use veac_codegen::emitter::CodegenErrorKind;
+use veac_plan::canonical::*;
+use veac_plan::ResolvedClipSource;
 
 #[test]
 fn before_and_after_cut_alignments_materialize_zero_handle_sampling() {
@@ -21,6 +20,14 @@ fn before_and_after_cut_alignments_materialize_zero_handle_sampling() {
     assert!(after_graph.contains("trim=start=0.933333333333,reverse,trim=end_frame=1"));
     assert!(after_graph.contains("tpad=stop_mode=clone:stop_duration=0.2"));
     assert!(after_graph.contains("trim=start=0:duration=0.2"));
+    assert!(after_graph.contains("transitionoutboundv"));
+    assert!(after_graph.contains("transitioninboundv"));
+    assert!(
+        after_graph
+            .matches("stop_duration=0.2,trim=duration=0.2")
+            .count()
+            >= 2
+    );
     assert!(after_graph.contains("afade=t=in:st=0:d=0.2"));
     assert!(!after_graph.contains("afade=t=out"));
 }
@@ -48,14 +55,14 @@ fn typed_transition_parameters_generate_executable_backend_expressions() {
                 direction: CardinalDirection::Right,
                 amount: 1.5,
             },
-            "pow(P\\,1.5)",
+            "pow(1-P\\,1.5)",
         ),
         (
             TransitionKind::Zoom {
                 direction: ZoomDirection::Out,
                 amount: 2.0,
             },
-            "max(1-(pow(P\\,2))",
+            "max(1-(pow(1-P\\,2))",
         ),
         (
             TransitionKind::Circle {
@@ -110,14 +117,13 @@ fn transition_missing_endpoint_and_visual_are_typed_errors() {
     }
     assert!(graph(&shadowed).contains("shadowv"));
 }
-
 pub(crate) fn transition_plan(
     alignment: TransitionAlignment,
     kind: TransitionKind,
 ) -> veac_plan::ResolvedRenderPlan {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
@@ -157,7 +163,7 @@ fn audio() -> AudioProperties {
     }
 }
 
-fn graph(plan: &veac_plan::ResolvedRenderPlan) -> String {
+pub(crate) fn graph(plan: &veac_plan::ResolvedRenderPlan) -> String {
     emit_video_command(plan, &bindings(plan))
         .unwrap()
         .filter_graph

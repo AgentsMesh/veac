@@ -2,7 +2,13 @@ use veac_plan::canonical::Vec2;
 
 use super::time;
 
-pub(super) fn signed_distance(points: &[Vec2], u: &str, v: &str, pixels: &str) -> String {
+pub(super) fn signed_distance(
+    points: &[Vec2],
+    x: &str,
+    y: &str,
+    width: &str,
+    height: &str,
+) -> String {
     if points.len() < 3 {
         return "-1".to_owned();
     }
@@ -14,41 +20,54 @@ pub(super) fn signed_distance(points: &[Vec2], u: &str, v: &str, pixels: &str) -
         .collect();
     let crossings: Vec<_> = edges
         .iter()
-        .filter_map(|(start, end)| crossing(*start, *end, u, v))
+        .filter_map(|(start, end)| crossing(*start, *end, x, y, width, height))
         .collect();
     let parity = format!("mod({}\\,2)", crossings.join("+"));
-    let distances: Vec<_> = edges
+    let distance = edges
         .iter()
-        .map(|(start, end)| edge_distance(*start, *end, u, v))
-        .collect();
-    let distance = distances
-        .into_iter()
+        .map(|(start, end)| edge_distance(*start, *end, x, y, width, height))
         .reduce(|left, right| format!("min({left}\\,{right})"))
         .expect("validated path has at least one edge");
-    format!("if(eq({parity}\\,1)\\,({distance})*({pixels})\\,-({distance})*({pixels}))")
+    format!("({distance})*(2*eq({parity}\\,1)-1)")
 }
 
-fn crossing(start: Vec2, end: Vec2, u: &str, v: &str) -> Option<String> {
+fn crossing(start: Vec2, end: Vec2, x: &str, y: &str, width: &str, height: &str) -> Option<String> {
     if start.y == end.y {
         return None;
     }
-    let low = time::number(start.y.min(end.y));
-    let high = time::number(start.y.max(end.y));
-    let x = time::number(start.x);
-    let dx = time::number(end.x - start.x);
-    let dy = time::number(end.y - start.y);
-    let y = time::number(start.y);
+    let (low, high) = if start.y < end.y {
+        (start, end)
+    } else {
+        (end, start)
+    };
+    let x1 = vertex(low.x, width);
+    let y1 = vertex(low.y, height);
+    let dx = delta(high.x - low.x, width);
+    let dy = delta(high.y - low.y, height);
+    let y2 = vertex(high.y, height);
     Some(format!(
-        "gte(({v})\\,{low})*lt(({v})\\,{high})*lt(({u})\\,{x}+((({v})-{y})*{dx}/{dy}))"
+        "gte(({y})\\,{y1})*lt(({y})\\,{y2})*lt(({x})\\,{x1}+((({y})-{y1})*({dx})/({dy})))"
     ))
 }
 
-fn edge_distance(start: Vec2, end: Vec2, u: &str, v: &str) -> String {
-    let x = time::number(start.x);
-    let y = time::number(start.y);
-    let dx = time::number(end.x - start.x);
-    let dy = time::number(end.y - start.y);
-    let length = time::number((end.x - start.x).powi(2) + (end.y - start.y).powi(2));
-    let projection = format!("clip(((({u})-{x})*{dx}+(({v})-{y})*{dy})/{length}\\,0\\,1)");
-    format!("hypot(({u})-({x}+({projection})*{dx})\\,({v})-({y}+({projection})*{dy}))")
+fn edge_distance(start: Vec2, end: Vec2, x: &str, y: &str, width: &str, height: &str) -> String {
+    let x1 = vertex(start.x, width);
+    let y1 = vertex(start.y, height);
+    let dx = delta(end.x - start.x, width);
+    let dy = delta(end.y - start.y, height);
+    let length = format!("({dx})*({dx})+({dy})*({dy})");
+    let projection =
+        format!("clip(((({x})-{x1})*({dx})+(({y})-{y1})*({dy}))/max({length}\\,0.000001)\\,0\\,1)");
+    format!("hypot(({x})-({x1}+({projection})*({dx}))\\,({y})-({y1}+({projection})*({dy})))")
 }
+
+fn vertex(value: f64, extent: &str) -> String {
+    format!("({}-0.5)*({extent})", time::number(value))
+}
+
+fn delta(value: f64, extent: &str) -> String {
+    format!("{}*({extent})", time::number(value))
+}
+
+#[cfg(test)]
+mod tests;

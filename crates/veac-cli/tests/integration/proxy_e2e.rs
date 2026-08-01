@@ -96,6 +96,7 @@ fn render_requires_semantic_proxy_postflight_and_prefer_falls_back() {
 fn proxy_request(plan: &veac_plan::ResolvedRenderPlan) -> MediaArtifactRequest {
     let input = &plan.inputs[0];
     let stream = input.video.as_ref().unwrap();
+    let raster = plan.output.raster.as_ref().unwrap();
     let clock = normalized_clock(
         stream.start_time,
         source_duration(plan),
@@ -111,9 +112,9 @@ fn proxy_request(plan: &veac_plan::ResolvedRenderPlan) -> MediaArtifactRequest {
         spec: MediaArtifactSpec::ProxyVideo(ProxyVideoSpec {
             source_stream: stream.selection,
             source_clock: clock,
-            width: plan.output.width,
-            height: plan.output.height,
-            frame_rate: plan.output.frame_rate,
+            width: raster.width,
+            height: raster.height,
+            frame_rate: raster.frame_rate,
             crf: 28,
         }),
     }

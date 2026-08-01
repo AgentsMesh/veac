@@ -52,7 +52,7 @@ impl Validator {
             self.value_error("REVISION_RANGE", "/project/revision", project.id.as_str());
         }
         self.metadata(&project.metadata, "/project/metadata", project.id.as_str());
-        self.render_budget(project);
+        self.structural_render_budget(project);
         self.collect_materials(project);
         self.collect_multicam_groups(project);
         self.collect_sequences(project);
@@ -68,6 +68,7 @@ impl Validator {
         self.annotations(project);
         self.sequence_cycles(&project.sequences);
         self.applied_operations(project);
+        self.visual_render_budget(project);
     }
 
     fn collect_materials(&mut self, project: &Project) {
@@ -92,14 +93,11 @@ impl Validator {
             if !self.sequence_ids.insert(sequence.id.to_string()) {
                 self.duplicate("DUPLICATE_SEQUENCE_ID", sequence.id.as_str(), &path);
             }
-            let audible = sequence.tracks.iter().any(|track| {
-                track.state.enabled
-                    && !track.state.muted
-                    && matches!(track.kind, TrackKind::Video | TrackKind::Audio)
-                    && track.clips.iter().any(|clip| {
-                        clip.enabled && clip.audio.as_ref().is_some_and(|audio| !audio.muted)
-                    })
-            });
+            let activity = SequenceActivity::new(sequence);
+            let audible = sequence
+                .tracks
+                .iter()
+                .any(|track| activity.track_has_live_audio(track));
             self.sequence_audio.insert(sequence.id.to_string(), audible);
         }
         if !self

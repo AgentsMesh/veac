@@ -4,7 +4,7 @@ mod level;
 mod matrix;
 mod video;
 
-pub use delivery::{mxf_geometry_valid, video_delivery_valid};
+pub use delivery::{mxf_geometry_valid, video_color_delivery_valid, video_delivery_valid};
 pub use executable::{
     audio_output_valid, ffmpeg_dimensions_valid, ffmpeg_sample_rate_valid,
     image_sequence_range_valid, image_sequence_start_valid, input_audio_stream_valid,

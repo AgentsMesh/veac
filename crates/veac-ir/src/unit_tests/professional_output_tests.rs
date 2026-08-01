@@ -39,17 +39,22 @@ fn mxf_geometry_uses_the_probed_ffmpeg_boundary() {
     ] {
         let mut project = project(VideoProfile::DnxHrHq, PixelFormat::Yuv422p);
         let output = &mut project.project.render_configs[0];
-        (output.width, output.height, output.frame_rate) = (256, 120, rate);
+        let raster = output.raster.as_mut().unwrap();
+        (raster.width, raster.height, raster.frame_rate) = (256, 120, rate);
         validate(&project).unwrap();
     }
 
     let mut too_small = project(VideoProfile::DnxHrHq, PixelFormat::Yuv422p);
-    let output = &mut too_small.project.render_configs[0];
-    (output.width, output.height) = (96, 54);
+    let raster = too_small.project.render_configs[0].raster.as_mut().unwrap();
+    (raster.width, raster.height) = (96, 54);
     assert!(has_code(&too_small, "OUTPUT_MXF_SETTINGS"));
 
     let mut bad_rate = project(VideoProfile::DnxHrHq, PixelFormat::Yuv422p);
-    bad_rate.project.render_configs[0].frame_rate = Rational::new(10, 1).unwrap();
+    bad_rate.project.render_configs[0]
+        .raster
+        .as_mut()
+        .unwrap()
+        .frame_rate = Rational::new(10, 1).unwrap();
     assert!(has_code(&bad_rate, "OUTPUT_MXF_SETTINGS"));
 }
 
@@ -69,8 +74,11 @@ fn mxf_audio_accepts_only_48khz_pcm16_or_pcm24() {
 pub(crate) fn project(profile: VideoProfile, pixel: PixelFormat) -> ProjectEnvelope {
     let mut project = sample_project();
     let output = &mut project.project.render_configs[0];
-    output.deliverables[0].file_name = "main.mxf".to_owned();
-    let video = output.video_deliverable_mut().unwrap();
+    output.deliverables[0].target = DeliverableTarget::File {
+        name: "main.mxf".to_owned(),
+    };
+    let id = DeliverableId::new("dlv_main").unwrap();
+    let video = output.video_deliverable_mut(&id).unwrap();
     video.container = OutputFormat::Mxf;
     video.video = VideoOutput {
         codec: VideoCodec::DnxHr,
@@ -93,7 +101,7 @@ pub(crate) fn project(profile: VideoProfile, pixel: PixelFormat) -> ProjectEnvel
 
 fn audio(project: &mut ProjectEnvelope) -> &mut AudioOutput {
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio
         .as_mut()

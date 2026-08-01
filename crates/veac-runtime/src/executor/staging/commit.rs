@@ -27,41 +27,39 @@ pub(super) fn apply_locked(
     context: CommitContext<'_>,
     deadline: Instant,
 ) -> Result<(), CommitFailure> {
-    apply_with(
+    apply_observed_until(
         context,
         || Instant::now() < deadline,
         &rollback::LiveOperations,
+        &LiveObserver,
+        Some(deadline),
     )
 }
 
-pub(in crate::executor) fn apply_with<O: rollback::Operations>(
-    context: CommitContext<'_>,
-    guard: impl FnMut() -> bool,
-    rollback: &O,
-) -> Result<(), CommitFailure> {
-    apply_observed(context, guard, rollback, &LiveObserver)
-}
-
-pub(in crate::executor) fn apply_observed<R: rollback::Operations, O: Observer>(
+pub(in crate::executor::staging) fn apply_observed_until<R: rollback::Operations, O: Observer>(
     context: CommitContext<'_>,
     mut guard: impl FnMut() -> bool,
     rollback: &R,
     observer: &O,
+    deadline: Option<Instant>,
 ) -> Result<(), CommitFailure> {
     let CommitContext {
         staging,
         stage,
         output,
-        files,
+        outputs,
         stale,
-        allow_empty,
     } = context;
     active(&mut guard)?;
-    let identities = validation::validate(staging, stage, files, stale, allow_empty)?;
+    let validation_deadline = deadline.unwrap_or_else(|| {
+        Instant::now()
+            + std::time::Duration::from_secs(veac_artifact::MAX_MEDIA_DERIVATION_WALL_SECONDS)
+    });
+    let identities = validation::validate(staging, stage, outputs, stale, validation_deadline)?;
     active(&mut guard)?;
     let backup = stage.create_child("backups")?;
     active(&mut guard)?;
-    let mut transaction = journal::prepare(stage, output, files, &identities, stale)?;
+    let mut transaction = journal::prepare(stage, output, outputs, &identities, stale)?;
     active(&mut guard)?;
     let mut backups = Vec::new();
     for (index, entry) in transaction.entries.iter().enumerate() {
@@ -96,6 +94,13 @@ pub(in crate::executor) fn apply_observed<R: rollback::Operations, O: Observer>(
         if let Err(error) = active(&mut guard) {
             return Err(failed(error, output, &backup, &[], &backups, rollback));
         }
+    }
+    if let Err(error) = active(&mut guard)
+        .and_then(|_| backup.sync())
+        .and_then(|_| output.sync())
+        .and_then(|_| active(&mut guard))
+    {
+        return Err(failed(error, output, &backup, &[], &backups, rollback));
     }
     let mut installed = Vec::new();
     for entry in transaction
@@ -136,15 +141,23 @@ pub(in crate::executor) fn apply_observed<R: rollback::Operations, O: Observer>(
             ));
         }
     }
-    let committed = sync(output, &installed, &mut guard)
-        .and_then(|_| active(&mut guard))
-        .and_then(|_| journal::commit(stage, &mut transaction));
-    if let Err(error) = committed {
+    if let Err(error) = sync(output, &installed, &mut guard).and_then(|_| active(&mut guard)) {
         return Err(failed(
             error, output, &backup, &installed, &backups, rollback,
         ));
     }
-    Ok(())
+    match journal::commit_with(stage, &mut transaction, || observer.sync_committed(stage)) {
+        Ok(()) => Ok(()),
+        Err(failure) if failure.crossed_commit => Err(CommitFailure::after_commit(failure.error)),
+        Err(failure) => Err(failed(
+            failure.error,
+            output,
+            &backup,
+            &installed,
+            &backups,
+            rollback,
+        )),
+    }
 }
 
 fn failed<O: rollback::Operations>(

@@ -51,9 +51,18 @@ fn rename_and_listing_stay_bound_to_descriptor_identities() {
         crate::RuntimeErrorKind::ResourceLimit
     );
 
-    let mismatch = EntryIdentity {
-        inode: first.inode.wrapping_add(1),
-        ..first
+    let EntryIdentity::Regular {
+        device,
+        inode,
+        size_bytes,
+    } = first
+    else {
+        panic!("file identity is regular");
+    };
+    let mismatch = EntryIdentity::Regular {
+        device,
+        inode: inode.wrapping_add(1),
+        size_bytes,
     };
     let failure = source
         .rename_bound_to("b", mismatch, &target, "moved")

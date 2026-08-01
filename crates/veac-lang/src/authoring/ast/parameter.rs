@@ -37,6 +37,11 @@ pub enum InterpolationKind {
         x2: NumberLiteral,
         y2: NumberLiteral,
     },
+    Spring {
+        frequency: NumberLiteral,
+        decay: NumberLiteral,
+        initial_velocity: NumberLiteral,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

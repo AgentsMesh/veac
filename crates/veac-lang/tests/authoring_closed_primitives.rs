@@ -12,7 +12,7 @@ fn output_video_closed_modes_survive_public_round_trip() {
         Rational::new(24_000, 1_001).unwrap()
     );
 
-    let crf = video(&project, 0);
+    let crf = video(&project, "dlv_crf");
     assert!(matches!(
         crf.video.rate_control,
         VideoRateControl::Crf { value: 18 }
@@ -20,19 +20,19 @@ fn output_video_closed_modes_survive_public_round_trip() {
     assert_eq!(crf.pass_mode, PassMode::Single);
     assert_eq!(crf.hardware, HardwareSelection::Auto);
 
-    let bitrate = video(&project, 1);
+    let bitrate = video(&project, "dlv_bitrate");
     assert!(matches!(
         bitrate.video.rate_control,
         VideoRateControl::Bitrate {
             target_bps: 6_000_000,
             max_bps: Some(8_000_000),
-            buffer_bps: Some(12_000_000)
+            buffer_size_bits: Some(12_000_000)
         }
     ));
     assert_eq!(bitrate.pass_mode, PassMode::TwoPass);
     assert_eq!(bitrate.hardware, HardwareSelection::Software);
 
-    let lossless = video(&project, 2);
+    let lossless = video(&project, "dlv_lossless");
     assert!(matches!(
         lossless.video.rate_control,
         VideoRateControl::Lossless
@@ -42,15 +42,18 @@ fn output_video_closed_modes_survive_public_round_trip() {
 
 #[test]
 fn output_video_rejects_open_ended_modes_and_bad_frame_rates() {
-    for invalid in [
-        "rate-control turbo;",
-        "rate-control crf;",
-        "rate-control bitrate { average 1000; bogus 2; }",
-        "pass-mode three-pass;",
-        "hardware quantum;",
+    for (video_field, mux_field) in [
+        ("rate-control turbo;", ""),
+        ("rate-control crf;", ""),
+        ("rate-control capped { target 1mbps; bogus 2; }", ""),
+        ("", "passes three-pass;"),
+        ("", "accelerator quantum;"),
     ] {
-        let source = single_output(invalid);
-        assert!(compile_round_trip(&source).is_err(), "accepted `{invalid}`");
+        let source = single_output(video_field, mux_field);
+        assert!(
+            compile_round_trip(&source).is_err(),
+            "accepted `{video_field} {mux_field}`"
+        );
     }
 
     let zero_rate = OUTPUTS.replace("24000/1001fps", "0/1001fps");
@@ -64,28 +67,32 @@ fn compile_round_trip(source: &str) -> Result<ProjectEnvelope, String> {
     lower_document(&reparsed).map_err(|error| format!("{error:?}"))
 }
 
-fn video(project: &ProjectEnvelope, index: usize) -> &VideoDeliverable {
-    let deliverable = &project.project.render_configs[index].deliverables[0];
+fn video<'a>(project: &'a ProjectEnvelope, id: &str) -> &'a VideoDeliverable {
+    let deliverable = project.project.render_configs[0]
+        .deliverables
+        .iter()
+        .find(|value| value.id.as_str() == id)
+        .unwrap_or_else(|| panic!("missing video artifact {id}"));
     let DeliverableKind::Video(video) = &deliverable.kind else {
         panic!("expected video output")
     };
     video
 }
 
-fn single_output(field: &str) -> String {
+fn single_output(video_field: &str, mux_field: &str) -> String {
     format!(
         r#"{BASE}
-output video invalid {{
+delivery invalid {{
   sequence main;
-  file-name "invalid.mp4";
-  encoding {{
-    container mp4;
-    video {{ codec h264; pixel-format yuv420p; {field} }}
-    audio none;
-    captions discard;
-    optimize-for-streaming false;
-    pass-mode single;
-    hardware auto;
+  raster {{ canvas 1920px by 1080px; frame-rate 24000/1001fps; captions discard; }}
+  artifact video invalid {{
+    target file "invalid.mp4";
+    mux mp4 {{
+      layout standard;
+      video h264 {{ pixel-format yuv420p; {video_field} }}
+      audio none;
+      {mux_field}
+    }}
   }}
 }}
 }}"#
@@ -112,20 +119,24 @@ settings {
 }
 entry sequence main;
 sequence main {}
-output video crf {
-  sequence main; file-name "crf.mp4";
-  encoding { container mp4; video { codec h264; pixel-format yuv420p; rate-control crf { value 18; } }
-    audio none; captions discard; optimize-for-streaming true; pass-mode single; hardware auto; }
-}
-output video bitrate {
-  sequence main; file-name "bitrate.mp4";
-  encoding { container mp4; video { codec h264; pixel-format yuv420p;
-      rate-control bitrate { target-bps 6000000; max-bps 8000000; buffer-bps 12000000; } }
-    audio none; captions discard; optimize-for-streaming false; pass-mode two-pass; hardware software; }
-}
-output video lossless {
-  sequence main; file-name "lossless.mp4";
-  encoding { container mp4; video { codec h264; pixel-format yuv420p; rate-control lossless; }
-    audio none; captions discard; optimize-for-streaming false; pass-mode single; hardware auto; }
+delivery closed-modes {
+  sequence main;
+  raster { canvas 1920px by 1080px; frame-rate 24000/1001fps; captions discard; }
+  artifact video crf {
+    target file "crf.mp4";
+    mux mp4 { layout fast-start; video h264 { pixel-format yuv420p; rate-control crf { value 18; } }
+      audio none; passes single; accelerator auto; }
+  }
+  artifact video bitrate {
+    target file "bitrate.mp4";
+    mux mp4 { layout standard; video h264 { pixel-format yuv420p;
+        rate-control capped { target 6mbps; max 8mbps; buffer 12mbit; } }
+      audio none; passes two-pass; accelerator software; }
+  }
+  artifact video lossless {
+    target file "lossless.mp4";
+    mux mp4 { layout standard; video h264 { pixel-format yuv420p; rate-control lossless; }
+      audio none; passes single; accelerator auto; }
+  }
 }
 }"#;

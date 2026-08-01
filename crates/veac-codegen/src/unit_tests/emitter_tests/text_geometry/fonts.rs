@@ -17,23 +17,27 @@ fn fallback_and_span_fonts_from_multiple_directories_share_safe_attachments() {
     let span_id = add_font_input(&mut plan, "pin_span_remote");
     set_input_identity(&mut plan, &fallback_id, &first_path);
     set_input_identity(&mut plan, &span_id, &second_path);
-    let primary = text_content(&mut plan).style.font.clone();
+    let primary = text_content(&mut plan).styled_mut().unwrap().font.clone();
     let mut fallback = primary.clone();
     fallback.input_id = fallback_id.clone();
     let mut span_font = primary;
     span_font.input_id = span_id.clone();
     let content = text_content(&mut plan);
     content.text = "\u{108e0}\u{108e1}".to_owned();
-    content.style.fallback_fonts.push(fallback);
-    content.style.spans.push(veac_plan::ResolvedTextSpan {
-        start: 0,
-        end: 1,
-        font: Some(span_font),
-        font_weight: None,
-        font_style: None,
-        size_pixels: None,
-        color: None,
-    });
+    content.styled_mut().unwrap().fallback_fonts.push(fallback);
+    content
+        .styled_mut()
+        .unwrap()
+        .spans
+        .push(veac_plan::ResolvedTextSpan {
+            start: 0,
+            end: 1,
+            font: Some(span_font),
+            font_weight: None,
+            font_style: None,
+            size_pixels: None,
+            color: None,
+        });
     let mut local = bindings(&plan);
     let fallback = plan
         .inputs

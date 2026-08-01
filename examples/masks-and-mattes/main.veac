@@ -1,83 +1,182 @@
 project masks-and-mattes {
   settings {
     timebase 1/1000;
-    canvas 1280px by 720px;
+    canvas 640px by 360px;
     frame-rate 30fps;
     sample-rate 48000hz;
   }
   entry sequence main;
 
   sequence main {
-    layer visual matte-source {
-      item matte {
-        source generated gradient radial {
-          center 50% 50%; radius 70%;
-          stop 0% #ffffffff; stop 100% #000000ff;
-        }
-        record { at 0s; duration 5s; }
-      }
-    }
     layer visual content {
-      item masked {
-        source generated solid { color #ef476fff; }
-        record { at 0s; duration 5s; }
+      item circle-stage {
+        source generated solid { color #ff2d95ff; }
+        record { at 0s; duration 1s; }
         modifiers {
-          mask focus {
+          mask circle-only {
             shape circle;
             position { x 50%; y 50%; }
-            scale { x 70%; y 70%; }
-            rotation 0deg;
+            scale { x 56%; y 56%; }
+            feather 8px;
+          }
+        }
+      }
+      item rectangle-stage {
+        source generated solid { color #00b4d8ff; }
+        record { at 1s; duration 1s; }
+        modifiers {
+          mask rectangle-only {
+            shape rectangle;
+            scale { x 70%; y 58%; }
+            feather 8px;
+          }
+        }
+      }
+      item ellipse-stage {
+        source generated solid { color #ffc857ff; }
+        record { at 2s; duration 1s; }
+        modifiers {
+          mask ellipse-only {
+            shape ellipse;
+            scale { x 68%; y 44%; }
+            feather 8px;
+          }
+        }
+      }
+      item rounded-stage {
+        source generated solid { color #7bd389ff; }
+        record { at 3s; duration 1s; }
+        modifiers {
+          mask rounded-only {
+            shape rounded-rectangle { radius 14%; }
+            scale { x 66%; y 52%; }
+            feather 8px;
+          }
+        }
+      }
+      item polygon-stage {
+        source generated solid { color #9b5de5ff; }
+        record { at 4s; duration 1s; }
+        modifiers {
+          mask polygon-only {
+            shape polygon {
+              point { x 50%; y 18%; }
+              point { x 82%; y 42%; }
+              point { x 68%; y 78%; }
+              point { x 32%; y 78%; }
+              point { x 18%; y 42%; }
+            }
+            feather 8px;
+          }
+        }
+      }
+      item path-stage {
+        source generated solid { color #f15bb5ff; }
+        record { at 5s; duration 1s; }
+        modifiers {
+          mask path-only {
+            shape path {
+              point { x 18%; y 72%; }
+              point { x 50%; y 18%; }
+              point { x 82%; y 72%; }
+            }
+            feather 8px;
+          }
+        }
+      }
+      item combined-masks {
+        source generated solid { color #ff006eff; }
+        record { at 6s; duration 2s; }
+        modifiers {
+          mask circle-window {
+            shape circle;
+            scale { x 76%; y 76%; }
             feather 18px;
             expansion 4px;
           }
-          mask crop-box { shape rectangle; scale { x 92%; y 82%; } }
-          mask rounded-box {
+          mask rectangle-window { shape rectangle; scale { x 74%; y 58%; } }
+          mask ellipse-window { shape ellipse; scale { x 72%; y 48%; } }
+          mask rounded-window {
             shape rounded-rectangle { radius 12%; }
-            scale { x 88%; y 76%; }
+            scale { x 70%; y 52%; }
           }
-          mask oval { shape ellipse; scale { x 80%; y 60%; } }
-          mask polygon {
+          mask polygon-window {
             shape polygon {
-              point { x 10%; y 10%; }
-              point { x 90%; y 15%; }
-              point { x 50%; y 90%; }
+              point { x 16%; y 22%; }
+              point { x 84%; y 22%; }
+              point { x 92%; y 78%; }
+              point { x 50%; y 92%; }
+              point { x 8%; y 78%; }
             }
           }
-          mask polygon-path {
+          mask path-window {
             shape path {
-              point { x 10%; y 10%; }
-              point { x 90%; y 20%; }
-              point { x 75%; y 90%; }
-              point { x 20%; y 80%; }
+              point { x 10%; y 50%; }
+              point { x 28%; y 16%; }
+              point { x 72%; y 16%; }
+              point { x 90%; y 50%; }
+              point { x 72%; y 84%; }
+              point { x 28%; y 84%; }
             }
+            feather 10px;
+            expansion -2px;
           }
         }
       }
+      item alpha-content {
+        source generated solid { color #00bbf9ff; }
+        record { at 8s; duration 2s; }
+      }
     }
-    layer visual alpha-source {
-      item alpha-matte {
+
+    layer visual matte {
+      item radial-matte {
         source generated gradient radial {
-          center 50% 50%; radius 45%;
-          stop 0% #ffffffff;
-          stop 60% #ffffffff;
-          stop 100% #ffffff00;
+          center 50% 50%; radius 62%;
+          stop 0% #ffffffff; stop 100% #000000ff;
         }
-        record { at 5s; duration 2s; }
+        record { at 6s; duration 2s; }
+      }
+      item alpha-source {
+        source generated gradient radial {
+          center 50% 50%; radius 48%;
+          stop 0% #ffffffff; stop 100% #00000000;
+        }
+        record { at 8s; duration 2s; }
       }
     }
-    layer visual alpha-content {
-      item alpha-masked {
-        source generated solid { color #118ab2ff; }
-        record { at 5s; duration 2s; }
-      }
-    }
-    relation matte luminance-mask {
-      endpoints { producer item matte; consumer item masked; }
+
+    relation matte soft-window {
+      endpoints { producer item radial-matte; consumer item combined-masks; }
       style { luma { invert false; } }
     }
-    relation matte alpha-inverted {
-      endpoints { producer item alpha-matte; consumer item alpha-masked; }
+    relation matte inverted-alpha {
+      endpoints { producer item alpha-source; consumer item alpha-content; }
       style { alpha { invert true; } }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 640px by 360px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
   }
 }

@@ -1,5 +1,8 @@
 use veac_plan::canonical::{Animatable, BlendMode, TimeRange};
-use veac_plan::{ResolvedApply, ResolvedApplyOperation, ResolvedSequence};
+use veac_plan::{
+    ResolvedApply, ResolvedApplyOperation, ResolvedApplyStage, ResolvedApplyTarget,
+    ResolvedSequence,
+};
 
 use super::{
     apply_slice, blend, color, effects, matte, process_owner::ProcessOwner, time, visual_pipeline,
@@ -13,7 +16,7 @@ pub(super) fn render(
     input: String,
     window: TimeRange,
 ) -> Result<String, CodegenErrors> {
-    let Some(active) = intersect(apply.record_range, window) else {
+    let Some(active) = apply_slice::intersect(apply.record_range, window) else {
         return Ok(input);
     };
     apply_slice::map(
@@ -38,12 +41,9 @@ pub(super) fn join(
         underlay,
         band,
         blend::Placement {
-            x: "0",
-            y: "0",
             start: "0".to_owned(),
             end: time::seconds(sequence.duration),
             mode: BlendMode::Normal,
-            shadow: None,
         },
     )
 }
@@ -90,7 +90,10 @@ fn process(
         (None, input)
     };
     for stage in &apply.stages {
-        let Some(active) = intersect(stage.active_range, window) else {
+        if !stage_used(apply, stage) {
+            continue;
+        }
+        let Some(active) = apply_slice::intersect(stage.active_range, window) else {
             continue;
         };
         processed = apply_slice::map(
@@ -134,14 +137,31 @@ fn process(
         original,
         &processed,
         blend::Placement {
-            x: "0",
-            y: "0",
             start: "0".to_owned(),
             end: time::seconds(window.duration),
             mode: apply.mix.blend_mode,
-            shadow: None,
         },
     ))
+}
+
+pub(super) fn stage_used(apply: &ResolvedApply, stage: &ResolvedApplyStage) -> bool {
+    let overlaps = |range| apply_slice::intersect(stage.active_range, range).is_some();
+    match &apply.target {
+        ResolvedApplyTarget::CompositeBand { active_ranges, .. }
+        | ResolvedApplyTarget::Layer { active_ranges, .. } => {
+            active_ranges.iter().copied().any(overlaps)
+        }
+        ResolvedApplyTarget::ItemSet { items } => {
+            items.iter().map(|item| item.active_range).any(overlaps)
+        }
+    }
+}
+
+pub(super) fn target_used(apply: &ResolvedApply, range: TimeRange) -> bool {
+    apply
+        .stages
+        .iter()
+        .any(|stage| apply_slice::intersect(stage.active_range, range).is_some())
 }
 
 fn needs_mix(apply: &ResolvedApply) -> bool {
@@ -149,23 +169,4 @@ fn needs_mix(apply: &ResolvedApply) -> bool {
         || apply.matte.is_some()
         || apply.mix.blend_mode != BlendMode::Normal
         || !matches!(&apply.mix.opacity, Animatable::Constant { value } if *value == 1.0)
-}
-
-fn intersect(left: TimeRange, right: TimeRange) -> Option<TimeRange> {
-    let start = if left.start > right.start {
-        left.start
-    } else {
-        right.start
-    };
-    let left_end = left.end().ok()?;
-    let right_end = right.end().ok()?;
-    let end = if left_end < right_end {
-        left_end
-    } else {
-        right_end
-    };
-    (start < end).then(|| TimeRange {
-        start,
-        duration: apply_slice::offset(start, end),
-    })
 }

@@ -23,7 +23,7 @@ mod tests;
 pub(super) struct ValidatedContract {
     pub plan: ContentDigest,
     pub resources: ContentDigest,
-    pub output_parents: Vec<PathBuf>,
+    pub output_parent: PathBuf,
     resource_paths: BTreeSet<PathBuf>,
 }
 
@@ -49,7 +49,7 @@ fn validate_while(
     active(&mut guard)?;
     filter::validate(bundle)?;
     active(&mut guard)?;
-    let output_parents = paths::validate(bundle, &resources.paths)?;
+    let output_parent = paths::validate(bundle, &resources.paths)?;
     let mut phases: BTreeMap<String, Vec<BackendPhase>> = BTreeMap::new();
     for task in &bundle.tasks {
         active(&mut guard)?;
@@ -74,7 +74,7 @@ fn validate_while(
     Ok(ValidatedContract {
         plan,
         resources: resources.fingerprint,
-        output_parents,
+        output_parent,
         resource_paths: resources.paths,
     })
 }

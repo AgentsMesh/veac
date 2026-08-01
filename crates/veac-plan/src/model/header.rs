@@ -5,7 +5,7 @@ use veac_ir::{ProjectId, SequenceId};
 use super::{ResolvedInput, ResolvedOutput, ResolvedSequence};
 
 pub const RENDER_PLAN_SCHEMA_ID: &str = "https://veac.dev/schemas/render-plan";
-pub const CURRENT_RENDER_PLAN_VERSION: u32 = 2;
+pub const CURRENT_RENDER_PLAN_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

@@ -62,10 +62,13 @@ fn preserves_typed_modifier_and_structure_blocks() {
       response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     }
   }
-  output video master {
+  delivery master {
     sequence main;
-    file-name "master.mp4";
-    encoding { video { codec h264; } }
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video master {
+      target file "master.mp4";
+      mux mp4 { video h264 {} audio none; }
+    }
   }
 "#,
     );
@@ -82,7 +85,7 @@ fn preserves_typed_modifier_and_structure_blocks() {
     let structures = &parsed.project.sequences[0].structures;
     assert_eq!(structures.len(), 2);
     assert_eq!(parsed.project.annotations.len(), 1);
-    assert_eq!(parsed.project.outputs.len(), 1);
+    assert_eq!(parsed.project.deliveries.len(), 1);
     let StructureDecl::Relation(relation) = &structures[0] else {
         panic!("relation expected")
     };
@@ -103,5 +106,5 @@ fn preserves_typed_modifier_and_structure_blocks() {
         matches!(&apply.pipeline[0], ApplyStageDecl::Effect(value) if value.id.value == "grade")
     );
     assert_eq!(apply.mix.blend.as_ref().unwrap().value, "screen");
-    assert_eq!(parsed.project.outputs[0].sequence.value, "main");
+    assert_eq!(parsed.project.deliveries[0].sequence.value, "main");
 }

@@ -60,7 +60,7 @@ fn audio_synced_angles_switch_video_without_emitting_clip_audio() {
     assert!(source
         .angles
         .iter()
-        .all(|angle| angle.audio_stream.is_some()));
+        .all(|angle| angle.audio_stream.is_none()));
     assert!(rendered.plan.sequences[0].tracks[0].clips[0]
         .audio
         .is_none());

@@ -42,6 +42,16 @@ pub struct ApplyStage {
     pub operation: ApplyOperation,
 }
 
+impl ApplyStage {
+    pub fn is_executable(&self) -> bool {
+        self.enabled
+            && match &self.operation {
+                ApplyOperation::Color { .. } => true,
+                ApplyOperation::Effect { effect } => effect.enabled,
+            }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ApplyOperation {

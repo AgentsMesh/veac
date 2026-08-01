@@ -56,7 +56,9 @@ fn image_pattern_cannot_consume_a_material_path() {
         .deliverables
         .push(Deliverable {
             id: DeliverableId::new("dlv_sequence").unwrap(),
-            file_name: "clip-%d.png".to_owned(),
+            target: veac_ir::DeliverableTarget::ImageSequence {
+                pattern: "clip-%d.png".to_owned(),
+            },
             kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
                 format: ImageFormat::Png,
                 start_number: 1,
@@ -122,14 +124,14 @@ fn two_pass_render_executes_analysis_before_delivery() {
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
     let video = envelope.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap();
     video.pass_mode = veac_ir::PassMode::TwoPass;
     video.hardware = veac_ir::HardwareSelection::Software;
     video.video.rate_control = veac_ir::VideoRateControl::Bitrate {
         target_bps: 1_000_000,
         max_bps: Some(1_500_000),
-        buffer_bps: Some(2_000_000),
+        buffer_size_bits: Some(2_000_000),
     };
     write_project(&project, &envelope);
     let environment = FakeEnvironment::success();
@@ -144,7 +146,9 @@ fn image_sequence_delivery_expands_the_authored_pattern() {
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
     let deliverable = &mut envelope.project.render_configs[0].deliverables[0];
-    deliverable.file_name = "frame-%04d.png".into();
+    deliverable.target = veac_ir::DeliverableTarget::ImageSequence {
+        pattern: "frame-%04d.png".into(),
+    };
     deliverable.kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Png,
         start_number: 1,

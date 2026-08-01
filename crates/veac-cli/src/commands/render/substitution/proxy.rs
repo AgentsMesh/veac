@@ -1,9 +1,6 @@
 use std::time::Instant;
-use veac_artifact::{
-    ContentDigest, DigestAlgorithm, MediaArtifactRequest, MediaArtifactSpec, ProducerFingerprint,
-    ProxyAudioSpec, ProxySelectionRequest, ProxyVideoSpec, SourceClockSpec,
-};
-use veac_ir::{HashAlgorithm, MaterialKind, StreamSelection};
+use veac_artifact::{ProducerFingerprint, ProxySelectionRequest};
+use veac_ir::MaterialKind;
 use veac_plan::ResolvedInputKind;
 
 use crate::arguments::SubstitutionPolicy;
@@ -11,6 +8,8 @@ use crate::error::{CliError, CliResult};
 use crate::planning::PreparedPlan;
 
 mod clock;
+mod descriptor;
+mod profile;
 mod verify;
 
 #[cfg(test)]
@@ -26,6 +25,10 @@ pub(super) fn apply(
     deadline: Instant,
 ) -> CliResult {
     if policy == SubstitutionPolicy::Original {
+        return Ok(());
+    }
+    let profile = profile::resolve(&prepared.plan.output)?;
+    if profile.is_empty() {
         return Ok(());
     }
     if Instant::now() >= deadline {
@@ -44,11 +47,17 @@ pub(super) fn apply(
         ) {
             continue;
         }
-        let source_identity = source_identity(&input.observed_identity)?;
+        let needs_video = input.video.is_some() && profile.raster.is_some();
+        let needs_audio = input.audio.is_some() && profile.audio.is_some();
+        if !needs_video && !needs_audio {
+            continue;
+        }
+        let source_identity = descriptor::source_identity(&input.observed_identity)?;
         let video = input
             .video
             .as_ref()
-            .map(|stream| {
+            .zip(profile.raster.as_ref())
+            .map(|(stream, raster)| {
                 let source_clock = clock::resolve(
                     &input.id,
                     prepared.plan.header.source.timebase,
@@ -60,16 +69,16 @@ pub(super) fn apply(
                     stream.duration,
                     "video",
                 )?;
-                video_descriptor(
-                    prepared,
+                descriptor::video(
                     stream.selection,
                     source_clock,
                     &source_identity,
                     producer,
+                    raster,
                 )
             })
             .transpose()?;
-        let audio = audio_settings(prepared).and_then(|settings| {
+        let audio = profile.audio.as_ref().and_then(|settings| {
             input.audio.as_ref().map(|stream| {
                 let source_clock = clock::resolve(
                     &input.id,
@@ -82,10 +91,11 @@ pub(super) fn apply(
                     stream.duration,
                     "audio",
                 )?;
-                audio_descriptor(
+                descriptor::audio(
                     stream.selection,
                     source_clock,
-                    settings,
+                    settings.sample_rate,
+                    settings.channels,
                     &source_identity,
                     producer,
                 )
@@ -115,81 +125,6 @@ pub(super) fn apply(
             .map_err(artifact_error)?;
     }
     Ok(())
-}
-
-fn video_descriptor(
-    prepared: &PreparedPlan,
-    source_stream: StreamSelection,
-    source_clock: SourceClockSpec,
-    source: &ContentDigest,
-    producer: &ProducerFingerprint,
-) -> CliResult<veac_artifact::ArtifactDescriptor> {
-    descriptor(
-        source,
-        producer,
-        MediaArtifactSpec::ProxyVideo(ProxyVideoSpec {
-            source_stream,
-            source_clock,
-            width: prepared.plan.output.width,
-            height: prepared.plan.output.height,
-            frame_rate: prepared.plan.output.frame_rate,
-            crf: 28,
-        }),
-    )
-}
-
-fn audio_descriptor(
-    source_stream: StreamSelection,
-    source_clock: SourceClockSpec,
-    settings: &veac_ir::AudioOutput,
-    source: &ContentDigest,
-    producer: &ProducerFingerprint,
-) -> CliResult<veac_artifact::ArtifactDescriptor> {
-    descriptor(
-        source,
-        producer,
-        MediaArtifactSpec::ProxyAudio(ProxyAudioSpec {
-            source_stream,
-            source_clock,
-            sample_rate: settings.sample_rate,
-            channels: settings.channels,
-        }),
-    )
-}
-
-fn descriptor(
-    source: &ContentDigest,
-    producer: &ProducerFingerprint,
-    spec: MediaArtifactSpec,
-) -> CliResult<veac_artifact::ArtifactDescriptor> {
-    MediaArtifactRequest {
-        source_identity: source.clone(),
-        producer: producer.clone(),
-        spec,
-    }
-    .descriptor()
-    .map_err(artifact_error)
-}
-
-fn source_identity(identity: &veac_ir::MediaIdentity) -> CliResult<ContentDigest> {
-    if identity.algorithm != HashAlgorithm::Sha256 {
-        return Err(CliError::new(
-            "PROXY_IDENTITY_UNSUPPORTED",
-            "automatic proxy selection requires SHA-256 input identity",
-        ));
-    }
-    Ok(ContentDigest {
-        algorithm: DigestAlgorithm::Sha256,
-        value: identity.digest.clone(),
-    })
-}
-
-fn audio_settings(prepared: &PreparedPlan) -> Option<&veac_ir::AudioOutput> {
-    prepared
-        .plan
-        .output
-        .video_deliverable()
-        .and_then(|(_, value)| value.audio.as_ref())
 }
 
 fn artifact_error(error: veac_artifact::ArtifactError) -> CliError {

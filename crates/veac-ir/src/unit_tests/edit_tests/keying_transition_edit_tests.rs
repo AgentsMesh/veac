@@ -103,9 +103,7 @@ fn luma_key_and_spill_parameters_edit_with_registry_type_and_range_guards() {
         parameter(
             "fx_luma_edit",
             "threshold",
-            ParameterValue::Text {
-                value: "wrong".to_owned(),
-            },
+            ParameterValue::Boolean { value: true },
         ),
         parameter(
             "fx_spill_edit",

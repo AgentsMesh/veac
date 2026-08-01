@@ -1,6 +1,7 @@
 use super::super::{
     error::{canonical_errors, internal_hash_error, normalize_diagnostics},
     material::InputUsage,
+    reachability::ClipDemand,
     PlanResolver,
 };
 use super::support::*;
@@ -158,11 +159,9 @@ fn direct_id_sequence_mapping_and_transition_defenses_are_total() {
         .resolve_clip(
             &main,
             &invalid_clip,
-            TrackKind::Video,
-            EffectiveTrackState {
-                include_in_render: true,
-                visual_enabled: true,
-                audio_enabled: false,
+            ClipDemand {
+                visual: true,
+                ..ClipDemand::default()
             },
             0,
         )

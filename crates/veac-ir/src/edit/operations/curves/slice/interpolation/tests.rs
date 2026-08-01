@@ -56,6 +56,33 @@ fn nonflat_subcurve_with_equal_endpoints_is_not_silently_flattened() {
     assert!(between(&keys(easing), time(0), time(50)).is_err());
 }
 
+#[test]
+fn restricted_spring_is_exactly_reparameterized() {
+    let spring = Interpolation::Spring {
+        frequency: 1.5,
+        decay: 6.0,
+        initial_velocity: -0.25,
+    };
+    let restricted = restrict(&spring, 0.17, 0.83).unwrap();
+    let low = spring.evaluate(0.17);
+    let high = spring.evaluate(0.83);
+    for local in [0.0, 0.1, 0.37, 0.75, 1.0] {
+        let expected = (spring.evaluate(0.17 + 0.66 * local) - low) / (high - low);
+        assert_close(restricted.evaluate(local), expected);
+    }
+    assert!(matches!(restricted, Interpolation::Spring { .. }));
+}
+
+#[test]
+fn spring_restriction_fails_closed_for_a_zero_value_span() {
+    let spring = Interpolation::Spring {
+        frequency: 1.5,
+        decay: 6.0,
+        initial_velocity: 0.0,
+    };
+    assert!(restrict(&spring, 0.25, 0.25 + 1e-12).is_err());
+}
+
 fn keys(interpolation: Interpolation) -> Vec<Keyframe<f64>> {
     vec![
         Keyframe {

@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use veac_ir::{AudioStemFormat, CaptionSidecarFormat, Deliverable, DeliverableKind, ImageFormat};
+use veac_ir::{
+    AdaptivePackage, AnimatedImage, AudioFileEncoding, AudioStemFormat, CaptionSidecarFormat,
+    Deliverable, DeliverableKind, DeliverableTarget, ImageFormat,
+};
 
 use crate::error::{CliError, CliResult};
 
@@ -23,6 +26,15 @@ pub(super) fn validate(
 }
 
 pub(super) fn validate_name(deliverable: &Deliverable, candidate: &Path) -> CliResult {
+    if !target_matches_kind(deliverable) {
+        return Err(CliError::new(
+            "OUTPUT_TARGET_KIND_MISMATCH",
+            format!(
+                "deliverable {} has an incompatible target kind",
+                deliverable.id
+            ),
+        ));
+    }
     let name = candidate
         .file_name()
         .and_then(|value| value.to_str())
@@ -50,6 +62,12 @@ pub(super) fn validate_name(deliverable: &Deliverable, candidate: &Path) -> CliR
                 AudioStemFormat::Flac => "flac",
             },
         ),
+        DeliverableKind::AudioFile(settings) => match settings.encoding {
+            AudioFileEncoding::Mp3(_) => extension(name, "mp3"),
+        },
+        DeliverableKind::AnimatedImage(AnimatedImage::Gif(_)) => extension(name, "gif"),
+        DeliverableKind::StillImage(settings) => image_extension(name, settings.encoding),
+        DeliverableKind::AdaptivePackage(AdaptivePackage::Hls(_)) => !name.is_empty(),
         DeliverableKind::Scope(settings) => image_extension(name, settings.format),
     };
     if valid {
@@ -66,7 +84,34 @@ pub(super) fn validate_name(deliverable: &Deliverable, candidate: &Path) -> CliR
     }
 }
 
+fn target_matches_kind(value: &Deliverable) -> bool {
+    matches!(
+        (&value.kind, &value.target),
+        (
+            DeliverableKind::ImageSequence(_),
+            DeliverableTarget::ImageSequence { .. }
+        ) | (
+            DeliverableKind::Video(_)
+                | DeliverableKind::CaptionSidecar(_)
+                | DeliverableKind::AudioStem(_)
+                | DeliverableKind::AudioFile(_)
+                | DeliverableKind::AnimatedImage(_)
+                | DeliverableKind::StillImage(_)
+                | DeliverableKind::Scope(_),
+            DeliverableTarget::File { .. }
+        ) | (
+            DeliverableKind::AdaptivePackage(_),
+            DeliverableTarget::Package { .. }
+        )
+    )
+}
+
 fn consumes(candidate: &Path, deliverable: &Deliverable, protected: &Path) -> bool {
+    if matches!(deliverable.kind, DeliverableKind::AdaptivePackage(_)) {
+        return candidate == protected
+            || candidate.starts_with(protected)
+            || protected.starts_with(candidate);
+    }
     if !matches!(deliverable.kind, DeliverableKind::ImageSequence(_)) {
         return candidate == protected;
     }
@@ -95,3 +140,7 @@ fn extension(value: &str, expected: &str) -> bool {
         .rsplit_once('.')
         .is_some_and(|(_, value)| value.eq_ignore_ascii_case(expected))
 }
+
+#[cfg(test)]
+#[path = "contract/tests.rs"]
+mod tests;

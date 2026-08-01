@@ -22,15 +22,20 @@ fn srt_speaker_and_plain_format_rich_spans_are_typed_rejections() {
 
     for format in [CaptionSidecarFormat::Srt, CaptionSidecarFormat::WebVtt] {
         let (mut plan, bindings, _) = caption_plan(format);
-        first(&mut plan).0.style.spans.push(ResolvedTextSpan {
-            start: 0,
-            end: 1,
-            font: None,
-            font_weight: Some(FontWeight::Bold),
-            font_style: None,
-            size_pixels: None,
-            color: None,
-        });
+        first(&mut plan)
+            .0
+            .styled_mut()
+            .unwrap()
+            .spans
+            .push(ResolvedTextSpan {
+                start: 0,
+                end: 1,
+                font: None,
+                font_weight: Some(FontWeight::Bold),
+                font_style: None,
+                size_pixels: None,
+                color: None,
+            });
         let diagnostic = emit_all(&plan, &bindings).unwrap_err().diagnostics()[0].clone();
         assert_eq!(diagnostic.kind, CodegenErrorKind::UnsupportedCaptionFeature);
         assert_eq!(diagnostic.code, "CAPTION_RICH_TEXT_UNSUPPORTED");

@@ -1,6 +1,6 @@
 use tempfile::tempdir;
 use veac_ir::{
-    AudioCodec, AudioOutput, AudioStemFormat, AudioStemOutput, AudioStemSource,
+    AudioCodec, AudioMixSource, AudioOutput, AudioStemFormat, AudioStemOutput,
     CaptionSidecarFormat, CaptionSidecarOutput, DeliverableKind, ImageFormat, ImageSequenceOutput,
     RationalTime, ScopeOutput, VideoScope,
 };
@@ -83,7 +83,9 @@ fn mismatched_auxiliary_extension_is_rejected_before_render() {
     let mut prepared =
         crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
     let deliverable = &mut prepared.plan.output.deliverables[0];
-    deliverable.file_name = "captions.json".into();
+    deliverable.target = veac_ir::DeliverableTarget::File {
+        name: "captions.json".into(),
+    };
     deliverable.kind = DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
         format: CaptionSidecarFormat::Srt,
         track_ids: vec![],
@@ -98,7 +100,12 @@ fn assert_bound(name: &str, kind: DeliverableKind) {
     let mut prepared =
         crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
     let deliverable = &mut prepared.plan.output.deliverables[0];
-    deliverable.file_name = name.into();
+    deliverable.target = match kind {
+        DeliverableKind::ImageSequence(_) => veac_ir::DeliverableTarget::ImageSequence {
+            pattern: name.into(),
+        },
+        _ => veac_ir::DeliverableTarget::File { name: name.into() },
+    };
     deliverable.kind = kind;
     let paths = crate::output::bind_render_outputs(&mut prepared, None).unwrap();
     assert_eq!(paths[0].file_name().unwrap(), name);
@@ -112,6 +119,6 @@ fn audio_stem(format: AudioStemFormat) -> AudioStemOutput {
             sample_rate: 48_000,
             channels: 2,
         },
-        source: AudioStemSource::Master,
+        source: AudioMixSource::Master,
     }
 }

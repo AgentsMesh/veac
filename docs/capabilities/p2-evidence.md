@@ -22,7 +22,7 @@ render mechanism. “Contract” never means that VEAC bundles a model or claims
 ### P2-04
 - P2-04 implementation: [tracking contract](../../crates/veac-provider/src/vision/tracking.rs)
 - P2-04 verification: [stabilization proposal tests](../../crates/veac-provider/src/unit_tests/proposal_tests/stabilization_tests.rs)
-- P2-04 application: [deshake pixel E2E](../../crates/veac-runtime/tests/render_e2e/effects.rs)
+- P2-04 application: [two-pass vidstab motion E2E](../../crates/veac-runtime/tests/render_e2e/stabilization.rs)
 - P2-04 contract: [dynamic crop mapping tests](../../crates/veac-provider/src/unit_tests/proposal_tests/crop_dynamic_tests.rs)
 ### P2-05
 - P2-05 implementation: [segmentation contract](../../crates/veac-provider/src/vision/segmentation.rs)

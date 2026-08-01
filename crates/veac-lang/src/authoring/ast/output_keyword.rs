@@ -1,6 +1,7 @@
 use super::{
-    AlphaMode, AudioCodec, AudioStemFormat, CaptionOutput, CaptionSidecarFormat, HardwareBackend,
-    ImageFormat, OutputFormat, PassMode, PixelFormat, VideoCodec, VideoProfile, VideoScope,
+    AlphaMode, AudioCodec, AudioStemFormat, CaptionOutput, CaptionSidecarFormat, GifDither,
+    HardwareBackend, ImageFormat, OutputFormat, PassMode, PixelFormat, VideoCodec, VideoProfile,
+    VideoScope,
 };
 
 pub(crate) trait OutputKeyword: Sized {
@@ -82,6 +83,12 @@ output_keywords!(VideoScope,
     "waveform" => VideoScope::Waveform,
     "vectorscope" => VideoScope::Vectorscope,
     "histogram" => VideoScope::Histogram,
+);
+output_keywords!(GifDither,
+    "bayer" => GifDither::Bayer,
+    "floyd-steinberg" => GifDither::FloydSteinberg,
+    "sierra2" => GifDither::Sierra2,
+    "none" => GifDither::None,
 );
 output_keywords!(VideoProfile,
     "h264-baseline" => VideoProfile::H264Baseline,

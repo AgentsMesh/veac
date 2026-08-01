@@ -8,6 +8,7 @@ impl Parser {
         self.left_brace()?;
         let mut source = None;
         let mut record = None;
+        let mut state = None;
         let mut mapping = None;
         let mut template_slot = None;
         let mut modifiers = Vec::new();
@@ -20,6 +21,12 @@ impl Parser {
                 let span = self.current().span;
                 let value = self.record_span();
                 assign(self, "record", &mut record, value, span);
+            } else if self.at_word("state") {
+                let span = self.required_word("state")?;
+                let value = self
+                    .semantic_block()
+                    .and_then(|block| super::timeline_state::item(self, block));
+                assign(self, "item state", &mut state, value, span);
             } else if self.at_word("mapping") {
                 let span = self.current().span;
                 let value = self.mapping();
@@ -34,7 +41,7 @@ impl Parser {
                 let span = self.current().span;
                 self.error(
                     "AUTHORING_ITEM_MEMBER",
-                    "item member must be source, record, mapping, template-slot, or modifiers"
+                    "item member must be source, record, state, mapping, template-slot, or modifiers"
                         .to_owned(),
                     span,
                 );
@@ -49,6 +56,7 @@ impl Parser {
             id,
             source,
             record: required(self, "record", record, span)?,
+            state,
             mapping,
             template_slot,
             modifiers,

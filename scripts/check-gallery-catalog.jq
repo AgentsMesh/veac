@@ -5,7 +5,7 @@ def chinese_presentation:
   nonempty and test("[一-龥]");
 
 def without_standard_tokens:
-  gsub("VEAC|AgentsMesh|Apple ProRes|ALAC|AAC|BT\\.709|GIF|H\\.264|HSL|LUFS|LUT|PCM|PNG|RGB|WAV|WebVTT"; "");
+  gsub("VEAC|AgentsMesh|Apple ProRes|ALAC|AAC|BT\\.709|BT\\.2020|GIF|H\\.264|H\\.265|HDR|HEVC|HLS|HSL|LUFS|LUT|MP3|MOV|Main10|Opus|PCM|PNG|PQ|RGB|VP9|WAV|WebM|WebVTT"; "");
 
 def chinese_explanation:
   chinese_presentation and
@@ -19,18 +19,22 @@ def exact_keys($expected):
   (keys_unsorted | sort) == ($expected | sort);
 
 def artifact_key:
-  if .kind == "authoring_output" then "authoring_output:" + .id else .kind end;
+  if .kind == "authoring_delivery" then "authoring_delivery:" + .id else .kind end;
 
 def expected_artifact:
   . as $artifact
-  | if $artifact.kind == "authoring_output" then
-      ($artifact | exact_keys(["id", "kind"])) and
-      ($artifact.id | nonempty and test("^[a-z][a-z0-9-]*$"))
+  | if $artifact.kind == "authoring_delivery" then
+      ($artifact | exact_keys(["artifact_ids", "id", "kind"])) and
+      ($artifact.id | nonempty and test("^[a-z][a-z0-9-]*$")) and
+      ($artifact.artifact_ids | type == "array" and length > 0 and
+        all(.[]; nonempty and test("^[a-z][a-z0-9-]*$")) and
+        length == (unique | length))
     else
       ($artifact | exact_keys(["kind"])) and
       ($artifact.kind as $kind | [
         "canonical_project", "resolved_plan", "provider_observations",
-        "caption_sidecar", "template_bindings", "edit_outcome", "probe_snapshot"
+        "preview_canonical_project", "preview_resolved_plan", "caption_sidecar",
+        "template_bindings", "edit_outcome", "probe_snapshot"
       ] | index($kind) != null)
     end;
 
@@ -46,11 +50,12 @@ def evidence_owner:
 
 def source_artifacts:
   all(.expected_artifacts[];
-    .kind == "canonical_project" or .kind == "resolved_plan" or
-    .kind == "authoring_output") and
+    .kind == "canonical_project" or .kind == "preview_canonical_project" or
+    .kind == "preview_resolved_plan" or .kind == "authoring_delivery") and
   ([.expected_artifacts[] | select(.kind == "canonical_project")] | length == 1) and
-  ([.expected_artifacts[] | select(.kind == "resolved_plan")] | length == 1) and
-  any(.expected_artifacts[]; .kind == "authoring_output");
+  ([.expected_artifacts[] | select(.kind == "preview_canonical_project")] | length == 1) and
+  ([.expected_artifacts[] | select(.kind == "preview_resolved_plan")] | length == 1) and
+  any(.expected_artifacts[]; .kind == "authoring_delivery");
 
 def presentation_check:
   exact_keys(["cue", "expect"]) and
@@ -92,11 +97,23 @@ def examples_are_closed:
   ([.examples[].source] | sort)
   == ([.targets[] | select(.example | nonempty) | .example] | sort);
 
+def checks_fit_preview_windows:
+  . as $root |
+  all($root.targets[] | select(.kind == "render");
+    . as $target |
+    ($root.examples[] | select(.source == $target.example)) as $example |
+    ([ $example.checks[].cue |
+      scan("[0-9]+(?:\\.[0-9]+)?") | tonumber ] | max) as $cue_end |
+    ($cue_end == null or
+      $cue_end <= ($target.preview_window.start_seconds +
+        $target.preview_window.duration_seconds)));
+
 exact_keys(["examples", "presentation_language", "schema_version", "targets"]) and
-.schema_version == 5 and
+.schema_version == 7 and
 .presentation_language == "zh-CN" and
 (.examples | type == "array" and length > 0 and unique_ids) and
 all(.examples[]; example) and
 (.targets | type == "array" and length > 0 and unique_ids) and
 all(.targets[]; target) and
-examples_are_closed
+examples_are_closed and
+checks_fit_preview_windows

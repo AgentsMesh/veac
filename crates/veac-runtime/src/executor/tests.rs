@@ -13,6 +13,8 @@ mod bundle_tests;
 mod contract_hardening_tests;
 #[path = "tests/deadline_tests.rs"]
 mod deadline_tests;
+#[path = "tests/dynamic_publication_tests.rs"]
+mod dynamic_publication_tests;
 #[path = "tests/failure_tests.rs"]
 mod failure_tests;
 #[path = "tests/passlog_snapshot_tests.rs"]
@@ -108,6 +110,7 @@ fn guarded_real_bundle_surfaces_ffmpeg_failure() {
 
 fn real_video_task(output: std::path::PathBuf) -> BackendTask {
     let command = BackendCommand {
+        preparations: vec![],
         inputs: vec![],
         filter_graph: Some("color=c=black:s=32x32:d=0.1[outv]".into()),
         filter_contract: None,

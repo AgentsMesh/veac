@@ -89,6 +89,7 @@ fn ffmpeg_bundle(
     let mut value = bundle(output);
     value.tasks[0].product = BackendProduct::VideoMaster;
     value.tasks[0].action = BackendAction::Ffmpeg(BackendCommand {
+        preparations: vec![],
         inputs: vec![BackendInput {
             path: resource.to_path_buf(),
         }],

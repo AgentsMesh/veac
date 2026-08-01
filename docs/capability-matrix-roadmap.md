@@ -102,7 +102,7 @@ explicit hardware upload/device implementation.
 | `P2-01` | P2 | ASR/language/translation/TTS/dubbing contracts and evidence-bound project mappings | Delivered/Contract | [P2-01](capabilities/p2-evidence.md#p2-01) |
 | `P2-02` | P2 | Local audio EQ/dynamics/ducking plus denoise/separation media application | Delivered/Contract | [P2-02](capabilities/p2-evidence.md#p2-02) |
 | `P2-03` | P2 | Advanced color/LUT/scopes plus evidence-bound color-match application | Delivered/Contract | [P2-03](capabilities/p2-evidence.md#p2-03) |
-| `P2-04` | P2 | Executable deshake plus tracking/stabilization sample-to-transform/crop mappings | Delivered/Contract | [P2-04](capabilities/p2-evidence.md#p2-04) |
+| `P2-04` | P2 | Two-pass vidstab plus tracking/stabilization sample-to-transform/crop mappings | Delivered/Contract | [P2-04](capabilities/p2-evidence.md#p2-04) |
 | `P2-05` | P2 | Temporal segmentation/correction-matte contracts and evidence-bound matte application | Delivered/Contract | [P2-05](capabilities/p2-evidence.md#p2-05) |
 | `P2-06` | P2 | Language/scene/beat/silence/filler/highlight/selection analysis annotations | Delivered/Contract | [P2-06](capabilities/p2-evidence.md#p2-06) |
 | `P2-07` | P2 | Subject/crop paths mapped exactly to animated clip-local crop viewports | Delivered/Contract | [P2-07](capabilities/p2-evidence.md#p2-07) |
@@ -132,5 +132,5 @@ Complete Markdown snippets use `veac,compile` and are parsed, validated, and che
 format by authoring parse/format idempotence tests; fragments stay unmarked.
 
 Every Rust source/test file stays below 200 lines; `include!` is rejected. Production Lines and
-Functions must each be at least 95.02 percent for every crate and the workspace. Coverage is a floor:
+Functions must each strictly exceed 95.02 percent for every crate and the workspace. Coverage is a floor:
 a backend-visible row cannot be Delivered without decoded pixel, audio, timing, or metadata evidence.

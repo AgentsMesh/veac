@@ -1,6 +1,6 @@
 use super::super::directory::Directory;
 use super::super::{commit, StagedFile};
-use super::RollbackFault;
+use super::{apply_with, file_outputs, RollbackFault};
 use crate::RuntimeErrorKind;
 
 #[test]
@@ -14,8 +14,9 @@ fn deadline_during_install_rolls_back_every_output() {
     let stage = Directory::open(staging.path()).unwrap();
     let output = Directory::open(temp.path()).unwrap();
     let mut calls = 0;
-    let error = commit::apply_with(
-        commit::CommitContext::new(staging.path(), &stage, &output, &files, &[], false),
+    let outputs = file_outputs(&files);
+    let error = apply_with(
+        commit::CommitContext::new(staging.path(), &stage, &output, &outputs, &[]),
         || {
             calls += 1;
             calls < 11
@@ -41,5 +42,9 @@ fn staged(
     let target = output.join(format!("{name}.out"));
     std::fs::write(&source, new).unwrap();
     std::fs::write(&target, old).unwrap();
-    StagedFile { source, target }
+    StagedFile {
+        source,
+        target,
+        allow_empty: false,
+    }
 }

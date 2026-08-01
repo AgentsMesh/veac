@@ -64,8 +64,12 @@ or decoded-output observation. The linked tests are entry points into broader mo
 - P1-14 observable: [mask-shape pixel E2E](../../crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs)
 ### P1-15
 - P1-15 implementation: [card and shadow model](../../crates/veac-ir/src/model/properties/composition.rs)
-- P1-15 verification: [graphics codegen tests](../../crates/veac-codegen/src/unit_tests/emitter_tests/graphics.rs)
-- P1-15 observable: [card/shadow render E2E](../../crates/veac-runtime/tests/render_e2e/text.rs)
+- P1-15 authoring AST: [typed surface declaration](../../crates/veac-lang/src/authoring/ast/modifier_surface.rs)
+- P1-15 authoring parser: [closed surface grammar](../../crates/veac-lang/src/authoring/parser/modifier_surface.rs)
+- P1-15 lowering: [surface to canonical card style](../../crates/veac-lang/src/authoring/lower/modifier_surface.rs)
+- P1-15 verification: [surface round-trip and rejection tests](../../crates/veac-lang/src/authoring/tests/surface.rs)
+- P1-15 observable: [card render E2E](../../crates/veac-runtime/tests/render_e2e/composition_card.rs)
+- P1-15 shadow observable: [shadow clipping pixel E2E](../../crates/veac-runtime/tests/render_e2e/composition_shadow_clipping.rs)
 ### P1-16
 - P1-16 implementation: [text style model](../../crates/veac-ir/src/model/properties/text.rs)
 - P1-16 verification: [text graphics validation](../../crates/veac-ir/src/unit_tests/validation_tests/text_graphics_tests.rs)

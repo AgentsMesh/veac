@@ -7,7 +7,7 @@ use {std::collections::BTreeMap, support::*};
 fn resolves_fonts_freeze_generated_audio_effects_and_transitions() {
     let mut project = project();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

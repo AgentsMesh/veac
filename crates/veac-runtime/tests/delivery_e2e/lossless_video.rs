@@ -54,7 +54,9 @@ fn video(id: &str, file: &str, container: OutputFormat, codec: VideoCodec) -> De
     };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::Video(settings),
     }
 }

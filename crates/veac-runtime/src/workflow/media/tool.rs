@@ -47,6 +47,16 @@ pub(super) fn verify(
 pub fn media_artifact_producer(
     fingerprint: &FfmpegFingerprint,
 ) -> Result<ProducerFingerprint, RuntimeError> {
+    media_artifact_producer_for_contract(
+        fingerprint,
+        veac_codegen::RENDER_IMPLEMENTATION_CONTRACT_VERSION,
+    )
+}
+
+fn media_artifact_producer_for_contract(
+    fingerprint: &FfmpegFingerprint,
+    render_contract_version: u32,
+) -> Result<ProducerFingerprint, RuntimeError> {
     fingerprint.configuration.validate().map_err(|error| {
         RuntimeError::new(format!("invalid FFmpeg producer configuration: {error}"))
     })?;
@@ -56,7 +66,8 @@ pub fn media_artifact_producer(
         ));
     }
     let mut contract = b"veac.media-workflow-producer".to_vec();
-    contract.extend_from_slice(&3_u32.to_be_bytes());
+    contract.extend_from_slice(&4_u32.to_be_bytes());
+    contract.extend_from_slice(&render_contract_version.to_be_bytes());
     field(&mut contract, fingerprint.configuration.value.as_bytes());
     for argument in input_policy::string_arguments() {
         field(&mut contract, argument.as_bytes());

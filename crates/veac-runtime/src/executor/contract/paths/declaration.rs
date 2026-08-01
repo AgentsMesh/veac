@@ -16,6 +16,7 @@ pub(super) use matching::{consumes, overlaps};
 
 pub(in crate::executor::contract) enum Declaration {
     Static(PathBuf),
+    Tree(PathBuf),
     Pattern {
         parent: PathBuf,
         prefix: Vec<u8>,
@@ -45,6 +46,7 @@ pub(in crate::executor::contract) fn collect(
                 }
             }
             BackendOutput::ImageSequence { pattern } => values.push(image::from_path(pattern)?),
+            BackendOutput::Package { root, .. } => values.push(package_root(root)?),
         }
     }
     Ok(values)
@@ -52,7 +54,9 @@ pub(in crate::executor::contract) fn collect(
 
 pub(in crate::executor::contract) fn overlaps_root(declaration: &Declaration, root: &Path) -> bool {
     match declaration {
-        Declaration::Static(path) => path.starts_with(root) || root.starts_with(path),
+        Declaration::Static(path) | Declaration::Tree(path) => {
+            path.starts_with(root) || root.starts_with(path)
+        }
         Declaration::Pattern { parent, .. } | Declaration::Passlog { parent, .. } => {
             parent.starts_with(root)
                 || root
@@ -64,7 +68,7 @@ pub(in crate::executor::contract) fn overlaps_root(declaration: &Declaration, ro
 
 pub(in crate::executor::contract) fn parent(declaration: &Declaration) -> PathBuf {
     match declaration {
-        Declaration::Static(path) => path.parent().unwrap().to_path_buf(),
+        Declaration::Static(path) | Declaration::Tree(path) => path.parent().unwrap().to_path_buf(),
         Declaration::Pattern { parent, .. } | Declaration::Passlog { parent, .. } => parent.clone(),
     }
 }
@@ -76,6 +80,11 @@ pub(in crate::executor::contract) fn parents(declarations: &[Declaration]) -> BT
 fn static_path(path: &Path) -> Result<Declaration, RuntimeError> {
     existing::validate_static(path)?;
     Ok(Declaration::Static(normalized(path)?))
+}
+
+fn package_root(path: &Path) -> Result<Declaration, RuntimeError> {
+    existing::validate_package(path)?;
+    Ok(Declaration::Tree(normalized(path)?))
 }
 
 fn passlog(task: &BackendTask) -> Result<Declaration, RuntimeError> {

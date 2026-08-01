@@ -22,6 +22,7 @@ pub fn parse(parser: &mut Parser, entry: &SemanticEntry) -> Option<Interpolation
         "ease-out" => leaf(parser, entry, InterpolationKind::EaseOut),
         "ease-in-out" => leaf(parser, entry, InterpolationKind::EaseInOut),
         "cubic-bezier" => entry.block.clone().and_then(|body| cubic(parser, body)),
+        "spring" => entry.block.clone().and_then(|body| spring(parser, body)),
         _ => {
             parser.error(
                 "AUTHORING_INTERPOLATION",
@@ -80,19 +81,33 @@ fn leaf(
 }
 
 fn cubic(parser: &mut Parser, mut body: SemanticBlock) -> Option<InterpolationKind> {
-    let x1 = field(parser, &mut body, "x1")?;
-    let y1 = field(parser, &mut body, "y1")?;
-    let x2 = field(parser, &mut body, "x2")?;
-    let y2 = field(parser, &mut body, "y2")?;
+    let x1 = field(parser, &mut body, "x1", "cubic-bezier interpolation")?;
+    let y1 = field(parser, &mut body, "y1", "cubic-bezier interpolation")?;
+    let x2 = field(parser, &mut body, "x2", "cubic-bezier interpolation")?;
+    let y2 = field(parser, &mut body, "y2", "cubic-bezier interpolation")?;
     finish(parser, body, "cubic-bezier interpolation");
     Some(InterpolationKind::CubicBezier { x1, y1, x2, y2 })
+}
+
+fn spring(parser: &mut Parser, mut body: SemanticBlock) -> Option<InterpolationKind> {
+    let context = "spring interpolation";
+    let frequency = field(parser, &mut body, "frequency", context)?;
+    let decay = field(parser, &mut body, "decay", context)?;
+    let initial_velocity = field(parser, &mut body, "initial-velocity", context)?;
+    finish(parser, body, context);
+    Some(InterpolationKind::Spring {
+        frequency,
+        decay,
+        initial_velocity,
+    })
 }
 
 fn field(
     parser: &mut Parser,
     body: &mut SemanticBlock,
     name: &'static str,
+    context: &'static str,
 ) -> Option<NumberLiteral> {
-    let entry = required(parser, body, name, "cubic-bezier interpolation")?;
+    let entry = required(parser, body, name, context)?;
     number(parser, &entry, name)
 }

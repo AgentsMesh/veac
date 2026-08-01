@@ -1,9 +1,10 @@
 use veac_artifact::SourceClock;
 use veac_plan::canonical::{
-    AudioOutput, PitchPolicy, RationalTime, SourceTimeInterpolation, SourceTimeSegment, TimeRange,
+    PitchPolicy, RationalTime, SourceTimeInterpolation, SourceTimeSegment, TimeRange,
 };
 use veac_plan::ResolvedClip;
 
+use super::super::audio::AudioRenderSpec;
 use super::super::{audio, audio_processing, audio_source::invalid, time};
 use super::{CodegenErrors, EmitContext};
 
@@ -17,7 +18,7 @@ pub(super) fn filter(
     raw: &str,
     segment: &SourceTimeSegment,
     clock: SourceClock,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     pitch: PitchPolicy,
 ) -> Result<String, CodegenErrors> {
     if segment.record_duration.value <= 0 {
@@ -77,7 +78,7 @@ pub(super) fn trim(
     raw: &str,
     start: RationalTime,
     duration: RationalTime,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> String {
     context.graph.filter(
         &[raw],
@@ -94,7 +95,7 @@ pub(super) fn trim(
 fn silence(
     context: &mut EmitContext<'_>,
     segment: &SourceTimeSegment,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> String {
     context.graph.source(
         format!(

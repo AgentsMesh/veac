@@ -87,7 +87,8 @@ run_package() {
   fi
   export CARGO_TARGET_DIR="${COVERAGE_TARGET_ROOT:-target}/coverage-$package"
   cargo llvm-cov clean --workspace
-    cargo llvm-cov -p "$package" --all-features --lib --bins --tests --no-report
+    cargo llvm-cov -p "$package" --all-features --lib --bins --tests --no-report \
+      -- --test-threads=1
   report_gate -p "$package"
 }
 
@@ -103,7 +104,8 @@ run_workspace() {
   export CARGO_TARGET_DIR="${COVERAGE_TARGET_ROOT:-target}/coverage-workspace"
   rm -f "$report_path"
   cargo llvm-cov clean --workspace
-  cargo llvm-cov --workspace --all-features --all-targets --no-report
+  cargo llvm-cov --workspace --all-features --all-targets --no-report \
+    -- --test-threads=1
   mkdir -p "$(dirname "$report_path")"
   cargo llvm-cov report \
     --ignore-filename-regex "$COVERAGE_TEST_SOURCE_REGEX" \

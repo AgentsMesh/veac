@@ -22,7 +22,7 @@ pub(super) fn document(diagnostics: &mut Vec<Diagnostic>, document: &Document) {
     );
     super::validate_multicam::declarations(diagnostics, project);
     super::validate_template_slot::validate(diagnostics, project);
-    super::validate_output::validate(diagnostics, project);
+    super::validate_delivery::validate(diagnostics, project);
     let resources: HashSet<_> = project
         .resources
         .iter()
@@ -75,7 +75,7 @@ pub(super) fn document(diagnostics: &mut Vec<Diagnostic>, document: &Document) {
     for sequence in &project.sequences {
         super::validate_refs::structures(diagnostics, &sequence.structures, &known);
     }
-    super::validate_refs::outputs(diagnostics, &project.outputs, &known);
+    super::validate_refs::deliveries(diagnostics, &project.deliveries, &known);
     super::validate_annotation::validate(diagnostics, &project.annotations, &known);
 }
 

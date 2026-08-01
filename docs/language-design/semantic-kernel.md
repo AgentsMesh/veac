@@ -1,4 +1,4 @@
-# VEAC V3 Semantic Kernel
+# VEAC Semantic Kernel
 
 The semantic kernel is the closed model shared by authoring, canonical IR,
 planning, and execution:
@@ -24,13 +24,13 @@ Authoring project                 Canonical Project
 |  |  `- items                   |  |  `- clips
 |  |- transitions/relations      |  |- transitions
 |  `- scoped Apply               |  `- applies
-`- outputs                       `- render_configs/deliverables
+`- deliveries                   `- render_configs/deliverables
 ```
 
 Layer/item are authoring names for canonical Track/Clip. Relations are authored
 inside a sequence and normalized into the project relation collection.
-Multicam, annotation, and output declarations are project members. An output or
-multicam group is never owned by a sequence.
+Multicam, annotation, and delivery declarations are project members. A delivery
+or multicam group is never owned by a sequence.
 
 ## Closed Authoring Sources
 
@@ -44,7 +44,7 @@ An item owns exactly one source from this six-variant union:
 6. Multicam group reference with item-local angle switches.
 
 Unknown tags fail parsing. Solid color is generated media, not `source color`.
-Caption sidecars are outputs, not sources. Canonical `ClipSource` additionally
+Caption sidecars are artifacts, not sources. Canonical `ClipSource` additionally
 contains `FreezeFrame`, produced only by lowering media plus `mapping freeze`.
 
 ## Timeline Kernel
@@ -79,6 +79,18 @@ Apply owns an ordered stage list plus typed mix, opacity/blend, mask, and
 optional matte-consumer semantics. It is not a synthetic clip or generic
 property map. Target membership and active intervals resolve before codegen.
 
+Visual item rendering has one canonical order:
+
+```text
+source -> content geometry/effects/masks -> shadow split -> placement
+       -> clip track matte -> item apply -> final composition
+```
+
+Track matte and item apply process both the shadow and foreground branches.
+Final composition uses normal source-over for shadow and the authored blend
+mode for foreground. Matte-source and transition-endpoint rendering flatten the
+processed branches with normal source-over before those consumers use them.
+
 ## Color And Effects Kernel
 
 A pipeline preserves stage order. Color stages include typed primary controls,
@@ -104,36 +116,33 @@ Media bytes, provider credentials, and secrets stay outside source and IR.
 ## Audio Kernel
 
 ```text
-source -> item gain/pan -> layer processor chain -> bus route -> output
+source -> item gain/pan -> layer processor chain -> bus route -> master mix
 ```
 
 An audio layer may route to a bus ID. Referencing a route establishes bus
-identity; no standalone bus declaration exists. Each audio-stem output selects
+identity; no standalone bus declaration exists. Each audio-stem artifact selects
 one source: project master, one track, or one routed bus. Processor order and
 route identity remain typed through planning.
 
 ## Caption Kernel
 
 A caption item carries text plus typed language, speaker, confidence, style,
-karaoke timing, and word timing. A project-owned caption-sidecar output selects
-a source sequence, SRT/VTT/ASS format, and caption track IDs. Sidecar generation
-preserves caption data and is separate from burning text into video.
+karaoke timing, and word timing. A caption-sidecar artifact selects SRT, WebVTT,
+or ASS plus caption track IDs. Its containing delivery selects the sequence.
+Sidecar generation is separate from burning text into video.
 
 ## Delivery Kernel
 
-Outputs form a closed authoring union:
+Each project-owned delivery selects a sequence, optional raster contract, and a
+non-empty artifact collection. Artifacts form a closed union: video, image
+sequence, caption sidecar, audio stem, scope, audio file, animated image, still
+image, and adaptive package.
 
-- video
-- image sequence
-- caption sidecar
-- audio stem
-- scope
-
-Media outputs lower to project render configs and typed deliverables. Video owns
-container and optional video/audio codec blocks; image sequence owns image
-format/pattern; sidecar owns caption format and track selection; stem owns one
-master/track/bus source; scope owns scope kind, time, dimensions, and image
-format. No independent audio-file output exists in the V3 authoring parser.
+Artifact bodies are typed recipes, not anonymous settings. `mux` owns container
+and stream recipes; `encode` owns codec settings; `source`, `frame`, `canvas`,
+`numbering`, `analyze`, and `package` remain separate domain primitives. Lowering
+creates one schema-v5 `RenderConfig` and one canonical `Deliverable` per artifact.
+Canonical settings use tagged enums and reject unknown fields.
 
 ## Edit Kernel
 
@@ -153,6 +162,6 @@ entire batch. It never applies a valid prefix of an invalid batch.
 - Time is exact under the project timebase.
 - Unknown variants and fields fail closed.
 - Formatter output is idempotent.
-- Lowering emits only canonical schema V3 constructs.
+- Lowering emits only canonical schema version 5 constructs.
 - Planning consumes canonical IR, never authoring syntax.
 - Backend artifacts contain no unresolved authoring choices.

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use veac_codegen::emitter::{emit_all, BackendAction, BackendProduct};
-use veac_plan::canonical::{DeliverableKind, ImageFormat, ImageSequenceOutput};
+use veac_plan::canonical::{DeliverableKind, DeliverableTarget, ImageFormat, ImageSequenceOutput};
 
 use super::support::{bindings, fixture, resolved};
 
@@ -10,7 +10,9 @@ fn jpeg_image_sequence_emits_numbered_mjpeg_delivery_arguments() {
     let mut plan = resolved(&fixture());
     let mut local = bindings(&plan);
     let deliverable = &mut plan.output.deliverables[0];
-    deliverable.file_name = "frame-%d.jpg".into();
+    deliverable.target = DeliverableTarget::ImageSequence {
+        pattern: "frame-%d.jpg".into(),
+    };
     deliverable.kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Jpeg,
         start_number: 17,

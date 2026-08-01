@@ -21,8 +21,20 @@ project transition-gallery {
       item zoom-b { source generated solid { color #ff924cff; } record { at 9s; duration 1s; } }
       item circle-a { source generated solid { color #f72585ff; } record { at 10s; duration 1s; } }
       item circle-b { source generated solid { color #7209b7ff; } record { at 11s; duration 1s; } }
-      item pixelize-a { source generated solid { color #4361eeff; } record { at 12s; duration 1s; } }
-      item pixelize-b { source generated solid { color #4cc9f0ff; } record { at 13s; duration 1s; } }
+      item pixelize-a {
+        source generated gradient linear {
+          from 0% 50%; to 100% 50%;
+          stop 0% #4361eeff; stop 50% #3a0ca3ff; stop 100% #f72585ff;
+        }
+        record { at 12s; duration 1s; }
+      }
+      item pixelize-b {
+        source generated gradient linear {
+          from 50% 0%; to 50% 100%;
+          stop 0% #4cc9f0ff; stop 50% #06d6a0ff; stop 100% #ffca3aff;
+        }
+        record { at 13s; duration 1s; }
+      }
     }
     relation transition dissolve-cut {
       endpoints { from item dissolve-a; to item dissolve-b; }
@@ -58,6 +70,30 @@ project transition-gallery {
       endpoints { from item pixelize-a; to item pixelize-b; }
       timing { duration 350ms; alignment centered; }
       style { pixelize { amount 65%; } }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
   }
 }

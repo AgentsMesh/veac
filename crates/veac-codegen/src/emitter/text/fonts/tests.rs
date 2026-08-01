@@ -14,7 +14,7 @@ fn font_book_finds_the_first_covering_face_and_rejects_missing_faces() {
     assert_eq!(book.first_covering("A"), Some(0));
     assert_eq!(book.first_covering("\u{10ffff}"), None);
     assert!(!book.covers(usize::MAX, "A"));
-    let mut absent = content.style.font.clone();
+    let mut absent = content.styled().unwrap().font.clone();
     absent.input_id = PlanInputId::new("pin_absent_font").unwrap();
     assert_eq!(book.index(&absent).unwrap_err().code, "TEXT_PLAN_INVALID");
 }
@@ -63,7 +63,7 @@ fn text(plan: &ResolvedRenderPlan) -> &ResolvedText {
 }
 
 fn add_duplicate_font(plan: &mut ResolvedRenderPlan) {
-    let primary = text(plan).style.font.clone();
+    let primary = text(plan).styled().unwrap().font.clone();
     let id = PlanInputId::new("pin_duplicate_font").unwrap();
     let mut fallback = primary.clone();
     fallback.input_id = id.clone();
@@ -71,7 +71,7 @@ fn add_duplicate_font(plan: &mut ResolvedRenderPlan) {
     else {
         panic!("text fixture")
     };
-    content.style.fallback_fonts.push(fallback);
+    content.styled_mut().unwrap().fallback_fonts.push(fallback);
     let mut input = plan
         .inputs
         .iter()

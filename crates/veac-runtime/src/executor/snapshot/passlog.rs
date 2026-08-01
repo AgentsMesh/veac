@@ -22,13 +22,15 @@ pub(in crate::executor) struct ReboundPasslogs {
 impl ReboundPasslogs {
     pub(in crate::executor) fn capture(
         task: &BackendTask,
-        paths: &[PathBuf],
+        sources: &[PathBuf],
+        targets: &[PathBuf],
         records: &[ArtifactRecord],
         deadline: Instant,
     ) -> Result<Self, RuntimeError> {
         if task.phase != BackendPhase::SecondPass
-            || paths.is_empty()
-            || paths.len() != records.len()
+            || sources.is_empty()
+            || sources.len() != targets.len()
+            || sources.len() != records.len()
         {
             return Err(RuntimeError::new(
                 "second pass requires complete checkpointed passlog outputs",
@@ -47,8 +49,8 @@ impl ReboundPasslogs {
             }
         };
         let private = directory.path().join("passlog");
-        for (path, record) in paths.iter().zip(records) {
-            copy_one(path, record, &original, &private, deadline)?;
+        for ((source, target), record) in sources.iter().zip(targets).zip(records) {
+            copy_one(source, target, record, &original, &private, deadline)?;
         }
         let mut task = task.clone();
         if let BackendAction::Ffmpeg(command) = &mut task.action {
@@ -67,12 +69,13 @@ impl ReboundPasslogs {
 
 fn copy_one(
     source: &Path,
+    target: &Path,
     record: &ArtifactRecord,
     original: &Path,
     private: &Path,
     deadline: Instant,
 ) -> Result<(), RuntimeError> {
-    let suffix = suffix(source, original)?;
+    let suffix = suffix(target, original)?;
     let destination = output::appended(private, suffix);
     let expected = MediaIdentity {
         algorithm: match record.content.algorithm {

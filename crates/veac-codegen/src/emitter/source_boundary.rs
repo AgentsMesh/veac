@@ -1,9 +1,10 @@
 use std::cmp::Ordering;
 
 use veac_artifact::SourceClock;
-use veac_plan::canonical::{AudioOutput, RationalTime, SourceOutOfRangePolicy};
+use veac_plan::canonical::{RationalTime, SourceOutOfRangePolicy};
 use veac_plan::{ResolvedClip, ResolvedSourceMapping};
 
+use super::audio::AudioRenderSpec;
 use super::error::{diagnostic, CodegenErrorKind};
 use super::{CodegenErrors, EmitContext};
 
@@ -43,7 +44,7 @@ pub(super) fn audio(
     mapping: &ResolvedSourceMapping,
     clock: SourceClock,
     duration: Option<RationalTime>,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<(String, SourceClock), CodegenErrors> {
     let Some(padding) = required(clip, mapping, clock, duration, false)? else {
         return Ok((raw.to_owned(), clock));

@@ -93,7 +93,7 @@ fn timescale(ctx: &mut Context, value: &NumberLiteral) -> Option<u32> {
     }
 }
 
-fn frame_rate(ctx: &mut Context, value: &NumberLiteral) -> Option<Rational> {
+pub(super) fn frame_rate(ctx: &mut Context, value: &NumberLiteral) -> Option<Rational> {
     let (number, unit) = split(&value.raw);
     if unit != "fps" {
         ctx.error(
@@ -121,7 +121,7 @@ fn frame_rate(ctx: &mut Context, value: &NumberLiteral) -> Option<Rational> {
         })
 }
 
-fn dimension(ctx: &mut Context, value: &NumberLiteral) -> Option<u32> {
+pub(super) fn dimension(ctx: &mut Context, value: &NumberLiteral) -> Option<u32> {
     unsigned(ctx, value, "px")
 }
 

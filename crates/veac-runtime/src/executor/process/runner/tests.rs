@@ -53,6 +53,7 @@ fn bounded_runner_preserves_success_output_and_rejects_invalid_policy() {
             max_stdout_bytes: 1,
             max_stderr_bytes: 1,
             output_root: None,
+            working_directory: None,
             max_output_bytes: 1,
         },
     )
@@ -75,6 +76,7 @@ fn shell(
             max_stdout_bytes: stdout,
             max_stderr_bytes: stderr,
             output_root: root,
+            working_directory: None,
             max_output_bytes: output,
         },
     )
@@ -93,6 +95,7 @@ fn shell_with_deadline(
             max_stdout_bytes: 64,
             max_stderr_bytes: 64,
             output_root: root,
+            working_directory: None,
             max_output_bytes: 64,
         },
     )

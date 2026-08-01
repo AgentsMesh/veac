@@ -30,25 +30,51 @@ project timeline-source-time {
         source media resource reel;
         record { at 0s; duration 3s; }
         mapping linear { from 5s; to 8s; }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
+        }
       }
       item speed-ramp {
         source media resource reel;
         record { at 3s; duration 3s; }
         mapping curve {
           key begin { at 0s; source 10s; interpolation linear; }
-          key ramp { at 1s; source 11s; interpolation linear; }
+          key gentle { at 750ms; source 10.5s; interpolation linear; }
+          key rising { at 1.5s; source 11.5s; interpolation linear; }
+          key fast { at 2.25s; source 13s; interpolation linear; }
           key finish { at 3s; source 15s; interpolation linear; }
+        }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
         }
       }
       item freeze {
         source media resource reel;
         record { at 6s; duration 2s; }
         mapping freeze { source 18s; }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
+        }
       }
       item fast-forward {
         source media resource reel;
         record { at 8s; duration 2s; }
         mapping linear { from 20s; to 24s; }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
+        }
       }
       item hold-first {
         source sequence sequence boundary-source;
@@ -64,6 +90,30 @@ project timeline-source-time {
         source sequence sequence boundary-source;
         record { at 14s; duration 4s; }
         mapping linear { from -1s; to 3s; outside hold-both; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

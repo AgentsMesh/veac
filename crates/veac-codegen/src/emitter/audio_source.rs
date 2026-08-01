@@ -1,6 +1,7 @@
-use veac_plan::canonical::{AudioOutput, Generator, PitchPolicy};
+use veac_plan::canonical::{Generator, PitchPolicy};
 use veac_plan::{ResolvedClip, ResolvedClipSource, ResolvedSourceMapping};
 
+use super::audio::AudioRenderSpec;
 use super::error::{diagnostic, CodegenErrorKind};
 use super::{
     audio, audio_fades, audio_processing, audio_sidechain, audio_transition_fades, effects, time,
@@ -10,7 +11,7 @@ use super::{
 pub(super) fn build(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     fades: audio_transition_fades::TransitionFades,
     sidechain: Option<String>,
 ) -> Result<Option<String>, CodegenErrors> {
@@ -67,7 +68,10 @@ pub(super) fn build(
     } else {
         Ok(Some(context.graph.filter(
             &[&source],
-            format!("adelay=delays={samples}S:all=1"),
+            format!(
+                "aresample={},adelay=delays={samples}S:all=1",
+                output.sample_rate
+            ),
             "delaya",
         )))
     }
@@ -95,7 +99,7 @@ fn media(
     input_id: &veac_plan::PlanInputId,
     stream: u32,
     mapping: &ResolvedSourceMapping,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     pitch: PitchPolicy,
 ) -> Result<String, CodegenErrors> {
     let label =
@@ -111,7 +115,11 @@ fn media(
     ))
 }
 
-fn generated(context: &mut EmitContext<'_>, clip: &ResolvedClip, output: &AudioOutput) -> String {
+fn generated(
+    context: &mut EmitContext<'_>,
+    clip: &ResolvedClip,
+    output: &AudioRenderSpec,
+) -> String {
     context.graph.source(
         format!(
             "anullsrc=r={}:cl={},atrim=duration={},asetpts=PTS-STARTPTS",
@@ -127,7 +135,7 @@ fn nested(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
     sequence_id: &veac_plan::canonical::SequenceId,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<String, CodegenErrors> {
     let sequence = context
         .plan
@@ -136,7 +144,7 @@ fn nested(
         .find(|sequence| sequence.id == *sequence_id)
         .cloned()
         .ok_or_else(|| invalid(clip, "nested audio sequence is missing"))?;
-    let raw = audio::build_audio(context, &sequence, output)?;
+    let raw = audio::build_master(context, &sequence, output)?;
     let raw = context.graph.filter(
         &[&raw],
         format!(

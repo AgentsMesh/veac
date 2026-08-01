@@ -1,6 +1,6 @@
 use super::{
-    Identifier, MappingDecl, ModifierDecl, NumberLiteral, SourceDecl, Span, StructureDecl,
-    TemplateSlotDecl,
+    Identifier, ItemStateDecl, MappingDecl, ModifierDecl, NumberLiteral, PlacementModeDecl,
+    SourceDecl, Span, Spanned, StructureDecl, TemplateSlotDecl, TrackStateDecl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +23,8 @@ pub enum LayerKind {
 pub struct LayerDecl {
     pub kind: LayerKind,
     pub id: Identifier,
+    pub placement: Option<Spanned<PlacementModeDecl>>,
+    pub state: Option<TrackStateDecl>,
     pub order: Option<NumberLiteral>,
     pub route_bus: Option<Identifier>,
     pub items: Vec<ItemDecl>,
@@ -34,6 +36,7 @@ pub struct ItemDecl {
     pub id: Identifier,
     pub source: SourceDecl,
     pub record: RecordSpan,
+    pub state: Option<ItemStateDecl>,
     pub mapping: Option<MappingDecl>,
     pub template_slot: Option<TemplateSlotDecl>,
     pub modifiers: Vec<ModifierDecl>,

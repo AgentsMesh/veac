@@ -30,7 +30,9 @@ fn padded_pattern_only_consumes_indices_meeting_its_minimum_width() {
     ];
     validate(&project).unwrap();
 
-    project.project.render_configs[0].deliverables[1].file_name = "frame-0001.png".into();
+    project.project.render_configs[0].deliverables[1].target = DeliverableTarget::File {
+        name: "frame-0001.png".into(),
+    };
     assert_code(&validation_codes(&project), "OUTPUT_FILE_COLLISION");
 }
 
@@ -56,13 +58,15 @@ fn image_pattern_requires_exactly_one_placeholder() {
     project.project.render_configs[0].deliverables =
         vec![image("dlv_frames", "frame-%d-%d.png", ImageFormat::Png)];
     let codes = validation_codes(&project);
-    assert_code(&codes, "OUTPUT_IMAGE_SEQUENCE");
+    assert_code(&codes, "OUTPUT_TARGET");
 }
 
 fn image(id: &str, file_name: &str, format: ImageFormat) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target: DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        },
         kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
             format,
             start_number: 1,
@@ -73,7 +77,9 @@ fn image(id: &str, file_name: &str, format: ImageFormat) -> Deliverable {
 fn still(id: &str, file_name: &str) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target: DeliverableTarget::File {
+            name: file_name.to_owned(),
+        },
         kind: DeliverableKind::Scope(ScopeOutput {
             scope: VideoScope::Waveform,
             at: RationalTime::new(0, 600).unwrap(),

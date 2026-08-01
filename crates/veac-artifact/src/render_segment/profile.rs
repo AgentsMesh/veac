@@ -1,23 +1,18 @@
 use serde::Serialize;
-use veac_ir::{Deliverable, DeliverableKind, Rational, VideoDeliverable};
-use veac_plan::ResolvedRenderPlan;
+use veac_ir::{Deliverable, DeliverableKind, RasterSettings, Rational, VideoDeliverable};
 
 use crate::{ArtifactResult, ContentDigest};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FullRenderSegmentMediaProfile {
-    width: u32,
-    height: u32,
-    frame_rate: Rational,
+    raster: RasterSettings,
     deliverable: Deliverable,
 }
 
 impl FullRenderSegmentMediaProfile {
-    pub(super) fn new(plan: &ResolvedRenderPlan, deliverable: &Deliverable) -> Self {
+    pub(super) fn new(raster: &RasterSettings, deliverable: &Deliverable) -> Self {
         Self {
-            width: plan.output.width,
-            height: plan.output.height,
-            frame_rate: plan.output.frame_rate,
+            raster: raster.clone(),
             deliverable: deliverable.clone(),
         }
     }
@@ -29,15 +24,15 @@ impl FullRenderSegmentMediaProfile {
     }
 
     pub fn width(&self) -> u32 {
-        self.width
+        self.raster.width
     }
 
     pub fn height(&self) -> u32 {
-        self.height
+        self.raster.height
     }
 
     pub fn frame_rate(&self) -> Rational {
-        self.frame_rate
+        self.raster.frame_rate
     }
 
     pub fn deliverable(&self) -> &Deliverable {

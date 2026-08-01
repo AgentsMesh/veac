@@ -3,10 +3,28 @@
 Modifiers are ordered item-local pipelines:
 
 ```text
-layout | transform | composite | mask | audio | color | effect
+layout | transform | composite | surface | mask | audio | color | effect
 ```
 
 Layout separates placement from frame fit. Transform owns position, scale, rotation, anchor, crop, and flips. Composite owns opacity, z-index, and blend mode. Mask is a closed shape variant with animatable position, scale, rotation, feather, and expansion.
+
+Surface owns presentation applied to the composed item boundary. It lowers
+directly to `VisualProperties.card`; it is not a generated-shape property bag:
+
+```veac
+surface raised {
+  corner-radius 36px;
+  shadow {
+    color #000000ff;
+    opacity 38%;
+    blur 28px;
+    offset { x 0px; y 16px; }
+  }
+}
+```
+
+The corner radius is required. A shadow is optional, but when present its
+color, opacity, blur, and two-dimensional offset are complete typed values.
 
 Color is an explicit ordered pipeline:
 
@@ -14,7 +32,10 @@ Color is an explicit ordered pipeline:
 input-space -> working-space -> basic/matrix/hsl/curves/wheels/lut -> output-space
 ```
 
-Effects have a typed effect kind and closed parameter values. Unknown effect kinds or parameter fields fail during authoring or canonical validation.
+Effects have a typed effect kind and a closed parameter union: number, number curve, boolean, or
+color. There is no generic text, integer, time, or vector escape hatch. The canonical schema,
+authoring parser/lowerer, registry modes, and executable backend catalog are guarded as exact sets;
+unknown effect kinds or parameter fields fail during authoring or canonical validation.
 
 Cross-item semantics are first-class relations, not duplicated clip properties:
 

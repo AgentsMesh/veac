@@ -40,5 +40,22 @@ pub enum Interpolation {
     EaseIn,
     EaseOut,
     EaseInOut,
-    CubicBezier { x1: f64, y1: f64, x2: f64, y2: f64 },
+    Spring {
+        frequency: f64,
+        decay: f64,
+        initial_velocity: f64,
+    },
+    CubicBezier {
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SpringCoefficients {
+    pub angular_frequency: f64,
+    pub equilibrium: f64,
+    pub sine: f64,
 }

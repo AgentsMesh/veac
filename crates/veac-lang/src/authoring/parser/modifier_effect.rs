@@ -89,13 +89,10 @@ impl Parser {
             [SemanticValue::Color(value)] if entry.block.is_none() => {
                 EffectParameterValue::Color(value.clone())
             }
-            [SemanticValue::String(value)] if entry.block.is_none() => {
-                EffectParameterValue::Text(value.clone())
-            }
             _ => {
                 self.error(
                     "AUTHORING_EFFECT_PARAMETER",
-                    "parameter value must be a number, curve, boolean, color, or string".to_owned(),
+                    "parameter value must be a number, curve, boolean, or color".to_owned(),
                     entry.span,
                 );
                 return None;
@@ -168,8 +165,7 @@ fn parameter_shape(spec: veac_ir::ParameterSpec, value: &EffectParameterValue) -
             EffectParameterValue::Number(ParameterDecl::Curve { .. }),
         ) => spec.supports_curve,
         (veac_ir::ParameterType::Boolean, EffectParameterValue::Boolean(_))
-        | (veac_ir::ParameterType::Color, EffectParameterValue::Color(_))
-        | (veac_ir::ParameterType::Text, EffectParameterValue::Text(_)) => true,
+        | (veac_ir::ParameterType::Color, EffectParameterValue::Color(_)) => true,
         _ => false,
     }
 }

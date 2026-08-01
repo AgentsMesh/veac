@@ -56,7 +56,7 @@ fn small_script_font() -> PathBuf {
 }
 
 fn add_font_input(plan: &mut veac_plan::ResolvedRenderPlan, id: &str) -> PlanInputId {
-    let primary = text_content(plan).style.font.clone();
+    let primary = text_content(plan).styled_mut().unwrap().font.clone();
     let id = PlanInputId::new(id).unwrap();
     let mut input = plan
         .inputs

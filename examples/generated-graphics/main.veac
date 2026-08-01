@@ -8,6 +8,20 @@ project generated-graphics {
   entry sequence main;
 
   sequence main {
+    layer visual transparency-base {
+      item light-cells {
+        source generated solid { color #d9dde3ff; }
+        record { at 0s; duration 1s; }
+      }
+    }
+    layer visual dark-top-left {
+      item top-left-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
+        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 320px; y 180px; } } } } }
+    }
+    layer visual dark-bottom-right {
+      item bottom-right-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
+        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 960px; y 540px; } } } } }
+    }
     layer visual graphics {
       item transparent {
         source generated transparent;
@@ -71,6 +85,33 @@ project generated-graphics {
       item silence {
         source generated silence;
         record { at 0s; duration 8s; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
       }
     }
   }

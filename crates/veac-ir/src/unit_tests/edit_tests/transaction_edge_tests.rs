@@ -19,10 +19,17 @@ fn batch_contract_rejects_unsafe_revision_and_non_ijson_values() {
                 clip_id: ItemId::new("itm_video").unwrap(),
                 effect_id: EffectId::new("fx_color").unwrap(),
                 name: "brightness".to_owned(),
-                value: ParameterValue::Time {
-                    value: RationalTime {
-                        value: i64::MAX,
-                        timescale: 600,
+                value: ParameterValue::NumberCurve {
+                    value: Animatable::Keyframes {
+                        keyframes: vec![Keyframe {
+                            id: KeyframeId::new("kf_unsafe_time").unwrap(),
+                            time: RationalTime {
+                                value: i64::MAX,
+                                timescale: 600,
+                            },
+                            value: 0.0,
+                            interpolation: Interpolation::Linear,
+                        }],
                     },
                 },
             },

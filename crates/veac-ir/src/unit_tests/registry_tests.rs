@@ -40,9 +40,6 @@ fn parameter_schema_checks_types_curves_and_ranges() {
             alpha: 4,
         },
     };
-    let text = ParameterValue::Text {
-        value: "soft".to_owned(),
-    };
     let boolean = ParameterValue::Boolean { value: true };
     let number = ParameterValue::Number { value: 0.5 };
     let curve = ParameterValue::NumberCurve {
@@ -77,20 +74,12 @@ fn parameter_schema_checks_types_curves_and_ranges() {
             maximum: None,
             supports_curve: false,
         },
-        ParameterSpec {
-            name: "text",
-            value_type: ParameterType::Text,
-            minimum: None,
-            maximum: None,
-            supports_curve: false,
-        },
     ];
     assert!(parameter_matches(specs[0], &number));
     assert!(parameter_matches(specs[0], &curve));
     assert!(parameter_matches(specs[1], &boolean));
     assert!(parameter_matches(specs[2], &color));
-    assert!(parameter_matches(specs[3], &text));
-    assert!(!parameter_matches(specs[0], &text));
+    assert!(!parameter_matches(specs[0], &boolean));
     assert!(!parameter_matches(
         specs[0],
         &ParameterValue::Number { value: 2.0 },
@@ -98,4 +87,31 @@ fn parameter_schema_checks_types_curves_and_ranges() {
     let normalize = built_in_effect("audio.normalize").unwrap().parameters[0];
     assert!(!normalize.supports_curve);
     assert!(!parameter_matches(normalize, &curve));
+}
+
+#[test]
+fn number_curve_schema_checks_spring_extrema_against_parameter_bounds() {
+    let threshold = built_in_effect("video.luma_key").unwrap().parameters[0];
+    let curve = ParameterValue::NumberCurve {
+        value: Animatable::Keyframes {
+            keyframes: vec![
+                spring_key("kf_threshold_start", 0, 0.1),
+                spring_key("kf_threshold_end", 600, 0.9),
+            ],
+        },
+    };
+    assert!(!parameter_matches(threshold, &curve));
+}
+
+fn spring_key(id: &str, at: i64, value: f64) -> Keyframe<f64> {
+    Keyframe {
+        id: KeyframeId::new(id).unwrap(),
+        time: time(at),
+        value,
+        interpolation: Interpolation::Spring {
+            frequency: 1.5,
+            decay: 6.0,
+            initial_velocity: 0.0,
+        },
+    }
 }

@@ -36,6 +36,7 @@ fn visual(
         VisualProperty::Frame(value) => replace(&mut visual.frame, *value),
         VisualProperty::Position(value) => curve(&mut visual.transform.position, value, changed),
         VisualProperty::Scale(value) => curve(&mut visual.transform.scale, value, changed),
+        VisualProperty::Shear(value) => replace(&mut visual.transform.shear, *value),
         VisualProperty::FlipHorizontal(value) => {
             replace(&mut visual.transform.flip_horizontal, *value)
         }

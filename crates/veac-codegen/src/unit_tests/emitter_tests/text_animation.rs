@@ -14,8 +14,8 @@ fn every_text_animation_granularity_executes_with_reveal_opacity_and_stagger() {
         let mut plan = resolved(&text_fixture(false));
         let content = text_content(&mut plan);
         content.text = "one two\nthree".to_owned();
-        content.style.background = None;
-        content.style.animation = Some(TextAnimation {
+        content.styled_mut().unwrap().background = None;
+        content.styled_mut().unwrap().animation = Some(TextAnimation {
             granularity,
             transform: TextUnitTransform::default(),
             reveal: Animatable::Keyframes {
@@ -52,8 +52,8 @@ fn highlight_progress_overrides_only_completed_unit_fills() {
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
     content.text = "one two".to_owned();
-    content.style.background = None;
-    content.style.animation = Some(TextAnimation {
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().animation = Some(TextAnimation {
         granularity: TextGranularity::Word,
         transform: TextUnitTransform::default(),
         reveal: Animatable::constant(1.0),

@@ -6,10 +6,8 @@ format it, compile it, and validate the canonical IR.
 
 ## Two Inputs, Two Jobs
 
-VEAC has two machine-facing inputs:
-
-1. `.veac` authoring source describes a complete project.
-2. Canonical JSON `EditBatch` describes atomic changes to canonical JSON IR.
+VEAC has two machine-facing inputs: `.veac` describes a complete project, while
+canonical JSON `EditBatch` describes atomic changes to schema-v5 JSON IR.
 
 There is no second textual edit language. `veac edit` does not parse `.veac` or
 rewrite authoring source; it reads a canonical project JSON plus an EditBatch
@@ -28,10 +26,10 @@ project
 |  |  `- items -> one source
 |  |- transitions and relations
 |  |- scoped Apply pipelines
-`- outputs
+`- deliveries -> typed artifacts
 ```
 
-`multicam`, `output`, and `annotation` are project members. Layers, items,
+`multicam`, `delivery`, and `annotation` are project members. Layers, items,
 transitions, relations, and Apply records belong to one sequence. An item source
 is not a reusable declaration by itself. Lowering maps layer/item to canonical
 IR Track/Clip and hoists typed relations into the project relation collection.
@@ -47,51 +45,56 @@ project sample {
         sample-rate 48000hz;
     }
 
-    resource video host {
-        locator local { path "media/host.mov"; }
-        streams { video auto; audio disabled; }
-    }
-
     entry sequence main;
 
     sequence main {
         layer visual picture {
             item host-shot {
                 record { at 0s; duration 5s; }
-                source media resource host;
+                source generated solid { color #18202aff; }
             }
         }
     }
 
-    output video preview {
+    delivery preview {
         sequence main;
-        file-name "preview.mp4";
-        encoding {
-            container mp4;
-            video { codec h264; }
-            audio none;
+        raster { canvas 1920px by 1080px; frame-rate 30fps; captions discard; }
+        artifact video preview {
+            target file "preview.mp4";
+            mux mp4 {
+                layout standard;
+                video h264 {
+                    pixel-format yuv420p;
+                    alpha opaque;
+                    color-space source;
+                    rate-control crf { value 23; }
+                    gop automatic;
+                    b-frames automatic;
+                    profile automatic;
+                    level automatic;
+                }
+                audio none;
+                passes single;
+                accelerator auto;
+            }
         }
     }
 }
 ```
 
-Do not add `format veac 3;`: the implemented V3 parser has no document version
-declaration. `veac fmt` is the authority for canonical spelling and layout.
+Do not add a document version declaration. `veac fmt` is the authority for
+canonical spelling and layout.
 
 ## Choose Closed Variants
 
-Item sources are exactly:
-
-- `source media resource <id>;`
-- `source text { text "..."; style text-style <id>; }`
-- `source caption { text "..."; ... }`
-- `source generated <transparent|silence|solid|gradient|shape> { ... }`
-- `source sequence sequence <id>;`
-- `source multicam multicam <id> { switch angle <id> { at <time>; duration <time>; } }`
+Item sources are exactly media, text, caption, generated, nested sequence, or
+multicam. Their canonical heads are `source media resource`, `source text`,
+`source caption`, `source generated <kind>`, `source sequence sequence`, and
+`source multicam multicam`.
 
 Use `source generated solid`, never `source color`. Caption text is an item
-source; subtitle files such as SRT, VTT, or ASS are `output
-caption-sidecar`, never media sources.
+source; subtitle files such as SRT, VTT, or ASS are `artifact
+caption-sidecar` recipes inside a delivery, never media sources.
 
 Media resources select streams with only `auto` or `disabled`. These become
 canonical stream intent; probe normalization records exact selected streams for
@@ -112,33 +115,31 @@ mapping curve {
 }
 ```
 
-Curve keys are in item-local record time. V3 source-time curves permit only
-`linear` and `hold`; easing names may exist in other animation contexts but are
-rejected here. Outside policies are `strict`, `hold-first`, `hold-last`, and
-`hold-both`; freeze has no outside policy. Only media and sequence sources may
-carry a mapping.
+Curve keys are in item-local record time and permit only `linear` or `hold`.
+Outside policies are `strict`, `hold-first`, `hold-last`, and `hold-both`;
+freeze has none. Only media and sequence sources carry mappings.
 
 ## Build Ordered Processing
 
-Use `pipeline` for ordered color and effect stages. Use a named `lut-1d` or
-`lut-3d` resource in a `lut` stage. LUT1D permits `nearest`, `linear`, `cosine`,
-`cubic`, or `spline`; LUT3D permits `nearest`, `trilinear`, `tetrahedral`,
-`pyramid`, or `prism`. Do not flatten stages into item properties.
+Use `pipeline` for ordered color and effect stages. A named `lut-1d` accepts
+`nearest`, `linear`, `cosine`, `cubic`, or `spline`; `lut-3d` accepts `nearest`,
+`trilinear`, `tetrahedral`, `pyramid`, or `prism`. Do not flatten stages.
 
 Use `scope composite-band`, `scope layer`, or `scope items` for first-class
-Apply records. The scope selects the target; the pipeline selects ordered
-operations; `mix`, matte, opacity, and blend remain typed primitives.
+Apply records. Scope selects the target; pipelines preserve operation order;
+`mix`, matte, opacity, and blend remain typed.
 
 ## Route Audio And Deliver Captions
 
 An audio layer can end with `route bus <id>;`. Referencing a bus ID establishes
 the routing identity; there is no independent `bus` declaration. Use processors
 in order, route layers to buses, then select one `master`, `track`, or `bus`
-source from each `output audio-stem`.
+source from each `artifact audio-stem`.
 
-Use `output caption-sidecar` with a source sequence, path, format, and explicit
-caption track IDs. Sidecar outputs preserve captions as data. A video output
-may render text visually, but it does not replace the sidecar contract.
+Use `artifact caption-sidecar` with `source caption-tracks` and a closed `encode`
+recipe. Sidecars preserve captions as data; burned-in video does not replace
+them. See the [delivery reference](../language-reference/outputs.md) for every
+artifact and unit-bearing recipe.
 
 ## Deterministic Workflow
 

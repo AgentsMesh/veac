@@ -1,4 +1,5 @@
 mod kind;
+mod timeline;
 
 use veac_plan::canonical::{BlendMode, ItemId};
 use veac_plan::{ResolvedClip, ResolvedSequence, ResolvedTrack, ResolvedTransition};
@@ -19,36 +20,15 @@ pub(super) fn compose(
     let incoming = endpoint(context, sequence, incoming)?;
     let outgoing = outgoing_side(context, &outgoing, transition);
     let incoming = incoming_side(context, &incoming, transition);
-    let mixed = context.graph.filter(
-        &[&outgoing, &incoming],
-        format!(
-            "{},format=rgba",
-            kind::filter(
-                &transition.kind,
-                &time::seconds(transition.record_window.duration)
-            )
-        ),
-        "transitionv",
-    );
-    let shifted = context.graph.filter(
-        &[&mixed],
-        format!(
-            "setpts=PTS+{}/TB",
-            time::seconds(transition.record_window.start)
-        ),
-        "transitionoffsetv",
-    );
+    let shifted = timeline::render(context, &outgoing, &incoming, transition);
     Ok(blend::composite(
         context,
         base,
         &shifted,
         blend::Placement {
-            x: "0",
-            y: "0",
             start: time::seconds(transition.record_window.start),
             end: time::end(transition.record_window),
             mode: BlendMode::Normal,
-            shadow: None,
         },
     ))
 }
@@ -71,8 +51,18 @@ fn outgoing_side(
     transition: &ResolvedTransition,
 ) -> String {
     let handle = transition.outgoing_handle;
-    if handle.duration.value == 0 {
-        let start = time::frame_window_start(handle.offset, context.canvas.frame_rate);
+    if handle.duration.value == 0
+        || !time::frame_interval_has_sample(
+            handle.offset,
+            handle.duration,
+            context.canvas.frame_rate,
+        )
+    {
+        let sample_end = handle
+            .offset
+            .checked_add(handle.duration)
+            .unwrap_or(handle.offset);
+        let start = time::frame_window_start(sample_end, context.canvas.frame_rate);
         return context.graph.filter(
             &[input],
             format!(

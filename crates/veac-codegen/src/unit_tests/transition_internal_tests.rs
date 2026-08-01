@@ -12,7 +12,7 @@ fn build_context<'a>(
         DeliverableKind::Video(video) => video.video.alpha,
         _ => panic!("expected video deliverable"),
     };
-    EmitContext::new(plan, execution, deliverable, alpha).expect("context")
+    EmitContext::new_visual(plan, execution, deliverable, alpha).expect("context")
 }
 
 #[test]

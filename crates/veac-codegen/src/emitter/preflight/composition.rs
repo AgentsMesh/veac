@@ -1,25 +1,14 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use veac_plan::canonical::{transition_parameters_valid, Animatable, Mask, MaskShape, Vec2};
-use veac_plan::{ResolvedClip, ResolvedMatte, ResolvedSequence};
+use veac_plan::ResolvedSequence;
 
 use super::Check;
 
+mod matte;
+
 pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence) {
-    let clips: BTreeMap<_, _> = sequence
-        .tracks
-        .iter()
-        .flat_map(|track| &track.clips)
-        .map(|clip| (&clip.id, clip))
-        .collect();
-    let mut graph = BTreeMap::new();
-    for clip in clips.values() {
+    for clip in sequence.tracks.iter().flat_map(|track| &track.clips) {
         if let Some(visual) = &clip.visual {
             validate_masks(check, &clip.id.to_string(), &visual.masks);
-            if let Some(matte) = &visual.track_matte {
-                validate_matte(check, clip, matte, &clips);
-                graph.insert(&clip.id, &matte.source_clip_id);
-            }
         }
     }
     for track in &sequence.tracks {
@@ -33,20 +22,7 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence) {
             }
         }
     }
-    if cyclic(&graph) {
-        check.push(
-            "PLAN_MATTE_CYCLE",
-            Some(sequence.id.to_string()),
-            "track matte references are cyclic",
-        );
-    }
-    if depth_exceeded(&graph) {
-        check.push(
-            "PLAN_MATTE_DEPTH_EXCEEDED",
-            Some(sequence.id.to_string()),
-            "track matte dependency depth exceeds the executable limit",
-        );
-    }
+    matte::validate(check, sequence);
 }
 
 pub(super) fn validate_masks(check: &mut Check, owner_id: &str, masks: &[Mask]) {
@@ -74,32 +50,6 @@ fn validate_mask(check: &mut Check, owner_id: &str, mask: &Mask) {
             "PLAN_MASK_INVALID",
             Some(owner_id.to_owned()),
             "mask shape or animation values are invalid",
-        );
-    }
-}
-
-fn validate_matte(
-    check: &mut Check,
-    target: &ResolvedClip,
-    matte: &ResolvedMatte,
-    clips: &BTreeMap<&veac_plan::canonical::ItemId, &ResolvedClip>,
-) {
-    let valid = clips.get(&matte.source_clip_id).is_some_and(|source| {
-        source.id != target.id
-            && source.visual.is_some()
-            && source.record_range.start <= target.record_range.start
-            && source.record_range.end().is_ok_and(|source_end| {
-                target
-                    .record_range
-                    .end()
-                    .is_ok_and(|target_end| source_end >= target_end)
-            })
-    });
-    if !valid {
-        check.push(
-            "PLAN_MATTE_REFERENCE_INVALID",
-            Some(target.id.to_string()),
-            "track matte source is missing, incompatible, or does not cover the target",
         );
     }
 }
@@ -137,41 +87,4 @@ fn unit_vec(value: &Vec2) -> bool {
 
 fn positive_vec(value: &Vec2) -> bool {
     value.x.is_finite() && value.y.is_finite() && value.x > 0.0 && value.y > 0.0
-}
-
-fn cyclic<'a>(
-    graph: &BTreeMap<&'a veac_plan::canonical::ItemId, &'a veac_plan::canonical::ItemId>,
-) -> bool {
-    graph.keys().any(|start| {
-        let mut seen = BTreeSet::new();
-        let mut current = *start;
-        while seen.insert(current) {
-            let Some(next) = graph.get(current) else {
-                return false;
-            };
-            current = next;
-        }
-        true
-    })
-}
-
-fn depth_exceeded<'a>(
-    graph: &BTreeMap<&'a veac_plan::canonical::ItemId, &'a veac_plan::canonical::ItemId>,
-) -> bool {
-    graph.keys().any(|start| {
-        let mut seen = BTreeSet::new();
-        let mut current = *start;
-        let mut depth = 0;
-        while seen.insert(current) {
-            let Some(next) = graph.get(current) else {
-                return false;
-            };
-            depth += 1;
-            if depth > veac_plan::canonical::MAX_MATTE_NESTING_DEPTH {
-                return true;
-            }
-            current = next;
-        }
-        false
-    })
 }

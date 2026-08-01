@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -6,7 +5,7 @@ use tempfile::TempDir;
 use veac_codegen::emitter::{BackendCommand, BackendTask};
 
 use super::directory::Directory;
-use super::StagedFile;
+use super::{StagedFile, StaleFamily};
 use crate::executor::{output, process, FfmpegEnvironment, FfmpegInvocation};
 use crate::RuntimeError;
 
@@ -29,7 +28,12 @@ pub(super) fn execute(
         .output_path
         .parent()
         .ok_or_else(|| RuntimeError::new("staged FFmpeg output has no resource-bounded parent"))?;
-    let result = environment.execute(FfmpegInvocation::render(&arguments, output_root, deadline));
+    let result = environment.execute(FfmpegInvocation::render(
+        &arguments,
+        output_root,
+        output_root,
+        deadline,
+    ));
     filter_script::finish(descriptor, script, result)
 }
 
@@ -40,7 +44,7 @@ pub(super) fn stage_sequence(
     command: &mut BackendCommand,
     pattern: &Path,
     deadline: Instant,
-) -> Result<(Vec<StagedFile>, Vec<PathBuf>), RuntimeError> {
+) -> Result<(Vec<StagedFile>, Vec<StaleFamily>), RuntimeError> {
     let staged_pattern = directory.path().join(pattern.file_name().unwrap());
     command.output_path = staged_pattern.clone();
     execute(environment, directory, descriptor, command, deadline)?;
@@ -53,10 +57,10 @@ pub(super) fn stage_sequence(
         .map(|source| StagedFile {
             target: parent.join(source.file_name().unwrap()),
             source,
+            allow_empty: false,
         })
         .collect::<Vec<_>>();
-    let stale = stale(output::enumerate_pattern(pattern)?, &files);
-    Ok((files, stale))
+    Ok((files, vec![StaleFamily::ImageSequence(pattern.to_owned())]))
 }
 
 pub(super) fn stage_passlog(
@@ -67,7 +71,7 @@ pub(super) fn stage_passlog(
     command: &mut BackendCommand,
     expected: &Path,
     deadline: Instant,
-) -> Result<(Vec<StagedFile>, Vec<PathBuf>), RuntimeError> {
+) -> Result<(Vec<StagedFile>, Vec<StaleFamily>), RuntimeError> {
     let final_prefix = output::passlog_prefix(task)?;
     let staged_prefix = directory.path().join("passlog");
     replace_passlog(&mut command.output_args, &staged_prefix);
@@ -81,6 +85,7 @@ pub(super) fn stage_passlog(
             StagedFile {
                 target: output::appended(&final_prefix, suffix),
                 source,
+                allow_empty: false,
             }
         })
         .collect::<Vec<_>>();
@@ -89,8 +94,7 @@ pub(super) fn stage_passlog(
             "FFmpeg did not produce its declared passlog",
         ));
     }
-    let stale = stale(output::enumerate_passlogs(&final_prefix)?, &files);
-    Ok((files, stale))
+    Ok((files, vec![StaleFamily::Passlog(final_prefix)]))
 }
 
 pub(super) fn stage_files(
@@ -100,7 +104,7 @@ pub(super) fn stage_files(
     command: &mut BackendCommand,
     paths: &[PathBuf],
     deadline: Instant,
-) -> Result<(Vec<StagedFile>, Vec<PathBuf>), RuntimeError> {
+) -> Result<(Vec<StagedFile>, Vec<StaleFamily>), RuntimeError> {
     command.output_path = directory.path().join(paths[0].file_name().unwrap());
     execute(environment, directory, descriptor, command, deadline)?;
     let files = paths
@@ -108,6 +112,7 @@ pub(super) fn stage_files(
         .map(|target| StagedFile {
             source: directory.path().join(target.file_name().unwrap()),
             target: target.clone(),
+            allow_empty: false,
         })
         .collect();
     Ok((files, Vec::new()))
@@ -117,12 +122,4 @@ fn replace_passlog(arguments: &mut [String], prefix: &Path) {
     if let Some(index) = arguments.iter().position(|value| value == "-passlogfile") {
         arguments[index + 1] = output::path_string(prefix);
     }
-}
-
-fn stale(existing: Vec<PathBuf>, files: &[StagedFile]) -> Vec<PathBuf> {
-    let targets: BTreeSet<_> = files.iter().map(|value| &value.target).collect();
-    existing
-        .into_iter()
-        .filter(|value| !targets.contains(value))
-        .collect()
 }

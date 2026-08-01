@@ -2,16 +2,16 @@ use std::path::{Path, PathBuf};
 
 use veac_codegen::emitter::BackendOutput;
 
-use super::StagedFile;
+use super::StagedOutput;
 use crate::executor::output;
 use crate::RuntimeError;
 
-pub(in crate::executor) fn common_parent_from_files(
-    files: &[StagedFile],
+pub(in crate::executor) fn common_parent_from_outputs(
+    outputs: &[StagedOutput],
 ) -> Result<&Path, RuntimeError> {
-    files
+    outputs
         .first()
-        .and_then(|file| file.target.parent())
+        .and_then(|output| output.target().parent())
         .ok_or_else(|| RuntimeError::new("staged task has no output parent"))
 }
 
@@ -20,6 +20,7 @@ pub(in crate::executor) fn common_parent(output: &BackendOutput) -> Result<&Path
         BackendOutput::File(path) => vec![path],
         BackendOutput::Files { paths } => paths.iter().map(PathBuf::as_path).collect(),
         BackendOutput::ImageSequence { pattern } => vec![pattern],
+        BackendOutput::Package { root, .. } => vec![root],
     };
     let parent = output::ensure_safe_parent(paths[0])?;
     if paths

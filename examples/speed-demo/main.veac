@@ -17,11 +17,47 @@ project speed-demo {
         source media resource source;
         record { at 0s; duration 2s; }
         mapping linear { from 0s; to 4s; }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
+        }
       }
       item slow {
         source media resource source;
         record { at 2s; duration 4s; }
         mapping linear { from 4s; to 6s; }
+        modifiers {
+          layout canvas-fit {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit contain; }
+          }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

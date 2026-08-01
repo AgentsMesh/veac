@@ -95,6 +95,7 @@ pub(crate) fn visual() -> VisualProperties {
         transform: Transform2D {
             position: Animatable::constant(point),
             scale: Animatable::constant(Vec2 { x: 1.0, y: 1.0 }),
+            shear: Vec2 { x: 0.0, y: 0.0 },
             flip_horizontal: false,
             flip_vertical: false,
             rotation_degrees: Animatable::constant(0.0),

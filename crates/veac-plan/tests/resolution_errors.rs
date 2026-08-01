@@ -64,7 +64,7 @@ fn remote_and_family_font_require_external_resolution() {
 fn required_audio_selection_is_not_inferred() {
     let mut project = project();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

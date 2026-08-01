@@ -25,6 +25,15 @@ fn format_layer(writer: &mut Writer, value: &LayerDecl) {
     writer.block(
         format!("layer {} {}", layer_kind(value.kind), value.id.value),
         |writer| {
+            if let Some(placement) = &value.placement {
+                writer.line(format!(
+                    "placement {};",
+                    super::timeline_state::placement(placement.value)
+                ));
+            }
+            if let Some(state) = &value.state {
+                super::timeline_state::track(writer, state);
+            }
             if let Some(order) = &value.order {
                 writer.line(format!("order {};", order.raw));
             }
@@ -32,7 +41,9 @@ fn format_layer(writer: &mut Writer, value: &LayerDecl) {
                 writer.line(format!("route bus {};", bus.value));
             }
             for item in &value.items {
-                if value.order.is_some()
+                if value.placement.is_some()
+                    || value.state.is_some()
+                    || value.order.is_some()
                     || value.route_bus.is_some()
                     || item.id.value != value.items[0].id.value
                 {
@@ -51,6 +62,9 @@ fn format_item(writer: &mut Writer, value: &ItemDecl) {
             writer.line(format!("at {};", value.record.at.raw));
             writer.line(format!("duration {};", value.record.duration.raw));
         });
+        if let Some(value) = &value.state {
+            super::timeline_state::item(writer, value);
+        }
         if let Some(value) = &value.mapping {
             mapping(writer, value);
         }

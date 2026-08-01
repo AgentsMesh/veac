@@ -1,5 +1,5 @@
 use crate::authoring::{TextFontDecl, TextSpanDecl, TextStyleDecl};
-use veac_ir::{FontRef, Shadow, TextBackground, TextOutline, TextSpan, TextStyle, Vec2};
+use veac_ir::{FontRef, TextBackground, TextOutline, TextSpan, TextStyle};
 
 use super::context::Context;
 use super::{color, ids, value};
@@ -63,15 +63,7 @@ pub(super) fn lower(ctx: &mut Context, declaration: &TextStyleDecl) -> Option<Te
             None => None,
         },
         shadow: match &declaration.shadow {
-            Some(value) => Some(Shadow {
-                blur_pixels: value::scalar(ctx, &value.blur, "px")?,
-                opacity: value::scale(ctx, &value.opacity)?,
-                offset: Vec2 {
-                    x: value::scalar(ctx, &value.offset.x, "px")?,
-                    y: value::scalar(ctx, &value.offset.y, "px")?,
-                },
-                color: color::lower(ctx, &value.color)?,
-            }),
+            Some(value) => Some(super::shadow::lower(ctx, value)?),
             None => None,
         },
         spans: declaration

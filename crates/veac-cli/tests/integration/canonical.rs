@@ -45,7 +45,9 @@ fn multiple_outputs_require_a_typed_config_selection() {
     let mut second = envelope.project.render_configs[0].clone();
     second.id = veac_ir::RenderConfigId::new("out_second").unwrap();
     second.deliverables[0].id = veac_ir::DeliverableId::new("dlv_second").unwrap();
-    second.deliverables[0].file_name = "second.mp4".into();
+    second.deliverables[0].target = veac_ir::DeliverableTarget::File {
+        name: "second.mp4".into(),
+    };
     envelope.project.render_configs.push(second);
     std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
 

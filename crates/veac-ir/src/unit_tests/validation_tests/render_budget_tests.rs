@@ -2,6 +2,11 @@ use std::collections::BTreeMap;
 
 use super::*;
 
+#[path = "render_budget_tests/hls.rs"]
+mod hls;
+#[path = "render_budget_tests/structure.rs"]
+mod structure;
+
 #[test]
 fn canonical_timeline_and_each_delivery_work_domain_are_bounded() {
     let mut project = sample_project();
@@ -10,9 +15,10 @@ fn canonical_timeline_and_each_delivery_work_domain_are_bounded() {
         .record_range
         .duration = RationalTime::new(long_ticks, 600).unwrap();
     let output = &mut project.project.render_configs[0];
-    output.width = 3_840;
-    output.height = 2_160;
-    output.frame_rate = Rational::new(240, 1).unwrap();
+    let raster = output.raster.as_mut().unwrap();
+    raster.width = 3_840;
+    raster.height = 2_160;
+    raster.frame_rate = Rational::new(240, 1).unwrap();
     let DeliverableKind::Video(video) = &mut output.deliverables[0].kind else {
         unreachable!()
     };
@@ -36,7 +42,7 @@ fn canonical_timeline_and_each_delivery_work_domain_are_bounded() {
                     sample_rate: 384_000,
                     channels: 2,
                 },
-                source: AudioStemSource::Master,
+                source: AudioMixSource::Master,
             }),
         ),
         deliverable(
@@ -96,33 +102,32 @@ fn canonical_reverse_and_visual_intermediates_are_bounded() {
 }
 
 #[test]
-fn canonical_structure_budget_runs_on_authored_objects() {
+fn canonical_placement_intermediate_is_bounded() {
     let mut project = sample_project();
     let sequence = &mut project.project.sequences[0];
-    for index in sequence.tracks.len()..=MAX_TOTAL_TRACKS as usize {
-        sequence.tracks.push(Track {
-            id: TrackId::new(format!("trk_budget_{index}")).unwrap(),
-            kind: TrackKind::Visual,
-            order: index as i32,
-            placement_mode: PlacementMode::Free,
-            state: TrackState {
-                enabled: true,
-                muted: false,
-                solo: false,
-                locked: false,
-            },
-            routing: TrackRouting::Default,
-            clips: vec![],
-        });
-    }
+    let visual = sequence.tracks[0].clips[0].visual.as_mut().unwrap();
+    visual.frame = None;
+    visual.transform.scale = Animatable::constant(Vec2 { x: 6.2, y: 6.2 });
 
-    assert_code(&validation_codes(&project), "BUDGET_TRACKS");
+    assert_code(
+        &validation_codes(&project),
+        "BUDGET_VISUAL_INTERMEDIATE_PIXELS",
+    );
 }
 
 fn deliverable(id: &str, file_name: &str, kind: DeliverableKind) -> Deliverable {
+    let target = if matches!(kind, DeliverableKind::ImageSequence(_)) {
+        DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        }
+    } else {
+        DeliverableTarget::File {
+            name: file_name.to_owned(),
+        }
+    };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target,
         kind,
     }
 }

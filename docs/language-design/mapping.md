@@ -1,7 +1,7 @@
-# V3 Authoring To Canonical IR Mapping
+# Authoring To Canonical IR Mapping
 
 This document defines the implemented boundary between `.veac`, canonical JSON
-IR schema V3, and transactional edits. It is a semantic mapping, not a
+IR schema version 5, and transactional edits. It is a semantic mapping, not a
 property-name translation table.
 
 ## One Compilation Path
@@ -11,7 +11,7 @@ property-name translation table.
   -> lexer/parser
   -> typed authoring AST
   -> reference and material lowering
-  -> canonical project JSON (schema version 3)
+  -> canonical project JSON (schema version 5, minimum reader 5)
   -> planner -> backend
 ```
 
@@ -21,7 +21,7 @@ fields, units, references, or unsupported combinations fail before planning.
 
 ## Ownership Mapping
 
-| Authoring V3 | Canonical IR V3 |
+| Authoring source | Canonical IR schema 5 |
 | --- | --- |
 | `project` | `Project` |
 | `settings` | `ProjectSettings` |
@@ -34,12 +34,13 @@ fields, units, references, or unsupported combinations fail before planning.
 | sequence `apply` / scope | `Sequence.applies[]` |
 | sequence `relation` | typed entry in `Project.relations[]` |
 | project `annotation` | `Project.annotations[]` |
-| project `output` | `Project.render_configs[]` plus deliverable |
+| project `delivery` | `Project.render_configs[]` |
+| delivery `artifact` | one typed `Deliverable` |
 
-Layer/item are authoring names; Track/Clip are canonical names. Output and
+Layer/item are authoring names; Track/Clip are canonical names. Delivery and
 multicam declarations never become sequence children. IDs are lowered through
-typed namespaces, so a resource, sequence, track, clip, bus, and output ID are
-not interchangeable strings.
+typed namespaces, so resources, sequences, tracks, clips, buses, render configs,
+and deliverables are not interchangeable strings.
 
 ## Resource And Stream Mapping
 
@@ -138,21 +139,15 @@ intervals.
 
 `route bus mix;` on an audio layer lowers to `TrackRouting::AudioBus` with a
 typed bus ID. There is no standalone bus declaration. Ordered audio processors
-remain ordered. An audio-stem output selects exactly one source: master, one
+remain ordered. An audio-stem artifact selects exactly one source: master, one
 track, or one routed bus.
 
-Outputs are project members and form a closed union:
-
-- video
-- image sequence
-- caption sidecar
-- audio stem
-- scope
-
-Media outputs lower to a render config and typed deliverable. Caption sidecars
-select a source sequence, `srt`/`vtt`/`ass`, and caption track IDs. Scope output
-selects a sequence, scope kind/time/dimensions, and image format. No output is
-owned by a sequence.
+A delivery lowers to one `RenderConfig`; each artifact lowers to one typed
+`Deliverable` with a file, image-sequence pattern, or package target. The closed
+kind union is video, image sequence, caption sidecar, audio stem, scope, audio
+file, animated image, still image, or adaptive package. Typed recipe primitives
+become codec/container/image/package enums and settings, never an untyped map.
+No delivery is owned by a sequence; it holds a typed sequence reference.
 
 ## Canonical EditBatch Only
 
@@ -188,8 +183,8 @@ performs the same checks without writing output. It never patches `.veac` text.
 ## Verification Invariants
 
 - `parse(fmt(parse(source)))` is semantically stable.
-- Canonical project JSON validates against schema V3.
-- Source and output unions are closed.
+- Canonical project JSON validates against schema version 5 with minimum reader 5.
+- Source, artifact, target, and recipe unions are closed.
 - Ownership and typed reference namespaces are preserved.
 - Ordered collections remain ordered where order is semantic.
 - Editing a canonical project yields another fully valid canonical project.

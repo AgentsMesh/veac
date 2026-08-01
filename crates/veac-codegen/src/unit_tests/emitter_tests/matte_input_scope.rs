@@ -7,7 +7,7 @@ use super::support::{output_bindings, resolved, test_font_path, text_fixture};
 #[test]
 fn hidden_caption_matte_transitively_requires_its_font() {
     let mut plan = resolved(&text_fixture(true));
-    plan.output.video_deliverable_mut().unwrap().captions = CaptionOutput::Discard;
+    plan.output.raster.as_mut().unwrap().captions = CaptionOutput::Discard;
     let caption = plan.sequences[0]
         .tracks
         .iter()

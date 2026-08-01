@@ -25,8 +25,9 @@ fn typed_visual_audio_and_effect_parameter_edits_update_only_their_targets() {
         visual(&id, VisualProperty::Position(Animatable::constant(point))),
         visual(
             &id,
-            VisualProperty::Scale(Animatable::constant(Vec2 { x: 1.2, y: 0.8 })),
+            VisualProperty::Scale(Animatable::constant(Vec2 { x: 0.2, y: 0.2 })),
         ),
+        visual(&id, VisualProperty::Shear(Vec2 { x: 0.2, y: -0.1 })),
         visual(&id, VisualProperty::FlipHorizontal(true)),
         visual(&id, VisualProperty::FlipVertical(true)),
         visual(
@@ -77,6 +78,14 @@ fn typed_visual_audio_and_effect_parameter_edits_update_only_their_targets() {
         Some(Animatable::Constant { value }) if value.x == 0.1
     ));
     assert!(clip.visual.as_ref().unwrap().transform.flip_horizontal);
+    assert_eq!(
+        clip.visual.as_ref().unwrap().transform.shear,
+        Vec2 { x: 0.2, y: -0.1 }
+    );
+    assert_eq!(
+        clip.visual.as_ref().unwrap().transform.scale,
+        Animatable::constant(Vec2 { x: 0.2, y: 0.2 })
+    );
     assert!(clip.visual.as_ref().unwrap().transform.flip_vertical);
     assert!(clip.audio.as_ref().unwrap().muted);
     assert!(clip.effects[0].parameters.contains_key("contrast"));

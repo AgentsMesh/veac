@@ -22,6 +22,10 @@ project all-features {
         record { at 0s; duration 8s; }
         mapping linear { from 2s; to 10s; }
         modifiers {
+          layout canvas-fill {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1920px; height 1080px; fit cover; }
+          }
           color grade {
             input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
             working-space { primaries bt709; transfer linear; matrix rgb; range full; }
@@ -39,6 +43,11 @@ project all-features {
         source generated solid { color #03045edd; }
         record { at 1s; duration 5s; }
         modifiers {
+          layout lower-third-frame {
+            placement anchor { at bottom; inset { x 0px; y 80px; } }
+            frame { width 1500px; height 180px; fit fill; }
+          }
+          transform lower-third-pivot { anchor { x 0.5; y 1; } }
           composite top { opacity 95%; z-index 20; blend normal; }
         }
       }
@@ -61,10 +70,21 @@ project all-features {
     layer caption subtitles {
       item cue {
         source caption {
-          content "One language, one typed IR, one render plan.";
-          style { font family "Inter"; size 48px; fill #ffffffff; }
+          content "一种语言，一份类型化中间表示，一套渲染计划。";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 48px; fill #ffffffff;
+            background { color #000000cc; padding 20px; }
+          }
         }
         record { at 0s; duration 8s; }
+        modifiers {
+          layout caption-placement {
+            placement absolute { position { x 960px; y 850px; } }
+            frame { width 1500px; height 140px; fit contain; }
+          }
+        }
       }
     }
     relation group edit-unit { members { item shot; item music-item; } }
@@ -73,13 +93,30 @@ project all-features {
     }
   }
 
-  output video master {
-    sequence main; file-name "all-features.mp4";
-    encoding {
-      container mp4; optimize-for-streaming true;
-      video { codec h264; pixel-format yuv420p; }
-      audio { codec aac; sample-rate 48000; channels 2; }
-      captions burn-in;
+  delivery master {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video master {
+      target file "all-features.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
+      }
     }
   }
 }

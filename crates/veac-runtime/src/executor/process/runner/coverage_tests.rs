@@ -114,6 +114,7 @@ fn valid_limits(root: Option<&Path>) -> ProcessLimits<'_> {
         max_stdout_bytes: 64,
         max_stderr_bytes: 64,
         output_root: root,
+        working_directory: None,
         max_output_bytes: 64,
     }
 }

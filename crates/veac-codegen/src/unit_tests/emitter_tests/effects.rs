@@ -2,7 +2,9 @@ use veac_codegen::emitter::CodegenErrorKind;
 use veac_plan::canonical::*;
 use veac_plan::ResolvedEffect;
 
-use super::support::{bindings, emit_video_command, fixture, resolved, time};
+use super::support::{
+    assert_rgb_plane_output, bindings, emit_video_command, fixture, resolved, time,
+};
 
 mod animated;
 
@@ -60,12 +62,23 @@ fn emits_every_registered_video_effect_and_parameter_form() {
         "noise=alls='0.2*100'",
         "color=0x010203:similarity=0.2:blend=0",
         "color=0x00FF00:similarity=0.1:blend=0",
-        "deshake",
+        "vidstabtransform=input=",
     ] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
     }
+    assert_rgb_plane_output(&graph, "effectcolorv");
+    assert_rgb_plane_output(&graph, "effectoutputcolorv");
     assert!(graph.contains("clip((t-0)/1"));
     assert!(graph.contains("enable='gte(t,0)*lt(t,1)'"));
+    let command = emit_video_command(&plan, &bindings(&plan)).unwrap();
+    assert_eq!(command.preparations.len(), 1);
+    let analysis = command.preparations[0]
+        .command
+        .filter_graph
+        .as_deref()
+        .unwrap();
+    assert!(analysis.contains("vidstabdetect=result="), "{analysis}");
+    assert_eq!(graph.matches("vidstabtransform").count(), 1);
 }
 
 #[test]
@@ -104,7 +117,7 @@ fn audio_normalize_splices_partial_ranges_and_rejects_curved_target() {
 fn audio_plan() -> veac_plan::ResolvedRenderPlan {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

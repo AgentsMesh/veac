@@ -83,9 +83,17 @@ fn bind_outputs(plan: &ResolvedRenderPlan, bindings: &mut ExecutionBindings) {
         bindings
             .bind_output(
                 deliverable.id.clone(),
-                PathBuf::from("/tmp").join(&deliverable.file_name),
+                PathBuf::from("/tmp").join(target_name(deliverable)),
             )
             .unwrap();
+    }
+}
+
+pub fn target_name(deliverable: &Deliverable) -> &str {
+    match &deliverable.target {
+        DeliverableTarget::File { name } => name,
+        DeliverableTarget::ImageSequence { pattern } => pattern,
+        DeliverableTarget::Package { name } => name,
     }
 }
 
@@ -102,14 +110,54 @@ pub fn emit_video_command(
     bindings: &ExecutionBindings,
 ) -> Result<BackendCommand, CodegenErrors> {
     let bundle = emit_all(plan, bindings)?;
-    Ok(bundle
+    let commands = bundle
         .tasks()
         .iter()
-        .find_map(|task| match (&task.action, task.product) {
+        .filter_map(|task| match (&task.action, task.product) {
             (BackendAction::Ffmpeg(command), BackendProduct::VideoMaster) => Some(command.clone()),
             _ => None,
         })
-        .expect("test plan must emit a video master"))
+        .collect::<Vec<_>>();
+    let [command] = commands.as_slice() else {
+        panic!("test plan must emit exactly one video master")
+    };
+    Ok(command.clone())
+}
+
+pub fn emit_video_command_for(
+    plan: &ResolvedRenderPlan,
+    bindings: &ExecutionBindings,
+    id: &DeliverableId,
+) -> Result<BackendCommand, CodegenErrors> {
+    let bundle = emit_all(plan, bindings)?;
+    let commands = bundle
+        .tasks()
+        .iter()
+        .filter_map(
+            |task| match (&task.action, task.product, &task.deliverable_id) {
+                (BackendAction::Ffmpeg(command), BackendProduct::VideoMaster, value)
+                    if value == id =>
+                {
+                    Some(command.clone())
+                }
+                _ => None,
+            },
+        )
+        .collect::<Vec<_>>();
+    let [command] = commands.as_slice() else {
+        panic!("deliverable {id} must emit exactly one video master")
+    };
+    Ok(command.clone())
+}
+
+pub fn assert_rgb_plane_output(graph: &str, prefix: &str) {
+    let output = format!("[{prefix}");
+    assert!(
+        graph
+            .split(';')
+            .any(|node| node.contains("mergeplanes=format=gbrp16le") && node.contains(&output)),
+        "missing explicit RGB-plane output {prefix}: {graph}"
+    );
 }
 
 pub fn test_font_path() -> PathBuf {

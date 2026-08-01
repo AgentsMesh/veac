@@ -85,9 +85,7 @@ fn known_effect_rejects_unknown_parameter_type_and_range() {
         .insert("unknown".to_owned(), ParameterValue::Number { value: 0.0 });
     effect.parameters.insert(
         "contrast".to_owned(),
-        ParameterValue::Text {
-            value: "bad".into(),
-        },
+        ParameterValue::Boolean { value: true },
     );
     effect.parameters.insert(
         "saturation".to_owned(),
@@ -96,6 +94,39 @@ fn known_effect_rejects_unknown_parameter_type_and_range() {
     let codes = validation_codes(&project);
     assert_code(&codes, "UNKNOWN_EFFECT_PARAMETER");
     assert_code(&codes, "EFFECT_PARAMETER_TYPE");
+}
+
+#[test]
+fn effect_parameter_spring_extrema_must_stay_inside_registry_range() {
+    let mut project = sample_project();
+    let effect = &mut project.project.sequences[0].tracks[0].clips[0].effects[0];
+    effect.effect_type = "video.luma_key".to_owned();
+    effect.parameters.clear();
+    effect.parameters.insert(
+        "threshold".to_owned(),
+        ParameterValue::NumberCurve {
+            value: Animatable::Keyframes {
+                keyframes: vec![
+                    threshold_key("kf_threshold_start", 0, 0.1),
+                    threshold_key("kf_threshold_end", 600, 0.9),
+                ],
+            },
+        },
+    );
+    assert_code(&validation_codes(&project), "EFFECT_PARAMETER_TYPE");
+}
+
+fn threshold_key(id: &str, at: i64, value: f64) -> Keyframe<f64> {
+    Keyframe {
+        id: KeyframeId::new(id).unwrap(),
+        time: time(at),
+        value,
+        interpolation: Interpolation::Spring {
+            frequency: 1.5,
+            decay: 6.0,
+            initial_velocity: 0.0,
+        },
+    }
 }
 
 #[test]

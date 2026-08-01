@@ -144,5 +144,6 @@ fn staged(
     StagedFile {
         source,
         target: target_parent.join(target),
+        allow_empty: false,
     }
 }

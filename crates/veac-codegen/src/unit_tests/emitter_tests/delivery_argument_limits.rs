@@ -29,9 +29,18 @@ fn auxiliary_visual_deliverables_emit_large_bounded_script_eligible_graphs() {
     ] {
         let mut plan = oversized_visual_plan();
         let id = DeliverableId::new("dlv_aux_limit").unwrap();
+        let target = if matches!(kind, DeliverableKind::ImageSequence(_)) {
+            DeliverableTarget::ImageSequence {
+                pattern: file.to_owned(),
+            }
+        } else {
+            DeliverableTarget::File {
+                name: file.to_owned(),
+            }
+        };
         plan.output.deliverables = vec![Deliverable {
             id: id.clone(),
-            file_name: file.to_owned(),
+            target,
             kind,
         }];
         let local = bindings(&plan);
@@ -65,7 +74,7 @@ fn oversized_visual_plan() -> veac_plan::ResolvedRenderPlan {
             panic!("text fixture")
         };
         content.text = "a".repeat(40_000);
-        content.style.background = None;
+        content.styled_mut().unwrap().background = None;
         plan.sequences[0].tracks.push(track);
     }
     plan

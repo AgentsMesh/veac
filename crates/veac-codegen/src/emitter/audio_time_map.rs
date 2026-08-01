@@ -1,9 +1,8 @@
 use veac_artifact::{MediaRole, SourceClock};
-use veac_plan::canonical::{
-    AudioOutput, PitchPolicy, PlaybackDirection, RationalTime, SourceTimeSegment,
-};
+use veac_plan::canonical::{PitchPolicy, PlaybackDirection, RationalTime, SourceTimeSegment};
 use veac_plan::{PlanInputId, ResolvedClip, ResolvedSourceMapping, ResolvedSourceTimeMap};
 
+use super::audio::AudioRenderSpec;
 use super::{audio_processing, audio_source::invalid, CodegenErrors, EmitContext};
 
 mod segment;
@@ -15,7 +14,7 @@ mod internal_tests;
 pub(super) struct LabelRequest<'a> {
     pub raw: &'a str,
     pub mapping: &'a ResolvedSourceMapping,
-    pub output: &'a AudioOutput,
+    pub output: &'a AudioRenderSpec,
     pub pitch: PitchPolicy,
     pub clock: SourceClock,
     pub source_duration: Option<RationalTime>,
@@ -27,7 +26,7 @@ pub(super) fn apply(
     input_id: &PlanInputId,
     stream: u32,
     mapping: &ResolvedSourceMapping,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     pitch: PitchPolicy,
 ) -> Result<String, CodegenErrors> {
     let Some(route) = context.input_routes.stream(input_id, MediaRole::Audio) else {
@@ -114,7 +113,7 @@ fn curve(
     raw: &str,
     segments: &[SourceTimeSegment],
     clock: SourceClock,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
     pitch: PitchPolicy,
 ) -> Result<String, CodegenErrors> {
     if segments.is_empty() {

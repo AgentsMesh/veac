@@ -1,4 +1,6 @@
 mod caption;
+mod delivery;
+mod support;
 
 use crate::*;
 
@@ -15,14 +17,18 @@ impl Validator {
         let sequence_id = &output.sequence_id;
         match &value.kind {
             DeliverableKind::ImageSequence(settings) => {
-                if !image_pattern_valid(value)
-                    || !image_extension(&value.file_name, settings.format)
-                    || !sequence_duration(project, sequence_id).is_some_and(|duration| {
-                        image_sequence_range_valid(
-                            settings.start_number,
-                            duration,
-                            output.frame_rate,
-                        )
+                if !value
+                    .target
+                    .image_sequence_pattern()
+                    .is_some_and(|pattern| image_extension(pattern, settings.format))
+                    || !support::sequence_duration(project, sequence_id).is_some_and(|duration| {
+                        output.raster.as_ref().is_some_and(|raster| {
+                            image_sequence_range_valid(
+                                settings.start_number,
+                                duration,
+                                raster.frame_rate,
+                            )
+                        })
                     })
                 {
                     self.value_error("OUTPUT_IMAGE_SEQUENCE", path, value.id.as_str());
@@ -36,6 +42,12 @@ impl Validator {
             }
             DeliverableKind::Scope(settings) => {
                 self.scope(value, settings, project, sequence_id, path)
+            }
+            DeliverableKind::AudioFile(_)
+            | DeliverableKind::AnimatedImage(_)
+            | DeliverableKind::StillImage(_)
+            | DeliverableKind::AdaptivePackage(_) => {
+                delivery::validate(self, value, project, output, path)
             }
             DeliverableKind::Video(_) => unreachable!("video is validated by the parent module"),
         }
@@ -60,32 +72,23 @@ impl Validator {
                 | (AudioStemFormat::Wav, AudioCodec::PcmS32Le)
                 | (AudioStemFormat::Flac, AudioCodec::Flac)
         );
-        if !extension_is(&value.file_name, expected)
+        if !value
+            .target
+            .file_name()
+            .is_some_and(|name| support::extension_is(name, expected))
             || !audio_output_valid(&settings.audio)
             || !codec_valid
         {
             self.value_error("OUTPUT_AUDIO_STEM", path, value.id.as_str());
         }
         match &settings.source {
-            AudioStemSource::Track { track_id }
-                if !sequence(project, sequence_id)
-                    .into_iter()
-                    .flat_map(|value| &value.tracks)
-                    .any(|track| {
-                        track.id == *track_id
-                            && matches!(track.kind, TrackKind::Video | TrackKind::Audio)
-                    }) =>
+            AudioMixSource::Track { track_id }
+                if !support::source_track_exists(project, sequence_id, track_id) =>
             {
                 self.missing_ref("OUTPUT_STEM_TRACK_NOT_FOUND", track_id.as_str(), path)
             }
-            AudioStemSource::Bus { bus_id }
-                if !sequence(project, sequence_id)
-                        .into_iter()
-                        .flat_map(|value| &value.tracks)
-                        .any(|track| {
-                            matches!(track.kind, TrackKind::Video | TrackKind::Audio)
-                                && matches!(&track.routing, TrackRouting::AudioBus { bus_id: value } if value == bus_id)
-                        }) =>
+            AudioMixSource::Bus { bus_id }
+                if !support::source_bus_exists(project, sequence_id, bus_id) =>
             {
                 self.value_error("OUTPUT_STEM_BUS", path, value.id.as_str());
             }
@@ -110,8 +113,11 @@ impl Validator {
             value.id.as_str(),
         );
         if !ffmpeg_dimensions_valid(settings.width, settings.height)
-            || !image_extension(&value.file_name, settings.format)
-            || sequence_duration(project, sequence_id).is_none_or(|end| settings.at >= end)
+            || !value
+                .target
+                .file_name()
+                .is_some_and(|name| image_extension(name, settings.format))
+            || support::sequence_duration(project, sequence_id).is_none_or(|end| settings.at >= end)
         {
             self.push(
                 "OUTPUT_SCOPE",
@@ -124,39 +130,6 @@ impl Validator {
     }
 }
 
-fn sequence<'a>(project: &'a Project, id: &SequenceId) -> Option<&'a Sequence> {
-    project.sequences.iter().find(|value| value.id == *id)
-}
-
-fn sequence_duration(project: &Project, id: &SequenceId) -> Option<RationalTime> {
-    sequence(project, id)?
-        .tracks
-        .iter()
-        .flat_map(|track| &track.clips)
-        .filter_map(|clip| clip.record_range.end().ok())
-        .max_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal))
-}
-
-pub(super) fn image_pattern_valid(value: &Deliverable) -> bool {
-    matches!(value.kind, DeliverableKind::ImageSequence(_))
-        && crate::ImageSequencePattern::parse(&value.file_name).is_some()
-        && !value.file_name.contains(['/', '\\', '\0'])
-}
-
 fn image_extension(value: &str, format: ImageFormat) -> bool {
-    extension_is(
-        value,
-        match format {
-            ImageFormat::Png => "png",
-            ImageFormat::Jpeg => "jpg",
-            ImageFormat::Tiff => "tiff",
-            ImageFormat::Exr => "exr",
-        },
-    )
-}
-
-fn extension_is(value: &str, expected: &str) -> bool {
-    value
-        .rsplit_once('.')
-        .is_some_and(|(_, extension)| extension.eq_ignore_ascii_case(expected))
+    support::image_extension(value, format)
 }

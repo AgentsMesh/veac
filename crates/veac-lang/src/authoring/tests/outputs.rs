@@ -1,4 +1,4 @@
-use super::super::{format_document, lower_document, parse, AudioStemSourceDecl, OutputEncoding};
+use super::super::{format_document, lower_document, parse, ArtifactRecipe, AudioMixSourceDecl};
 use super::project;
 
 fn document(outputs: &str) -> String {
@@ -14,57 +14,60 @@ fn document(outputs: &str) -> String {
 }
 
 pub(super) const OUTPUTS: &str = r#"
-  output video preview {
+  delivery preview {
     sequence main;
-    file-name "preview.mp4";
-    encoding {
-      container mp4;
-      video {
-        codec h264;
-        pixel-format yuv420p;
-        alpha opaque;
-        rate-control bitrate {
-          target-bps 8000000;
-          max-bps 10000000;
-          buffer-bps 16000000;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video video-out {
+      target file "preview.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          rate-control capped {
+            target 8mbps;
+            max 10mbps;
+            buffer 16mbit;
+          }
+          profile h264-high;
+          level "4.1";
         }
-        profile h264-high;
-        level "4.1";
+        audio aac { sample-rate 48khz; channel-layout stereo; }
+        passes two-pass;
+        accelerator videotoolbox;
       }
-      audio { codec aac; sample-rate 48000; channels 2; }
-      captions burn-in;
-      optimize-for-streaming true;
-      pass-mode two-pass;
-      hardware videotoolbox;
     }
-  }
-  output image-sequence frames {
-    sequence main; file-name "frame-%d.exr";
-    encoding { format exr; start-number 1001; }
-  }
-  output caption-sidecar sidecar {
-    sequence main; file-name "captions.vtt";
-    encoding { format web-vtt; tracks { track captions; } }
-  }
-  output audio-stem dialogue-stem {
-    sequence main; file-name "dialogue.wav";
-    encoding {
-      format wav;
-      audio { codec pcm-s24le; sample-rate 48000; channels 2; }
+    artifact image-sequence frames {
+      target pattern "frame-%d.exr"; numbering from 1001; encode exr;
+    }
+    artifact caption-sidecar sidecar {
+      target file "captions.vtt";
+      source caption-tracks { track captions; }
+      encode web-vtt;
+    }
+    artifact audio-stem dialogue-stem {
+      target file "dialogue.wav";
       source track dialogue;
+      encode wav {
+        sample-format pcm-s24le;
+        sample-rate 48khz;
+        channel-layout stereo;
+      }
     }
-  }
-  output scope waveform {
-    sequence main; file-name "waveform.png";
-    encoding { scope waveform; at 1s; width 1280; height 720; format png; }
+    artifact scope waveform {
+      target file "waveform.png";
+      analyze waveform; frame containing 1s; canvas 1280px by 720px; encode png;
+    }
   }
 "#;
 
 #[test]
 fn parses_all_typed_output_variants() {
     let parsed = parse(&document(OUTPUTS)).unwrap();
-    assert_eq!(parsed.project.outputs.len(), 5);
-    let OutputEncoding::Video(video) = &parsed.project.outputs[0].encoding else {
+    assert_eq!(parsed.project.deliveries.len(), 1);
+    let artifacts = &parsed.project.deliveries[0].artifacts;
+    assert_eq!(artifacts.len(), 5);
+    let ArtifactRecipe::Video(video) = &artifacts[0].recipe else {
         panic!("video expected")
     };
     assert!(matches!(
@@ -74,42 +77,46 @@ fn parses_all_typed_output_variants() {
             ..
         }
     ));
-    let OutputEncoding::AudioStem(stem) = &parsed.project.outputs[3].encoding else {
+    let ArtifactRecipe::AudioStem(stem) = &artifacts[3].recipe else {
         panic!("stem expected")
     };
-    assert!(matches!(stem.source, AudioStemSourceDecl::Track(_)));
+    assert!(matches!(stem.source, AudioMixSourceDecl::Track(_)));
     let diagnostics = lower_document(&parsed).unwrap_err();
     assert!(!diagnostics.as_slice().is_empty());
 }
 
 #[test]
-fn output_format_is_idempotent() {
+fn delivery_format_is_idempotent() {
     let once = format_document(&parse(&document(OUTPUTS)).unwrap());
     let twice = format_document(&parse(&once).unwrap());
     assert_eq!(once, twice);
-    assert!(once.contains("rate-control bitrate"));
+    assert!(once.contains("rate-control capped"));
     assert!(once.contains("source track dialogue;"));
     assert!(!once.contains("mode test"));
 }
 
 #[test]
-fn output_schema_rejects_unknown_and_untyped_values() {
+fn delivery_schema_rejects_unknown_and_untyped_values() {
     let cases = [
         (
-            "output video bad { sequence main; file-name \"../bad.mp4\"; encoding {} }",
-            "AUTHORING_OUTPUT_FILE_NAME",
+            "delivery bad { sequence main; raster { canvas 1px by 1px; frame-rate 30fps; captions discard; } artifact video bad { target file \"../bad.mp4\"; mux mp4 { video h264 {} audio none; } } }",
+            "AUTHORING_ARTIFACT_TARGET_FILE",
         ),
         (
-            "output video bad { sequence main; file-name \"bad.mp4\"; encoding { mystery true; } }",
+            "delivery bad { sequence main; raster { canvas 2px by 2px; frame-rate 30fps; captions discard; } artifact video bad { target file \"bad.mp4\"; mux mp4 { video h264 {} audio none; } mystery true; } }",
             "AUTHORING_UNKNOWN_FIELD",
         ),
         (
-            "output video bad { sequence main; file-name \"bad.mp4\"; encoding { video { codec h266; } } }",
-            "AUTHORING_OUTPUT_ENUM",
+            "delivery bad { sequence main; raster { canvas 2px by 2px; frame-rate 30fps; captions discard; } artifact video bad { target file \"bad.mp4\"; mux mp4 { video h266 {} audio none; } } }",
+            "AUTHORING_RECIPE_VARIANT",
         ),
         (
-            "output audio-stem bad { sequence main; file-name \"bad.wav\"; encoding { source item wrong; } }",
+            "delivery bad { sequence main; artifact audio-stem bad { target file \"bad.wav\"; source item wrong; encode wav { sample-format pcm-s24le; sample-rate 48khz; channel-layout stereo; } } }",
             "AUTHORING_OUTPUT_SOURCE",
+        ),
+        (
+            "delivery bad { sequence main; artifact audio-stem bad { target file \"bad.wav\"; encoding {} } }",
+            "AUTHORING_LEGACY_ARTIFACT_ENCODING",
         ),
     ];
     for (output, code) in cases {

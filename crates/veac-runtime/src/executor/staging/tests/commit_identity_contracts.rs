@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use super::super::commit::{self, CommitContext, CommitObserver};
+use super::super::commit::{CommitContext, CommitObserver};
 use super::super::directory::Directory;
 use super::super::StagedFile;
-use super::{load_journal, RollbackFault};
+use super::{apply_observed, file_outputs, load_journal, RollbackFault};
 
 #[test]
 fn source_swap_at_the_rename_boundary_never_commits_the_journal() {
@@ -16,6 +16,7 @@ fn source_swap_at_the_rename_boundary_never_commits_the_journal() {
     let files = [StagedFile {
         source: source.clone(),
         target: target.clone(),
+        allow_empty: false,
     }];
     let stage = Directory::open(staging.path()).unwrap();
     let output = Directory::open(root.path()).unwrap();
@@ -24,8 +25,9 @@ fn source_swap_at_the_rename_boundary_never_commits_the_journal() {
         moved: moved.clone(),
     };
 
-    let failure = commit::apply_observed(
-        CommitContext::new(staging.path(), &stage, &output, &files, &[], false),
+    let outputs = file_outputs(&files);
+    let failure = apply_observed(
+        CommitContext::new(staging.path(), &stage, &output, &outputs, &[]),
         || true,
         &RollbackFault::None,
         &observer,

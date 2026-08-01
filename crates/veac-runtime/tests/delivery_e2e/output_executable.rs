@@ -118,7 +118,9 @@ fn video(
     };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::Video(settings),
     }
 }
@@ -132,7 +134,9 @@ fn stem(
 ) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format,
             audio: AudioOutput {
@@ -140,7 +144,7 @@ fn stem(
                 sample_rate,
                 channels: 1,
             },
-            source: AudioStemSource::Master,
+            source: AudioMixSource::Master,
         }),
     }
 }

@@ -6,24 +6,22 @@ use veac_plan::ResolvedRenderPlan;
 use super::Check;
 
 mod aux;
+mod delivery_extended;
 mod names;
+mod raster;
 
 pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
     let output = &plan.output;
     if veac_plan::PlanOutputId::new(output.id.as_str()).is_err()
         || veac_plan::canonical::RenderConfigId::new(output.render_config_id.as_str()).is_err()
-        || !veac_plan::canonical::render_geometry_valid(
-            output.width,
-            output.height,
-            output.frame_rate,
-        )
     {
         check.push(
             "PLAN_OUTPUT_INVALID",
             Some(output.id.to_string()),
-            "output geometry or frame rate exceeds the default untrusted-plan render budget",
+            "output or render-config ID is invalid",
         );
     }
+    raster::validate(check, output);
     names::validate(check, &output.deliverables);
     if output.sequence_id != plan.entry_sequence_id {
         check.push(
@@ -43,6 +41,12 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
         }
         match &deliverable.kind {
             DeliverableKind::Video(settings) => video(check, plan, deliverable, settings),
+            DeliverableKind::AudioFile(_)
+            | DeliverableKind::AnimatedImage(_)
+            | DeliverableKind::StillImage(_)
+            | DeliverableKind::AdaptivePackage(_) => {
+                delivery_extended::validate(check, plan, deliverable)
+            }
             _ => aux::validate(check, plan, deliverable),
         }
     }
@@ -62,7 +66,11 @@ fn video(
             "video codec is incompatible with the output container",
         );
     }
-    if !veac_plan::canonical::output_file_compatible(&deliverable.file_name, settings.container) {
+    if !deliverable
+        .target
+        .file_name()
+        .is_some_and(|name| veac_plan::canonical::output_file_compatible(name, settings.container))
+    {
         check.push(
             "PLAN_VIDEO_FILE_FORMAT_INVALID",
             id.clone(),
@@ -71,11 +79,13 @@ fn video(
     }
     if !veac_plan::canonical::video_settings_valid(&settings.video)
         || !veac_plan::canonical::video_delivery_valid(settings)
-        || !veac_plan::canonical::pixel_geometry_valid(
-            plan.output.width,
-            plan.output.height,
-            settings.video.pixel_format,
-        )
+        || !plan.output.raster.as_ref().is_none_or(|raster| {
+            veac_plan::canonical::pixel_geometry_valid(
+                raster.width,
+                raster.height,
+                settings.video.pixel_format,
+            )
+        })
     {
         check.push(
             "PLAN_VIDEO_SETTINGS_INVALID",
@@ -104,11 +114,9 @@ fn video(
         );
     }
     if settings.container == OutputFormat::Mxf
-        && !veac_plan::canonical::mxf_geometry_valid(
-            plan.output.width,
-            plan.output.height,
-            plan.output.frame_rate,
-        )
+        && !plan.output.raster.as_ref().is_none_or(|raster| {
+            veac_plan::canonical::mxf_geometry_valid(raster.width, raster.height, raster.frame_rate)
+        })
     {
         check.push(
             "PLAN_MXF_OUTPUT_INVALID",

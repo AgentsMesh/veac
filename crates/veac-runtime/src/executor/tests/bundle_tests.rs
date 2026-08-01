@@ -89,15 +89,3 @@ fn commit_rejects_a_replaced_target_and_invalidates_its_checkpoint() {
     assert!(error.message.contains("unsafe output"));
     assert_no_checkpoint_payload(&store_root);
 }
-
-fn assert_no_checkpoint_payload(root: &std::path::Path) {
-    fn contains_payload(path: &std::path::Path) -> bool {
-        std::fs::read_dir(path).is_ok_and(|entries| {
-            entries.filter_map(Result::ok).any(|entry| {
-                entry.file_name() == "payload.bin"
-                    || (entry.path().is_dir() && contains_payload(&entry.path()))
-            })
-        })
-    }
-    assert!(!contains_payload(root));
-}

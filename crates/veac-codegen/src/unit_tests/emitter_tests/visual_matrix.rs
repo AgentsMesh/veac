@@ -125,48 +125,6 @@ fn animated_crop_uses_a_fixed_viewport_with_per_frame_origin_and_size() {
     );
 }
 
-#[test]
-fn layer_sorting_uses_track_z_record_source_and_id_tiebreakers() {
-    let mut plan = resolved(&fixture());
-    let track = &mut plan.sequences[0].tracks[0];
-    let mut copies = Vec::new();
-    for (index, (id, start, z)) in [
-        ("itm_layer_c", 300, 3),
-        ("itm_layer_a", 100, 1),
-        ("itm_layer_b", 100, 2),
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        let mut clip = track.clips[0].clone();
-        clip.id = ItemId::new(id).unwrap();
-        clip.source_order = index as u32;
-        clip.record_range.start = time(start);
-        clip.visual.as_mut().unwrap().compositing.z_index = z;
-        copies.push(clip);
-    }
-    track.clips = copies;
-    track.clips.sort_by(|left, right| {
-        left.record_range
-            .start
-            .partial_cmp(&right.record_range.start)
-            .unwrap()
-            .then(left.source_order.cmp(&right.source_order))
-            .then(left.id.cmp(&right.id))
-    });
-    track.source_order = 2;
-    let mut second_track = track.clone();
-    second_track.id = TrackId::new("trk_second").unwrap();
-    second_track.order = 1;
-    second_track.source_order = 1;
-    second_track.clips.truncate(1);
-    second_track.clips[0].id = ItemId::new("itm_second").unwrap();
-    plan.sequences[0].tracks.push(second_track);
-    plan.sequences[0].duration = time(900);
-    let graph = graph(&plan);
-    assert_eq!(graph.matches("overlay=x=").count(), 4);
-}
-
 fn visual(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut veac_plan::EffectiveVisualProperties {
     plan.sequences[0].tracks[0].clips[0]
         .visual

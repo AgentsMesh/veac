@@ -53,7 +53,6 @@ fn validate_one(
     }
     apply_target::validate(check, sequence, apply);
     composition::validate_masks(check, &apply.id.to_string(), &apply.mix.masks);
-    validate_matte(check, sequence, apply);
     for stage in &apply.stages {
         if ApplyStageId::new(stage.id.to_string()).is_err()
             || !stage_ids.insert(stage.id.clone())
@@ -80,31 +79,6 @@ fn validate_one(
                 parameters,
             ),
         }
-    }
-}
-
-fn validate_matte(check: &mut Check, sequence: &ResolvedSequence, apply: &ResolvedApply) {
-    let Some(matte) = &apply.matte else {
-        return;
-    };
-    let source = sequence.tracks.iter().find_map(|track| {
-        track
-            .clips
-            .iter()
-            .find(|clip| clip.id == matte.source_clip_id)
-            .map(|clip| (track, clip))
-    });
-    let valid = source.is_some_and(|(track, clip)| {
-        clip.visual.is_some()
-            && within(clip.record_range, apply.record_range)
-            && !apply_target::contains_item(apply, &track.id, &clip.id)
-    });
-    if !valid {
-        check.push(
-            "PLAN_APPLY_MATTE_INVALID",
-            Some(apply.id.to_string()),
-            "apply matte source is missing, too short, or part of its target",
-        );
     }
 }
 

@@ -29,7 +29,9 @@ fn every_scope_uses_a_real_ffmpeg_filter_and_declared_size() {
     .into_iter()
     .map(|(id, file, scope, format)| Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::Scope(ScopeOutput {
             scope,
             at: RationalTime::new(300, 600).unwrap(),
@@ -90,21 +92,22 @@ fn master_track_and_bus_stems_keep_their_typed_audio_contracts() {
         stem(
             "dlv_bus",
             "bus.flac",
-            AudioStemSource::Bus {
+            AudioMixSource::Bus {
                 bus_id: BusId::new("bus_dialogue").unwrap(),
             },
             true,
         ),
-        stem("dlv_master", "master.wav", AudioStemSource::Master, false),
+        stem("dlv_master", "master.wav", AudioMixSource::Master, false),
         stem(
             "dlv_track",
             "track.wav",
-            AudioStemSource::Track {
+            AudioMixSource::Track {
                 track_id: TrackId::new("trk_video").unwrap(),
             },
             false,
         ),
     ];
+    project.project.render_configs[0].raster = None;
     let plan = resolved(&project);
     let bundle = emit_all(&plan, &all_bindings(&plan)).unwrap();
     assert_eq!(bundle.tasks().len(), 3);
@@ -139,10 +142,12 @@ fn master_track_and_bus_stems_keep_their_typed_audio_contracts() {
     assert!(pair(&command(bus).output_args, "-f", "flac"));
 }
 
-fn stem(id: &str, file: &str, source: AudioStemSource, flac: bool) -> Deliverable {
+fn stem(id: &str, file: &str, source: AudioMixSource, flac: bool) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format: if flac {
                 AudioStemFormat::Flac

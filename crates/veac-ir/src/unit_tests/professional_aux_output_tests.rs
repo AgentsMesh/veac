@@ -32,6 +32,7 @@ fn wav_stems_accept_24_and_32_bit_pcm() {
     for codec in [AudioCodec::PcmS24Le, AudioCodec::PcmS32Le] {
         let mut project = sample_project();
         project.project.render_configs[0].deliverables = vec![stem("dlv_stem", "stem.wav", codec)];
+        project.project.render_configs[0].raster = None;
         validate(&project).unwrap();
     }
 }
@@ -40,6 +41,7 @@ fn wav_stems_accept_24_and_32_bit_pcm() {
 fn ass_requires_exact_centisecond_cue_boundaries() {
     let mut project = sample_project();
     project.project.render_configs[0].deliverables = vec![ass()];
+    project.project.render_configs[0].raster = None;
     validate(&project).unwrap();
 
     project.project.sequences[0].tracks[1].clips[0]
@@ -67,7 +69,9 @@ fn aux_deliverables() -> Vec<Deliverable> {
 fn ass() -> Deliverable {
     Deliverable {
         id: DeliverableId::new("dlv_ass").unwrap(),
-        file_name: "captions.ass".to_owned(),
+        target: DeliverableTarget::File {
+            name: "captions.ass".to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format: CaptionSidecarFormat::Ass,
             track_ids: vec![TrackId::new("trk_captions").unwrap()],
@@ -78,7 +82,9 @@ fn ass() -> Deliverable {
 fn image(id: &str, file_name: &str, format: ImageFormat) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target: DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        },
         kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
             format,
             start_number: 1,
@@ -89,7 +95,9 @@ fn image(id: &str, file_name: &str, format: ImageFormat) -> Deliverable {
 fn stem(id: &str, file_name: &str, codec: AudioCodec) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target: DeliverableTarget::File {
+            name: file_name.to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format: AudioStemFormat::Wav,
             audio: AudioOutput {
@@ -97,7 +105,7 @@ fn stem(id: &str, file_name: &str, codec: AudioCodec) -> Deliverable {
                 sample_rate: 96_000,
                 channels: 2,
             },
-            source: AudioStemSource::Master,
+            source: AudioMixSource::Master,
         }),
     }
 }

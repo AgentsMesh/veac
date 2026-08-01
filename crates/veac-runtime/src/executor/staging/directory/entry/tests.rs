@@ -3,6 +3,7 @@ use std::fs::File;
 use rustix::fs::fstat;
 
 use super::*;
+use crate::executor::staging::directory::Directory;
 
 #[test]
 fn rename_failure_before_install_never_crosses_the_commit_point() {

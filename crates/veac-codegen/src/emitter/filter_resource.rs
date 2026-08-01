@@ -4,8 +4,8 @@ use veac_artifact::MediaRole;
 
 use super::error::{diagnostic, CodegenErrorKind};
 use super::{
-    BackendFilterBinding, BackendFilterContract, BackendFilterEscape, CodegenErrors, EmitContext,
-    MAX_FILTER_GRAPH_BYTES,
+    graph::Graph, BackendFilterBinding, BackendFilterContract, BackendFilterEscape,
+    BackendInternalAccess, CodegenErrors, EmitContext, MAX_FILTER_GRAPH_BYTES,
 };
 
 impl EmitContext<'_> {
@@ -32,16 +32,62 @@ impl EmitContext<'_> {
         token
     }
 
+    pub(super) fn filter_internal_file(
+        &mut self,
+        path: PathBuf,
+        access: BackendInternalAccess,
+    ) -> String {
+        let token = self.next_filter_token();
+        self.filter_bindings
+            .push(BackendFilterBinding::internal_file(
+                token.clone(),
+                path,
+                access,
+                BackendFilterEscape::Quoted,
+            ));
+        token
+    }
+
     pub(super) fn filter_graph(
         &self,
     ) -> Result<(Option<String>, Option<BackendFilterContract>), CodegenErrors> {
         if self.graph.is_empty() {
             return Ok((None, None));
         }
+        let (rendered, contract) = self.render_graph(&self.graph, self.filter_bindings.clone())?;
+        Ok((Some(rendered), Some(contract)))
+    }
+
+    pub(super) fn render_graph(
+        &self,
+        graph: &Graph,
+        bindings: Vec<BackendFilterBinding>,
+    ) -> Result<(String, BackendFilterContract), CodegenErrors> {
+        self.render_template(self.graph_template(graph), bindings)
+    }
+
+    pub(super) fn render_preparation_graph(
+        &self,
+        graph: &Graph,
+        mut bindings: Vec<BackendFilterBinding>,
+    ) -> Result<(String, BackendFilterContract), CodegenErrors> {
+        let template = self.graph_template(graph);
+        bindings.retain(|binding| template.contains(binding.token()));
+        self.render_template(template, bindings)
+    }
+
+    fn graph_template(&self, graph: &Graph) -> String {
         let video = self.external_inputs(MediaRole::Video);
         let audio = self.external_inputs(MediaRole::Audio);
-        let template = self.graph.render_with_inputs(&video, &audio);
-        let contract = BackendFilterContract::new(template, self.filter_bindings.clone())
+        graph.render_with_inputs(&video, &audio)
+    }
+
+    fn render_template(
+        &self,
+        template: String,
+        bindings: Vec<BackendFilterBinding>,
+    ) -> Result<(String, BackendFilterContract), CodegenErrors> {
+        let contract = BackendFilterContract::new(template, bindings)
             .map_err(|message| self.invalid_filter(message))?;
         let rendered = contract
             .render_original()
@@ -51,10 +97,10 @@ impl EmitContext<'_> {
                 "FFmpeg filter graph exceeds {MAX_FILTER_GRAPH_BYTES} bytes"
             )));
         }
-        Ok((Some(rendered), Some(contract)))
+        Ok((rendered, contract))
     }
 
-    fn next_filter_token(&self) -> String {
+    pub(super) fn next_filter_token(&self) -> String {
         format!("__VEAC_FILTER_RESOURCE_{:04}__", self.filter_bindings.len())
     }
 

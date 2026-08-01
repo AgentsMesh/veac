@@ -1,15 +1,14 @@
 use std::path::{Path, PathBuf};
 
 use super::super::directory::Directory;
-use super::super::StagedFile;
+use super::super::StagedOutput;
 
 pub(in crate::executor) struct CommitContext<'a> {
     pub(super) staging: &'a Path,
     pub(super) stage: &'a Directory,
     pub(super) output: &'a Directory,
-    pub(super) files: &'a [StagedFile],
+    pub(super) outputs: &'a [StagedOutput],
     pub(super) stale: &'a [PathBuf],
-    pub(super) allow_empty: bool,
 }
 
 impl<'a> CommitContext<'a> {
@@ -17,17 +16,15 @@ impl<'a> CommitContext<'a> {
         staging: &'a Path,
         stage: &'a Directory,
         output: &'a Directory,
-        files: &'a [StagedFile],
+        outputs: &'a [StagedOutput],
         stale: &'a [PathBuf],
-        allow_empty: bool,
     ) -> Self {
         Self {
             staging,
             stage,
             output,
-            files,
+            outputs,
             stale,
-            allow_empty,
         }
     }
 }

@@ -5,6 +5,8 @@ use veac_plan::canonical::*;
 
 use super::support::{bindings, resolved, text_fixture};
 
+mod contracts;
+
 #[test]
 fn emits_every_deliverable_as_an_independent_typed_task() {
     let mut plan = resolved(&text_fixture(true));
@@ -41,7 +43,7 @@ fn emits_every_deliverable_as_an_independent_typed_task() {
             DeliverableKind::AudioStem(AudioStemOutput {
                 format: AudioStemFormat::Wav,
                 audio: pcm(),
-                source: AudioStemSource::Master,
+                source: AudioMixSource::Master,
             }),
         ),
         deliverable(
@@ -55,6 +57,7 @@ fn emits_every_deliverable_as_an_independent_typed_task() {
         .sort_by(|left, right| left.id.cmp(&right.id));
     let bindings = all_bindings(&plan);
     let bundle = emit_all(&plan, &bindings).unwrap();
+    contracts::assert_five_artifact_contract(&plan, &bindings, &bundle);
     assert_eq!(
         bundle.plan_identity().value,
         veac_plan::plan_hash(&plan).unwrap()
@@ -125,9 +128,17 @@ fn all_bindings(plan: &veac_plan::ResolvedRenderPlan) -> ExecutionBindings {
 }
 
 fn deliverable(id: &str, file_name: &str, kind: DeliverableKind) -> Deliverable {
+    let target = match &kind {
+        DeliverableKind::ImageSequence(_) => DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        },
+        _ => DeliverableTarget::File {
+            name: file_name.to_owned(),
+        },
+    };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target,
         kind,
     }
 }

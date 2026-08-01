@@ -67,24 +67,6 @@ impl Validator {
             ParameterValue::Number { value } if !value.is_finite() => {
                 self.value_error("EFFECT_PARAMETER", context.path, context.item_id)
             }
-            ParameterValue::Integer { value } if !crate::time::safe_i64(*value) => {
-                self.value_error("EFFECT_PARAMETER", context.path, context.item_id)
-            }
-            ParameterValue::Vec2 { value } => self.finite_vec(
-                *value,
-                false,
-                "EFFECT_PARAMETER",
-                context.path,
-                context.item_id,
-            ),
-            ParameterValue::Time { value } => self.time(
-                *value,
-                context.timebase,
-                false,
-                "EFFECT_PARAMETER",
-                context.path,
-                context.item_id,
-            ),
             ParameterValue::NumberCurve { value } => self.animatable(
                 value,
                 context.duration,

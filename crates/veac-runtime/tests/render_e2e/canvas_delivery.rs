@@ -19,18 +19,22 @@ fn composition_canvas_is_preserved_until_square_pixel_delivery_conform() {
     sequence.settings.height = COMPOSITION_HEIGHT;
     sequence.tracks = canvas_tracks();
     let output = &mut canonical.project.render_configs[0];
-    output.width = DELIVERY_WIDTH;
-    output.height = DELIVERY_HEIGHT;
+    let raster = output.raster.as_mut().expect("raster fixture");
+    raster.width = DELIVERY_WIDTH;
+    raster.height = DELIVERY_HEIGHT;
     let path = temp.path().join("canvas-delivery.mp4");
 
     let rendered = render(canonical, &BTreeMap::new(), &path);
 
     let settings = &rendered.plan.sequences[0].settings;
     assert_eq!((settings.width, settings.height), (1_280, 720));
-    assert_eq!(
-        (rendered.plan.output.width, rendered.plan.output.height),
-        (240, 134)
-    );
+    let raster = rendered
+        .plan
+        .output
+        .raster
+        .as_ref()
+        .expect("resolved raster");
+    assert_eq!((raster.width, raster.height), (240, 134));
     let stream = video_stream(&path);
     assert_eq!(
         (stream["width"].as_u64(), stream["height"].as_u64()),

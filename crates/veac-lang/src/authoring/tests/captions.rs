@@ -37,10 +37,13 @@ const PROJECT: &str = r#"project captions {
     }
   }
 
-  output caption-sidecar transcript {
+  delivery transcript {
     sequence main;
-    file-name "captions.vtt";
-    encoding { format web-vtt; tracks { track subtitles; } }
+    artifact caption-sidecar transcript {
+      target file "captions.vtt";
+      source caption-tracks { track subtitles; }
+      encode web-vtt;
+    }
   }
 }"#;
 

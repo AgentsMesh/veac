@@ -11,6 +11,7 @@ fn srt_and_webvtt_sidecars_preserve_real_cues_and_timing() {
     let temp = tempdir().unwrap();
     let font = font_fixture();
     let mut canonical = project(false);
+    canonical.project.render_configs[0].raster = None;
     canonical.project.materials.push(material(
         "med_caption_font",
         MaterialKind::Font,
@@ -185,7 +186,9 @@ fn caption_style() -> TextStyle {
 fn sidecar(id: &str, file: &str, format: CaptionSidecarFormat, track: &str) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format,
             track_ids: vec![TrackId::new(track).unwrap()],

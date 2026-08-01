@@ -19,7 +19,9 @@ pub(crate) fn add_second_video(project: &Path) {
     let mut envelope = crate::canonical::load(project).unwrap();
     let mut second = envelope.project.render_configs[0].deliverables[0].clone();
     second.id = DeliverableId::new("dlv_second").unwrap();
-    second.file_name = "second.mp4".to_owned();
+    second.target = veac_ir::DeliverableTarget::File {
+        name: "second.mp4".to_owned(),
+    };
     envelope.project.render_configs[0].deliverables.push(second);
     std::fs::write(project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
 }

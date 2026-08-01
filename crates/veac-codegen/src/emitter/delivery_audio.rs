@@ -1,5 +1,5 @@
 use veac_artifact::ExecutionBindings;
-use veac_plan::canonical::{AlphaMode, AudioStemFormat, AudioStemOutput, Deliverable};
+use veac_plan::canonical::{AudioStemFormat, AudioStemOutput, Deliverable};
 use veac_plan::ResolvedRenderPlan;
 
 use super::{
@@ -13,7 +13,7 @@ pub(super) fn task(
     deliverable: &Deliverable,
     settings: &AudioStemOutput,
 ) -> Result<BackendTask, CodegenErrors> {
-    let mut context = EmitContext::new(plan, bindings, deliverable, AlphaMode::Opaque)?;
+    let mut context = EmitContext::new_audio(plan, bindings, deliverable)?;
     let Some(sequence) = context
         .plan
         .sequences
@@ -24,7 +24,12 @@ pub(super) fn task(
             context.plan,
         )));
     };
-    let audio = audio::build_stem(&mut context, sequence, settings)?;
+    let audio = audio::build_stem(
+        &mut context,
+        sequence,
+        &settings.source,
+        audio::AudioRenderSpec::from(&settings.audio),
+    )?;
     let inputs = context.input_routes.backend_inputs().to_vec();
     let path = output::bound_path(deliverable, bindings)?;
     let output_args = vec![
@@ -42,6 +47,7 @@ pub(super) fn task(
     ];
     let (filter_graph, filter_contract) = context.filter_graph()?;
     let command = BackendCommand {
+        preparations: Vec::new(),
         inputs,
         filter_graph,
         filter_contract,

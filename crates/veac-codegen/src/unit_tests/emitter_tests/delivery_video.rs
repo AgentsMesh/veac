@@ -8,13 +8,16 @@ use super::support::{bindings, fixture, resolved};
 #[test]
 fn two_pass_video_has_exact_phases_and_shared_passlog() {
     let mut plan = resolved(&fixture());
-    let video = plan.output.video_deliverable_mut().unwrap();
+    let video = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     video.pass_mode = PassMode::TwoPass;
     video.hardware = HardwareSelection::Software;
     video.video.rate_control = VideoRateControl::Bitrate {
         target_bps: 1_000_000,
         max_bps: Some(1_500_000),
-        buffer_bps: Some(2_000_000),
+        buffer_size_bits: Some(2_000_000),
     };
     let bundle = emit_all(&plan, &bindings(&plan)).unwrap();
     assert_eq!(bundle.tasks().len(), 2);
@@ -49,7 +52,10 @@ fn two_pass_video_has_exact_phases_and_shared_passlog() {
 #[test]
 fn explicit_hardware_fails_before_emission_without_device_setup() {
     let mut plan = resolved(&fixture());
-    plan.output.video_deliverable_mut().unwrap().hardware = HardwareSelection::Explicit {
+    plan.output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
+        .hardware = HardwareSelection::Explicit {
         backend: HardwareBackend::VideoToolbox,
     };
     let error = emit_all(&plan, &bindings(&plan)).unwrap_err();
@@ -62,8 +68,13 @@ fn explicit_hardware_fails_before_emission_without_device_setup() {
 #[test]
 fn prores_4444_alpha_emits_the_professional_pixel_contract() {
     let mut plan = resolved(&fixture());
-    plan.output.deliverables[0].file_name = "output.mov".to_owned();
-    let video = plan.output.video_deliverable_mut().unwrap();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "output.mov".to_owned(),
+    };
+    let video = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     video.container = OutputFormat::Mov;
     video.audio = None;
     video.video = VideoOutput {
@@ -96,7 +107,10 @@ fn pq_and_hlg_emit_ten_bit_bt2020_metadata() {
         (ColorTransfer::AribStdB67, "arib-std-b67"),
     ] {
         let mut plan = resolved(&fixture());
-        let video = plan.output.video_deliverable_mut().unwrap();
+        let video = plan
+            .output
+            .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+            .unwrap();
         video.video.codec = VideoCodec::H265;
         video.video.pixel_format = PixelFormat::Yuv420p10le;
         video.video.profile = Some(VideoProfile::H265Main10);

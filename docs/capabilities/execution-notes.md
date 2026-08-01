@@ -40,10 +40,12 @@ Freeze and hold select the containing displayed frame at canvas rate before clon
 timebase is source-time precision, not output fps. Cubic easing is split with de Casteljau
 restriction and evaluated from the same canonical curve in edit, plan, and FFmpeg expression paths.
 
-Effect parameter modes are registry capabilities. Every built-in video number accepts a curve;
-static-only parameters reject curves. Range-limited command-driven filters use instance-addressed
-runtime commands. Composition uses high-depth color/alpha paths and preserves straight alpha through
-blend, masks, mattes, scoped Apply pipelines, and output conversion.
+Effect parameter modes are registry capabilities. The generated canonical schema exposes exactly
+number, number-curve, boolean, and color values. Every built-in video number accepts a curve;
+static-only parameters reject curves. Registry keys and parameter modes must exactly match the V2
+authoring surface and executable backend catalog. Range-limited command-driven filters use
+instance-addressed runtime commands. Composition uses high-depth color/alpha paths and preserves
+straight alpha through blend, masks, mattes, scoped Apply pipelines, and output conversion.
 
 ## Delivery And Commit
 

@@ -87,7 +87,9 @@ fn selected_config_and_all_configs_have_stable_id_order() {
     let mut early = project.project.render_configs[0].clone();
     early.id = RenderConfigId::new("out_a").unwrap();
     early.deliverables[0].id = DeliverableId::new("dlv_a").unwrap();
-    early.deliverables[0].file_name = "a.mp4".to_owned();
+    early.deliverables[0].target = DeliverableTarget::File {
+        name: "a.mp4".to_owned(),
+    };
     project.project.render_configs.push(early);
     let plans = resolve(&project, None).unwrap();
     let ids: Vec<_> = plans

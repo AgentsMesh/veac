@@ -21,9 +21,6 @@ pub(super) fn lower(context: &mut Context, value: &EffectModifierDecl) -> Option
                 value: animation::parameter(context, value, super::value::unitless)?,
             },
             EffectParameterValue::Boolean(value) => ParameterValue::Boolean { value: value.value },
-            EffectParameterValue::Text(value) => ParameterValue::Text {
-                value: value.value.clone(),
-            },
             EffectParameterValue::Color(value) => ParameterValue::Color {
                 value: color(context, &value.value, value.span)?,
             },

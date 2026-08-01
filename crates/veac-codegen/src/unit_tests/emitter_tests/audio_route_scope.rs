@@ -10,7 +10,7 @@ fn track_stem_ignores_unrouted_pan_rate_and_alignment_contracts() {
     let mut pan = two_track_plan(1, 48_000);
     second(&mut pan).audio.as_mut().unwrap().pan = Animatable::constant(0.5);
     assert!(emit_all(&pan, &bindings(&pan)).is_ok());
-    stem_source(&mut pan, AudioStemSource::Master);
+    stem_source(&mut pan, AudioMixSource::Master);
     assert_code(&pan, "PLAN_AUDIO_CHANNEL_LAYOUT_INVALID");
 
     let mut rate = two_track_plan(2, 48_000);
@@ -32,14 +32,14 @@ fn track_stem_ignores_unrouted_pan_rate_and_alignment_contracts() {
     rate.inputs[0].audio.as_mut().unwrap().duration = Some(time(60_000_000));
     let emitted = emit_all(&rate, &bindings(&rate));
     assert!(emitted.is_ok(), "{emitted:?}");
-    stem_source(&mut rate, AudioStemSource::Master);
+    stem_source(&mut rate, AudioMixSource::Master);
     assert_code(&rate, "PLAN_AUDIO_RATE_INVALID");
 
     let mut alignment = two_track_plan(2, 44_100);
     second(&mut alignment).record_range.start = time(1);
     alignment.sequences.last_mut().unwrap().duration = time(601);
     assert!(emit_all(&alignment, &bindings(&alignment)).is_ok());
-    stem_source(&mut alignment, AudioStemSource::Master);
+    stem_source(&mut alignment, AudioMixSource::Master);
     assert_code(&alignment, "PLAN_AUDIO_SAMPLE_ALIGNMENT_INVALID");
 }
 
@@ -53,7 +53,7 @@ fn bus_sidechain_and_nested_audio_expand_the_consumer_closure() {
     second(&mut bus).audio.as_mut().unwrap().pan = Animatable::constant(0.5);
     stem_source(
         &mut bus,
-        AudioStemSource::Bus {
+        AudioMixSource::Bus {
             bus_id: BusId::new("bus_dialogue").unwrap(),
         },
     );
@@ -61,7 +61,7 @@ fn bus_sidechain_and_nested_audio_expand_the_consumer_closure() {
 
     stem_source(
         &mut bus,
-        AudioStemSource::Track {
+        AudioMixSource::Track {
             track_id: TrackId::new("trk_video").unwrap(),
         },
     );
@@ -83,7 +83,7 @@ fn bus_sidechain_and_nested_audio_expand_the_consumer_closure() {
     assert!(emit_all(&nested, &bindings(&nested)).is_ok());
     stem_source(
         &mut nested,
-        AudioStemSource::Track {
+        AudioMixSource::Track {
             track_id: TrackId::new("trk_nested_owner").unwrap(),
         },
     );
@@ -99,7 +99,9 @@ fn two_track_plan(channels: u8, sample_rate: u32) -> veac_plan::ResolvedRenderPl
     extra.source_order = 1;
     extra.clips[0].id = ItemId::new("itm_unrelated").unwrap();
     sequence.tracks.push(extra);
-    plan.output.deliverables[0].file_name = "isolated.wav".to_owned();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "isolated.wav".to_owned(),
+    };
     plan.output.deliverables[0].kind = DeliverableKind::AudioStem(AudioStemOutput {
         format: AudioStemFormat::Wav,
         audio: AudioOutput {
@@ -107,10 +109,11 @@ fn two_track_plan(channels: u8, sample_rate: u32) -> veac_plan::ResolvedRenderPl
             sample_rate,
             channels,
         },
-        source: AudioStemSource::Track {
+        source: AudioMixSource::Track {
             track_id: sequence.tracks[0].id.clone(),
         },
     });
+    plan.output.raster = None;
     plan
 }
 
@@ -137,7 +140,7 @@ fn second(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut veac_plan::ResolvedC
     &mut plan.sequences.last_mut().unwrap().tracks[1].clips[0]
 }
 
-fn stem_source(plan: &mut veac_plan::ResolvedRenderPlan, source: AudioStemSource) {
+fn stem_source(plan: &mut veac_plan::ResolvedRenderPlan, source: AudioMixSource) {
     let DeliverableKind::AudioStem(stem) = &mut plan.output.deliverables[0].kind else {
         unreachable!()
     };

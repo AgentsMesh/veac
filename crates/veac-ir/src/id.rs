@@ -120,6 +120,11 @@ typed_id!(
     "dlv_",
     r"^dlv_[A-Za-z0-9][A-Za-z0-9_-]{0,123}$"
 );
+typed_id!(
+    HlsRenditionId,
+    "rnd_",
+    r"^rnd_[A-Za-z0-9][A-Za-z0-9_-]{0,123}$"
+);
 typed_id!(OperationId, "op_", r"^op_[A-Za-z0-9][A-Za-z0-9_-]{0,124}$");
 typed_id!(
     AnnotationId,

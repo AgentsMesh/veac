@@ -4,59 +4,85 @@ use veac_plan::canonical::{
 };
 
 pub(super) fn arguments(video: &VideoOutput, hardware: HardwareSelection) -> Vec<String> {
+    arguments_with_suffix(video, hardware, "")
+}
+
+pub(super) fn stream_arguments(video: &VideoOutput, stream: usize) -> Vec<String> {
+    arguments_with_suffix(video, HardwareSelection::Software, &format!(":{stream}"))
+}
+
+fn arguments_with_suffix(
+    video: &VideoOutput,
+    hardware: HardwareSelection,
+    suffix: &str,
+) -> Vec<String> {
     let mut args = vec![
-        "-c:v".to_owned(),
+        option("-c:v", "-c:v", suffix),
         encoder(video.codec, hardware).to_owned(),
-        "-pix_fmt".to_owned(),
+        option("-pix_fmt", "-pix_fmt:v", suffix),
         pixel_format(video.pixel_format).to_owned(),
     ];
-    rate_control(&mut args, video);
-    optional_pair(&mut args, "-g", video.gop_size);
-    optional_pair(&mut args, "-bf", video.b_frames);
+    rate_control(&mut args, video, suffix);
+    optional_pair(&mut args, &option("-g", "-g:v", suffix), video.gop_size);
+    optional_pair(&mut args, &option("-bf", "-bf:v", suffix), video.b_frames);
     if let Some(profile) = video.profile {
-        args.extend(["-profile:v".to_owned(), profile_name(profile).to_owned()]);
+        args.extend([
+            option("-profile:v", "-profile:v", suffix),
+            profile_name(profile).to_owned(),
+        ]);
     }
     if let Some(level) = &video.level {
-        args.extend(["-level:v".to_owned(), level.clone()]);
+        args.extend([option("-level:v", "-level:v", suffix), level.clone()]);
     }
     if video.alpha == AlphaMode::Straight {
-        args.extend(["-alpha_bits".to_owned(), "16".to_owned()]);
+        args.extend([
+            option("-alpha_bits", "-alpha_bits:v", suffix),
+            "16".to_owned(),
+        ]);
     }
-    args.extend(super::color_output::arguments(video.color_space));
+    args.extend(if suffix.is_empty() {
+        super::color_output::arguments(video.color_space)
+    } else {
+        super::color_output::stream_arguments(video.color_space, suffix)
+    });
     args
 }
 
-fn rate_control(args: &mut Vec<String>, video: &VideoOutput) {
+fn rate_control(args: &mut Vec<String>, video: &VideoOutput, suffix: &str) {
     match video.rate_control {
         VideoRateControl::Crf { value } => {
-            args.extend(["-crf".to_owned(), value.to_string()]);
+            args.extend([option("-crf", "-crf:v", suffix), value.to_string()]);
             if matches!(video.codec, VideoCodec::Vp9 | VideoCodec::Av1) {
-                args.extend(["-b:v".to_owned(), "0".to_owned()]);
+                args.extend([option("-b:v", "-b:v", suffix), "0".to_owned()]);
             }
         }
         VideoRateControl::Bitrate {
             target_bps,
             max_bps,
-            buffer_bps,
+            buffer_size_bits,
         } => {
-            args.extend(["-b:v".to_owned(), target_bps.to_string()]);
-            optional_pair(args, "-maxrate", max_bps);
-            optional_pair(args, "-bufsize", buffer_bps);
+            args.extend([option("-b:v", "-b:v", suffix), target_bps.to_string()]);
+            optional_pair(args, &option("-maxrate", "-maxrate:v", suffix), max_bps);
+            optional_pair(
+                args,
+                &option("-bufsize", "-bufsize:v", suffix),
+                buffer_size_bits,
+            );
         }
         VideoRateControl::Lossless => match video.codec {
             VideoCodec::H264 | VideoCodec::H265 => {
-                args.extend(["-crf".to_owned(), "0".to_owned()]);
+                args.extend([option("-crf", "-crf:v", suffix), "0".to_owned()]);
             }
             VideoCodec::Vp9 => args.extend([
-                "-lossless".to_owned(),
+                option("-lossless", "-lossless:v", suffix),
                 "1".to_owned(),
-                "-b:v".to_owned(),
+                option("-b:v", "-b:v", suffix),
                 "0".to_owned(),
             ]),
             VideoCodec::Av1 => args.extend([
-                "-crf".to_owned(),
+                option("-crf", "-crf:v", suffix),
                 "0".to_owned(),
-                "-b:v".to_owned(),
+                option("-b:v", "-b:v", suffix),
                 "0".to_owned(),
             ]),
             VideoCodec::ProRes | VideoCodec::DnxHr => {}
@@ -67,6 +93,14 @@ fn rate_control(args: &mut Vec<String>, video: &VideoOutput) {
 fn optional_pair<T: ToString>(args: &mut Vec<String>, name: &str, value: Option<T>) {
     if let Some(value) = value {
         args.extend([name.to_owned(), value.to_string()]);
+    }
+}
+
+fn option(unscoped: &str, scoped: &str, suffix: &str) -> String {
+    if suffix.is_empty() {
+        unscoped.to_owned()
+    } else {
+        format!("{scoped}{suffix}")
     }
 }
 

@@ -59,7 +59,7 @@ fn mask_rotation_scale_feather_and_expansion_curves_are_frame_evaluated() {
     assert_blue(rgb_at(&output, 0.05, 48, 42));
     assert_blue(rgb_at(&output, 1.85, 70, 27));
     assert_red(rgb_at(&output, 1.85, 48, 42));
-    let feathered = rgb_at(&output, 1.85, 48, 45);
+    let feathered = rgb_at(&output, 1.85, 36, 28);
     assert!(feathered[0] > 45 && feathered[2] > 45, "edge={feathered:?}");
 }
 

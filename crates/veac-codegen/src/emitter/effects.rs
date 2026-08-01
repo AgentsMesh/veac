@@ -9,9 +9,11 @@ use super::error::{diagnostic, CodegenErrorKind};
 use super::{animation, process_owner::ProcessOwner, time, CodegenErrors, EmitContext};
 
 mod alpha;
+mod catalog;
 mod dynamic;
 mod normalize;
 
+pub(super) use catalog::{effect_kind, supports_parameter, EffectKind};
 pub(super) use dynamic::{filter as dynamic_filter, RuntimeNumber};
 
 #[derive(Clone, Copy)]
@@ -89,7 +91,7 @@ pub(super) fn audio(
     mut label: String,
 ) -> Result<String, CodegenErrors> {
     for effect in &clip.effects {
-        if effect.effect_type != "audio.normalize" {
+        if effect_kind(&effect.effect_type) != Some(EffectKind::AudioNormalize) {
             continue;
         }
         label = normalize::apply(context, clip, effect, &label)?;

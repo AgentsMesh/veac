@@ -9,9 +9,9 @@ use super::support::{ass_script, bindings, emit_video_command, resolved, text_fi
 fn box_alignment_line_height_and_unit_alpha_are_encoded_in_ass() {
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
-    content.style.layout = box_layout(120.0, 60.0, TextOverflow::Clip);
-    content.style.line_height = 1.5;
-    content.style.animation = Some(TextAnimation {
+    content.styled_mut().unwrap().layout = box_layout(120.0, 60.0, TextOverflow::Clip);
+    content.styled_mut().unwrap().line_height = 1.5;
+    content.styled_mut().unwrap().animation = Some(TextAnimation {
         granularity: TextGranularity::Grapheme,
         transform: TextUnitTransform::default(),
         reveal: Animatable::constant(1.0),
@@ -44,31 +44,33 @@ fn tracking_weight_style_rich_spans_wrap_and_ellipsis_execute() {
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
     content.text = "alpha beta gamma delta".to_owned();
-    content.style.tracking_pixels = 2.0;
-    content.style.font_weight = FontWeight::Bold;
-    content.style.font_style = FontStyle::Italic;
-    content
-        .style
-        .fallback_fonts
-        .push(content.style.font.clone());
-    content.style.layout = TextLayout {
+    content.styled_mut().unwrap().tracking_pixels = 2.0;
+    content.styled_mut().unwrap().font_weight = FontWeight::Bold;
+    content.styled_mut().unwrap().font_style = FontStyle::Italic;
+    let primary = content.styled().unwrap().font.clone();
+    content.styled_mut().unwrap().fallback_fonts.push(primary);
+    content.styled_mut().unwrap().layout = TextLayout {
         wrap: TextWrap::Word,
         ..box_layout(80.0, 35.0, TextOverflow::Ellipsis)
     };
-    content.style.spans.push(veac_plan::ResolvedTextSpan {
-        start: 0,
-        end: 5,
-        font: None,
-        font_weight: Some(FontWeight::Black),
-        font_style: None,
-        size_pixels: Some(36.0),
-        color: Some(Color {
-            red: 255,
-            green: 0,
-            blue: 0,
-            alpha: 255,
-        }),
-    });
+    content
+        .styled_mut()
+        .unwrap()
+        .spans
+        .push(veac_plan::ResolvedTextSpan {
+            start: 0,
+            end: 5,
+            font: None,
+            font_weight: Some(FontWeight::Black),
+            font_style: None,
+            size_pixels: Some(36.0),
+            color: Some(Color {
+                red: 255,
+                green: 0,
+                blue: 0,
+                alpha: 255,
+            }),
+        });
     let graph = emit_video_command(&plan, &bindings(&plan))
         .unwrap()
         .filter_graph
@@ -88,8 +90,8 @@ fn animated_ass_has_a_deterministic_event_budget() {
     let ResolvedClipSource::Text { content } = &mut clip.source else {
         panic!("text fixture")
     };
-    content.style.background = None;
-    content.style.animation = Some(TextAnimation {
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().animation = Some(TextAnimation {
         granularity: TextGranularity::Whole,
         transform: TextUnitTransform::default(),
         reveal: Animatable::constant(1.0),

@@ -11,7 +11,30 @@ use super::PlanInputId;
 #[serde(deny_unknown_fields)]
 pub struct ResolvedText {
     pub text: String,
-    pub style: ResolvedTextStyle,
+    pub presentation: ResolvedTextPresentation,
+}
+
+impl ResolvedText {
+    pub fn styled(&self) -> Option<&ResolvedTextStyle> {
+        match &self.presentation {
+            ResolvedTextPresentation::Plain { .. } => None,
+            ResolvedTextPresentation::Styled { style } => Some(style),
+        }
+    }
+
+    pub fn styled_mut(&mut self) -> Option<&mut ResolvedTextStyle> {
+        match &mut self.presentation {
+            ResolvedTextPresentation::Plain { .. } => None,
+            ResolvedTextPresentation::Styled { style } => Some(style),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ResolvedTextPresentation {
+    Plain { has_spans: bool },
+    Styled { style: Box<ResolvedTextStyle> },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

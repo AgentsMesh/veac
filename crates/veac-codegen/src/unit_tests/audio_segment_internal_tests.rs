@@ -26,7 +26,8 @@ fn run(segment: SourceTimeSegment) -> Result<String, CodegenErrors> {
         ),
         _ => panic!("expected video deliverable"),
     };
-    let mut context = EmitContext::new(&plan, &execution, deliverable, alpha)?;
+    let output = AudioRenderSpec::from(output);
+    let mut context = EmitContext::new_visual(&plan, &execution, deliverable, alpha)?;
     let clip = &plan.sequences[0].tracks[0].clips[0];
     filter(
         &mut context,
@@ -34,7 +35,7 @@ fn run(segment: SourceTimeSegment) -> Result<String, CodegenErrors> {
         "0:1",
         &segment,
         SourceClock::identity(600).expect("identity clock"),
-        output,
+        &output,
         PitchPolicy::Preserve,
     )
 }

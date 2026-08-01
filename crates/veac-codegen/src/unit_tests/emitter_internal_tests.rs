@@ -1,4 +1,5 @@
 use super::*;
+use crate::emitter::audio::AudioRenderSpec;
 use crate::unit_tests::emitter_tests::composition_advanced::advanced_plan;
 use crate::unit_tests::emitter_tests::multicam::multicam_plan;
 use crate::unit_tests::emitter_tests::support::{bindings, fixture, resolved, time};
@@ -29,14 +30,15 @@ fn multicam_error(
     let execution = bindings(plan);
     let deliverable = &plan.output.deliverables[0];
     let mut context =
-        EmitContext::new(plan, &execution, deliverable, alpha(plan)).expect("context");
+        EmitContext::new_visual(plan, &execution, deliverable, alpha(plan)).expect("context");
     let clip = &plan.sequences[0].tracks[0].clips[0];
     let result = if audio {
         let output = match &deliverable.kind {
             DeliverableKind::Video(video) => video.audio.as_ref().expect("audio output"),
             _ => unreachable!(),
         };
-        multicam_source::audio(&mut context, clip, source, output)
+        let output = AudioRenderSpec::from(output);
+        multicam_source::audio(&mut context, clip, source, &output)
     } else {
         multicam_source::video(&mut context, clip, source)
     };
@@ -82,7 +84,7 @@ fn source_dispatch_rejects_missing_streams_mappings_and_sequences() {
     let execution = bindings(&plan);
     let deliverable = &plan.output.deliverables[0];
     let mut context =
-        EmitContext::new(&plan, &execution, deliverable, alpha(&plan)).expect("context");
+        EmitContext::new_visual(&plan, &execution, deliverable, alpha(&plan)).expect("context");
     let base = &plan.sequences[0].tracks[0].clips[0];
 
     let mut clip = base.clone();
@@ -110,11 +112,12 @@ fn source_dispatch_rejects_missing_streams_mappings_and_sequences() {
     };
     *audio_stream = *video_stream;
     clip.source_mapping = None;
+    let output = AudioRenderSpec::from(context_audio(&audio_plan));
     assert_eq!(
         audio_source::build(
             &mut context,
             &clip,
-            context_audio(&audio_plan),
+            &output,
             audio_transition_fades::TransitionFades::default(),
             None,
         )

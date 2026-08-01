@@ -8,7 +8,7 @@ project image-overlay {
   entry sequence main;
 
   resource image logo {
-    locator local { path "assets/sample.png"; }
+    locator local { path "assets/logo.png"; }
   }
 
   sequence main {
@@ -27,9 +27,36 @@ project image-overlay {
             placement anchor { at bottom-right; inset { x 48px; y 48px; } }
             frame { width 320px; height 320px; fit contain; }
           }
-          transform scale { scale { x 0.35; y 0.35; } }
+          transform scale {
+            scale { x 0.75; y 0.75; }
+            anchor { x 1; y 1; }
+          }
           composite blend { opacity 90%; z-index 20; blend screen; }
         }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

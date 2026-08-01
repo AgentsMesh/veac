@@ -15,6 +15,7 @@ fn empty_and_escaped_transactions_are_rejected_before_prepare() {
     let file = StagedFile {
         source: outside.clone(),
         target: temp.path().join("output"),
+        allow_empty: false,
     };
     let error = apply(staging.path(), &[file], &[], false).unwrap_err();
     assert!(error.message.contains("escaped its transaction directory"));
@@ -34,6 +35,7 @@ fn transaction_rejects_a_non_utf8_source_name() {
     let file = StagedFile {
         source,
         target: temp.path().join("output"),
+        allow_empty: false,
     };
 
     let error = apply(staging.path(), &[file], &[], false).unwrap_err();
@@ -70,6 +72,7 @@ fn failed_prepared_task_discards_its_unjournaled_staging_area() {
         vec![StagedFile {
             source: staging.join("missing"),
             target: root.path().join("output"),
+            allow_empty: false,
         }],
     );
     let parent = std::fs::canonicalize(root.path()).unwrap();

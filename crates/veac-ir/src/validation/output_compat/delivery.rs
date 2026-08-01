@@ -18,7 +18,7 @@ pub fn video_delivery_valid(value: &VideoDeliverable) -> bool {
         && prores_valid(value)
         && dnxhr_valid(value)
         && alpha_container_valid(value)
-        && color_delivery_valid(value)
+        && video_color_delivery_valid(&value.video)
 }
 
 fn encoder_level_valid(value: &VideoOutput) -> bool {
@@ -62,8 +62,8 @@ fn alpha_container_valid(value: &VideoDeliverable) -> bool {
             && value.video.profile == Some(VideoProfile::ProRes4444))
 }
 
-fn color_delivery_valid(value: &VideoDeliverable) -> bool {
-    let Some(color) = value.video.color_space else {
+pub fn video_color_delivery_valid(value: &VideoOutput) -> bool {
+    let Some(color) = value.color_space else {
         return true;
     };
     let wide = color.primaries == ColorPrimaries::Bt2020;
@@ -74,8 +74,8 @@ fn color_delivery_valid(value: &VideoDeliverable) -> bool {
     (!wide && !hdr)
         || (wide
             && color.matrix == ColorMatrix::Bt2020Ncl
-            && value.video.pixel_format == PixelFormat::Yuv420p10le
-            && matches!(value.video.codec, VideoCodec::H265 | VideoCodec::Av1))
+            && value.pixel_format == PixelFormat::Yuv420p10le
+            && matches!(value.codec, VideoCodec::H265 | VideoCodec::Av1))
 }
 
 fn hardware_valid(_: VideoCodec, selection: HardwareSelection) -> bool {

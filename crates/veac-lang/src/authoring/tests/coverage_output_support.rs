@@ -1,98 +1,60 @@
 use crate::authoring::{format_document, lower_document, parse};
 
-pub(super) fn video(video_fields: &str, encoding_fields: &str) -> veac_ir::VideoDeliverable {
-    video_result(video_fields, encoding_fields).unwrap_or_else(|error| panic!("{error}"))
-}
+#[path = "coverage_output_support/video.rs"]
+mod video_helpers;
 
-pub(super) fn video_result(
-    video_fields: &str,
-    encoding_fields: &str,
-) -> Result<veac_ir::VideoDeliverable, crate::authoring::Diagnostics> {
-    let extension = ["mov", "mkv", "webm", "mxf"]
-        .into_iter()
-        .find(|value| encoding_fields.contains(&format!("container {value};")))
-        .unwrap_or("mp4");
-    let source = format!(
-        r#"project output-coverage {{
-  settings {{
-    timebase 1/1000; canvas 1920px by 1080px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }}
-  entry sequence main;
-  sequence main {{
-    layer visual picture {{
-      item blank {{
-        source generated transparent;
-        record {{ at 0s; duration 2s; }}
-      }}
-    }}
-  }}
-  output video preview {{
-    sequence main; file-name "preview.{extension}";
-    encoding {{
-      video {{ {video_fields} }}
-      {encoding_fields}
-    }}
-  }}
-}}"#
-    );
-    let document = parse(&source).unwrap_or_else(|error| panic!("{error}"));
-    let formatted = format_document(&document);
-    assert_eq!(format_document(&parse(&formatted).unwrap()), formatted);
-    let envelope = lower_document(&document)?;
-    let veac_ir::DeliverableKind::Video(video) =
-        &envelope.project.render_configs[0].deliverables[0].kind
-    else {
-        panic!("video deliverable expected")
-    };
-    Ok(video.clone())
-}
+pub(super) use video_helpers::{video, video_result};
 
 pub(super) fn output(kind: &str, body: &str) -> veac_ir::DeliverableKind {
-    let file_name = match kind {
+    let target = match kind {
         "image-sequence" => {
-            let extension = if body.contains("format jpeg;") {
+            let extension = if body.contains("encode jpeg;") {
                 "jpg"
-            } else if body.contains("format tiff;") {
+            } else if body.contains("encode tiff;") {
                 "tiff"
-            } else if body.contains("format exr;") {
+            } else if body.contains("encode exr;") {
                 "exr"
             } else {
                 "png"
             };
-            format!("frame-%06d.{extension}")
+            format!("pattern \"frame-%06d.{extension}\"")
         }
         "caption-sidecar" => {
-            let extension = if body.contains("format web-vtt;") {
+            let extension = if body.contains("encode web-vtt;") {
                 "vtt"
-            } else if body.contains("format ass;") {
+            } else if body.contains("encode ass;") {
                 "ass"
             } else {
                 "srt"
             };
-            format!("captions.{extension}")
+            format!("file \"captions.{extension}\"")
         }
         "audio-stem" => {
-            let extension = if body.contains("format flac;") {
+            let extension = if body.contains("encode flac") {
                 "flac"
             } else {
                 "wav"
             };
-            format!("stem.{extension}")
+            format!("file \"stem.{extension}\"")
         }
         "scope" => {
-            let extension = if body.contains("format jpeg;") {
+            let extension = if body.contains("encode jpeg;") {
                 "jpg"
-            } else if body.contains("format tiff;") {
+            } else if body.contains("encode tiff;") {
                 "tiff"
-            } else if body.contains("format exr;") {
+            } else if body.contains("encode exr;") {
                 "exr"
             } else {
                 "png"
             };
-            format!("scope.{extension}")
+            format!("file \"scope.{extension}\"")
         }
         _ => panic!("unexpected output kind"),
+    };
+    let raster = if matches!(kind, "image-sequence" | "scope") {
+        "raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }"
+    } else {
+        ""
     };
     let source = format!(
         r#"project output-coverage {{
@@ -107,7 +69,11 @@ pub(super) fn output(kind: &str, body: &str) -> veac_ir::DeliverableKind {
       item line {{ source caption {{ content "Line"; }} record {{ at 0s; duration 1s; }} }}
     }}
   }}
-  output {kind} result {{ sequence main; file-name "{file_name}"; encoding {{ {body} }} }}
+  delivery result {{
+    sequence main;
+    {raster}
+    artifact {kind} result {{ target {target}; {body} }}
+  }}
 }}"#
     );
     let document = parse(&source).unwrap_or_else(|error| panic!("{error}"));

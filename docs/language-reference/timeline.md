@@ -37,7 +37,13 @@ mapping freeze { source 3.5s; }
 Decreasing linear bounds express reverse playback. `outside` is one of
 `strict`, `hold-first`, `hold-last`, or `hold-both`; looping is never implicit.
 
-`Parameter<T>` uses the same constant-or-curve shape for position, scale, rotation, opacity, mask geometry, effect parameters, and text animation channels.
+`Parameter<T>` uses the same constant-or-curve shape for position, scale, rotation, opacity, mask
+geometry, numeric effect parameters, and text animation channels. Boolean and color effect
+parameters are static typed values; they do not accept curves.
+
+A key's `interpolation` controls its outgoing segment to the next key. Use `hold` on the terminal
+key to state that its final value remains fixed; terminal interpolation never reshapes the segment
+that enters it.
 
 Nested sequences use `source sequence sequence <id>;`. Their base recursive execution is supported, including cycle and depth validation. Source-time mapping for nested sequence composites is intentionally not yet exposed until planner mapping has the same fidelity as media mapping.
 

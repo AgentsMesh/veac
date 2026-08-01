@@ -18,6 +18,7 @@ fn project_structure_workflow_rows_match_typed_examples() {
     for relative in [
         "nested-and-multicam/main.veac",
         "executable-mechanisms/main.veac",
+        "all-features/main.veac",
     ] {
         actual.extend(workflow_evidence(&lower_example(relative)));
     }
@@ -83,8 +84,19 @@ fn preview_evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
 
 fn workflow_evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
+    if !envelope.project.sequences.is_empty() {
+        found.insert("project.sequence".to_owned());
+    }
     if !envelope.project.multicam_groups.is_empty() {
         found.insert("project.multicam".to_owned());
+    }
+    if envelope
+        .project
+        .relations
+        .iter()
+        .any(|relation| matches!(relation.kind, RelationKind::AvLink { .. }))
+    {
+        found.insert("relation.av-link".to_owned());
     }
     for annotation in &envelope.project.annotations {
         let id = match &annotation.payload {

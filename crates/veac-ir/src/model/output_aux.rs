@@ -43,7 +43,7 @@ pub enum AudioStemFormat {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum AudioStemSource {
+pub enum AudioMixSource {
     Master,
     Track { track_id: TrackId },
     Bus { bus_id: BusId },
@@ -54,7 +54,7 @@ pub enum AudioStemSource {
 pub struct AudioStemOutput {
     pub format: AudioStemFormat,
     pub audio: AudioOutput,
-    pub source: AudioStemSource,
+    pub source: AudioMixSource,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

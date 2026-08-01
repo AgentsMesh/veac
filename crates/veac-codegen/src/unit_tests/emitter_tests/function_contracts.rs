@@ -2,7 +2,7 @@ use veac_codegen::emitter::{BackendPhase, BackendProduct};
 use veac_plan::canonical::{BlendMode, TrackMatteMode};
 
 use super::composition_advanced::advanced_plan;
-use super::support::{bindings, emit_video_command, visual};
+use super::support::{assert_rgb_plane_output, bindings, emit_video_command, visual};
 
 #[test]
 fn backend_phase_and_product_labels_are_stable() {
@@ -21,6 +21,10 @@ fn backend_phase_and_product_labels_are_stable() {
             BackendProduct::ImageSequence.as_str(),
             BackendProduct::CaptionSidecar.as_str(),
             BackendProduct::AudioStem.as_str(),
+            BackendProduct::AudioFile.as_str(),
+            BackendProduct::AnimatedImage.as_str(),
+            BackendProduct::StillImage.as_str(),
+            BackendProduct::HlsVod.as_str(),
             BackendProduct::VideoWaveform.as_str(),
             BackendProduct::Vectorscope.as_str(),
             BackendProduct::Histogram.as_str(),
@@ -31,6 +35,10 @@ fn backend_phase_and_product_labels_are_stable() {
             "image_sequence",
             "caption_sidecar",
             "audio_stem",
+            "audio_file",
+            "animated_image",
+            "still_image",
+            "hls_vod",
             "video_waveform",
             "vectorscope",
             "histogram",
@@ -47,13 +55,14 @@ fn matte_modes_and_card_shadow_emit_observable_filter_graphs() {
         "alphaextract,format=gray16le",
         "blend=all_mode=multiply",
         "mattemergev",
-        "cardsplit",
+        "shadowsplit",
         "pad=iw+32:ih+32:16:16:color=black@0",
-        "gblur=sigma=8:planes=8",
+        "gblur=sigma=8:steps=2:planes=8",
         "shadowv",
     ] {
         assert!(alpha.contains(marker), "missing {marker}: {alpha}");
     }
+    assert_rgb_plane_output(&alpha, "mattetargetv");
     assert!(!alpha.contains("matteinvertv"), "graph={alpha}");
 
     let inverted_luma = graph(TrackMatteMode::Luma, true, false);
@@ -87,15 +96,19 @@ fn non_normal_blends_preserve_and_combine_base_and_layer_alpha() {
         .unwrap();
 
     for marker in [
-        "format=gbrp16le",
+        "mergeplanes=format=gbrp16le",
+        "map0s=0:map0p=0:map1s=0:map1p=1:map2s=0:map2p=2",
         "blendbasealphav",
         "blendstraightv",
         "blendmergev",
         "premultiply=planes=7",
         "unpremultiply=planes=7",
-        "overoutputalphav",
+        "blend=all_expr='B+A*(65535-B)/65535'",
     ] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
+    }
+    for prefix in ["blendbasev", "blendsourcev", "blendcolorv", "sobc", "sosc"] {
+        assert_rgb_plane_output(&graph, prefix);
     }
 }
 

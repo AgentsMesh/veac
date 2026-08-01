@@ -25,7 +25,8 @@ pub(super) fn text_animation(plan: &mut ResolvedRenderPlan) -> &mut TextAnimatio
         })
         .unwrap();
     content
-        .style
+        .styled_mut()
+        .unwrap()
         .animation
         .get_or_insert_with(|| TextAnimation {
             granularity: TextGranularity::Whole,

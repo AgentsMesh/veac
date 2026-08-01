@@ -16,14 +16,14 @@ fn text_path_and_per_grapheme_transform_emit_position_rotation_and_scale() {
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
     content.text = "AB".to_owned();
-    content.style.background = None;
-    content.style.path = Some(TextPath {
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().path = Some(TextPath {
         points: vec![point(100.0, 200.0), point(400.0, 200.0)],
         start_offset: pixels(250.0),
         reverse: true,
         alignment: TextPathAlignment::Center,
     });
-    content.style.animation = Some(TextAnimation {
+    content.styled_mut().unwrap().animation = Some(TextAnimation {
         granularity: TextGranularity::Grapheme,
         transform: TextUnitTransform {
             position_offset: Animatable::constant(point(5.0, 7.0)),
@@ -51,7 +51,7 @@ fn placed_text_draws_background_before_glyphs_and_skips_invisible_backgrounds() 
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
     content.text = "AB".to_owned();
-    content.style.path = Some(TextPath {
+    content.styled_mut().unwrap().path = Some(TextPath {
         points: vec![point(100.0, 200.0), point(500.0, 200.0)],
         start_offset: pixels(0.0),
         reverse: false,
@@ -68,7 +68,7 @@ fn placed_text_draws_background_before_glyphs_and_skips_invisible_backgrounds() 
     assert_eq!(ass.matches("Dialogue: 1").count(), 2);
     assert!(ass.contains("\\p1\\bord0\\shad0"), "{ass}");
 
-    text_content(&mut plan).style.animation = Some(TextAnimation {
+    text_content(&mut plan).styled_mut().unwrap().animation = Some(TextAnimation {
         granularity: TextGranularity::Grapheme,
         transform: TextUnitTransform {
             position_offset: Animatable::constant(point(0.0, 0.0)),
@@ -121,11 +121,15 @@ fn malformed_geometry_plans_fail_at_each_backend_budget() {
     assert_code(&multiline, "TEXT_PATH_MULTILINE");
 
     let mut path_vertical = path_plan(vec![point(0.0, 0.0), point(1_000.0, 0.0)]);
-    text_content(&mut path_vertical).style.layout.writing_mode = TextWritingMode::VerticalRl;
+    text_content(&mut path_vertical)
+        .styled_mut()
+        .unwrap()
+        .layout
+        .writing_mode = TextWritingMode::VerticalRl;
     assert_code(&path_vertical, "TEXT_PATH_WRITING_MODE");
 
     let mut invalid_vertical = resolved(&text_fixture(false));
-    let style = &mut text_content(&mut invalid_vertical).style;
+    let style = &mut text_content(&mut invalid_vertical).styled_mut().unwrap();
     style.layout.writing_mode = TextWritingMode::VerticalLr;
     style.layout.wrap = TextWrap::Word;
     assert_code(&invalid_vertical, "TEXT_VERTICAL_LAYOUT_INVALID");
@@ -133,19 +137,24 @@ fn malformed_geometry_plans_fail_at_each_backend_budget() {
     let mut over_budget = resolved(&text_fixture(false));
     let content = text_content(&mut over_budget);
     content.text = "A".repeat(2_049);
-    content.style.background = None;
-    content.style.layout.writing_mode = TextWritingMode::VerticalRl;
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().layout.writing_mode = TextWritingMode::VerticalRl;
     assert_code(&over_budget, "TEXT_LAYOUT_UNIT_LIMIT");
 }
 
 fn vertical_ass(mode: TextWritingMode) -> String {
     let mut plan = resolved(&text_fixture(false));
-    let font = text_content(&mut plan).style.font.input_id.clone();
+    let font = text_content(&mut plan)
+        .styled_mut()
+        .unwrap()
+        .font
+        .input_id
+        .clone();
     let content = text_content(&mut plan);
     content.text = "中A\n文B".to_owned();
-    content.style.background = None;
-    content.style.layout.writing_mode = mode;
-    content.style.layout.orientation = TextOrientation::Mixed;
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().layout.writing_mode = mode;
+    content.styled_mut().unwrap().layout.orientation = TextOrientation::Mixed;
     let path = cjk_font_path();
     set_input_identity(&mut plan, &font, &path);
     let mut local = bindings(&plan);
@@ -162,8 +171,8 @@ fn path_plan(points: Vec<Point>) -> veac_plan::ResolvedRenderPlan {
     let mut plan = resolved(&text_fixture(false));
     let content = text_content(&mut plan);
     content.text = "AB".to_owned();
-    content.style.background = None;
-    content.style.path = Some(TextPath {
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().path = Some(TextPath {
         points,
         start_offset: pixels(0.0),
         reverse: false,
@@ -184,10 +193,6 @@ fn line<'a>(ass: &'a str, text: &str) -> &'a str {
 }
 
 fn x(line: &str) -> f64 {
-    line.split("\\pos(")
-        .nth(1)
-        .and_then(|value| value.split(',').next())
-        .unwrap()
-        .parse()
-        .unwrap()
+    let (_, value) = line.split_once("\\pos(").unwrap();
+    value.split_once(',').unwrap().0.parse().unwrap()
 }

@@ -50,7 +50,9 @@ fn planning_requires_and_validates_render_config_selection() {
     let mut second = envelope.project.render_configs[0].clone();
     second.id = RenderConfigId::new("out_second").unwrap();
     second.deliverables[0].id = DeliverableId::new("dlv_second").unwrap();
-    second.deliverables[0].file_name = "second.mp4".into();
+    second.deliverables[0].target = veac_ir::DeliverableTarget::File {
+        name: "second.mp4".into(),
+    };
     envelope.project.render_configs.push(second);
     write_envelope(&project, &envelope);
     assert!(
@@ -65,8 +67,9 @@ fn planning_requires_and_validates_render_config_selection() {
             .plan
             .output
             .deliverables[0]
-            .file_name,
-        "second.mp4"
+            .target
+            .file_name(),
+        Some("second.mp4")
     );
     assert!(
         crate::planning::prepare(&project, Some("bad"), &FakeEnvironment::success())
@@ -80,6 +83,26 @@ fn planning_requires_and_validates_render_config_selection() {
             .to_string()
             .contains("RENDER_CONFIG_NOT_FOUND")
     );
+}
+
+#[test]
+fn missing_config_preserves_resolution_diagnostic_before_environment_access() {
+    let temp = tempdir().unwrap();
+    let project = canonical_project(&temp, MEDIA_SOURCE);
+    let environment = FakeEnvironment::success();
+    let error = crate::planning::prepare(&project, Some("out_missing"), &environment).unwrap_err();
+    let [diagnostic] = error.diagnostics() else {
+        panic!("expected one resolution diagnostic");
+    };
+    assert_eq!(diagnostic.code, "RENDER_CONFIG_NOT_FOUND");
+    assert_eq!(diagnostic.object_id.as_deref(), Some("out_missing"));
+    assert_eq!(
+        diagnostic.pointer.as_deref(),
+        Some("/project/render_configs")
+    );
+    assert!(diagnostic.suggested_repair.is_some());
+    assert!(environment.identity_paths.borrow().is_empty());
+    assert!(environment.probe_paths.borrow().is_empty());
 }
 
 #[test]

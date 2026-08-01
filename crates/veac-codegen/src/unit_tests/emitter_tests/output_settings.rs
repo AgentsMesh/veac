@@ -49,7 +49,7 @@ fn emits_bounded_bitrate_and_codec_specific_lossless_modes() {
     delivery(&mut plan).video.rate_control = VideoRateControl::Bitrate {
         target_bps: 4_000_000,
         max_bps: Some(6_000_000),
-        buffer_bps: Some(8_000_000),
+        buffer_size_bits: Some(8_000_000),
     };
     let args = emit_video_command(&plan, &bindings(&plan))
         .unwrap()
@@ -65,7 +65,9 @@ fn emits_bounded_bitrate_and_codec_specific_lossless_modes() {
         (VideoCodec::Av1, "-crf", "0"),
     ] {
         let mut plan = resolved(&fixture());
-        plan.output.deliverables[0].file_name = "output.mkv".to_owned();
+        plan.output.deliverables[0].target = DeliverableTarget::File {
+            name: "output.mkv".to_owned(),
+        };
         let delivery = delivery(&mut plan);
         delivery.container = OutputFormat::Mkv;
         delivery.video.codec = codec;
@@ -94,7 +96,9 @@ fn emits_every_codec_specific_profile_and_ten_bit_pixel_format() {
     ];
     for (codec, profile, encoded) in cases {
         let mut plan = resolved(&fixture());
-        plan.output.deliverables[0].file_name = "output.mkv".to_owned();
+        plan.output.deliverables[0].target = DeliverableTarget::File {
+            name: "output.mkv".to_owned(),
+        };
         let delivery = delivery(&mut plan);
         delivery.container = OutputFormat::Mkv;
         delivery.video.codec = codec;
@@ -135,7 +139,9 @@ fn preflight_rejects_invalid_encoder_and_streaming_settings() {
 }
 
 fn delivery(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut VideoDeliverable {
-    plan.output.video_deliverable_mut().unwrap()
+    plan.output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
 }
 
 fn codes(plan: &veac_plan::ResolvedRenderPlan) -> Vec<&'static str> {

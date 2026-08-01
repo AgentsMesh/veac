@@ -1,7 +1,8 @@
 use crate::authoring::{CaptionSourceDecl, TextFontDecl, TextSourceDecl, TextStyleDecl};
 
+use super::shadow::shadow;
 use super::text_animation::animation;
-use super::text_decor::{background, outline, shadow, span};
+use super::text_decor::{background, outline, span};
 use super::text_layout::layout;
 use super::value::quoted;
 use super::writer::Writer;

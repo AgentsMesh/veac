@@ -38,6 +38,21 @@ impl PlanResolver<'_> {
         item_id: &ItemId,
     ) -> Option<ResolvedSidechain> {
         let edge = self.relations.sidechain_for_target(sequence_id, item_id)?;
+        let has_control = match &edge.key {
+            RelationSignal::Track(track) => track
+                .clips
+                .iter()
+                .any(|clip| self.reachability.is_audio_control(sequence_id, &clip.id)),
+            RelationSignal::Bus { tracks, .. } => tracks.iter().any(|track| {
+                track
+                    .clips
+                    .iter()
+                    .any(|clip| self.reachability.is_audio_control(sequence_id, &clip.id))
+            }),
+        };
+        if !has_control {
+            return None;
+        }
         let source = match edge.key {
             RelationSignal::Track(track) => SidechainSource::Track {
                 track_id: track.id.clone(),

@@ -16,7 +16,9 @@ fn dnxhr_hqx_mxf_with_pcm24_is_a_real_probeable_master() {
     let temp = tempdir().unwrap();
     let mut canonical = project(false);
     let output = &mut canonical.project.render_configs[0];
-    (output.width, output.height, output.frame_rate) = (256, 120, ratio(24, 1));
+    let raster = output.raster.as_mut().expect("raster fixture");
+    (raster.width, raster.height, raster.frame_rate) = (256, 120, ratio(24, 1));
+    raster.captions = CaptionOutput::Discard;
     let sequence = &mut canonical.project.sequences[0];
     sequence.settings.width = 256;
     sequence.settings.height = 120;
@@ -28,7 +30,9 @@ fn dnxhr_hqx_mxf_with_pcm24_is_a_real_probeable_master() {
         vec![solid_clip("itm_source", color(40, 120, 220), 0, 1_000)],
     ));
     let deliverable = &mut output.deliverables[0];
-    deliverable.file_name = "master.mxf".to_owned();
+    deliverable.target = DeliverableTarget::File {
+        name: "master.mxf".to_owned(),
+    };
     deliverable.kind = DeliverableKind::Video(VideoDeliverable {
         container: OutputFormat::Mxf,
         video: VideoOutput {
@@ -47,7 +51,6 @@ fn dnxhr_hqx_mxf_with_pcm24_is_a_real_probeable_master() {
             sample_rate: 48_000,
             channels: 2,
         }),
-        captions: CaptionOutput::Discard,
         optimize_for_streaming: false,
         pass_mode: PassMode::Single,
         hardware: HardwareSelection::Software,

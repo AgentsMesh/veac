@@ -11,7 +11,7 @@ fn every_image_sequence_format_preserves_format_and_start_number() {
     ] {
         let veac_ir::DeliverableKind::ImageSequence(settings) = output(
             "image-sequence",
-            &format!("format {token}; start-number 1001;"),
+            &format!("numbering from 1001; encode {token};"),
         ) else {
             panic!("image sequence expected")
         };
@@ -25,7 +25,7 @@ fn every_caption_sidecar_format_preserves_the_selected_track() {
     for (token, expected) in [("srt", F::Srt), ("web-vtt", F::WebVtt), ("ass", F::Ass)] {
         let veac_ir::DeliverableKind::CaptionSidecar(settings) = output(
             "caption-sidecar",
-            &format!("format {token}; tracks {{ track captions; }}"),
+            &format!("source caption-tracks {{ track captions; }} encode {token};"),
         ) else {
             panic!("caption sidecar expected")
         };
@@ -36,20 +36,20 @@ fn every_caption_sidecar_format_preserves_the_selected_track() {
 
 #[test]
 fn audio_stem_formats_and_all_source_kinds_lower_exactly() {
-    use veac_ir::{AudioCodec, AudioStemFormat, AudioStemSource, DeliverableKind};
+    use veac_ir::{AudioCodec, AudioMixSource, AudioStemFormat, DeliverableKind};
     let cases = [
         (
-            "format wav; audio { codec pcm-s16le; sample-rate 48000; channels 1; } source master;",
+            "source master; encode wav { sample-format pcm-s16le; sample-rate 48khz; channel-layout mono; }",
             AudioStemFormat::Wav,
             "master",
         ),
         (
-            "format wav; audio { codec pcm-s24le; sample-rate 48000; channels 2; } source track dialogue;",
+            "source track dialogue; encode wav { sample-format pcm-s24le; sample-rate 48khz; channel-layout stereo; }",
             AudioStemFormat::Wav,
             "track",
         ),
         (
-            "format flac; audio { codec flac; sample-rate 96000; channels 6; } source bus dialogue;",
+            "source bus dialogue; encode flac { sample-rate 96khz; channel-layout surround-5-1; }",
             AudioStemFormat::Flac,
             "bus",
         ),
@@ -60,11 +60,11 @@ fn audio_stem_formats_and_all_source_kinds_lower_exactly() {
         };
         assert_eq!(settings.format, format);
         match (source, settings.source) {
-            ("master", AudioStemSource::Master) => {}
-            ("track", AudioStemSource::Track { track_id }) => {
+            ("master", AudioMixSource::Master) => {}
+            ("track", AudioMixSource::Track { track_id }) => {
                 assert_eq!(track_id.as_str(), "trk_dialogue");
             }
-            ("bus", AudioStemSource::Bus { bus_id }) => {
+            ("bus", AudioMixSource::Bus { bus_id }) => {
                 assert_eq!(bus_id.as_str(), "bus_dialogue");
             }
             value => panic!("unexpected stem source: {value:?}"),
@@ -86,7 +86,9 @@ fn scope_types_and_image_formats_lower_with_exact_geometry_and_time() {
     ] {
         let veac_ir::DeliverableKind::Scope(settings) = output(
             "scope",
-            &format!("scope {scope}; at 500ms; width 640; height 360; format {image};"),
+            &format!(
+                "analyze {scope}; frame containing 500ms; canvas 640px by 360px; encode {image};"
+            ),
         ) else {
             panic!("scope expected")
         };

@@ -9,12 +9,12 @@ pub(super) struct Canvas {
 }
 
 impl Canvas {
-    pub fn from_output(output: &ResolvedOutput) -> Self {
-        Self {
-            width: output.width,
-            height: output.height,
-            frame_rate: output.frame_rate,
-        }
+    pub fn from_output(output: &ResolvedOutput) -> Option<Self> {
+        output.raster.as_ref().map(|raster| Self {
+            width: raster.width,
+            height: raster.height,
+            frame_rate: raster.frame_rate,
+        })
     }
 
     pub fn from_sequence(sequence: &ResolvedSequence) -> Self {

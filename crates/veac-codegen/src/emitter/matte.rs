@@ -66,9 +66,7 @@ fn merge(
     invert: bool,
 ) -> String {
     let (color, alpha) = context.graph.split(target, "mattetargetsplitv");
-    let color = context
-        .graph
-        .filter(&[&color], "format=gbrp16le", "mattetargetv");
+    let color = super::rgb_planes::without_alpha(&mut context.graph, &color, "mattetargetv");
     let alpha = context.graph.filter(
         &[&alpha],
         "format=rgba64le,alphaextract,format=gray16le",

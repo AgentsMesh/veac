@@ -110,8 +110,14 @@ fn render(
     format::render(
         settings.format,
         &cues,
-        plan.output.width,
-        plan.output.height,
+        plan.output
+            .raster
+            .as_ref()
+            .map_or(sequence.settings.width, |raster| raster.width),
+        plan.output
+            .raster
+            .as_ref()
+            .map_or(sequence.settings.height, |raster| raster.height),
         bindings,
     )
     .map_err(sidecar_failure)

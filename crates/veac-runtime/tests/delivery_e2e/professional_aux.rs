@@ -61,7 +61,9 @@ fn high_precision_image_sequences_and_pcm_stems_are_real_and_cached() {
 fn image(id: &str, file: &str, format: ImageFormat) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::ImageSequence {
+            pattern: file.to_owned(),
+        },
         kind: DeliverableKind::ImageSequence(ImageSequenceOutput {
             format,
             start_number: 1,
@@ -72,7 +74,9 @@ fn image(id: &str, file: &str, format: ImageFormat) -> Deliverable {
 fn stem(id: &str, file: &str, codec: AudioCodec) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format: AudioStemFormat::Wav,
             audio: AudioOutput {
@@ -80,7 +84,7 @@ fn stem(id: &str, file: &str, codec: AudioCodec) -> Deliverable {
                 sample_rate: 96_000,
                 channels: 2,
             },
-            source: AudioStemSource::Master,
+            source: AudioMixSource::Master,
         }),
     }
 }

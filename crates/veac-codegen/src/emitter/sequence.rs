@@ -60,7 +60,7 @@ pub(super) fn conform_output(
     resolved: &ResolvedSequence,
 ) -> String {
     let sequence = Canvas::from_sequence(resolved);
-    let output = &context.plan.output;
+    let output = context.canvas;
     let mut filters = Vec::new();
     if sequence.width != output.width || sequence.height != output.height {
         filters.push(format!(

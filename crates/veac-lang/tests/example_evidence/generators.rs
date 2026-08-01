@@ -72,6 +72,7 @@ fn add_geometry(value: &VectorGeometry, found: &mut BTreeSet<String>) {
 }
 
 fn add_paint(value: &Paint, prefix: &str, found: &mut BTreeSet<String>) {
+    add(found, prefix);
     match value {
         Paint::Solid { .. } => add(found, &format!("{prefix}.solid")),
         Paint::Gradient { gradient } => {

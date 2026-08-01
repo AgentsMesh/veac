@@ -13,9 +13,9 @@ project unused {
       item background { source generated solid { color #000000ff; } record { at 0s; duration 200ms; } }
     }
   }
-  output video main {
-    sequence main; file-name "unused.mp4";
-    encoding { container mp4; video { codec h264; pixel-format yuv420p; } audio none; captions discard; }
+  delivery main {
+    sequence main; raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
+    artifact video main { target file "unused.mp4"; mux mp4 { layout standard; video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; } audio none; passes single; accelerator auto; } }
   }
 }
 "#;
@@ -40,9 +40,9 @@ project solo-folding {
       }
     }
   }
-  output video main {
-    sequence main; file-name "solo.mp4";
-    encoding { container mp4; video { codec h264; pixel-format yuv420p; } audio none; captions discard; }
+  delivery main {
+    sequence main; raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
+    artifact video main { target file "solo.mp4"; mux mp4 { layout standard; video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; } audio none; passes single; accelerator auto; } }
   }
 }
 "#;
@@ -69,13 +69,13 @@ project selected-output {
       }
     }
   }
-  output video main {
-    sequence main; file-name "main.mp4";
-    encoding { container mp4; video { codec h264; pixel-format yuv420p; } audio none; captions discard; }
+  delivery main {
+    sequence main; raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
+    artifact video main { target file "main.mp4"; mux mp4 { layout standard; video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; } audio none; passes single; accelerator auto; } }
   }
-  output video offline {
-    sequence offline-sequence; file-name "offline.mp4";
-    encoding { container mp4; video { codec h264; pixel-format yuv420p; } audio none; captions discard; }
+  delivery offline {
+    sequence offline-sequence; raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
+    artifact video offline { target file "offline.mp4"; mux mp4 { layout standard; video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; } audio none; passes single; accelerator auto; } }
   }
 }
 "#;

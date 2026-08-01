@@ -1,5 +1,5 @@
 use veac_plan::canonical::TextOverflow;
-use veac_plan::{EffectiveVisualProperties, ResolvedText};
+use veac_plan::{EffectiveVisualProperties, ResolvedTextStyle};
 
 use crate::emitter::canvas::Canvas;
 use crate::emitter::{geometry, visual_frame};
@@ -21,10 +21,10 @@ impl Surface {
 pub(super) fn resolve(
     canvas: Canvas,
     visual: &EffectiveVisualProperties,
-    content: &ResolvedText,
+    style: &ResolvedTextStyle,
 ) -> Surface {
     let anchor = visual.transform.anchor;
-    let layout = content.style.layout;
+    let layout = style.layout;
     if let (Some(width), Some(height)) = (layout.box_width_pixels, layout.box_height_pixels) {
         if layout.overflow == TextOverflow::Visible {
             let dimensions = (canvas.width, canvas.height);

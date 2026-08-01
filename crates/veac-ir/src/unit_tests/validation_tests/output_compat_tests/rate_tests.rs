@@ -50,11 +50,11 @@ fn bitrate_fields_enforce_positive_and_safe_integer_boundaries() {
         (1, None, Some(MAX_VIDEO_BUFFER + 1)),
     ];
 
-    for (target_bps, max_bps, buffer_bps) in valid {
-        assert!(valid_bitrate(target_bps, max_bps, buffer_bps));
+    for (target_bps, max_bps, buffer_size_bits) in valid {
+        assert!(valid_bitrate(target_bps, max_bps, buffer_size_bits));
     }
-    for (target_bps, max_bps, buffer_bps) in invalid {
-        assert!(!valid_bitrate(target_bps, max_bps, buffer_bps));
+    for (target_bps, max_bps, buffer_size_bits) in invalid {
+        assert!(!valid_bitrate(target_bps, max_bps, buffer_size_bits));
     }
 }
 
@@ -101,12 +101,12 @@ fn gop_b_frame_and_level_boundaries_are_enforced() {
     }
 }
 
-fn valid_bitrate(target_bps: u64, max_bps: Option<u64>, buffer_bps: Option<u64>) -> bool {
+fn valid_bitrate(target_bps: u64, max_bps: Option<u64>, buffer_size_bits: Option<u64>) -> bool {
     video_settings_valid(&VideoOutput {
         rate_control: VideoRateControl::Bitrate {
             target_bps,
             max_bps,
-            buffer_bps,
+            buffer_size_bits,
         },
         ..VideoOutput::default()
     })

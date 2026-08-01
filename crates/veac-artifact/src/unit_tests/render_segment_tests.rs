@@ -21,9 +21,18 @@ fn full_segment_identity_binds_plan_profile_range_fidelity_and_source_clocks() {
     assert_eq!(base.range().start.value, 0);
 
     let mut profile = plan.clone();
-    profile.output.width += 2;
+    profile.output.raster.as_mut().unwrap().width += 2;
     let changed = contract(&profile, bindings.input_substitution_proof());
+    assert_ne!(base.media_profile(), changed.media_profile());
     assert_ne!(key(&base), key(&changed));
+    let mut rate = plan.clone();
+    rate.output.raster.as_mut().unwrap().frame_rate = veac_ir::Rational::new(24, 1).unwrap();
+    let rate = contract(&rate, bindings.input_substitution_proof());
+    assert_ne!(base.media_profile(), rate.media_profile());
+    let mut captions = plan.clone();
+    captions.output.raster.as_mut().unwrap().captions = veac_ir::CaptionOutput::Discard;
+    let captions = contract(&captions, bindings.input_substitution_proof());
+    assert_ne!(base.media_profile(), captions.media_profile());
     let clocks = contract(&plan, ContentDigest::sha256(b"other clocks"));
     assert_ne!(key(&base), key(&clocks));
     let mut range = plan.clone();
@@ -56,7 +65,7 @@ fn exact_verified_segment_binds_and_drift_or_corruption_fails_closed() {
     assert_ne!(bindings.substitution_proof(), input_proof);
 
     let mut drifted = plan.clone();
-    drifted.output.height += 2;
+    drifted.output.raster.as_mut().unwrap().height += 2;
     let mut wrong = originals(&drifted, "/media/source.mp4");
     assert_eq!(
         wrong

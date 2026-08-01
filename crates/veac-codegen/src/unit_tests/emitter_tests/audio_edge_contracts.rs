@@ -44,7 +44,7 @@ fn a_sidechain_source_inherits_its_authored_transition_fades() {
     for marker in [
         "afade=t=out:st=0.9:d=0.1",
         "afade=t=in:st=0:d=0.1",
-        "sidechainsourcemix",
+        "sidechainsource",
         "sidechaincompress",
     ] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
@@ -131,7 +131,7 @@ fn audio() -> AudioProperties {
 
 fn enable_audio(project: &mut ProjectEnvelope) {
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

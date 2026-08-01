@@ -20,18 +20,51 @@ project card-overlay {
     layer visual card {
       item panel {
         source generated shape {
-          geometry rounded-rectangle { bounds 0% 0% 100% 100%; radius 18px; }
-          fill solid #f7f7f2ee;
-          stroke 3px solid #5bc0beff;
+          geometry rectangle { bounds 0% 0% 100% 100%; }
+          fill solid #f7f7f2ff;
+          stroke 14px solid #5bc0beff;
         }
         record { at 0s; duration 4s; }
         modifiers {
           layout card-frame {
-            placement absolute { position { x 280px; y 170px; } }
-            frame { width 720px; height 380px; fit contain; }
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 720px; height 380px; fit fill; }
+          }
+          surface raised {
+            corner-radius 36px;
+            shadow {
+              color #000000ff;
+              opacity 38%;
+              blur 28px;
+              offset { x 0px; y 16px; }
+            }
           }
           composite translucent { opacity 92%; z-index 10; }
         }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

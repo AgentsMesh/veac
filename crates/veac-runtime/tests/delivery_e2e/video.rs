@@ -16,7 +16,9 @@ fn prores_4444_preserves_a_real_transparent_region() {
     let temp = tempdir().unwrap();
     let mut canonical = project(false);
     let deliverable = &mut canonical.project.render_configs[0].deliverables[0];
-    deliverable.file_name = "alpha.mov".to_owned();
+    deliverable.target = DeliverableTarget::File {
+        name: "alpha.mov".to_owned(),
+    };
     let DeliverableKind::Video(settings) = &mut deliverable.kind else {
         panic!()
     };
@@ -96,6 +98,11 @@ fn pq_and_hlg_outputs_carry_real_ten_bit_bt2020_metadata() {
         0,
         vec![solid_clip("itm_color", color(80, 120, 160), 0, 1_000)],
     ));
+    canonical.project.render_configs[0]
+        .raster
+        .as_mut()
+        .expect("raster fixture")
+        .captions = CaptionOutput::Discard;
     canonical.project.render_configs[0].deliverables = vec![
         hdr("dlv_hlg", "hlg.mp4", ColorTransfer::AribStdB67),
         hdr("dlv_pq", "pq.mp4", ColorTransfer::Smpte2084),
@@ -115,7 +122,9 @@ fn pq_and_hlg_outputs_carry_real_ten_bit_bt2020_metadata() {
 fn hdr(id: &str, file: &str, transfer: ColorTransfer) -> Deliverable {
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file.to_owned(),
+        target: DeliverableTarget::File {
+            name: file.to_owned(),
+        },
         kind: DeliverableKind::Video(VideoDeliverable {
             container: OutputFormat::Mp4,
             video: VideoOutput {
@@ -135,7 +144,6 @@ fn hdr(id: &str, file: &str, transfer: ColorTransfer) -> Deliverable {
                 level: None,
             },
             audio: None,
-            captions: CaptionOutput::Discard,
             optimize_for_streaming: false,
             pass_mode: PassMode::Single,
             hardware: HardwareSelection::Software,

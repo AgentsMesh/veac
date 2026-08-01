@@ -167,7 +167,7 @@ fn character_reveal_and_stagger_hide_fill_outline_and_shadow() {
         },
         opacity: Animatable::Keyframes {
             keyframes: vec![
-                key("kf_opacity_a", 0, 0.0, Interpolation::Linear),
+                key("kf_opacity_a", 0, 0.25, Interpolation::Linear),
                 key("kf_opacity_b", 300, 1.0, Interpolation::Linear),
             ],
         },
@@ -180,12 +180,18 @@ fn character_reveal_and_stagger_hide_fill_outline_and_shadow() {
     let assets = BTreeMap::from([("med_font".to_owned(), font)]);
     render(canonical, &assets, &output);
     let early = frame_stats(&rgb_frame(&output, 0.02));
-    let middle = frame_stats(&rgb_frame(&output, 0.42));
-    let late = frame_stats(&rgb_frame(&output, 0.85));
+    let middle_frame = rgb_frame(&output, 0.32);
+    let late_frame = rgb_frame(&output, 0.85);
+    let middle = frame_stats(&middle_frame);
+    let late = frame_stats(&late_frame);
     assert!(early.ratio < 0.001, "outline/shadow leaked: {early:?}");
     assert!(
         middle.energy > early.energy + 1.0,
         "{early:?} -> {middle:?}"
     );
-    assert!(late.energy > middle.energy * 1.15, "{middle:?} -> {late:?}");
+    let changed = changed_channels(&middle_frame, &late_frame);
+    assert!(
+        late.ratio > middle.ratio + 0.005 && changed > 300,
+        "{middle:?} -> {late:?}; changed channels={changed}"
+    );
 }

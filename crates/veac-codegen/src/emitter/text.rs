@@ -44,8 +44,9 @@ pub(super) fn prepare(
     );
     let filter = ass::filter(&rendered.script, Path::new(&font_token));
     let premultiplied = context.graph.filter(&[&canvas], filter, "textassv");
+    let corrected = correct_ass_alpha(context, &premultiplied);
     let source = context.graph.filter(
-        &[&premultiplied],
+        &[&corrected],
         "unpremultiply=inplace=1:planes=7",
         "textstraightv",
     );
@@ -56,6 +57,21 @@ pub(super) fn prepare(
         source,
         rendered.surface.source_geometry,
     )
+}
+
+fn correct_ass_alpha(context: &mut EmitContext<'_>, input: &str) -> String {
+    // FFmpeg's ASS alpha path applies authored opacity to both coverage and the alpha plane.
+    let (color_raw, alpha_raw) = context.graph.split(input, "textasssplitv");
+    let color = super::rgb_planes::without_alpha(&mut context.graph, &color_raw, "textasscolorv");
+    let alpha = context.graph.filter(
+        &[&alpha_raw],
+        concat!(
+            "format=rgba64le,alphaextract,format=gray16le,",
+            "geq=lum='sqrt(lum(X\\,Y)/65535)*65535'"
+        ),
+        "textassalphav",
+    );
+    super::alpha_merge::apply(context, &color, &alpha, "gbrap16le", "textassmergev")
 }
 
 fn transparent_canvas(

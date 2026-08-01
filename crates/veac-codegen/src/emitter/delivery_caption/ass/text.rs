@@ -3,7 +3,7 @@ use std::fmt::Write;
 
 use unicode_segmentation::UnicodeSegmentation;
 use veac_plan::canonical::FontStyle;
-use veac_plan::{ResolvedText, ResolvedTextSpan};
+use veac_plan::{ResolvedText, ResolvedTextSpan, ResolvedTextStyle};
 
 use super::super::failure::Failure;
 use super::font::FontCatalog;
@@ -12,14 +12,15 @@ use crate::emitter::time;
 
 pub(super) fn render(
     content: &ResolvedText,
+    style: &ResolvedTextStyle,
     base: &Style,
     fonts: &mut FontCatalog<'_>,
 ) -> Result<String, Failure> {
-    validate_spans(content)?;
+    validate_spans(content, style)?;
     let characters: Vec<_> = content.text.chars().collect();
     let mut output = String::new();
     let mut cursor = 0_usize;
-    for span in &content.style.spans {
+    for span in &style.spans {
         output.push_str(&escape(&characters[cursor..span.start as usize]));
         let tags = tags(span, fonts)?;
         let value = escape(&characters[span.start as usize..span.end as usize]);
@@ -83,7 +84,7 @@ fn tags(span: &ResolvedTextSpan, fonts: &mut FontCatalog<'_>) -> Result<String, 
     Ok(output)
 }
 
-fn validate_spans(content: &ResolvedText) -> Result<(), Failure> {
+fn validate_spans(content: &ResolvedText, style: &ResolvedTextStyle) -> Result<(), Failure> {
     let length = content.text.chars().count() as u32;
     let mut previous_end = 0_u32;
     let mut grapheme_boundaries = BTreeSet::from([0_u32]);
@@ -92,7 +93,7 @@ fn validate_spans(content: &ResolvedText) -> Result<(), Failure> {
         scalar += grapheme.chars().count() as u32;
         grapheme_boundaries.insert(scalar);
     }
-    for span in &content.style.spans {
+    for span in &style.spans {
         if span.start >= span.end || span.start < previous_end || span.end > length {
             return Err(invalid("rich-text span range is invalid or overlapping"));
         }

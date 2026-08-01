@@ -81,3 +81,26 @@ fn clip_source_reports_only_typed_font_material_references() {
         None
     );
 }
+
+#[test]
+fn spring_interpolation_has_an_explicit_canonical_shape() {
+    let spring = Interpolation::Spring {
+        frequency: 1.5,
+        decay: 6.0,
+        initial_velocity: 0.0,
+    };
+    let json = serde_json::to_value(&spring).unwrap();
+    assert_eq!(
+        json,
+        serde_json::json!({
+            "type": "spring",
+            "frequency": 1.5,
+            "decay": 6.0,
+            "initial_velocity": 0.0
+        })
+    );
+    assert_eq!(
+        serde_json::from_value::<Interpolation>(json).unwrap(),
+        spring
+    );
+}

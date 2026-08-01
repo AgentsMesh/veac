@@ -46,6 +46,7 @@ fn interpolation_variants_survive_parameter_curve_round_trip() {
         "interpolation ease-out;",
         "interpolation ease-in-out;",
         "interpolation cubic-bezier {",
+        "interpolation spring {",
     ] {
         assert!(formatted.contains(variant), "missing `{variant}`");
     }
@@ -64,7 +65,7 @@ fn mappings_and_interpolations_reject_incomplete_or_unknown_forms() {
         assert!(compile_round_trip(&mapped_project(invalid)).is_err());
     }
 
-    let unknown = INTERPOLATIONS.replace("interpolation hold;", "interpolation spring;");
+    let unknown = INTERPOLATIONS.replace("interpolation hold;", "interpolation bounce;");
     assert!(compile_round_trip(&unknown).is_err());
     let incomplete =
         INTERPOLATIONS.replace("x1 0.25; y1 0.1; x2 0.25; y2 1.0;", "x1 0.25; y1 0.1;");
@@ -120,6 +121,9 @@ sequence main {
             key k4 { at 4s; value { x 40px; y 40px; } interpolation ease-in-out; }
             key k5 { at 5s; value { x 50px; y 50px; }
               interpolation cubic-bezier { x1 0.25; y1 0.1; x2 0.25; y2 1.0; }
+            }
+            key k6 { at 6s; value { x 60px; y 60px; }
+              interpolation spring { frequency 1.5; decay 6; initial-velocity 0; }
             }
           }
         }

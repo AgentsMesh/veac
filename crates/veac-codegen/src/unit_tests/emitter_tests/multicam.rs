@@ -9,6 +9,12 @@ use super::support::{bindings, fixture, identity, probe, resolved, time};
 #[test]
 fn multicam_switches_map_two_resources_and_concatenate_video_and_audio() {
     let plan = multicam_plan();
+    assert_eq!(plan.inputs.len(), 2);
+    assert_eq!(multicam_source(&plan).angles.len(), 2);
+    assert!(plan.inputs.iter().all(|input| input
+        .material_id
+        .as_ref()
+        .is_none_or(|id| id.as_str() != "med_unused")));
     let bindings = bindings(&plan);
     let bundle = emit_all(&plan, &bindings).unwrap();
     assert_eq!(bundle.protected_resources().len(), 2);
@@ -81,9 +87,17 @@ pub(crate) fn multicam_plan() -> ResolvedRenderPlan {
     wide.identity = Some(observed.clone());
     wide.probe = Some(probe(observed));
     project.project.materials.push(wide);
+    let mut unused = project.project.materials[0].clone();
+    unused.id = MaterialId::new("med_unused").unwrap();
+    unused.source = MaterialSource::File {
+        uri: "media/unused-missing.mp4".to_owned(),
+    };
+    unused.identity = None;
+    unused.probe = None;
+    project.project.materials.push(unused);
     project.project.multicam_groups.push(group());
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
@@ -116,6 +130,7 @@ fn group() -> MulticamGroup {
         },
         angles: vec![
             angle("ang_close", "med_video", 0),
+            angle("ang_unused", "med_unused", 0),
             angle("ang_wide", "med_wide", 60),
         ],
     }

@@ -1,4 +1,4 @@
-use crate::authoring::{TextBackgroundDecl, TextOutlineDecl, TextShadowDecl, TextSpanDecl};
+use crate::authoring::{TextBackgroundDecl, TextOutlineDecl, TextSpanDecl};
 use veac_ir::{FontStyle, FontWeight};
 
 use super::text::{font, number};
@@ -15,18 +15,6 @@ pub(super) fn outline(writer: &mut Writer, value: &TextOutlineDecl) {
     writer.block("outline", |writer| {
         writer.line(format!("color {};", value.color.value));
         writer.line(format!("width {};", value.width.raw));
-    });
-}
-
-pub(super) fn shadow(writer: &mut Writer, value: &TextShadowDecl) {
-    writer.block("shadow", |writer| {
-        writer.line(format!("color {};", value.color.value));
-        writer.line(format!("opacity {};", value.opacity.raw));
-        writer.line(format!("blur {};", value.blur.raw));
-        writer.block("offset", |writer| {
-            writer.line(format!("x {};", value.offset.x.raw));
-            writer.line(format!("y {};", value.offset.y.raw));
-        });
     });
 }
 

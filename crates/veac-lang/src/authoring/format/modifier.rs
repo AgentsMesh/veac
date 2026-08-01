@@ -4,7 +4,6 @@ use crate::authoring::{
 };
 
 use super::parameter::{point, rect, scalar, vector};
-use super::value::quoted;
 use super::writer::Writer;
 
 pub(super) fn modifier(writer: &mut Writer, value: &ModifierDecl) {
@@ -30,6 +29,7 @@ pub(super) fn modifier(writer: &mut Writer, value: &ModifierDecl) {
                 }
             })
         }
+        ModifierDecl::Surface(value) => super::modifier_surface::surface(writer, value),
         ModifierDecl::Mask(value) => super::modifier_mask::mask(writer, value),
         ModifierDecl::Audio(value) => super::modifier_audio::audio(writer, value),
         ModifierDecl::Color(value) => super::modifier_color::color(writer, value),
@@ -90,6 +90,13 @@ fn transform(writer: &mut Writer, value: &TransformModifierDecl) {
     if let Some(value) = &value.scale {
         vector(writer, "scale", value);
     }
+    if let Some(value) = &value.shear {
+        vector(
+            writer,
+            "shear",
+            &crate::authoring::ParameterDecl::Constant(value.as_ref().clone()),
+        );
+    }
     if let Some(value) = &value.rotation {
         scalar(writer, "rotation", value);
     }
@@ -136,11 +143,6 @@ fn effect(writer: &mut Writer, value: &crate::authoring::EffectModifierDecl) {
             EffectParameterValue::Color(value) => writer.line(format!(
                 "parameter {} {};",
                 parameter.name.value, value.value
-            )),
-            EffectParameterValue::Text(value) => writer.line(format!(
-                "parameter {} {};",
-                parameter.name.value,
-                quoted(&value.value)
             )),
         }
     }

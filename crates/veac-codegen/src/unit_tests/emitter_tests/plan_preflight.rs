@@ -161,7 +161,7 @@ fn effect(id: &str, kind: &str) -> ResolvedEffect {
 fn audio_plan() -> ResolvedRenderPlan {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

@@ -29,7 +29,7 @@ project apply-scopes {
             shape circle;
             position { x 50%; y 50%; }
             scale { x 42%; y 72%; }
-            feather 24px;
+            feather 0px;
           }
         }
       }
@@ -47,17 +47,17 @@ project apply-scopes {
         }
         stage effect band-soften {
           type video.blur;
-          parameter radius 2;
+          parameter radius 14;
         }
       }
       mix {
-        opacity 82%;
+        opacity 88%;
         blend screen;
         mask band-window {
           shape circle;
           position { x 50%; y 50%; }
           scale { x 60%; y 78%; }
-          feather 48px;
+          feather 24px;
         }
       }
     }
@@ -82,6 +82,30 @@ project apply-scopes {
         }
       }
       mix { opacity 70%; blend multiply; }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
   }
 }

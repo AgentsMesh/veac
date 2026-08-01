@@ -36,6 +36,7 @@ fn version_then_original_replacement_keeps_capabilities_on_one_pinned_copy() {
         .execute(FfmpegInvocation::render(
             &arguments,
             temp.path(),
+            temp.path(),
             Instant::now() + std::time::Duration::from_secs(10),
         ))
         .unwrap();

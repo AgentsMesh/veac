@@ -20,6 +20,7 @@
     {"id":"audio.sidechain-ducking","title":"侧链压低","family":"音频路由","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P1-20"},
     {"id":"animation.interpolation-hold","title":"保持插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
     {"id":"animation.interpolation-linear","title":"线性插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
+    {"id":"animation.interpolation-spring","title":"弹簧插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
     {"id":"animation.interpolation-ease-in","title":"缓入插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
     {"id":"animation.interpolation-ease-out","title":"缓出插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},
     {"id":"animation.interpolation-ease-in-out","title":"缓入缓出插值","family":"动画插值","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-12"},

@@ -1,4 +1,28 @@
-use veac_plan::canonical::{Interpolation, Point, Rect, Vec2};
+use veac_plan::canonical::{Interpolation, Keyframe, Length, Point, Rect, Vec2};
+
+pub(super) trait SpringValue: Sized {
+    fn spring_value(&self, next: &Self, amount: f64) -> Option<Self>;
+}
+
+pub(super) fn spring_ranges_valid<T: SpringValue>(
+    keyframes: &[Keyframe<T>],
+    valid: fn(&T) -> bool,
+) -> bool {
+    keyframes.windows(2).all(|pair| {
+        if !matches!(pair[0].interpolation, Interpolation::Spring { .. }) {
+            return true;
+        }
+        let Some(amounts) = pair[0].interpolation.spring_extrema() else {
+            return false;
+        };
+        amounts.into_iter().all(|amount| {
+            pair[0]
+                .value
+                .spring_value(&pair[1].value, amount)
+                .is_some_and(|value| valid(&value))
+        })
+    })
+}
 
 pub(super) fn finite(value: &f64) -> bool {
     value.is_finite()
@@ -56,6 +80,55 @@ pub(super) fn interpolation(value: &Interpolation) -> bool {
                 && (0.0..=1.0).contains(x2)
                 && (0.0..=1.0).contains(y2)
         }
+        Interpolation::Spring { .. } => value.spring_coefficients().is_some(),
         _ => true,
     }
 }
+
+impl SpringValue for f64 {
+    fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
+        Some(self + (next - self) * amount)
+    }
+}
+
+impl SpringValue for Vec2 {
+    fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
+        Some(Self {
+            x: self.x + (next.x - self.x) * amount,
+            y: self.y + (next.y - self.y) * amount,
+        })
+    }
+}
+
+impl SpringValue for Point {
+    fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
+        if self.x.unit != next.x.unit || self.y.unit != next.y.unit {
+            return None;
+        }
+        Some(Self {
+            x: Length {
+                value: self.x.value + (next.x.value - self.x.value) * amount,
+                unit: self.x.unit,
+            },
+            y: Length {
+                value: self.y.value + (next.y.value - self.y.value) * amount,
+                unit: self.y.unit,
+            },
+        })
+    }
+}
+
+impl SpringValue for Rect {
+    fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
+        Some(Self {
+            x: self.x + (next.x - self.x) * amount,
+            y: self.y + (next.y - self.y) * amount,
+            width: self.width + (next.width - self.width) * amount,
+            height: self.height + (next.height - self.height) * amount,
+        })
+    }
+}
+
+#[cfg(test)]
+#[path = "values/tests.rs"]
+mod tests;

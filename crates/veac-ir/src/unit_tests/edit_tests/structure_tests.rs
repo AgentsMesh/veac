@@ -52,7 +52,7 @@ fn structure_edits_cover_insert_set_relink_and_reference_safe_remove() {
     material
         .metadata
         .insert("role".to_owned(), serde_json::json!("ui"));
-    output.width = 720;
+    output.raster.as_mut().unwrap().width = 720;
     let settings = SequenceSettings {
         width: 720,
         ..sequence.settings.clone()

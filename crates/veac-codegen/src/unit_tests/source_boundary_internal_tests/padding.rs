@@ -21,8 +21,10 @@ fn rejects_unbounded_and_unaligned_clocks() {
         }
         _ => panic!("expected video deliverable"),
     };
+    let audio_output = AudioRenderSpec::from(audio_output);
     let clip = &plan.sequences[0].tracks[0].clips[0];
-    let mut context = EmitContext::new(&plan, &execution, deliverable, alpha).expect("context");
+    let mut context =
+        EmitContext::new_visual(&plan, &execution, deliverable, alpha).expect("context");
     let padding = Padding {
         before: RationalTime::new(1, 44_100).expect("unaligned padding"),
         after: time(0),
@@ -48,7 +50,7 @@ fn rejects_unbounded_and_unaligned_clocks() {
     )
     .expect("clock");
     assert_eq!(
-        audio::pad(&mut context, "0:1", clip, bounded, padding, audio_output)
+        audio::pad(&mut context, "0:1", clip, bounded, padding, &audio_output)
             .unwrap_err()
             .diagnostics()[0]
             .code,
@@ -66,7 +68,7 @@ fn rejects_unbounded_and_unaligned_clocks() {
             clip,
             SourceClock::identity(600).expect("identity clock"),
             zero,
-            audio_output,
+            &audio_output,
         )
         .unwrap_err()
         .diagnostics()[0]
@@ -79,7 +81,7 @@ fn rejects_unbounded_and_unaligned_clocks() {
         after: RationalTime::new(1, 44_100).expect("unaligned padding"),
     };
     assert_eq!(
-        audio::pad(&mut context, "0:1", clip, bounded, after, audio_output)
+        audio::pad(&mut context, "0:1", clip, bounded, after, &audio_output)
             .unwrap_err()
             .diagnostics()[0]
             .code,

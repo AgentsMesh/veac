@@ -28,7 +28,12 @@ impl Operations for LiveOperations {
         name: &str,
         expected: EntryIdentity,
     ) -> Result<(), RuntimeError> {
-        output.remove_bound(name, expected)
+        output.remove_tree_bound(
+            name,
+            expected,
+            veac_artifact::MAX_DELIVERY_PACKAGE_MEMBERS + 1,
+            || true,
+        )
     }
 
     fn restore(

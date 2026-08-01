@@ -1,4 +1,4 @@
-use crate::{Deliverable, DeliverableKind, ImageSequencePattern};
+use crate::{Deliverable, DeliverableTarget, ImageSequencePattern};
 
 enum Name<'a> {
     Static(&'a str),
@@ -15,10 +15,12 @@ pub(super) fn overlap(left: &Deliverable, right: &Deliverable) -> bool {
 }
 
 fn name(value: &Deliverable) -> Name<'_> {
-    match &value.kind {
-        DeliverableKind::ImageSequence(_) => ImageSequencePattern::parse(&value.file_name)
+    match &value.target {
+        DeliverableTarget::ImageSequence { pattern } => ImageSequencePattern::parse(pattern)
             .map(Name::Pattern)
-            .unwrap_or(Name::Static(&value.file_name)),
-        _ => Name::Static(&value.file_name),
+            .unwrap_or(Name::Static(pattern)),
+        DeliverableTarget::File { name } | DeliverableTarget::Package { name } => {
+            Name::Static(name)
+        }
     }
 }

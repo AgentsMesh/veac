@@ -13,7 +13,7 @@
     {"id":"generator.shape.path","title":"路径形状","family":"生成形状","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.shape.ellipse","title":"椭圆","family":"生成形状","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.shape.rectangle","title":"矩形","family":"生成形状","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
-    {"id":"generator.paint","title":"生成形状绘制","family":"形状绘制","coverage":"workflow_evidence","evidence":"crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs"},
+    {"id":"generator.paint","title":"生成形状绘制","family":"形状绘制","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.stroke.solid","title":"纯色形状描边","family":"形状描边","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.stroke.gradient","title":"渐变形状描边","family":"形状描边","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"resource.kind.font","title":"字体资源类型","family":"资源声明","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac"},

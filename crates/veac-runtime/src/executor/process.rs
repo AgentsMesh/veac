@@ -53,6 +53,7 @@ impl SystemFfmpeg {
         &self,
         arguments: &[String],
         output_root: Option<&Path>,
+        working_directory: Option<&Path>,
         deadline: Instant,
     ) -> Result<Output, RuntimeError> {
         let executable = self.launch_until(deadline)?;
@@ -64,6 +65,7 @@ impl SystemFfmpeg {
                 max_stdout_bytes: runner::MAX_STDOUT_BYTES,
                 max_stderr_bytes: runner::MAX_STDERR_BYTES,
                 output_root,
+                working_directory,
                 max_output_bytes: runner::MAX_OUTPUT_BYTES,
             },
         )

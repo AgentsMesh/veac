@@ -3,12 +3,17 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 WRITER="$ROOT/scripts/write-examples-index.sh"
+source "$ROOT/scripts/tests/example-preview-layout-fixtures.sh"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 GALLERY="$TMP/gallery.json"
 cat > "$GALLERY" <<'JSON'
 {
+  "targets": [
+    {"id":"zeta","expected_artifacts":[{"kind":"authoring_delivery","id":"preview"}]},
+    {"id":"alpha","expected_artifacts":[{"kind":"authoring_delivery","id":"preview"}]}
+  ],
   "examples": [
     {
       "id": "zeta",
@@ -27,9 +32,17 @@ cat > "$GALLERY" <<'JSON'
 JSON
 
 make_example() {
-  local output=$1 name=$2 artifact=$3
-  mkdir -p "$output/$name/rendered" "$output/$name/project"
-  : > "$output/$name/rendered/$artifact"
+  local output=$1 name=$2 artifact=$3 entry="$1/$2"
+  prepare_preview_fixture_dirs "$entry"
+  : > "$entry/rendered/$artifact"
+  cat >"$entry/project/project.veac.json" <<JSON
+{"project":{"id":"prj_$name","render_configs":[{"id":"out_preview",
+"deliverables":[{"id":"dlv_preview","target":{"type":"file","name":"$artifact"}}]}]}}
+JSON
+  mirror_fixture_preview_canonical "$entry"
+  printf '{"output":{"render_config_id":"out_preview"}}\n' \
+    >"$entry/plans/preview/out_preview.json"
+  printf 'fixture build\n' >"$entry/build.log"
 }
 
 FULL="$TMP/full"
@@ -49,8 +62,15 @@ rg -F '0 &lt; 1' "$FULL/index.html" >/dev/null
 rg -F '甲 &amp; 乙 &quot;双引号&quot; &apos;单引号&apos;' "$FULL/index.html" >/dev/null
 rg -F '<div class="output-name">tone.wav</div>' "$FULL/index.html" >/dev/null
 rg -F '>打开 output.txt</a>' "$FULL/index.html" >/dev/null
-rg -F '>源码</a>' "$FULL/index.html" >/dev/null
-rg -F '>中间表示</a>' "$FULL/index.html" >/dev/null
+rg -F '>创作源码</a>' "$FULL/index.html" >/dev/null
+rg -F '>预览适配源码</a>' "$FULL/index.html" >/dev/null
+rg -F '>创作 canonical IR</a>' "$FULL/index.html" >/dev/null
+rg -F '>预览派生 IR</a>' "$FULL/index.html" >/dev/null
+rg -F '>预览计划 out_preview</a>' "$FULL/index.html" >/dev/null
+if rg -F '/plan.json' "$FULL/index.html" >/dev/null; then
+  echo "example index linked a legacy ambiguous plan" >&2
+  exit 1
+fi
 if rg -F 'What to verify' "$FULL/index.html" >/dev/null; then
   echo "example index emitted English presentation chrome" >&2
   exit 1

@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 source "$ROOT/scripts/example-preview-cli.sh"
+# shellcheck source=coverage-policy.sh
+source "$ROOT/scripts/coverage-policy.sh"
 REQUIRED=(
   Makefile
   examples/catalog/gallery.json
@@ -30,13 +32,28 @@ while IFS= read -r file; do SHELL_FILES+=("$file"); done < <(
 bash -n "${SHELL_FILES[@]}"
 make -s -C "$ROOT" help >/dev/null
 rg -q '^test-example-index:' "$ROOT/Makefile"
+rg -q '^test-example-render-contracts:' "$ROOT/Makefile"
 rg -q '^build-examples: check-examples ' "$ROOT/Makefile"
+rg -q '^[[:space:]]*@unset VEAC_BIN;' "$ROOT/Makefile"
 rg -q '^PREVIEW_MAX_EDGE \?= 480$' "$ROOT/Makefile"
 rg -q 'VEAC_PREVIEW_MAX_EDGE:-480' "$ROOT/scripts/build-examples.sh"
+rg -q '^unset VEAC_BIN$' "$ROOT/scripts/build-examples.sh"
 git -C "$ROOT" check-ignore -q -- examples-preview/.guard
 git -C "$ROOT" check-ignore -q -- examples-preview.staging.123/.guard
 jq -e -f "$ROOT/scripts/check-gallery-catalog.jq" \
   "$ROOT/examples/catalog/gallery.json" >/dev/null
+awk -v minimum="$COVERAGE_MINIMUM" 'BEGIN { exit !(minimum > 95.02) }' || {
+  echo "coverage threshold must be strictly greater than 95.02" >&2
+  exit 1
+}
+for contract in example-preview example-preview-fixture example-preview-provenance \
+  example-preview-build-flow render-evidence text-render-evidence timing-render-evidence \
+  media-smoke-render-evidence all-features-render-evidence \
+  agentsmesh-intro-render-evidence advanced-color-render-evidence \
+  mask-shape-render-evidence video-stabilization-render-evidence \
+  delivery-codec-render-evidence; do
+  rg -q "bash scripts/tests/$contract-contracts.sh" "$ROOT/Makefile"
+done
 jq --argjson edge 240 --argjson fps 12 --argjson window null \
   -f "$ROOT/scripts/example-preview.jq" >/dev/null <<'JSON'
 {"project":{"sequences":[],"render_configs":[],"materials":[],"relations":[],"annotations":[]}}
@@ -53,7 +70,9 @@ cargo() {
     *) return 64 ;;
   esac
 }
-unset VEAC_BIN
+VEAC_BIN="$tmp/stale-veac"
+printf '#!/usr/bin/env bash\nexit 99\n' > "$VEAC_BIN"
+chmod +x "$VEAC_BIN"
 veac=$(prepare_example_preview_cli "$ROOT" 1.85.0)
 [[ "$veac" == "$tmp/target/debug/veac" ]]
 [[ $(wc -l < "$cargo_log" | tr -d ' ') -eq 2 ]]
@@ -61,12 +80,6 @@ veac=$(prepare_example_preview_cli "$ROOT" 1.85.0)
   "+1.85.0 build --manifest-path $ROOT/Cargo.toml --package veac-cli --bin veac" ]]
 [[ $(sed -n '2p' "$cargo_log") == \
   "+1.85.0 metadata --manifest-path $ROOT/Cargo.toml --format-version 1 --no-deps" ]]
-
-: > "$cargo_log"
-VEAC_BIN="$tmp/custom-veac"
-veac=$(prepare_example_preview_cli "$ROOT" 1.85.0)
-[[ "$veac" == "$VEAC_BIN" ]]
-[[ ! -s "$cargo_log" ]]
 unset VEAC_BIN
 
 for target in render_e2e_tests delivery_e2e_tests probe_e2e_tests workflow_e2e_tests; do
@@ -79,6 +92,10 @@ for target in render_e2e_tests delivery_e2e_tests probe_e2e_tests workflow_e2e_t
     exit 1
   }
 done
+[[ $(rg -c -- '-- --test-threads=1' "$ROOT/scripts/coverage.sh") -eq 2 ]] || {
+  echo "coverage entrypoints must serialize every test target" >&2
+  exit 1
+}
 [[ -f "$ROOT/crates/veac-cli/tests/cli_tests.rs" ]] || {
   echo "missing CLI E2E target: cli_tests" >&2
   exit 1
@@ -88,7 +105,8 @@ rg -q -- '--test cli_tests' "$ROOT/Makefile" || {
   exit 1
 }
 
-for target in check-language-docs check-example-capabilities \
+for target in structure fmt-check check clippy test coverage coverage-packages verify \
+  check-language-docs check-example-capabilities \
   test-example-capabilities check-examples build-examples serve-examples \
   clean-examples e2e; do
   rg -q -- "^$target:" "$ROOT/Makefile" || {

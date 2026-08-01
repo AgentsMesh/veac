@@ -15,7 +15,10 @@ pub(super) fn validate(
         CaptionSidecarFormat::WebVtt => "vtt",
         CaptionSidecarFormat::Ass => "ass",
     };
-    if !extension_is(&value.file_name, expected)
+    if !value
+        .target
+        .file_name()
+        .is_some_and(|name| extension_is(name, expected))
         || settings.track_ids.is_empty()
         || !settings.track_ids.windows(2).all(|pair| pair[0] < pair[1])
     {

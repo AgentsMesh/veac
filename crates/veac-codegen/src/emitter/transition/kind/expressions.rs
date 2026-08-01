@@ -1,5 +1,7 @@
 use veac_plan::canonical::{CardinalDirection, CircleDirection, TransitionKind, ZoomDirection};
 
+const PROGRESS: &str = "1-P";
+
 pub(super) fn custom(value: &TransitionKind) -> String {
     match value {
         TransitionKind::Wipe {
@@ -32,13 +34,17 @@ fn wipe(direction: CardinalDirection, angle: f64, softness: f64) -> String {
         "0.5+((X/W-0.5)*cos({radians})+(Y/H-0.5)*sin({radians}))/(abs(cos({radians}))+abs(sin({radians})))"
     );
     let softness = super::super::super::time::number(softness);
-    let weight =
-        format!("clip((P-({projection})+({softness})/2)/max({softness}\\,0.000001)\\,0\\,1)");
+    let weight = format!(
+        "clip((({PROGRESS})-({projection})+({softness})/2)/max({softness}\\,0.000001)\\,0\\,1)"
+    );
     format!("A*(1-({weight}))+B*({weight})")
 }
 
 fn slide(direction: CardinalDirection, amount: f64) -> String {
-    let q = format!("pow(P\\,{})", super::super::super::time::number(amount));
+    let q = format!(
+        "pow({PROGRESS}\\,{})",
+        super::super::super::time::number(amount)
+    );
     match direction {
         CardinalDirection::Left => choose(
             &format!("gte(X\\,W*(1-{q}))"),
@@ -64,7 +70,10 @@ fn slide(direction: CardinalDirection, amount: f64) -> String {
 }
 
 fn zoom(direction: ZoomDirection, amount: f64) -> String {
-    let q = format!("pow(P\\,{})", super::super::super::time::number(amount));
+    let q = format!(
+        "pow({PROGRESS}\\,{})",
+        super::super::super::time::number(amount)
+    );
     let scale = match direction {
         ZoomDirection::In => q.clone(),
         ZoomDirection::Out => format!("1-({q})"),
@@ -73,11 +82,11 @@ fn zoom(direction: ZoomDirection, amount: f64) -> String {
     let y = format!("(Y-H/2)/max({scale}\\,0.001)+H/2");
     match direction {
         ZoomDirection::In => format!(
-            "if(between({x}\\,0\\,W-1)*between({y}\\,0\\,H-1)\\,A*(1-{q})+({})*{q}\\,A)",
+            "if(between({x}\\,0\\,W-1)*between({y}\\,0\\,H-1)\\,A*P+({})*{q}\\,A)",
             sample('b', &x, &y)
         ),
         ZoomDirection::Out => format!(
-            "if(between({x}\\,0\\,W-1)*between({y}\\,0\\,H-1)\\,({})*(1-{q})+B*{q}\\,B)",
+            "if(between({x}\\,0\\,W-1)*between({y}\\,0\\,H-1)\\,({})*P+B*{q}\\,B)",
             sample('a', &x, &y)
         ),
     }
@@ -87,8 +96,8 @@ fn circle(direction: CircleDirection, softness: f64) -> String {
     let softness = super::super::super::time::number(softness);
     let radius = "hypot(X-W/2\\,Y-H/2)/hypot(W/2\\,H/2)";
     let edge = match direction {
-        CircleDirection::Open => format!("P-({radius})"),
-        CircleDirection::Close => format!("({radius})-(1-P)"),
+        CircleDirection::Open => format!("({PROGRESS})-({radius})"),
+        CircleDirection::Close => format!("({radius})-P"),
     };
     let weight = format!("clip(0.5+({edge})/max({softness}\\,0.000001)\\,0\\,1)");
     format!("A*(1-({weight}))+B*({weight})")
@@ -96,11 +105,11 @@ fn circle(direction: CircleDirection, softness: f64) -> String {
 
 fn pixelize(amount: f64) -> String {
     let amount = super::super::super::time::number(amount);
-    let block = format!("1+({amount})*min(W\\,H)*4*P*(1-P)");
+    let block = format!("1+({amount})*min(W\\,H)*4*P*({PROGRESS})");
     let x = format!("floor(X/({block}))*({block})");
     let y = format!("floor(Y/({block}))*({block})");
     format!(
-        "({})*(1-P)+({})*P",
+        "({})*P+({})*({PROGRESS})",
         sample('a', &x, &y),
         sample('b', &x, &y)
     )

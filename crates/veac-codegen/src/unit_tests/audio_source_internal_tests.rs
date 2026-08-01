@@ -1,4 +1,5 @@
 use super::*;
+use crate::emitter::audio::AudioRenderSpec;
 use crate::unit_tests::emitter_tests::multicam::multicam_plan;
 use crate::unit_tests::emitter_tests::support::{bindings, fixture, resolved};
 use veac_plan::canonical::{DeliverableKind, RationalTime, SequenceId};
@@ -19,12 +20,14 @@ fn audio_source_rejects_unaligned_and_unrouted_nested_clips() {
         DeliverableKind::Video(video) => video.audio.as_ref().expect("audio output"),
         _ => panic!("expected video deliverable"),
     };
-    let mut context = EmitContext::new(&plan, &execution, deliverable, alpha).expect("context");
+    let output = AudioRenderSpec::from(output);
+    let mut context =
+        EmitContext::new_visual(&plan, &execution, deliverable, alpha).expect("context");
     let base = &plan.sequences[0].tracks[0].clips[0];
     let audio = audio_plan.sequences[0].tracks[0].clips[0].audio.clone();
 
     let error =
-        audio_processing::properties(&mut context, base, "0:1".to_owned(), output).unwrap_err();
+        audio_processing::properties(&mut context, base, "0:1".to_owned(), &output).unwrap_err();
     assert_eq!(error.diagnostics()[0].code, "AUDIO_PLAN_INVALID");
 
     let mut unaligned = base.clone();
@@ -42,7 +45,7 @@ fn audio_source_rejects_unaligned_and_unrouted_nested_clips() {
     assert!(audio_source::build(
         &mut context,
         &unaligned,
-        output,
+        &output,
         audio_transition_fades::TransitionFades::default(),
         None,
     )
@@ -56,7 +59,7 @@ fn audio_source_rejects_unaligned_and_unrouted_nested_clips() {
     assert!(audio_source::build(
         &mut context,
         &missing,
-        output,
+        &output,
         audio_transition_fades::TransitionFades::default(),
         None,
     )
@@ -70,7 +73,7 @@ fn audio_source_rejects_unaligned_and_unrouted_nested_clips() {
     assert!(audio_source::build(
         &mut context,
         &unrouted,
-        output,
+        &output,
         audio_transition_fades::TransitionFades::default(),
         None,
     )

@@ -13,6 +13,7 @@ fn explicit_hardware_arguments_become_typed_requirements() {
         product: BackendProduct::VideoMaster,
         output: BackendOutput::File(PathBuf::from("master.mp4")),
         action: BackendAction::Ffmpeg(BackendCommand {
+            preparations: Vec::new(),
             inputs: vec![],
             filter_graph: None,
             filter_contract: None,

@@ -5,11 +5,13 @@ use crate::{
     Sequence, SequenceId, Track, TrackId, Transition,
 };
 
+mod dependency;
 mod matte;
 mod membership;
 mod scope;
 mod sidechain;
 
+pub use dependency::{MatteDependencyAnalysis, MatteDependencyGraph};
 pub use matte::{ApplyMatteEdge, MatteEdge};
 pub use membership::{AvLinkEdge, GroupEdge};
 pub use scope::RelationSequence;

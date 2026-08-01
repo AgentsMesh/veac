@@ -8,7 +8,7 @@ fn identity_bound_operations_reject_a_missing_output() {
     let error = directory
         .require(
             "missing.out",
-            EntryIdentity {
+            EntryIdentity::Regular {
                 device: 1,
                 inode: 1,
                 size_bytes: 1,

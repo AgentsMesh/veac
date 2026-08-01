@@ -5,15 +5,6 @@ prepare_example_preview_cli() {
   local toolchain=$2
   local target_dir
 
-  if [[ ${VEAC_BIN+x} == x ]]; then
-    [[ -n "$VEAC_BIN" ]] || {
-      echo "example preview CLI: VEAC_BIN must not be empty" >&2
-      return 2
-    }
-    printf '%s\n' "$VEAC_BIN"
-    return
-  fi
-
   command -v cargo >/dev/null 2>&1 || {
     echo "example preview CLI: required command not found: cargo" >&2
     return 1

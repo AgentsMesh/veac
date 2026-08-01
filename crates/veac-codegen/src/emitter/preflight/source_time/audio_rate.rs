@@ -1,4 +1,6 @@
-use veac_plan::canonical::{Animatable, DeliverableKind, PitchPolicy, SourceTimeInterpolation};
+use veac_plan::canonical::{
+    AdaptivePackage, Animatable, DeliverableKind, PitchPolicy, SourceTimeInterpolation,
+};
 use veac_plan::{EffectiveAudioProperties, ResolvedRenderPlan, ResolvedSourceTimeMap};
 
 use crate::emitter::input::usage::{visit_audio, AudioSelection};
@@ -7,38 +9,62 @@ use super::super::Check;
 
 pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
     for deliverable in &plan.output.deliverables {
-        let (output, selection) = match &deliverable.kind {
+        let (sample_rate, channels, selection) = match &deliverable.kind {
             DeliverableKind::Video(settings) => {
                 let Some(output) = settings.audio.as_ref() else {
                     continue;
                 };
-                (output, AudioSelection::Master)
+                (output.sample_rate, output.channels, AudioSelection::Master)
             }
-            DeliverableKind::AudioStem(settings) => {
-                (&settings.audio, AudioSelection::from(&settings.source))
+            DeliverableKind::AudioStem(settings) => (
+                settings.audio.sample_rate,
+                settings.audio.channels,
+                AudioSelection::from(&settings.source),
+            ),
+            DeliverableKind::AudioFile(settings) => {
+                let veac_plan::canonical::AudioFileEncoding::Mp3(encoding) = &settings.encoding;
+                (
+                    encoding.sample_rate_hz,
+                    encoding.channel_layout.count(),
+                    AudioSelection::from(&settings.source),
+                )
+            }
+            DeliverableKind::AdaptivePackage(AdaptivePackage::Hls(settings)) => {
+                let Some(output) = settings.audio.as_ref() else {
+                    continue;
+                };
+                let veac_plan::canonical::HlsAudioEncoding::Aac(encoding) = &output.encoding;
+                (
+                    encoding.sample_rate_hz,
+                    encoding.channel_layout.count(),
+                    AudioSelection::from(&output.source),
+                )
             }
             _ => continue,
         };
-        visit_audio(plan, selection, |clip| validate_clip(check, clip, output));
+        visit_audio(plan, selection, |clip| {
+            validate_clip(check, clip, sample_rate, channels)
+        });
     }
 }
 
 fn validate_clip(
     check: &mut Check,
     clip: &veac_plan::ResolvedClip,
-    output: &veac_plan::canonical::AudioOutput,
+    sample_rate: u32,
+    channels: u8,
 ) {
     let audio = clip
         .audio
         .as_ref()
         .expect("audio usage only visits audible clips");
-    output_contract(check, clip, audio, output);
+    output_contract(check, clip, audio, sample_rate, channels);
     let follows_speed = audio.pitch_policy == PitchPolicy::FollowSpeed;
     let valid = !follows_speed
         || clip
             .source_mapping
             .as_ref()
-            .is_none_or(|mapping| mapping_valid(&mapping.time_map, output.sample_rate));
+            .is_none_or(|mapping| mapping_valid(&mapping.time_map, sample_rate));
     if !valid {
         check.push(
             "PLAN_AUDIO_RATE_INVALID",
@@ -52,9 +78,10 @@ fn output_contract(
     check: &mut Check,
     clip: &veac_plan::ResolvedClip,
     audio: &EffectiveAudioProperties,
-    output: &veac_plan::canonical::AudioOutput,
+    sample_rate: u32,
+    channels: u8,
 ) {
-    let numerator = i128::from(clip.record_range.start.value) * i128::from(output.sample_rate);
+    let numerator = i128::from(clip.record_range.start.value) * i128::from(sample_rate);
     if clip.record_range.start.timescale == 0
         || numerator < 0
         || numerator % i128::from(clip.record_range.start.timescale) != 0
@@ -65,7 +92,7 @@ fn output_contract(
             "record start is not aligned to an output audio sample",
         );
     }
-    if pan_nonzero(&audio.pan) && output.channels != 2 {
+    if pan_nonzero(&audio.pan) && channels != 2 {
         check.push(
             "PLAN_AUDIO_CHANNEL_LAYOUT_INVALID",
             Some(clip.id.to_string()),

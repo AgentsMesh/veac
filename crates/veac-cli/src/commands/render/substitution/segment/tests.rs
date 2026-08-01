@@ -104,6 +104,39 @@ fn prefer_propagates_a_contract_resource_limit_without_starting_ffmpeg() {
     assert!(environment.executed.borrow().is_empty());
 }
 
+#[test]
+fn prefer_does_not_select_a_segment_from_another_producer_contract() {
+    let temp = tempdir().unwrap();
+    let project = canonical_project(&temp, GENERATED_SOURCE);
+    let environment = FakeEnvironment::success();
+    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
+    let mut previous = producer.clone();
+    previous.configuration = ContentDigest::sha256(b"previous render implementation");
+    let old_contract = FullRenderSegmentContract::new(
+        &prepared.plan,
+        prepared.bindings.input_substitution_proof(),
+        previous,
+    )
+    .unwrap();
+    let store = ArtifactStore::new(temp.path().join("store"));
+    store
+        .put(old_contract.descriptor(), b"old segment")
+        .unwrap();
+
+    let disposition = select(
+        &mut prepared,
+        &store,
+        SubstitutionPolicy::Prefer,
+        Some(&producer),
+        &environment,
+        Instant::now() + std::time::Duration::from_secs(1),
+    )
+    .unwrap();
+    assert!(matches!(disposition, SegmentDisposition::Store { .. }));
+    assert!(environment.executed.borrow().is_empty());
+}
+
 fn record(content: ContentDigest, size_bytes: u64) -> ArtifactRecord {
     ArtifactRecord {
         key: ContentDigest::sha256(b"fixture-key"),

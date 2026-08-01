@@ -1,6 +1,4 @@
-use crate::authoring::{
-    SemanticEntry, TextBackgroundDecl, TextOutlineDecl, TextShadowDecl, VectorDecl,
-};
+use crate::authoring::{SemanticEntry, ShadowDecl, TextBackgroundDecl, TextOutlineDecl};
 
 use super::{semantic, text_value, Parser};
 
@@ -22,33 +20,8 @@ pub(super) fn outline(parser: &mut Parser, entry: &SemanticEntry) -> Option<Text
     Some(TextOutlineDecl { color, width })
 }
 
-pub(super) fn shadow(parser: &mut Parser, entry: &SemanticEntry) -> Option<TextShadowDecl> {
-    let mut block = semantic::nested(parser, entry, "text shadow")?;
-    let color_entry = semantic::required(parser, &mut block, "color", "text shadow")?;
-    let color = text_value::color(parser, &color_entry)?;
-    let opacity = required_number(parser, &mut block, "opacity", "text shadow")?;
-    let blur = required_number(parser, &mut block, "blur", "text shadow")?;
-    let offset_entry = semantic::required(parser, &mut block, "offset", "text shadow")?;
-    let offset = vector(parser, &offset_entry)?;
-    semantic::finish(parser, block, "text shadow");
-    Some(TextShadowDecl {
-        color,
-        opacity,
-        blur,
-        offset,
-    })
-}
-
-fn vector(parser: &mut Parser, entry: &SemanticEntry) -> Option<VectorDecl> {
-    let mut block = semantic::nested(parser, entry, "shadow offset")?;
-    let x = required_number(parser, &mut block, "x", "shadow offset")?;
-    let y = required_number(parser, &mut block, "y", "shadow offset")?;
-    semantic::finish(parser, block, "shadow offset");
-    Some(VectorDecl {
-        x,
-        y,
-        span: entry.span,
-    })
+pub(super) fn shadow(parser: &mut Parser, entry: &SemanticEntry) -> Option<ShadowDecl> {
+    super::shadow::parse(parser, entry, "text shadow")
 }
 
 fn required_number(

@@ -79,6 +79,7 @@ impl Case {
             .map(|target| StagedFile {
                 source: source.clone(),
                 target,
+                allow_empty: false,
             })
             .collect();
         let task = task(directory, files);

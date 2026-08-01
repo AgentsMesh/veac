@@ -9,6 +9,7 @@ pub(super) fn task(output: BackendOutput, phase: BackendPhase) -> BackendTask {
         BackendOutput::File(path) => path.clone(),
         BackendOutput::Files { paths } => paths[0].clone(),
         BackendOutput::ImageSequence { pattern } => pattern.clone(),
+        BackendOutput::Package { paths, .. } => paths.playlist_pattern.clone(),
     };
     BackendTask {
         deliverable_id: veac_ir::DeliverableId::new("dlv_output_test").unwrap(),
@@ -25,6 +26,7 @@ pub(super) fn task(output: BackendOutput, phase: BackendPhase) -> BackendTask {
 
 pub(super) fn command(path: &Path) -> BackendCommand {
     BackendCommand {
+        preparations: vec![],
         inputs: vec![],
         filter_graph: None,
         filter_contract: None,

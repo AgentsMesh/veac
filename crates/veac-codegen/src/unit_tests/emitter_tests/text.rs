@@ -15,7 +15,7 @@ fn text_and_caption_emit_inline_ass_with_decorations_and_common_visual_pipeline(
             "subtitles=filename='data\\:application/x-ass;base64\\,",
             ":alpha=1:wrap_unicode=0:fontsdir=",
             "textassv",
-            "cardsplit",
+            "shadowsplit",
             "shadowv",
         ] {
             assert!(graph.contains(marker), "missing {marker}: {graph}");
@@ -40,7 +40,8 @@ fn text_and_caption_emit_inline_ass_with_decorations_and_common_visual_pipeline(
 fn zero_blur_shadow_uses_clean_events_and_unframed_text_keeps_full_canvas() {
     let mut plan = resolved(&text_fixture(false));
     text_content(&mut plan)
-        .style
+        .styled_mut()
+        .unwrap()
         .shadow
         .as_mut()
         .unwrap()
@@ -61,8 +62,17 @@ fn zero_blur_shadow_uses_clean_events_and_unframed_text_keeps_full_canvas() {
 #[test]
 fn bad_font_face_and_missing_font_fail_with_specific_diagnostics() {
     let mut face = resolved(&text_fixture(false));
-    let font_id = text_content_ref(&face).style.font.input_id.clone();
-    text_content(&mut face).style.font.face_index = u32::MAX;
+    let font_id = text_content_ref(&face)
+        .styled()
+        .unwrap()
+        .font
+        .input_id
+        .clone();
+    text_content(&mut face)
+        .styled_mut()
+        .unwrap()
+        .font
+        .face_index = u32::MAX;
     let input = face
         .inputs
         .iter_mut()
@@ -91,7 +101,12 @@ fn bad_font_face_and_missing_font_fail_with_specific_diagnostics() {
 #[test]
 fn public_text_backend_reports_font_io_failures_and_missing_glyphs() {
     let plan = resolved(&text_fixture(false));
-    let font = text_content_ref(&plan).style.font.input_id.clone();
+    let font = text_content_ref(&plan)
+        .styled()
+        .unwrap()
+        .font
+        .input_id
+        .clone();
     for (path, message) in [
         (std::path::PathBuf::from("/"), "no parent directory"),
         (
@@ -117,7 +132,12 @@ fn public_text_backend_reports_font_io_failures_and_missing_glyphs() {
 #[test]
 fn font_bytes_must_match_the_resolved_identity_before_shaping() {
     let mut plan = resolved(&text_fixture(false));
-    let font = text_content_ref(&plan).style.font.input_id.clone();
+    let font = text_content_ref(&plan)
+        .styled()
+        .unwrap()
+        .font
+        .input_id
+        .clone();
     plan.inputs
         .iter_mut()
         .find(|input| input.id == font)

@@ -56,7 +56,7 @@ fn video_caption_policy_controls_font_authority() {
                 .unwrap();
         }
     }
-    plan.output.video_deliverable_mut().unwrap().captions = CaptionOutput::Discard;
+    plan.output.raster.as_mut().unwrap().captions = CaptionOutput::Discard;
     let bundle = emit_all(&plan, &bindings).unwrap();
     assert_eq!(bundle.protected_resources().len(), 1);
     let BackendAction::Ffmpeg(command) = &bundle.tasks()[0].action else {
@@ -64,7 +64,7 @@ fn video_caption_policy_controls_font_authority() {
     };
     assert_eq!(command.inputs.len(), 1);
 
-    plan.output.video_deliverable_mut().unwrap().captions = CaptionOutput::BurnIn;
+    plan.output.raster.as_mut().unwrap().captions = CaptionOutput::BurnIn;
     let error = emit_all(&plan, &bindings).unwrap_err();
     assert!(error
         .diagnostics()
@@ -81,17 +81,20 @@ fn caption_plan(format: CaptionSidecarFormat) -> ResolvedRenderPlan {
         .unwrap();
     plan.output.deliverables = vec![Deliverable {
         id: DeliverableId::new("dlv_caption_scope").unwrap(),
-        file_name: match format {
-            CaptionSidecarFormat::Srt => "scope.srt",
-            CaptionSidecarFormat::WebVtt => "scope.vtt",
-            CaptionSidecarFormat::Ass => "scope.ass",
-        }
-        .to_owned(),
+        target: DeliverableTarget::File {
+            name: match format {
+                CaptionSidecarFormat::Srt => "scope.srt",
+                CaptionSidecarFormat::WebVtt => "scope.vtt",
+                CaptionSidecarFormat::Ass => "scope.ass",
+            }
+            .to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format,
             track_ids: vec![track.id.clone()],
         }),
     }];
+    plan.output.raster = None;
     plan
 }
 
@@ -107,11 +110,11 @@ fn normalize_ass(plan: &mut ResolvedRenderPlan) {
     let ResolvedClipSource::Caption { content, .. } = &mut clip.source else {
         unreachable!()
     };
-    content.style.fallback_fonts.clear();
-    content.style.line_height = 1.0;
-    content.style.path = None;
-    content.style.background = None;
-    content.style.animation = None;
+    content.styled_mut().unwrap().fallback_fonts.clear();
+    content.styled_mut().unwrap().line_height = 1.0;
+    content.styled_mut().unwrap().path = None;
+    content.styled_mut().unwrap().background = None;
+    content.styled_mut().unwrap().animation = None;
     let visual = clip.visual.as_mut().unwrap();
     visual.frame = None;
     visual.transform.position = Animatable::constant(Point {
@@ -147,7 +150,7 @@ fn caption_font(plan: &ResolvedRenderPlan) -> PlanInputId {
     let ResolvedClipSource::Caption { content, .. } = &clip.source else {
         unreachable!()
     };
-    content.style.font.input_id.clone()
+    content.styled().unwrap().font.input_id.clone()
 }
 
 fn add_unselected_caption_font(plan: &mut ResolvedRenderPlan) {
@@ -171,7 +174,7 @@ fn add_unselected_caption_font(plan: &mut ResolvedRenderPlan) {
     let ResolvedClipSource::Caption { content, .. } = &mut track.clips[0].source else {
         unreachable!()
     };
-    content.style.font.input_id = input.id.clone();
+    content.styled_mut().unwrap().font.input_id = input.id.clone();
     plan.inputs.push(input);
     plan.inputs.sort_by(|left, right| left.id.cmp(&right.id));
     plan.sequences[0].tracks.push(track);

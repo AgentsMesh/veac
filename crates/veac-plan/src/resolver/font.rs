@@ -3,16 +3,35 @@ use veac_ir::{FontRef, TextStyle};
 use super::{material::InputUsage, PlanResolver};
 use crate::{
     ResolutionDiagnostic, ResolutionErrorKind, ResolvedFont, ResolvedInputKind, ResolvedText,
-    ResolvedTextSpan, ResolvedTextStyle,
+    ResolvedTextPresentation, ResolvedTextSpan, ResolvedTextStyle,
 };
+
+use super::reachability::TextDemand;
 
 impl PlanResolver<'_> {
     pub(super) fn resolve_text(
         &mut self,
         text: &str,
         style: &TextStyle,
+        demand: TextDemand,
         path: &str,
     ) -> Option<ResolvedText> {
+        if demand == TextDemand::Plain {
+            return Some(ResolvedText {
+                text: text.to_owned(),
+                presentation: ResolvedTextPresentation::Plain {
+                    has_spans: !style.spans.is_empty(),
+                },
+            });
+        }
+        if demand != TextDemand::Styled {
+            self.push_internal(
+                "TEXT_PRESENTATION_MISSING",
+                path.to_owned(),
+                "reachable text has no presentation demand".to_owned(),
+            );
+            return None;
+        }
         let font = self.resolve_font(&style.font, &format!("{path}/source/style/font"))?;
         let mut fallback_fonts = Vec::with_capacity(style.fallback_fonts.len());
         for (index, fallback) in style.fallback_fonts.iter().enumerate() {
@@ -41,22 +60,24 @@ impl PlanResolver<'_> {
         }
         Some(ResolvedText {
             text: text.to_owned(),
-            style: ResolvedTextStyle {
-                font,
-                fallback_fonts,
-                font_weight: style.font_weight,
-                font_style: style.font_style,
-                size_pixels: style.size_pixels,
-                color: style.color,
-                tracking_pixels: style.tracking_pixels,
-                line_height: style.line_height,
-                layout: style.layout,
-                path: style.path.clone(),
-                background: style.background.clone(),
-                outline: style.outline.clone(),
-                shadow: style.shadow.clone(),
-                spans,
-                animation: style.animation.clone(),
+            presentation: ResolvedTextPresentation::Styled {
+                style: Box::new(ResolvedTextStyle {
+                    font,
+                    fallback_fonts,
+                    font_weight: style.font_weight,
+                    font_style: style.font_style,
+                    size_pixels: style.size_pixels,
+                    color: style.color,
+                    tracking_pixels: style.tracking_pixels,
+                    line_height: style.line_height,
+                    layout: style.layout,
+                    path: style.path.clone(),
+                    background: style.background.clone(),
+                    outline: style.outline.clone(),
+                    shadow: style.shadow.clone(),
+                    spans,
+                    animation: style.animation.clone(),
+                }),
             },
         })
     }

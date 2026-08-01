@@ -3,7 +3,7 @@ use std::path::Path;
 use cosmic_text::fontdb::Database;
 use cosmic_text::FontSystem;
 use veac_artifact::{ArtifactErrorKind, BoundResource, ExecutionBindings};
-use veac_plan::{ResolvedFont, ResolvedText};
+use veac_plan::{ResolvedFont, ResolvedText, ResolvedTextStyle};
 
 use super::{EmbeddedFont, FontBook, FontEntry, NoFallback};
 use crate::emitter::text::{error::TextError, font_face};
@@ -47,7 +47,10 @@ impl FontBook {
             limits,
             consumed: 0,
         };
-        for font in font_refs(content) {
+        let style = content
+            .styled()
+            .ok_or_else(|| TextError::invalid("font loading requires styled presentation"))?;
+        for font in font_refs(style) {
             let key = (font.input_id.clone(), font.face_index);
             if indexes.contains_key(&key) {
                 continue;
@@ -160,14 +163,8 @@ fn limit_error(
     TextError::new(code, format!("font bytes {observed} exceed limit {limit}"))
 }
 
-fn font_refs(content: &ResolvedText) -> impl Iterator<Item = &ResolvedFont> {
-    std::iter::once(&content.style.font)
-        .chain(&content.style.fallback_fonts)
-        .chain(
-            content
-                .style
-                .spans
-                .iter()
-                .filter_map(|span| span.font.as_ref()),
-        )
+fn font_refs(style: &ResolvedTextStyle) -> impl Iterator<Item = &ResolvedFont> {
+    std::iter::once(&style.font)
+        .chain(&style.fallback_fonts)
+        .chain(style.spans.iter().filter_map(|span| span.font.as_ref()))
 }

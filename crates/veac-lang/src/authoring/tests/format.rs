@@ -97,12 +97,15 @@ project demo {
       response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     }
   }
-  output video master {
+  delivery master {
     sequence main;
-    file-name "master.mp4";
-    encoding {
-      video { codec h264; pixel-format yuv420p; }
-      audio { codec aac; sample-rate 48000; channels 2; }
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video master {
+      target file "master.mp4";
+      mux mp4 {
+        video h264 { pixel-format yuv420p; }
+        audio aac { sample-rate 48khz; channel-layout stereo; }
+      }
     }
   }
 }

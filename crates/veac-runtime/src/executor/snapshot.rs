@@ -6,12 +6,14 @@ use tempfile::{Builder, TempDir};
 use veac_artifact::{
     copy_verified_source_bounded_while, ArtifactError, ArtifactErrorKind, MAX_VERIFIED_SOURCE_BYTES,
 };
-use veac_codegen::emitter::{BackendAction, BackendFilterBinding, BackendInput, BackendTask};
+use veac_codegen::emitter::{BackendAction, BackendTask};
+#[cfg(test)]
+use veac_codegen::emitter::{BackendFilterBinding, BackendInput};
 
-use super::contract;
 use super::model::RuntimeBundle;
 use crate::RuntimeError;
 
+mod bind;
 mod passlog;
 
 pub(in crate::executor) use passlog::ReboundPasslogs;
@@ -73,26 +75,7 @@ impl ResourceSnapshots {
         let BackendAction::Ffmpeg(command) = &mut task.action else {
             return Ok(task);
         };
-        command.inputs = command
-            .inputs
-            .iter()
-            .map(|input| {
-                self.file(&input.path)
-                    .map(|path| BackendInput { path: path.clone() })
-            })
-            .collect::<Result<_, _>>()?;
-        if let Some(contract) = &command.filter_contract {
-            let graph = match contract.render_bound(&self.files, &self.directories) {
-                Ok(graph) => graph,
-                Err(error) => {
-                    return Err(RuntimeError::new(format!(
-                        "cannot bind filter snapshot: {error}"
-                    )))
-                }
-            };
-            contract::filter::validate_size(&graph)?;
-            command.filter_graph = Some(graph);
-        }
+        bind::command(self, command, deadline)?;
         super::deadline::ensure(deadline)?;
         Ok(task)
     }
@@ -102,34 +85,10 @@ impl ResourceSnapshots {
         bundle: &RuntimeBundle,
         deadline: Instant,
     ) -> Result<(), RuntimeError> {
-        for binding in bundle
-            .tasks
-            .iter()
-            .filter_map(|task| match &task.action {
-                BackendAction::Ffmpeg(command) => command.filter_contract.as_ref(),
-                BackendAction::WriteFile { .. } => None,
-            })
-            .flat_map(|contract| contract.bindings())
-        {
-            super::deadline::ensure_setup(deadline)?;
-            let BackendFilterBinding::Directory { files, .. } = binding else {
-                continue;
-            };
-            if self.directories.contains_key(files) {
-                continue;
+        for task in &bundle.tasks {
+            if let BackendAction::Ffmpeg(command) = &task.action {
+                bind::directories(self, command, deadline)?;
             }
-            let path = self
-                ._directory
-                .path()
-                .join(format!("fonts-{:04}", self.directories.len()));
-            std::fs::create_dir(&path).map_err(snapshot_error)?;
-            for (index, original) in files.iter().enumerate() {
-                super::deadline::ensure_setup(deadline)?;
-                let source = self.file(original)?;
-                let destination = numbered(&path, "font", index, original);
-                std::fs::hard_link(source, destination).map_err(snapshot_error)?;
-            }
-            self.directories.insert(files.clone(), path);
         }
         Ok(())
     }

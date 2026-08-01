@@ -1,4 +1,6 @@
-use veac_plan::canonical::{Deliverable, DeliverableId, DeliverableKind, ImageSequencePattern};
+use veac_plan::canonical::{
+    Deliverable, DeliverableId, DeliverableKind, DeliverableTarget, ImageSequencePattern,
+};
 
 use super::super::Check;
 
@@ -36,14 +38,28 @@ pub(super) fn validate(check: &mut Check, values: &[Deliverable]) {
 }
 
 fn name_valid(value: &Deliverable) -> bool {
-    if matches!(value.kind, DeliverableKind::ImageSequence(_)) {
-        ImageSequencePattern::parse(&value.file_name).is_some()
-            && !value.file_name.is_empty()
-            && !value.file_name.contains(['/', '\\', '\0'])
-    } else {
-        !value.file_name.is_empty()
-            && !matches!(value.file_name.as_str(), "." | "..")
-            && !value.file_name.contains(['/', '\\', '\0'])
+    match (&value.kind, &value.target) {
+        (DeliverableKind::ImageSequence(_), DeliverableTarget::ImageSequence { pattern }) => {
+            ImageSequencePattern::parse(pattern).is_some()
+        }
+        (
+            DeliverableKind::Video(_)
+            | DeliverableKind::CaptionSidecar(_)
+            | DeliverableKind::AudioStem(_)
+            | DeliverableKind::Scope(_)
+            | DeliverableKind::AudioFile(_)
+            | DeliverableKind::AnimatedImage(_)
+            | DeliverableKind::StillImage(_),
+            DeliverableTarget::File { name },
+        ) => {
+            !name.is_empty()
+                && !matches!(name.as_str(), "." | "..")
+                && !name.contains(['/', '\\', '\0'])
+        }
+        (DeliverableKind::AdaptivePackage(_), DeliverableTarget::Package { name }) => {
+            leaf_name(name)
+        }
+        _ => false,
     }
 }
 
@@ -62,10 +78,21 @@ fn overlap(left: &Deliverable, right: &Deliverable) -> bool {
 }
 
 fn name(value: &Deliverable) -> Name<'_> {
-    match &value.kind {
-        DeliverableKind::ImageSequence(_) => ImageSequencePattern::parse(&value.file_name)
+    match &value.target {
+        DeliverableTarget::ImageSequence { pattern } => ImageSequencePattern::parse(pattern)
             .map(Name::Pattern)
-            .unwrap_or(Name::Static(&value.file_name)),
-        _ => Name::Static(&value.file_name),
+            .unwrap_or(Name::Static(pattern)),
+        DeliverableTarget::File { name } | DeliverableTarget::Package { name } => {
+            Name::Static(name)
+        }
     }
+}
+
+fn leaf_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 255
+        && !matches!(name, "." | "..")
+        && !name
+            .chars()
+            .any(|character| character.is_control() || matches!(character, '/' | '\\'))
 }

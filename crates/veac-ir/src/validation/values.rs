@@ -93,7 +93,12 @@ impl Validator {
 }
 
 pub(super) fn is_file_name(value: &str) -> bool {
-    !value.is_empty() && !matches!(value, "." | "..") && !value.contains(['/', '\\', '\0'])
+    !value.is_empty()
+        && value.len() <= 255
+        && !matches!(value, "." | "..")
+        && !value
+            .chars()
+            .any(|character| character.is_control() || matches!(character, '/' | '\\'))
 }
 
 pub(super) fn is_sha256(value: &str) -> bool {

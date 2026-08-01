@@ -1,3 +1,7 @@
+use std::cell::Cell;
+use std::rc::Rc;
+use std::time::Instant;
+
 use veac_artifact::ArtifactStore;
 use veac_codegen::emitter::BackendRequirement;
 
@@ -49,11 +53,13 @@ fn generated_bundle_declares_software_encoder_before_fake_execution() {
 }
 
 #[test]
-fn failed_task_preserves_its_previous_output() {
+fn failed_task_publishes_none_of_the_bundle() {
     let temp = tempfile::tempdir().unwrap();
     let first = path(temp.path(), "first.bin");
     let second = path(temp.path(), "second.bin");
-    std::fs::write(&second, b"previous").unwrap();
+    let store_root = path(temp.path(), "store");
+    std::fs::write(&first, b"previous-first").unwrap();
+    std::fs::write(&second, b"previous-second").unwrap();
     let environment = FakeFfmpeg {
         fail_on_call: Some(2),
         ..FakeFfmpeg::default()
@@ -65,12 +71,62 @@ fn failed_task_preserves_its_previous_output() {
                 video_task("first", &first),
                 video_task("second", &second),
             ]),
-            &ArtifactStore::new(path(temp.path(), "store")),
+            &ArtifactStore::new(&store_root),
         )
         .unwrap_err();
     assert!(error.message.contains("fake FFmpeg failure"));
-    assert_eq!(std::fs::read(first).unwrap(), b"rendered-output");
-    assert_eq!(std::fs::read(second).unwrap(), b"previous");
+    assert_eq!(std::fs::read(first).unwrap(), b"previous-first");
+    assert_eq!(std::fs::read(second).unwrap(), b"previous-second");
+    assert_no_checkpoint_payload(&store_root);
+    assert_no_staging(temp.path());
+}
+
+#[test]
+fn precommit_failure_removes_all_fresh_checkpoints_and_preserves_hits() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = ArtifactStore::new(path(temp.path(), "store"));
+    let outputs = ["a.bin", "b.bin", "c.bin"].map(|name| path(temp.path(), name));
+    let warm = BundleExecutor::new(FakeFfmpeg::default());
+    let mut keys = Vec::new();
+    for (index, output) in outputs.iter().enumerate() {
+        let result = warm
+            .execute_runtime(
+                &bundle(vec![video_task(&format!("item-{index}"), output)]),
+                &store,
+            )
+            .unwrap();
+        keys.push(result.tasks[0].checkpoint.key.clone());
+    }
+    store.remove(&keys[1]).unwrap();
+    store.remove(&keys[2]).unwrap();
+    std::fs::write(&outputs[1], b"previous-b").unwrap();
+    std::fs::write(&outputs[2], b"previous-c").unwrap();
+
+    let observed = Rc::new(Cell::new(0));
+    let callback = Rc::clone(&observed);
+    let mut executor = BundleExecutor::new(FakeFfmpeg::default());
+    executor.checkpoint_stored_observer = Box::new(move |deadline| {
+        callback.set(callback.get() + 1);
+        (callback.get() < 2)
+            .then_some(deadline)
+            .unwrap_or_else(Instant::now)
+    });
+    let tasks = outputs
+        .iter()
+        .enumerate()
+        .map(|(index, output)| video_task(&format!("item-{index}"), output))
+        .collect();
+
+    executor
+        .execute_runtime(&bundle(tasks), &store)
+        .unwrap_err();
+
+    assert!(store.get(&keys[0]).unwrap().is_some());
+    assert!(store.get(&keys[1]).unwrap().is_none());
+    assert!(store.get(&keys[2]).unwrap().is_none());
+    assert_eq!(std::fs::read(&outputs[1]).unwrap(), b"previous-b");
+    assert_eq!(std::fs::read(&outputs[2]).unwrap(), b"previous-c");
+    assert_no_staging(temp.path());
 }
 
 #[test]

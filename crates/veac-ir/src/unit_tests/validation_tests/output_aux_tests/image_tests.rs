@@ -9,16 +9,25 @@ fn png_and_jpeg_sequences_accept_one_typed_pattern() {
 
 #[test]
 fn image_sequences_reject_malformed_patterns_and_format_mismatches() {
-    for value in [
-        image("frames.png", ImageFormat::Png),
-        image("frames-%d-%d.png", ImageFormat::Png),
-        image("frames-%00d.png", ImageFormat::Png),
-        image("nested/frames-%d.png", ImageFormat::Png),
-        image("frames-%d.jpeg", ImageFormat::Jpeg),
-        image("frames-%d.jpg", ImageFormat::Png),
-        image("frames-%d\0.png", ImageFormat::Png),
+    for (value, code) in [
+        (image("frames.png", ImageFormat::Png), "OUTPUT_TARGET"),
+        (image("frames-%d-%d.png", ImageFormat::Png), "OUTPUT_TARGET"),
+        (image("frames-%00d.png", ImageFormat::Png), "OUTPUT_TARGET"),
+        (
+            image("nested/frames-%d.png", ImageFormat::Png),
+            "OUTPUT_TARGET",
+        ),
+        (
+            image("frames-%d.jpeg", ImageFormat::Jpeg),
+            "OUTPUT_IMAGE_SEQUENCE",
+        ),
+        (
+            image("frames-%d.jpg", ImageFormat::Png),
+            "OUTPUT_IMAGE_SEQUENCE",
+        ),
+        (image("frames-%d\0.png", ImageFormat::Png), "OUTPUT_TARGET"),
     ] {
-        assert_invalid(value, "OUTPUT_IMAGE_SEQUENCE");
+        assert_invalid(value, code);
     }
 }
 

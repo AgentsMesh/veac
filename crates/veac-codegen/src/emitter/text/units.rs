@@ -44,10 +44,7 @@ fn words(lines: &[RenderLine]) -> (Vec<AnimatedLine>, usize) {
             .iter()
             .map(|piece| piece.text.as_str())
             .collect();
-        let starts: Vec<_> = text
-            .unicode_word_indices()
-            .map(|(start, _)| start)
-            .collect();
+        let starts = word_starts(&text);
         let count = starts.len().max(1);
         let mut pieces = Vec::new();
         let mut offset = 0;
@@ -62,6 +59,24 @@ fn words(lines: &[RenderLine]) -> (Vec<AnimatedLine>, usize) {
         base += count;
     }
     (output, base.max(1))
+}
+
+fn word_starts(text: &str) -> Vec<usize> {
+    if !text.chars().any(char::is_whitespace) {
+        return text
+            .unicode_word_indices()
+            .map(|(start, _)| start)
+            .collect();
+    }
+    let mut after_whitespace = true;
+    text.char_indices()
+        .filter_map(|(start, character)| {
+            let whitespace = character.is_whitespace();
+            let begins_token = !whitespace && after_whitespace;
+            after_whitespace = whitespace;
+            begins_token.then_some(start)
+        })
+        .collect()
 }
 
 fn split_words(
@@ -137,3 +152,6 @@ fn copy_line(line: &RenderLine, pieces: Vec<AnimatedPiece>) -> AnimatedLine {
         y: line.y,
     }
 }
+
+#[cfg(test)]
+mod tests;

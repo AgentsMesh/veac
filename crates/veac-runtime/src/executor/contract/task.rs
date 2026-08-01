@@ -9,6 +9,8 @@ use super::invalid;
 use crate::executor::output;
 use crate::RuntimeError;
 
+mod package;
+
 pub(super) fn validate(task: &BackendTask) -> Result<(), RuntimeError> {
     match (task.phase, task.product) {
         (BackendPhase::FirstPass, BackendProduct::RenderPassLog)
@@ -16,6 +18,10 @@ pub(super) fn validate(task: &BackendTask) -> Result<(), RuntimeError> {
         | (BackendPhase::Single, BackendProduct::ImageSequence)
         | (BackendPhase::Single, BackendProduct::CaptionSidecar)
         | (BackendPhase::Single, BackendProduct::AudioStem)
+        | (BackendPhase::Single, BackendProduct::AudioFile)
+        | (BackendPhase::Single, BackendProduct::AnimatedImage)
+        | (BackendPhase::Single, BackendProduct::StillImage)
+        | (BackendPhase::Single, BackendProduct::HlsVod)
         | (BackendPhase::Single, BackendProduct::VideoWaveform)
         | (BackendPhase::Single, BackendProduct::Vectorscope)
         | (BackendPhase::Single, BackendProduct::Histogram) => {}
@@ -30,6 +36,10 @@ pub(super) fn validate(task: &BackendTask) -> Result<(), RuntimeError> {
         }
         (BackendOutput::Files { paths }, _) if paths.is_empty() => {
             return invalid("backend file list may not be empty")
+        }
+        (BackendOutput::Package { .. }, BackendProduct::HlsVod) => {}
+        (BackendOutput::Package { .. }, _) | (_, BackendProduct::HlsVod) => {
+            return invalid("HLS product requires one typed package output")
         }
         _ => {}
     }
@@ -74,6 +84,12 @@ fn validate_action(task: &BackendTask) -> Result<(), RuntimeError> {
         {
             Ok(())
         }
+        (
+            BackendAction::Ffmpeg(command),
+            BackendOutput::Package {
+                entrypoint, paths, ..
+            },
+        ) => package::validate(command, entrypoint, paths),
         (BackendAction::Ffmpeg(_), _) => {
             invalid("FFmpeg command output does not match its declared output")
         }

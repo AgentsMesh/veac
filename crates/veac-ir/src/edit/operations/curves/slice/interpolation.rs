@@ -50,6 +50,9 @@ fn restrict(value: &Interpolation, from: f64, to: f64) -> Result<Interpolation, 
     if matches!(value, Interpolation::Hold | Interpolation::Linear) {
         return Ok(value.clone());
     }
+    if matches!(value, Interpolation::Spring { .. }) {
+        return restrict_spring(value, from, to);
+    }
     let controls = value.cubic_controls().ok_or(())?;
     let points = [
         Point { x: 0.0, y: 0.0 },
@@ -66,6 +69,28 @@ fn restrict(value: &Interpolation, from: f64, to: f64) -> Result<Interpolation, 
     let from = value.parameter_for_x(from).ok_or(())?;
     let to = value.parameter_for_x(to).ok_or(())?;
     normalize(crop(points, from, to))
+}
+
+fn restrict_spring(value: &Interpolation, from: f64, to: f64) -> Result<Interpolation, ()> {
+    let Interpolation::Spring {
+        frequency, decay, ..
+    } = value
+    else {
+        return Err(());
+    };
+    let span = to - from;
+    let value_span = value.evaluate(to) - value.evaluate(from);
+    if !value_span.is_finite() || value_span.abs() <= 1e-9 {
+        return Err(());
+    }
+    let initial_velocity = span * value.spring_derivative(from).ok_or(())? / value_span;
+    let restricted = Interpolation::Spring {
+        frequency: frequency * span,
+        decay: decay * span,
+        initial_velocity,
+    };
+    restricted.spring_coefficients().ok_or(())?;
+    Ok(restricted)
 }
 
 fn crop(points: [Point; 4], from: f64, to: f64) -> [Point; 4] {

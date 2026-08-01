@@ -3,7 +3,8 @@ use std::collections::BTreeSet;
 use veac_artifact::MediaRole;
 use veac_plan::canonical::{ItemId, SequenceId, TrackKind};
 use veac_plan::{
-    ResolvedClip, ResolvedClipSource, ResolvedColorStage, ResolvedRenderPlan, ResolvedSequence,
+    ResolvedApply, ResolvedApplyOperation, ResolvedClip, ResolvedClipSource, ResolvedColorStage,
+    ResolvedRenderPlan, ResolvedSequence,
 };
 
 use super::{text_resources, Usage};
@@ -48,6 +49,26 @@ impl Walker<'_> {
             for clip in &track.clips {
                 if clip.visual.is_some() {
                     self.clip(sequence, clip);
+                }
+            }
+        }
+        for apply in &sequence.applies {
+            self.apply(apply);
+        }
+    }
+
+    fn apply(&mut self, apply: &ResolvedApply) {
+        for stage in apply
+            .stages
+            .iter()
+            .filter(|stage| crate::emitter::apply::stage_used(apply, stage))
+        {
+            let ResolvedApplyOperation::Color { pipeline } = &stage.operation else {
+                continue;
+            };
+            for color_stage in &pipeline.stages {
+                if let ResolvedColorStage::Lut { application } = color_stage {
+                    self.usage.resource(&application.input_id);
                 }
             }
         }

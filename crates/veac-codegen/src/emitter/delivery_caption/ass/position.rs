@@ -11,7 +11,12 @@ pub(super) struct Position {
     pub y: f64,
 }
 
-pub(super) fn resolve(cue: &Cue<'_>, width: u32, height: u32) -> Result<Position, Failure> {
+pub(super) fn resolve(
+    cue: &Cue<'_>,
+    style: &veac_plan::ResolvedTextStyle,
+    width: u32,
+    height: u32,
+) -> Result<Position, Failure> {
     if !cue.clip.effects.is_empty() {
         return Err(unsupported("caption clip effects"));
     }
@@ -24,6 +29,8 @@ pub(super) fn resolve(cue: &Cue<'_>, width: u32, height: u32) -> Result<Position
     if visual.frame.is_some()
         || visual.transform.flip_horizontal
         || visual.transform.flip_vertical
+        || visual.transform.shear.x != 0.0
+        || visual.transform.shear.y != 0.0
         || visual.transform.crop.is_some()
         || !visual.masks.is_empty()
         || visual.track_matte.is_some()
@@ -49,7 +56,7 @@ pub(super) fn resolve(cue: &Cue<'_>, width: u32, height: u32) -> Result<Position
     if !left.is_finite() || !top.is_finite() {
         return Err(invalid());
     }
-    let layout = cue.content.style.layout;
+    let layout = style.layout;
     Ok(Position {
         x: left
             + match layout.horizontal_alignment {

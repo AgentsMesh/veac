@@ -50,19 +50,26 @@ fn dnxhr_crossed_pixels_and_mxf_geometry_fail_before_emission() {
         assert!(codes(&plan(profile, pixel)).contains(&"PLAN_VIDEO_SETTINGS_INVALID"));
     }
     let mut too_small = plan(VideoProfile::DnxHrHq, PixelFormat::Yuv422p);
-    (too_small.output.width, too_small.output.height) = (96, 54);
+    let raster = too_small.output.raster.as_mut().unwrap();
+    (raster.width, raster.height) = (96, 54);
     assert!(codes(&too_small).contains(&"PLAN_MXF_OUTPUT_INVALID"));
     let mut bad_rate = plan(VideoProfile::DnxHrHq, PixelFormat::Yuv422p);
-    bad_rate.output.frame_rate = Rational::new(10, 1).unwrap();
+    bad_rate.output.raster.as_mut().unwrap().frame_rate = Rational::new(10, 1).unwrap();
     assert!(codes(&bad_rate).contains(&"PLAN_MXF_OUTPUT_INVALID"));
 }
 
 fn plan(profile: VideoProfile, pixel: PixelFormat) -> veac_plan::ResolvedRenderPlan {
     let mut plan = resolved(&fixture());
-    (plan.output.width, plan.output.height) = (256, 120);
-    plan.output.frame_rate = Rational::new(24, 1).unwrap();
-    plan.output.deliverables[0].file_name = "master.mxf".to_owned();
-    let delivery = plan.output.video_deliverable_mut().unwrap();
+    let raster = plan.output.raster.as_mut().unwrap();
+    (raster.width, raster.height) = (256, 120);
+    raster.frame_rate = Rational::new(24, 1).unwrap();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.mxf".to_owned(),
+    };
+    let delivery = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     delivery.container = OutputFormat::Mxf;
     delivery.video = VideoOutput {
         codec: VideoCodec::DnxHr,

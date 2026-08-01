@@ -64,7 +64,7 @@ pub fn add_sidechain(
 pub fn relation_project() -> ProjectEnvelope {
     let mut envelope = project();
     envelope.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

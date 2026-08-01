@@ -9,7 +9,8 @@ fn structured_export_settings_reach_ffmpeg_and_the_output_bitstream() {
     let temp = tempdir().unwrap();
     let mut canonical = project(false);
     let output = &mut canonical.project.render_configs[0];
-    let delivery = output.video_deliverable_mut().unwrap();
+    let deliverable_id = output.deliverables[0].id.clone();
+    let delivery = output.video_deliverable_mut(&deliverable_id).unwrap();
     delivery.video = VideoOutput {
         codec: VideoCodec::H264,
         pixel_format: PixelFormat::Yuv420p,

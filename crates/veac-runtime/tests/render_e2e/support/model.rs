@@ -14,14 +14,17 @@ pub(crate) fn project(with_audio: bool) -> ProjectEnvelope {
     value.project.materials.clear();
     value.project.sequences = vec![sequence("seq_main", Vec::new())];
     let output = &mut value.project.render_configs[0];
-    output.width = WIDTH;
-    output.height = HEIGHT;
-    output.frame_rate = ratio(FPS, 1);
-    output.video_deliverable_mut().unwrap().audio = with_audio.then_some(AudioOutput {
-        codec: AudioCodec::Aac,
-        sample_rate: 48_000,
-        channels: 1,
-    });
+    let raster = output.raster.as_mut().expect("raster fixture");
+    raster.width = WIDTH;
+    raster.height = HEIGHT;
+    raster.frame_rate = ratio(FPS, 1);
+    let deliverable_id = output.deliverables[0].id.clone();
+    output.video_deliverable_mut(&deliverable_id).unwrap().audio =
+        with_audio.then_some(AudioOutput {
+            codec: AudioCodec::Aac,
+            sample_rate: 48_000,
+            channels: 1,
+        });
     value
 }
 

@@ -2,6 +2,7 @@
 
 mod binding;
 mod cache;
+mod delivery_package;
 mod descriptor;
 mod digest;
 mod error;
@@ -20,6 +21,7 @@ mod workflow;
 
 pub use binding::*;
 pub use cache::*;
+pub use delivery_package::*;
 pub use descriptor::*;
 pub use digest::*;
 pub use error::*;
@@ -71,6 +73,9 @@ mod catalog_tests;
 #[cfg(test)]
 #[path = "unit_tests/contract_tests.rs"]
 mod contract_tests;
+#[cfg(test)]
+#[path = "unit_tests/delivery_package_tests.rs"]
+mod delivery_package_tests;
 #[cfg(test)]
 #[path = "unit_tests/error_mapping_tests.rs"]
 mod error_mapping_tests;

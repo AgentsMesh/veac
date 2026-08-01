@@ -39,6 +39,7 @@ pub(super) fn current_paths(task: &BackendTask) -> Result<Vec<PathBuf>, RuntimeE
             Ok(paths)
         }
         BackendOutput::ImageSequence { pattern } => enumerate_pattern(pattern),
+        BackendOutput::Package { root, .. } => Ok(vec![root.clone()]),
     }
 }
 

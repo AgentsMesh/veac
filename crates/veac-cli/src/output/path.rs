@@ -4,6 +4,14 @@ use std::path::{Path, PathBuf};
 use crate::error::{CliError, CliResult};
 
 pub(super) fn destination(path: &Path) -> CliResult<PathBuf> {
+    destination_kind(path, false)
+}
+
+pub(super) fn package_destination(path: &Path) -> CliResult<PathBuf> {
+    destination_kind(path, true)
+}
+
+fn destination_kind(path: &Path, package: bool) -> CliResult<PathBuf> {
     let Some(file_name) = path.file_name() else {
         return Err(CliError::new(
             "INVALID_OUTPUT_PATH",
@@ -17,7 +25,13 @@ pub(super) fn destination(path: &Path) -> CliResult<PathBuf> {
                 format!("refusing symlink output {}", path.display()),
             ));
         }
-        if metadata.is_dir() {
+        if package && !metadata.is_dir() {
+            return Err(CliError::new(
+                "OUTPUT_IS_FILE",
+                format!("package output {} is not a directory", path.display()),
+            ));
+        }
+        if !package && metadata.is_dir() {
             return Err(CliError::new(
                 "OUTPUT_IS_DIRECTORY",
                 format!("output {} is a directory", path.display()),
@@ -74,3 +88,7 @@ fn parent(path: &Path) -> &Path {
         .filter(|value| !value.as_os_str().is_empty())
         .unwrap_or(Path::new("."))
 }
+
+#[cfg(test)]
+#[path = "path/tests.rs"]
+mod tests;

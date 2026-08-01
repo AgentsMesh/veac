@@ -80,6 +80,15 @@ impl Validator {
             item_id,
             |value| value.is_finite(),
         );
+        if !visual_shear_valid(visual.transform.shear) {
+            self.push(
+                "SHEAR",
+                Some(item_id.to_owned()),
+                format!("{path}/transform/shear"),
+                "x and y shear factors must each be finite and within [-2, 2]",
+                Some("use unitless x/y shear factors in the closed range [-2, 2]"),
+            );
+        }
         if let Some(crop) = &visual.transform.crop {
             self.animatable(
                 crop,

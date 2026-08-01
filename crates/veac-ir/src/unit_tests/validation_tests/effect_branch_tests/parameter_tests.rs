@@ -18,9 +18,7 @@ fn registered_and_unregistered_effects_keep_distinct_parameter_contracts() {
     effect.parameters.clear();
     effect.parameters.insert(
         "arbitrary".to_owned(),
-        ParameterValue::Text {
-            value: "preserved".to_owned(),
-        },
+        ParameterValue::Boolean { value: true },
     );
     let codes = effect_codes(&unregistered);
     assert_code(&codes, "UNKNOWN_EFFECT");
@@ -29,26 +27,16 @@ fn registered_and_unregistered_effects_keep_distinct_parameter_contracts() {
 }
 
 #[test]
-fn generic_parameter_values_reject_noncanonical_numbers_vectors_and_times() {
-    let invalid = [
+fn generic_number_parameter_rejects_non_finite_values() {
+    let mut project = sample_project();
+    let effect = effect_mut(&mut project);
+    effect.effect_type = "vendor.private".to_owned();
+    effect.parameters.clear();
+    effect.parameters.insert(
+        "invalid".to_owned(),
         ParameterValue::Number { value: f64::NAN },
-        ParameterValue::Integer { value: i64::MAX },
-        ParameterValue::Vec2 {
-            value: Vec2 {
-                x: f64::INFINITY,
-                y: 0.0,
-            },
-        },
-        ParameterValue::Time { value: time(-1) },
-    ];
-    for (index, value) in invalid.into_iter().enumerate() {
-        let mut project = sample_project();
-        let effect = effect_mut(&mut project);
-        effect.effect_type = "vendor.private".to_owned();
-        effect.parameters.clear();
-        effect.parameters.insert(format!("value-{index}"), value);
-        assert_effect_code(&project, "EFFECT_PARAMETER");
-    }
+    );
+    assert_effect_code(&project, "EFFECT_PARAMETER");
 }
 
 #[test]

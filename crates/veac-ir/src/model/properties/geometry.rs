@@ -46,6 +46,8 @@ pub struct Rect {
 pub struct Transform2D {
     pub position: Animatable<Point>,
     pub scale: Animatable<Vec2>,
+    /// Unitless x/y shear factors in the closed range [-2, 2].
+    pub shear: Vec2,
     pub flip_horizontal: bool,
     pub flip_vertical: bool,
     pub rotation_degrees: Animatable<f64>,

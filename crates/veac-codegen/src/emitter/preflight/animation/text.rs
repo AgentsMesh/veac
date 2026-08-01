@@ -15,7 +15,7 @@ pub(super) fn validate(
         }
         _ => return,
     };
-    let Some(animation) = &content.style.animation else {
+    let Some(animation) = content.styled().and_then(|style| style.animation.as_ref()) else {
         return;
     };
     if !valid_point(animation.stagger, domain, curves.timebase) {

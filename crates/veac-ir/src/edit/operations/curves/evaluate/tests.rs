@@ -48,6 +48,39 @@ fn scalar_curves_cover_boundaries_extrapolation_and_every_easing() {
 }
 
 #[test]
+fn spring_is_endpoint_normalized_and_overshoots() {
+    let spring = Interpolation::Spring {
+        frequency: 1.5,
+        decay: 6.0,
+        initial_velocity: 0.0,
+    };
+    assert_close(spring.evaluate(0.0), 0.0);
+    assert_close(spring.evaluate(1.0), 1.0);
+    assert_close(spring.spring_derivative(0.0).unwrap(), 0.0);
+    assert!((1..100)
+        .map(|step| spring.evaluate(f64::from(step) / 100.0))
+        .any(|value| value > 1.0));
+}
+
+#[test]
+fn spring_stability_bounds_are_closed_and_invalid_values_fail_evaluation() {
+    for spring in [spring(64.0, 0.0), spring(6.0, 128.0), spring(6.0, -128.0)] {
+        assert!(spring.spring_coefficients().is_some());
+        assert_close(spring.evaluate(0.0), 0.0);
+        assert_close(spring.evaluate(1.0), 1.0);
+        assert!(spring.evaluate(0.5).is_finite());
+    }
+    for spring in [
+        spring(64.000_1, 0.0),
+        spring(6.0, 128.000_1),
+        spring(6.0, -128.000_1),
+    ] {
+        assert!(spring.spring_coefficients().is_none());
+        assert!(spring.evaluate(0.5).is_nan());
+    }
+}
+
+#[test]
 fn vectors_and_compatible_points_interpolate_component_wise() {
     let vectors = vec![
         key("kf_v0", Vec2 { x: 0.0, y: 4.0 }, 0),
@@ -97,9 +130,21 @@ fn key<T>(id: &str, value: T, at: i64) -> Keyframe<T> {
     }
 }
 
+fn spring(decay: f64, initial_velocity: f64) -> Interpolation {
+    Interpolation::Spring {
+        frequency: 1.5,
+        decay,
+        initial_velocity,
+    }
+}
+
 fn point(x: f64, y: f64, unit: LengthUnit) -> Point {
     Point {
         x: Length { value: x, unit },
         y: Length { value: y, unit },
     }
+}
+
+fn assert_close(actual: f64, expected: f64) {
+    assert!((actual - expected).abs() < 1e-10, "{actual} != {expected}");
 }

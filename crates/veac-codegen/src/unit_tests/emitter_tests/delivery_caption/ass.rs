@@ -15,7 +15,7 @@ fn ass_preserves_style_speaker_rich_spans_position_and_stable_deduplication() {
     normalize(&mut plan);
     let (caption, speaker) = first_caption(&mut plan);
     caption.text = "Path \\ {title}\nNext".to_owned();
-    caption.style.spans.push(ResolvedTextSpan {
+    caption.styled_mut().unwrap().spans.push(ResolvedTextSpan {
         start: 0,
         end: 4,
         font: None,
@@ -43,10 +43,16 @@ fn ass_preserves_style_speaker_rich_spans_position_and_stable_deduplication() {
     assert!(style.contains(",32,&H37563412"));
     assert!(!style.contains(",Arial,48,"));
     assert!(rendered.contains(",VEAC0001,Narrator,0,0,0,,"));
+    let canvas = &plan
+        .sequences
+        .iter()
+        .find(|sequence| sequence.id == plan.entry_sequence_id)
+        .unwrap()
+        .settings;
     assert!(rendered.contains(&format!(
         "\\pos({},{})",
-        plan.output.width + 12,
-        plan.output.height - 8
+        canvas.width + 12,
+        canvas.height - 8
     )));
     assert!(rendered.contains(" \\\\ \\{title\\}\\NNext"));
     assert!(rendered.contains("\\fs40\\1c&H0000FF&\\1a&H00&"));
@@ -71,7 +77,7 @@ fn ass_rejects_every_unrepresentable_style_family_without_loss() {
     ] {
         let (mut plan, bindings, _) = caption_plan(CaptionSidecarFormat::Ass);
         normalize(&mut plan);
-        mutate(&mut first_caption(&mut plan).0.style);
+        mutate(first_caption(&mut plan).0.styled_mut().unwrap());
         let diagnostic = emit_all(&plan, &bindings).unwrap_err().diagnostics()[0].clone();
         assert_eq!(diagnostic.kind, CodegenErrorKind::UnsupportedCaptionFeature);
         assert_eq!(diagnostic.code, code);
@@ -87,15 +93,17 @@ fn ass_rejects_unsafe_speaker_font_span_visual_and_inexact_time() {
         ("CAPTION_ASS_VISUAL_UNSUPPORTED", 3),
         ("CAPTION_ASS_SPAN_INVALID", 4),
         ("CAPTION_ASS_VISUAL_UNSUPPORTED", 5),
+        ("CAPTION_ASS_VISUAL_UNSUPPORTED", 6),
     ] {
         let (mut plan, bindings, _) = caption_plan(CaptionSidecarFormat::Ass);
         normalize(&mut plan);
         let (content, speaker) = first_caption(&mut plan);
         match mutation {
             0 => *speaker = Some("Alice,Bob".to_owned()),
-            1 => content.style.font.face_index = u32::MAX,
+            1 => content.styled_mut().unwrap().font.face_index = u32::MAX,
             2 => content
-                .style
+                .styled_mut()
+                .unwrap()
                 .spans
                 .push(span(0, 1, Some(FontStyle::Oblique))),
             3 => {
@@ -105,7 +113,7 @@ fn ass_rejects_unsafe_speaker_font_span_visual_and_inexact_time() {
             }
             4 => {
                 content.text = "e\u{301}".to_owned();
-                content.style.spans.push(span(0, 1, None));
+                content.styled_mut().unwrap().spans.push(span(0, 1, None));
             }
             5 => caption_clip(&mut plan).effects.push(ResolvedEffect {
                 id: EffectId::new("fx_caption_blur").unwrap(),
@@ -116,6 +124,14 @@ fn ass_rejects_unsafe_speaker_font_span_visual_and_inexact_time() {
                     ParameterValue::Number { value: 2.0 },
                 )]),
             }),
+            6 => {
+                caption_clip(&mut plan)
+                    .visual
+                    .as_mut()
+                    .unwrap()
+                    .transform
+                    .shear = Vec2 { x: 0.25, y: 0.0 };
+            }
             _ => unreachable!(),
         }
         let diagnostic = emit_all(&plan, &bindings).unwrap_err().diagnostics()[0].clone();

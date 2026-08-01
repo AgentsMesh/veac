@@ -154,6 +154,7 @@ fn interpolation_evidence<T>(value: &Animatable<T>, found: &mut BTreeSet<String>
             Interpolation::EaseIn => "animation.interpolation-ease-in",
             Interpolation::EaseOut => "animation.interpolation-ease-out",
             Interpolation::EaseInOut => "animation.interpolation-ease-in-out",
+            Interpolation::Spring { .. } => "animation.interpolation-spring",
             Interpolation::CubicBezier { .. } => "animation.interpolation-cubic-bezier",
         };
         found.insert(id.to_owned());

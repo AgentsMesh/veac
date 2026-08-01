@@ -19,7 +19,8 @@ while IFS= read -r -d '' file; do
   check_file "$file"
 done < <(
   find "$ROOT/crates" "$ROOT/docs" "$ROOT/examples" "$ROOT/scripts" \
-    -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.jq' -o -name '*.md' \) \
+    -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.jq' -o -name '*.md' \
+      -o -name '*.veac' -o -name '*.json' -o -name '*.toml' -o -name '*.cube' \) \
     -print0
 )
 

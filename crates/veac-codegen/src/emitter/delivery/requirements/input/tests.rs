@@ -6,6 +6,7 @@ use crate::unit_tests::emitter_tests::support::{fixture, resolved};
 fn command_input_outside_verified_bindings_is_rejected() {
     let plan = resolved(&fixture());
     let command = BackendCommand {
+        preparations: Vec::new(),
         inputs: vec![BackendInput {
             path: "/tmp/unbound-media".into(),
         }],

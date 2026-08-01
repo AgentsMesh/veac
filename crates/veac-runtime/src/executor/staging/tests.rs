@@ -1,21 +1,30 @@
 mod commit_contracts;
 mod commit_identity_contracts;
+mod commit_point_contracts;
 mod deadline_contracts;
 mod directory_behavior;
 mod directory_contracts;
 mod ffmpeg_contracts;
 mod filter_script_contracts;
+mod injection;
 mod io_failure_tests;
 mod journal_contracts;
 mod journal_safety_contracts;
+mod orphan_recovery_contracts;
+mod package_contracts;
+mod package_recovery_contracts;
+mod package_safety_contracts;
+mod preparation_contracts;
 mod recovery_safety_contracts;
 mod rollback_contracts;
 mod validation_contracts;
 
+use injection::{apply_observed, apply_with};
+
 use std::path::{Path, PathBuf};
 
 use super::directory::{Directory, EntryIdentity, EntryState};
-use super::{StagedFile, StagedTask};
+use super::{StagedFile, StagedOutput, StagedTask};
 
 #[derive(Clone, Copy)]
 pub(super) enum RollbackFault {
@@ -64,14 +73,19 @@ pub(super) fn apply(
     stale: &[PathBuf],
     allow_empty: bool,
 ) -> Result<(), crate::RuntimeError> {
+    let mut files = files.to_vec();
+    for file in &mut files {
+        file.allow_empty = allow_empty;
+    }
     let stage = Directory::open(staging)?;
     let parent = files
         .first()
         .and_then(|file| file.target.parent())
         .unwrap_or(Path::new("."));
     let output = Directory::open(parent)?;
+    let outputs = file_outputs(&files);
     super::commit::apply_locked(
-        super::commit::CommitContext::new(staging, &stage, &output, files, stale, allow_empty),
+        super::commit::CommitContext::new(staging, &stage, &output, &outputs, stale),
         deadline(),
     )
     .map_err(super::commit::CommitFailure::into_error)
@@ -83,16 +97,16 @@ impl StagedTask {
         locks: &crate::executor::locking::OutputLocks,
         fault: RollbackFault,
     ) -> Result<(), crate::RuntimeError> {
-        let parent = super::common_parent_from_files(&self.files)?;
+        let parent = super::common_parent_from_outputs(&self.outputs)?;
         let output = locks.directory(parent)?;
-        let result = super::commit::apply_with(
+        let stale = super::stale::enumerate(&self.stale, &self.outputs)?;
+        let result = apply_with(
             super::commit::CommitContext::new(
                 self.directory.path(),
                 &self.descriptor,
                 &output,
-                &self.files,
-                &self.stale,
-                self.allow_empty,
+                &self.outputs,
+                &stale,
             ),
             || true,
             &fault,
@@ -121,13 +135,17 @@ pub(super) fn prepare_journal(
         .map(
             |file| match stage.state(file.source.file_name().unwrap().to_str().unwrap())? {
                 EntryState::Regular(identity) => Ok(identity),
+                EntryState::Directory(_) => Err(crate::RuntimeError::new(
+                    "test stage source must be regular",
+                )),
                 EntryState::Missing => {
                     Err(crate::RuntimeError::new("test stage source is missing"))
                 }
             },
         )
         .collect::<Result<Vec<_>, _>>()?;
-    super::journal::prepare(&stage, &output, files, &identities, stale)
+    let outputs = file_outputs(files);
+    super::journal::prepare(&stage, &output, &outputs, &identities, stale)
 }
 
 pub(super) fn load_journal(staging: &Path) -> Result<super::journal::Journal, crate::RuntimeError> {
@@ -140,7 +158,7 @@ pub(super) fn commit_journal(
     journal: &mut super::journal::Journal,
 ) -> Result<(), crate::RuntimeError> {
     let stage = Directory::open(staging)?;
-    super::journal::commit(&stage, journal)
+    super::journal::commit_with(&stage, journal, || stage.sync()).map_err(|failure| failure.error)
 }
 
 pub(super) fn task(directory: tempfile::TempDir, files: Vec<StagedFile>) -> StagedTask {
@@ -148,10 +166,13 @@ pub(super) fn task(directory: tempfile::TempDir, files: Vec<StagedFile>) -> Stag
     StagedTask {
         directory,
         descriptor,
-        files,
+        outputs: file_outputs(&files),
         stale: Vec::new(),
-        allow_empty: false,
     }
+}
+
+pub(super) fn file_outputs(files: &[StagedFile]) -> Vec<StagedOutput> {
+    files.iter().cloned().map(StagedOutput::File).collect()
 }
 
 pub(super) fn deadline() -> std::time::Instant {

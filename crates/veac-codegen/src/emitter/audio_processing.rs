@@ -1,6 +1,7 @@
-use veac_plan::canonical::{Animatable, AudioOutput, PitchPolicy};
+use veac_plan::canonical::{Animatable, PitchPolicy};
 use veac_plan::ResolvedClip;
 
+use super::audio::AudioRenderSpec;
 use super::{animation, audio_filters, audio_source::invalid, time, CodegenErrors, EmitContext};
 
 pub(super) fn speed(
@@ -55,7 +56,7 @@ pub(super) fn properties(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
     mut label: String,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<String, CodegenErrors> {
     let properties = clip
         .audio

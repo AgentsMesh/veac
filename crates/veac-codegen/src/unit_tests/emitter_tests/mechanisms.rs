@@ -41,13 +41,26 @@ fn emits_common_visual_pipeline_and_ordered_effects() {
     assert!(graph.contains("blend=all_mode=screen"));
     assert!(graph.contains("maskedmerge=planes=7"));
     assert!(graph.contains("pow("));
+    for prefix in [
+        "placementcolorbasev",
+        "placementalphabasev",
+        "placementcolorsourcev",
+        "placementalphasourcev",
+        "placementalphav",
+        "placementv",
+    ] {
+        assert!(
+            graph.contains(prefix),
+            "missing straight-alpha boundary: {graph}"
+        );
+    }
 }
 
 #[test]
 fn emits_real_audio_source_timing_automation_and_mix() {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
@@ -90,7 +103,7 @@ fn emits_real_audio_source_timing_automation_and_mix() {
 fn materializes_centered_video_transition_and_audio_edge_fades() {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

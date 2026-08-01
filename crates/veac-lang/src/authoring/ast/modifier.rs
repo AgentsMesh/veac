@@ -1,6 +1,6 @@
 use super::{
     AudioModifierDecl, ColorModifierDecl, Identifier, MaskModifierDecl, NumberLiteral,
-    ParameterDecl, PointDecl, RectDecl, Span, Spanned, VectorDecl,
+    ParameterDecl, PointDecl, RectDecl, Span, Spanned, SurfaceModifierDecl, VectorDecl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -8,6 +8,7 @@ pub enum ModifierDecl {
     Layout(LayoutModifierDecl),
     Transform(TransformModifierDecl),
     Composite(CompositeModifierDecl),
+    Surface(SurfaceModifierDecl),
     Mask(MaskModifierDecl),
     Audio(AudioModifierDecl),
     Color(ColorModifierDecl),
@@ -20,6 +21,7 @@ impl ModifierDecl {
             Self::Layout(value) => &value.id,
             Self::Transform(value) => &value.id,
             Self::Composite(value) => &value.id,
+            Self::Surface(value) => &value.id,
             Self::Mask(value) => &value.id,
             Self::Audio(value) => &value.id,
             Self::Color(value) => &value.id,
@@ -32,6 +34,7 @@ impl ModifierDecl {
             Self::Layout(value) => value.span,
             Self::Transform(value) => value.span,
             Self::Composite(value) => value.span,
+            Self::Surface(value) => value.span,
             Self::Mask(value) => value.span,
             Self::Audio(value) => value.span,
             Self::Color(value) => value.span,
@@ -74,6 +77,7 @@ pub struct TransformModifierDecl {
     pub id: Identifier,
     pub position: Option<ParameterDecl<PointDecl>>,
     pub scale: Option<ParameterDecl<VectorDecl>>,
+    pub shear: Option<Box<VectorDecl>>,
     pub rotation: Option<ParameterDecl<NumberLiteral>>,
     pub anchor: Option<VectorDecl>,
     pub crop: Option<ParameterDecl<RectDecl>>,
@@ -113,5 +117,15 @@ pub enum EffectParameterValue {
     Number(ParameterDecl<NumberLiteral>),
     Boolean(Spanned<bool>),
     Color(Spanned<String>),
-    Text(Spanned<String>),
+}
+
+impl EffectParameterValue {
+    pub fn kind(&self) -> veac_ir::ParameterValueKind {
+        match self {
+            Self::Number(ParameterDecl::Constant(_)) => veac_ir::ParameterValueKind::Number,
+            Self::Number(ParameterDecl::Curve { .. }) => veac_ir::ParameterValueKind::NumberCurve,
+            Self::Boolean(_) => veac_ir::ParameterValueKind::Boolean,
+            Self::Color(_) => veac_ir::ParameterValueKind::Color,
+        }
+    }
 }

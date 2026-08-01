@@ -12,7 +12,9 @@ fn image_and_audio_tasks_receive_only_their_physical_proxy_role() {
     let store = ArtifactStore::new(temp.path());
 
     let mut image = av_plan();
-    image.output.deliverables[0].file_name = "frame-%d.png".to_owned();
+    image.output.deliverables[0].target = DeliverableTarget::ImageSequence {
+        pattern: "frame-%d.png".to_owned(),
+    };
     image.output.deliverables[0].kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Png,
         start_number: 1,
@@ -43,7 +45,9 @@ fn image_and_audio_tasks_receive_only_their_physical_proxy_role() {
     assert_task_resource(&bundle, video.payload_path());
 
     let mut stem = av_plan();
-    stem.output.deliverables[0].file_name = "master.wav".to_owned();
+    stem.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.wav".to_owned(),
+    };
     stem.output.deliverables[0].kind = DeliverableKind::AudioStem(AudioStemOutput {
         format: AudioStemFormat::Wav,
         audio: AudioOutput {
@@ -51,8 +55,9 @@ fn image_and_audio_tasks_receive_only_their_physical_proxy_role() {
             sample_rate: 48_000,
             channels: 2,
         },
-        source: AudioStemSource::Master,
+        source: AudioMixSource::Master,
     });
+    stem.output.raster = None;
     let stem_input = &stem.inputs[0];
     let video = proxy(
         &store,
@@ -124,7 +129,7 @@ fn two_pass_first_phase_has_video_only_input_authority() {
         settings.video.rate_control = VideoRateControl::Bitrate {
             target_bps: 1_000_000,
             max_bps: Some(1_500_000),
-            buffer_bps: Some(2_000_000),
+            buffer_size_bits: Some(2_000_000),
         };
         value
     };

@@ -22,6 +22,7 @@ use crate::RuntimeError;
 pub struct FfmpegInvocation<'a> {
     arguments: &'a [String],
     pub(super) output_root: Option<&'a Path>,
+    pub(super) working_directory: Option<&'a Path>,
     pub(super) deadline: Instant,
 }
 
@@ -29,11 +30,13 @@ impl<'a> FfmpegInvocation<'a> {
     pub(in crate::executor) fn render(
         arguments: &'a [String],
         output_root: &'a Path,
+        working_directory: &'a Path,
         deadline: Instant,
     ) -> Self {
         Self {
             arguments,
             output_root: Some(output_root),
+            working_directory: Some(working_directory),
             deadline,
         }
     }
@@ -44,6 +47,10 @@ impl<'a> FfmpegInvocation<'a> {
 
     pub fn deadline(&self) -> Instant {
         self.deadline
+    }
+
+    pub fn working_directory(&self) -> Option<&'a Path> {
+        self.working_directory
     }
 }
 

@@ -7,6 +7,31 @@ use std::time::{Duration, Instant};
 use super::*;
 
 #[test]
+fn missing_executable_is_a_stable_tool_start_failure() {
+    let temp = tempfile::tempdir().unwrap();
+    let executable = temp.path().join("missing-ffmpeg");
+    let error = run(
+        &executable,
+        &[],
+        &temp.path().join("output"),
+        MediaArtifactLimits::default(),
+        Instant::now() + Duration::from_secs(1),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.kind, WorkflowErrorKind::ToolFailure);
+    assert_eq!(
+        error.to_string(),
+        "failed to start FFmpeg artifact derivation"
+    );
+    let source = std::error::Error::source(&error).unwrap();
+    assert_eq!(
+        source.downcast_ref::<std::io::Error>().unwrap().kind(),
+        std::io::ErrorKind::NotFound
+    );
+}
+
+#[test]
 fn timeout_kills_ffmpeg_descendants_before_they_can_escape() {
     let temp = tempfile::tempdir().unwrap();
     let marker = temp.path().join("descendant-ran");

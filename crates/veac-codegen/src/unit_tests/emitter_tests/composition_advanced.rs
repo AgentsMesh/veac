@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use veac_codegen::emitter::CodegenErrorKind;
 use veac_plan::canonical::*;
@@ -166,7 +167,10 @@ fn graph(plan: &veac_plan::ResolvedRenderPlan) -> String {
 }
 
 fn assert_invalid(plan: &veac_plan::ResolvedRenderPlan, code: &str) {
-    let error = emit_video_command(plan, &bindings(plan)).unwrap_err();
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        emit_video_command(plan, &bindings(plan))
+    }));
+    let error = result.expect("preflight must not panic").unwrap_err();
     assert_eq!(error.diagnostics()[0].kind, CodegenErrorKind::InvalidPlan);
     assert!(error.diagnostics().iter().any(|value| value.code == code));
 }

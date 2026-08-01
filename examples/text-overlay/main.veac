@@ -17,20 +17,20 @@ project text-overlay {
     layer visual typography {
       item title {
         source text {
-          content "Agent-friendly video editing";
+          content "面向智能体的视频编辑";
           style {
-            font family "Inter";
+            font family "Arial Unicode MS";
             fallback-font family "Arial";
             size 68px;
             weight bold;
             fill #ffffffff;
             tracking 1px;
             line-height 1.2;
-            background { color #00000099; padding 18px; }
+            background { color #00000099; padding 14px; }
             outline { color #00b4d8ff; width 2px; }
             shadow {
-              color #000000ff; opacity 65%; blur 8px;
-              offset { x 4px; y 6px; }
+              color #ff477eff; opacity 80%; blur 8px;
+              offset { x 24px; y 28px; }
             }
           }
           layout {
@@ -43,6 +43,30 @@ project text-overlay {
           }
         }
         record { at 0s; duration 5s; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
       }
     }
   }

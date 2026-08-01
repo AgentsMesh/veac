@@ -13,7 +13,7 @@ pub(super) fn task(
     deliverable: &Deliverable,
     settings: &ScopeOutput,
 ) -> Result<BackendTask, CodegenErrors> {
-    let mut context = EmitContext::new(plan, bindings, deliverable, AlphaMode::Opaque)?;
+    let mut context = EmitContext::new_visual(plan, bindings, deliverable, AlphaMode::Opaque)?;
     let Some(resolved) = context
         .plan
         .sequences
@@ -26,7 +26,7 @@ pub(super) fn task(
     };
     let video = sequence::build_entry(&mut context, resolved)?;
     let video = sequence::conform_output(&mut context, video, resolved);
-    let Some(frame) = time::containing_frame(settings.at, plan.output.frame_rate) else {
+    let Some(frame) = time::containing_frame(settings.at, context.canvas.frame_rate) else {
         return Err(CodegenErrors::one(super::error::diagnostic(
             super::CodegenErrorKind::InvalidPlan,
             "PLAN_SCOPE_OUTPUT_INVALID",
@@ -52,7 +52,9 @@ pub(super) fn task(
     let inputs = context.input_routes.backend_inputs().to_vec();
     let path = output::bound_path(deliverable, bindings)?;
     let (filter_graph, filter_contract) = context.filter_graph()?;
+    let preparations = context.take_preparations(&inputs);
     let command = BackendCommand {
+        preparations,
         inputs,
         filter_graph,
         filter_contract,

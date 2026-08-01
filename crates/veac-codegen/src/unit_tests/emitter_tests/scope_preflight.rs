@@ -71,7 +71,9 @@ fn scope_accepts_the_last_tick_inside_the_entry_sequence() {
 fn add_scope(plan: &mut veac_plan::ResolvedRenderPlan, settings: ScopeOutput) {
     plan.output.deliverables.push(Deliverable {
         id: DeliverableId::new("dlv_scope_preflight").unwrap(),
-        file_name: "scope-preflight.png".to_owned(),
+        target: DeliverableTarget::File {
+            name: "scope-preflight.png".to_owned(),
+        },
         kind: DeliverableKind::Scope(settings),
     });
     plan.output

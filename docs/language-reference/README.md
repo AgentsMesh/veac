@@ -8,10 +8,13 @@ The only supported compilation path is:
 .veac -> typed authoring AST -> canonical JSON IR -> plan -> FFmpeg/artifacts
 ```
 
+The current canonical project envelope uses schema version 5 and minimum reader 5.
+
 Core algebra:
 
 ```text
-Project   = settings + resources + entry + multicams + sequences + annotations + outputs
+Project   = settings + resources + entry + multicams + sequences + annotations + deliveries
+Delivery  = sequence + optional raster + typed artifacts
 Sequence  = layers + relations + applies
 Layer     = ordered items + optional audio routing
 Item      = source + record span + optional source mapping + modifiers + optional template slot
@@ -25,6 +28,6 @@ References are typed by their grammar position (`resource`, `sequence`, `layer`,
 - [Sources](sources.md)
 - [Modifiers and relations](modifiers-relations.md)
 - [Text, captions, and audio](text-caption-audio.md)
-- [Outputs](outputs.md)
+- [Deliveries and artifacts](outputs.md)
 
 Every public mechanism has an executable source under [`examples/`](../../examples/). `make check-examples` parses, formats, lowers, and validates every cataloged example.

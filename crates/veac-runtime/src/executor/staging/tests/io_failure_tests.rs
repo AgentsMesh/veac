@@ -4,7 +4,7 @@ use veac_codegen::emitter::{
     BackendAction, BackendOutput, BackendPhase, BackendProduct, BackendTask,
 };
 
-use super::super::common_parent_from_files;
+use super::super::common_parent_from_outputs;
 use super::super::directory::{Directory, EntryState};
 use super::super::write::stage as stage_write;
 use super::deadline;
@@ -74,7 +74,7 @@ fn descriptor_relative_mutation_and_open_fail_closed_on_permissions() {
 
 #[test]
 fn stage_write_and_parent_discovery_report_missing_storage() {
-    assert!(common_parent_from_files(&[])
+    assert!(common_parent_from_outputs(&[])
         .unwrap_err()
         .message
         .contains("no output parent"));

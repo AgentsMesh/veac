@@ -1,7 +1,8 @@
 use crate::authoring::{
     AnnotationTargetDecl, AnnotationTimingDecl, AudioModifierDecl, ColorModifierDecl,
     CompositeModifierDecl, EffectModifierDecl, Identifier, LayoutModifierDecl, MaskModifierDecl,
-    MaskShapeDecl, ModifierDecl, Span, Spanned, TransformModifierDecl,
+    MaskShapeDecl, ModifierDecl, NumberLiteral, Span, Spanned, SurfaceModifierDecl,
+    TransformModifierDecl,
 };
 
 fn id(value: &str, span: Span) -> Identifier {
@@ -56,7 +57,7 @@ fn every_modifier_exposes_its_identifier_and_complete_span() {
         range: veac_ir::ColorRange::Limited,
     };
     let make_id = |value: &str| id(value, Span { start: 1, end: 2 });
-    let spans = (10..17).map(|start| Span {
+    let spans = (10..18).map(|start| Span {
         start,
         end: start + 1,
     });
@@ -72,6 +73,7 @@ fn every_modifier_exposes_its_identifier_and_complete_span() {
             id: make_id("transform"),
             position: None,
             scale: None,
+            shear: None,
             rotation: None,
             anchor: None,
             crop: None,
@@ -84,6 +86,15 @@ fn every_modifier_exposes_its_identifier_and_complete_span() {
             opacity: None,
             z_index: None,
             blend: None,
+            span: spans.next().unwrap(),
+        }),
+        ModifierDecl::Surface(SurfaceModifierDecl {
+            id: make_id("surface"),
+            corner_radius: NumberLiteral {
+                raw: "12px".into(),
+                span: Span::default(),
+            },
+            shadow: None,
             span: spans.next().unwrap(),
         }),
         ModifierDecl::Mask(MaskModifierDecl {
@@ -144,6 +155,7 @@ fn every_modifier_exposes_its_identifier_and_complete_span() {
             "layout",
             "transform",
             "composite",
+            "surface",
             "mask",
             "audio",
             "color",
@@ -152,7 +164,7 @@ fn every_modifier_exposes_its_identifier_and_complete_span() {
     );
     assert_eq!(
         modifiers.iter().map(ModifierDecl::span).collect::<Vec<_>>(),
-        (10..17)
+        (10..18)
             .map(|start| Span {
                 start,
                 end: start + 1

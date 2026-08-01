@@ -1,4 +1,6 @@
-use super::{Identifier, NumberLiteral, Span, Spanned, TextAnimationDecl, TextLayoutDecl};
+use super::{
+    Identifier, NumberLiteral, ShadowDecl, Span, Spanned, TextAnimationDecl, TextLayoutDecl,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextSourceDecl {
@@ -28,7 +30,7 @@ pub struct TextStyleDecl {
     pub line_height: Option<NumberLiteral>,
     pub background: Option<TextBackgroundDecl>,
     pub outline: Option<TextOutlineDecl>,
-    pub shadow: Option<TextShadowDecl>,
+    pub shadow: Option<ShadowDecl>,
     pub spans: Vec<TextSpanDecl>,
 }
 
@@ -60,12 +62,4 @@ pub struct TextBackgroundDecl {
 pub struct TextOutlineDecl {
     pub color: Spanned<String>,
     pub width: NumberLiteral,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TextShadowDecl {
-    pub color: Spanned<String>,
-    pub opacity: NumberLiteral,
-    pub blur: NumberLiteral,
-    pub offset: super::VectorDecl,
 }

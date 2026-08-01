@@ -45,7 +45,76 @@ fn validate_deliverable(
             settings.audio.sample_rate,
             settings.audio.channels,
         ),
-        DeliverableKind::CaptionSidecar(_) | DeliverableKind::Scope(_) => {}
+        DeliverableKind::AudioFile(settings) => {
+            let AudioFileEncoding::Mp3(encoding) = &settings.encoding;
+            audio_work(
+                validator,
+                deliverable,
+                duration,
+                encoding.sample_rate_hz,
+                encoding.channel_layout.count(),
+            );
+        }
+        DeliverableKind::AnimatedImage(_) => video_work(validator, output, deliverable, duration),
+        DeliverableKind::AdaptivePackage(AdaptivePackage::Hls(settings)) => {
+            hls_work(validator, output, deliverable, settings, duration)
+        }
+        DeliverableKind::CaptionSidecar(_)
+        | DeliverableKind::Scope(_)
+        | DeliverableKind::StillImage(_) => {}
+    }
+}
+
+fn hls_work(
+    validator: &mut Validator,
+    output: &RenderConfig,
+    deliverable: &Deliverable,
+    settings: &HlsPackage,
+    duration: RationalTime,
+) {
+    let Some(raster) = &output.raster else {
+        return;
+    };
+    let frames = units_for_duration(duration, raster.frame_rate).unwrap_or(u128::MAX);
+    let renditions = settings.renditions.len() as u128;
+    if frames.saturating_mul(renditions) > MAX_VIDEO_FRAMES_PER_DELIVERABLE {
+        push(
+            validator,
+            "BUDGET_VIDEO_FRAMES",
+            deliverable,
+            "video frames",
+        );
+    }
+    let pixels = settings.renditions.iter().fold(0u128, |total, rendition| {
+        total.saturating_add(
+            u128::from(rendition.raster.width) * u128::from(rendition.raster.height),
+        )
+    });
+    if frames.saturating_mul(pixels) > MAX_PIXEL_FRAMES_PER_DELIVERABLE {
+        push(
+            validator,
+            "BUDGET_PIXEL_FRAMES",
+            deliverable,
+            "pixel-frames",
+        );
+    }
+    if let Some(audio) = &settings.audio {
+        let HlsAudioEncoding::Aac(encoding) = &audio.encoding;
+        let samples = channel_samples_for_duration(
+            duration,
+            encoding.sample_rate_hz,
+            encoding.channel_layout.count(),
+        )
+        .unwrap_or(u128::MAX)
+        .saturating_mul(renditions);
+        if samples > MAX_AUDIO_SAMPLES_PER_DELIVERABLE {
+            push(
+                validator,
+                "BUDGET_AUDIO_SAMPLES",
+                deliverable,
+                "audio samples",
+            );
+        }
     }
 }
 
@@ -55,7 +124,31 @@ fn video_work(
     deliverable: &Deliverable,
     duration: RationalTime,
 ) {
-    let frames = units_for_duration(duration, output.frame_rate).unwrap_or(u128::MAX);
+    let Some(raster) = &output.raster else {
+        return;
+    };
+    raster_work(
+        validator,
+        output,
+        deliverable,
+        duration,
+        raster.width,
+        raster.height,
+    );
+}
+
+fn raster_work(
+    validator: &mut Validator,
+    output: &RenderConfig,
+    deliverable: &Deliverable,
+    duration: RationalTime,
+    width: u32,
+    height: u32,
+) {
+    let Some(raster) = &output.raster else {
+        return;
+    };
+    let frames = units_for_duration(duration, raster.frame_rate).unwrap_or(u128::MAX);
     if frames > MAX_VIDEO_FRAMES_PER_DELIVERABLE {
         push(
             validator,
@@ -64,7 +157,7 @@ fn video_work(
             "video frames",
         );
     }
-    if pixel_frames(frames, output.width, output.height) > MAX_PIXEL_FRAMES_PER_DELIVERABLE {
+    if pixel_frames(frames, width, height) > MAX_PIXEL_FRAMES_PER_DELIVERABLE {
         push(
             validator,
             "BUDGET_PIXEL_FRAMES",

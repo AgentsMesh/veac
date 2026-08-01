@@ -12,7 +12,7 @@ impl Parser {
         let mut resources = Vec::new();
         let mut multicams = Vec::new();
         let mut sequences = Vec::new();
-        let mut outputs = Vec::new();
+        let mut deliveries = Vec::new();
         let mut annotations = Vec::new();
         while !self.at_right_brace() && !self.at_eof() {
             if self.at_word("entry") {
@@ -51,9 +51,9 @@ impl Parser {
                 if let Some(value) = self.sequence() {
                     sequences.push(value);
                 }
-            } else if self.at_word("output") {
-                if let Some(value) = self.output() {
-                    outputs.push(value);
+            } else if self.at_word("delivery") {
+                if let Some(value) = self.delivery() {
+                    deliveries.push(value);
                 }
             } else if self.at_word("annotation") {
                 if let Some(value) = self.annotation() {
@@ -63,7 +63,7 @@ impl Parser {
                 let span = self.current().span;
                 self.error(
                     "AUTHORING_PROJECT_MEMBER",
-                    "project member must be entry, settings, resource, multicam, sequence, annotation, or output"
+                    "project member must be entry, settings, resource, multicam, sequence, annotation, or delivery"
                         .to_owned(),
                     span,
                 );
@@ -88,7 +88,7 @@ impl Parser {
                 resources,
                 multicams,
                 sequences,
-                outputs,
+                deliveries,
                 annotations,
                 span: start.join(end),
             },

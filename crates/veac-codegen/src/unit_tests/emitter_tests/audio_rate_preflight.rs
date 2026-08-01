@@ -1,5 +1,5 @@
 use veac_plan::canonical::{
-    Animatable, Interpolation, Keyframe, KeyframeId, PitchPolicy, Rational,
+    Animatable, DeliverableId, Interpolation, Keyframe, KeyframeId, PitchPolicy, Rational,
     SourceTimeInterpolation, SourceTimeSegment,
 };
 use veac_plan::ResolvedSourceTimeMap;
@@ -36,7 +36,7 @@ fn output_specific_sample_alignment_and_pan_fail_in_preflight() {
     let mut alignment = audio_plan(2);
     alignment
         .output
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio
         .as_mut()

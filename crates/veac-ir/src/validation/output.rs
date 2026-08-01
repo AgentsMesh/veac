@@ -1,9 +1,10 @@
 mod aux;
 mod collision;
+mod contract;
 
 use crate::*;
 
-use super::{output_file_compatible, values::is_file_name, Validator};
+use super::{output_file_compatible, Validator};
 
 impl Validator {
     pub(super) fn render_config(&mut self, output: &RenderConfig, project: &Project) {
@@ -19,15 +20,7 @@ impl Validator {
                 &format!("{path}/sequence_id"),
             );
         }
-        if !render_geometry_valid(output.width, output.height, output.frame_rate) {
-            self.push(
-                "OUTPUT_GEOMETRY",
-                Some(output.id.to_string()),
-                &path,
-                "output geometry or frame rate exceeds the default untrusted-plan render budget",
-                None,
-            );
-        }
+        contract::render_config(self, output, &path);
         if output.deliverables.is_empty() {
             self.value_error("OUTPUT_DELIVERABLE_REQUIRED", &path, output.id.as_str());
         }
@@ -62,9 +55,7 @@ impl Validator {
                     &item_path,
                 );
             }
-            if !is_file_name(&deliverable.file_name) && !aux::image_pattern_valid(deliverable) {
-                self.value_error("OUTPUT_FILE_NAME", &item_path, deliverable.id.as_str());
-            }
+            contract::target(self, deliverable, &item_path);
             self.deliverable(deliverable, output, project, &item_path);
         }
     }
@@ -91,16 +82,21 @@ impl Validator {
         output: &RenderConfig,
         path: &str,
     ) {
-        if !video_settings_valid(&settings.video)
-            || !video_delivery_valid(settings)
-            || !pixel_geometry_valid(output.width, output.height, settings.video.pixel_format)
+        let pixel_valid = output.raster.as_ref().is_none_or(|raster| {
+            pixel_geometry_valid(raster.width, raster.height, settings.video.pixel_format)
+        });
+        if !video_settings_valid(&settings.video) || !video_delivery_valid(settings) || !pixel_valid
         {
             self.value_error("OUTPUT_VIDEO_SETTINGS", path, value.id.as_str());
         }
         if !video_container_compatible(settings.container, settings.video.codec) {
             self.value_error("OUTPUT_VIDEO_CODEC", path, value.id.as_str());
         }
-        if !output_file_compatible(&value.file_name, settings.container) {
+        if !value
+            .target
+            .file_name()
+            .is_some_and(|name| output_file_compatible(name, settings.container))
+        {
             self.value_error("OUTPUT_FILE_FORMAT", path, value.id.as_str());
         }
         if settings.audio.as_ref().is_some_and(|audio| {
@@ -115,7 +111,9 @@ impl Validator {
             self.value_error("OUTPUT_STREAMING_MODE", path, value.id.as_str());
         }
         if settings.container == OutputFormat::Mxf
-            && !mxf_geometry_valid(output.width, output.height, output.frame_rate)
+            && !output.raster.as_ref().is_some_and(|raster| {
+                mxf_geometry_valid(raster.width, raster.height, raster.frame_rate)
+            })
         {
             self.value_error("OUTPUT_MXF_SETTINGS", path, value.id.as_str());
         }

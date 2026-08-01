@@ -71,6 +71,10 @@ impl FfmpegEnvironment for SwappingPasslogs {
             return Ok(());
         }
         self.consumed_prefixes.borrow_mut().push(prefix.clone());
+        if self.calls.get() == 2 {
+            assert!(!appended(&self.original, "-0.log").exists());
+            assert!(!appended(&self.original, "-0.log.mbtree").exists());
+        }
         self.swap_originals(b"attacker-log", b"attacker-tree");
         let log = std::fs::read(appended(&prefix, "-0.log")).unwrap();
         let tree = std::fs::read(appended(&prefix, "-0.log.mbtree")).unwrap();

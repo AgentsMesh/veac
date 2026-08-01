@@ -60,7 +60,7 @@ fn matte_reference_type_range_and_cycle_are_validated() {
     assert_code(&validation_codes(&cycle), "MATTE_CYCLE");
 }
 
-fn project_with_matte() -> ProjectEnvelope {
+pub(super) fn project_with_matte() -> ProjectEnvelope {
     let mut project = sample_project();
     let mut source = project.project.sequences[0].tracks[0].clips[0].clone();
     source.id = ItemId::new("itm_matte").unwrap();
@@ -109,6 +109,6 @@ fn project_with_matte() -> ProjectEnvelope {
     project
 }
 
-fn matte(project: &mut ProjectEnvelope) -> &mut Clip {
+pub(super) fn matte(project: &mut ProjectEnvelope) -> &mut Clip {
     &mut project.project.sequences[0].tracks[2].clips[0]
 }

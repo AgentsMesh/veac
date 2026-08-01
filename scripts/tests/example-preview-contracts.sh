@@ -15,7 +15,7 @@ fail() {
 }
 
 cat > "$tmp/project.json" <<'JSON'
-{"project":{"sequences":[{"settings":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"tracks":[{"kind":"visual","clips":[{"id":"keep","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":4,"timescale":1}},"source":{"type":"generated"}},{"id":"drop","record_range":{"start":{"value":3,"timescale":1},"duration":{"value":1,"timescale":1}},"source":{"type":"generated"}}]}],"applies":[{"id":"keep-apply","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":4,"timescale":1}},"target":{"type":"item_set","item_ids":["keep","drop"]}},{"id":"drop-apply","record_range":{"start":{"value":3,"timescale":1},"duration":{"value":1,"timescale":1}},"target":{"type":"item_set","item_ids":["drop"]}}]}],"relations":[{"kind":{"type":"group","members":[{"type":"item","item_id":"drop"}]}},{"kind":{"type":"group","members":[{"type":"item","item_id":"keep"}]}}],"annotations":[{"target":{"type":"clip","clip_id":"drop"}},{"target":{"type":"clip","clip_id":"keep"}}],"render_configs":[{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1},"deliverables":[]}],"materials":[]}}
+{"project":{"sequences":[{"settings":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"tracks":[{"kind":"visual","clips":[{"id":"keep","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":4,"timescale":1}},"source":{"type":"generated"}},{"id":"drop","record_range":{"start":{"value":3,"timescale":1},"duration":{"value":1,"timescale":1}},"source":{"type":"generated"}}]}],"applies":[{"id":"keep-apply","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":4,"timescale":1}},"target":{"type":"item_set","item_ids":["keep","drop"]}},{"id":"drop-apply","record_range":{"start":{"value":3,"timescale":1},"duration":{"value":1,"timescale":1}},"target":{"type":"item_set","item_ids":["drop"]}}]}],"relations":[{"kind":{"type":"group","members":[{"type":"item","item_id":"drop"}]}},{"kind":{"type":"group","members":[{"type":"item","item_id":"keep"}]}}],"annotations":[{"target":{"type":"clip","clip_id":"drop"}},{"target":{"type":"clip","clip_id":"keep"}}],"render_configs":[{"id":"out_preview","raster":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1},"captions":"discard"},"deliverables":[]}],"materials":[]}}
 JSON
 
 jq --argjson edge 240 --argjson fps 12 \
@@ -30,7 +30,8 @@ jq -e '
     "width": 1280, "height": 720,
     "frame_rate": {"numerator": 12, "denominator": 1}
   } and
-  (.project.render_configs[0] | .width == 240 and .height == 134 and
+  (.project.render_configs[] | select(.id == "out_preview") | .raster |
+    .width == 240 and .height == 134 and
     .frame_rate == {"numerator": 12, "denominator": 1})
 ' "$tmp/preview.json" >/dev/null || fail "preview changed spatial authoring dimensions"
 jq -e '
@@ -46,7 +47,7 @@ if jq --argjson edge 240 --argjson fps 12 \
 fi
 
 cat > "$tmp/source-curve.json" <<'JSON'
-{"project":{"sequences":[{"settings":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"tracks":[{"kind":"visual","clips":[{"id":"curve","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":9,"timescale":1}},"source_mapping":{"time_map":{"type":"curve","segments":[{"record_duration":{"value":3,"timescale":1},"source_start":{"value":0,"timescale":1},"source_end":{"value":3,"timescale":1},"interpolation":"linear"},{"record_duration":{"value":6,"timescale":1},"source_start":{"value":3,"timescale":1},"source_end":{"value":15,"timescale":1},"interpolation":"linear"}]}},"source":{"type":"generated"}}]}],"applies":[]}],"relations":[],"annotations":[],"render_configs":[{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1},"deliverables":[]}],"materials":[]}}
+{"project":{"sequences":[{"settings":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"tracks":[{"kind":"visual","clips":[{"id":"curve","record_range":{"start":{"value":0,"timescale":1},"duration":{"value":9,"timescale":1}},"source_mapping":{"time_map":{"type":"curve","segments":[{"record_duration":{"value":3,"timescale":1},"source_start":{"value":0,"timescale":1},"source_end":{"value":3,"timescale":1},"interpolation":"linear"},{"record_duration":{"value":6,"timescale":1},"source_start":{"value":3,"timescale":1},"source_end":{"value":15,"timescale":1},"interpolation":"linear"}]}},"source":{"type":"generated"}}]}],"applies":[]}],"relations":[],"annotations":[],"render_configs":[{"id":"out_preview","raster":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1},"captions":"discard"},"deliverables":[]}],"materials":[]}}
 JSON
 jq --argjson edge 240 --argjson fps 12 \
   --argjson window '{"start_seconds":0,"duration_seconds":5}' \
@@ -66,33 +67,65 @@ project font-preview {
   entry sequence main;
 }
 VEAC
-bash "$ROOT/scripts/prepare-example-source.sh" "$tmp/font-source.veac"
-grep -q 'font resource preview-font;' "$tmp/font-source.veac" || fail "primary family was not normalized"
-grep -q 'fallback-font resource preview-font;' "$tmp/font-source.veac" || fail "fallback family was not normalized"
-grep -q 'resource font preview-font' "$tmp/font-source.veac" || fail "font fixture resource is missing"
-if grep -q 'font family' "$tmp/font-source.veac"; then
+cp "$tmp/font-source.veac" "$tmp/font-source.original.veac"
+bash "$ROOT/scripts/prepare-example-source.sh" "$tmp/font-source.veac" "$tmp/font-preview.veac"
+cmp -s "$tmp/font-source.original.veac" "$tmp/font-source.veac" ||
+  fail "source preparation mutated the authoring source"
+grep -q 'font resource preview-font;' "$tmp/font-preview.veac" || fail "primary family was not normalized"
+grep -q 'fallback-font resource preview-arabic-font;' "$tmp/font-preview.veac" ||
+  fail "fallback family lost its Arabic-capable resource"
+grep -q 'resource font preview-font' "$tmp/font-preview.veac" || fail "font fixture resource is missing"
+grep -q 'resource font preview-arabic-font' "$tmp/font-preview.veac" ||
+  fail "Arabic font fixture resource is missing"
+if grep -Eq '^[[:space:]]*delivery[[:space:]]' "$tmp/font-preview.veac"; then
+  fail "source preparation injected delivery semantics"
+fi
+if grep -q 'font family' "$tmp/font-preview.veac"; then
   fail "family font escaped deterministic preview normalization"
 fi
+bash "$ROOT/scripts/prepare-example-source.sh" \
+  "$tmp/font-preview.veac" "$tmp/font-preview.twice.veac"
+cmp -s "$tmp/font-preview.veac" "$tmp/font-preview.twice.veac" ||
+  fail "source preparation is not idempotent"
+[[ $(grep -c 'resource font preview-font' "$tmp/font-preview.veac") == 1 ]] ||
+  fail "preview font resource was injected more than once"
+[[ $(grep -c 'resource font preview-arabic-font' "$tmp/font-preview.veac") == 1 ]] ||
+  fail "Arabic preview font resource was injected more than once"
+if bash "$ROOT/scripts/prepare-example-source.sh" \
+    "$tmp/font-source.veac" "$tmp/font-source.veac" >/dev/null 2>&1; then
+  fail "source preparation accepted in-place output"
+fi
+bash "$ROOT/scripts/prepare-example-source.sh" \
+  "$ROOT/examples/delivery-codec-matrix/main.veac" "$tmp/codec-matrix.preview.veac"
+grep -q 'font resource preview-font;' "$tmp/codec-matrix.preview.veac" ||
+  fail "codec-matrix caption has no deterministic preview font"
 
 mkdir -p "$tmp/rendered"
 printf '{}\n' > "$tmp/canonical.json"
-printf '{}\n' > "$tmp/plan.json"
+printf '{}\n' > "$tmp/preview.json"
+printf '{"output":{"render_config_id":"out_captions"}}\n' > "$tmp/plan.json"
 printf 'WEBVTT\n' > "$tmp/rendered/captions.vtt"
 jq '.project = {"render_configs":[{"id":"out_captions","deliverables":[
-  {"id":"dlv_captions","file_name":"captions.vtt","kind":{"type":"caption_sidecar"}}
+  {"id":"dlv_captions","target":{"type":"file","name":"captions.vtt"},"kind":{"type":"caption_sidecar"}}
 ]}]}' "$tmp/canonical.json" > "$tmp/canonical.next"
 mv "$tmp/canonical.next" "$tmp/canonical.json"
-target='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"captions"}]}'
+cp "$tmp/canonical.json" "$tmp/preview.json"
+target='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"captions","artifact_ids":["captions"]}]}'
 verify_expected_preview_artifacts "$target" "$tmp/canonical.json" \
-  "$tmp/plan.json" "$tmp/rendered" || fail "valid artifacts were rejected"
-missing_config='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"resolved_plan"},{"kind":"authoring_output","id":"dlv_captions"}]}'
+  "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" || fail "valid artifacts were rejected"
+missing_config='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"missing","artifact_ids":["captions"]}]}'
 if verify_expected_preview_artifacts "$missing_config" "$tmp/canonical.json" \
-  "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
-  fail "lowered deliverable ID was accepted as an authoring render config"
+  "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
+  fail "missing authoring delivery was accepted"
+fi
+missing_artifact='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"captions","artifact_ids":["missing"]}]}'
+if verify_expected_preview_artifacts "$missing_artifact" "$tmp/canonical.json" \
+  "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
+  fail "missing delivery artifact was accepted"
 fi
 rm "$tmp/rendered/captions.vtt"
 if verify_expected_preview_artifacts "$target" "$tmp/canonical.json" \
-  "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
+  "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
   fail "missing expected deliverable was accepted"
 fi
 
@@ -119,5 +152,7 @@ if remove_preview_scratch "$ROOT" "$output" "$tmp/outside" >/dev/null 2>&1; then
   fail "cross-root scratch removal was accepted"
 fi
 [[ -f "$tmp/outside" ]] || fail "cross-root path was removed"
+
+bash "$ROOT/scripts/tests/example-preview-package-contracts.sh"
 
 echo "Example preview contract tests passed."

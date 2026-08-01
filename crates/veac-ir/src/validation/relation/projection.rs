@@ -114,9 +114,10 @@ impl Validator {
         let target =
             self.relation_item(target, index, &format!("{path}/kind/target"), id.as_str())?;
         let target_item = index.item(&target)?;
-        if target_item.clip.audio.is_none() {
+        let activity = SequenceActivity::new(index.sequence());
+        if !activity.audio_typed(target_item.track, target_item.clip) {
             self.value_error(
-                "RELATION_CONTEXT",
+                "SIDECHAIN_TARGET_TYPE",
                 &format!("{path}/kind/target"),
                 id.as_str(),
             );

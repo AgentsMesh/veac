@@ -14,4 +14,4 @@ pub use model::*;
 pub use resolver::*;
 pub use veac_ir as canonical;
 
-pub const RESOLVER_VERSION: &str = "veac-plan-resolver-v2";
+pub const RESOLVER_VERSION: &str = "veac-plan-resolver-v5";

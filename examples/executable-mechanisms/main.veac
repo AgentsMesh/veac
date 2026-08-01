@@ -1,11 +1,12 @@
 project executable-mechanisms {
+  entry sequence main;
+
   settings {
     timebase 1/1000;
     canvas 96px by 54px;
     frame-rate 30fps;
     sample-rate 48000hz;
   }
-  entry sequence main;
 
   sequence main {
     layer visual background {
@@ -63,7 +64,7 @@ project executable-mechanisms {
   }
 
   annotation marker ann-01-marker {
-    target project; span untimed; payload { label "Agent marker"; }
+    target project; span untimed; payload { label "代理标记"; }
     provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
   }
   annotation language ann-02-language {
@@ -91,22 +92,33 @@ project executable-mechanisms {
     provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
   }
   annotation highlight ann-08-highlight {
-    target sequence main; span range { at 0s; duration 2s; } payload { score 1; rationale "Primary example"; }
+    target sequence main; span range { at 0s; duration 2s; } payload { score 1; rationale "主要示例"; }
     provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
   }
   annotation review ann-09-review {
-    target sequence main; span range { at 0s; duration 2s; } payload { action keep; rationale "Approved"; confidence 1; }
+    target sequence main; span range { at 0s; duration 2s; } payload { action keep; rationale "审核通过"; confidence 1; }
     provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
   }
 
-  output video main {
+  delivery main {
     sequence main;
-    file-name "executable-mechanisms.mp4";
-    encoding {
-      container mp4; optimize-for-streaming true;
-      video { codec h264; pixel-format yuv420p; }
-      audio { codec aac; sample-rate 48000; channels 1; }
+    raster {
+      canvas 96px by 54px;
+      frame-rate 30fps;
       captions discard;
+    }
+    artifact video main {
+      target file "executable-mechanisms.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p; alpha opaque; color-space source;
+          rate-control crf { value 23; }
+          gop automatic; b-frames automatic; profile automatic; level automatic;
+        }
+        audio aac { sample-rate 48khz; channel-layout mono; }
+        passes single; accelerator auto;
+      }
     }
   }
 }

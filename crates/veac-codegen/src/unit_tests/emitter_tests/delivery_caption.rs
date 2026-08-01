@@ -5,7 +5,9 @@ use veac_codegen::emitter::{emit_all, BackendAction, BackendOutput, BackendPhase
 use veac_plan::canonical::*;
 use veac_plan::{ResolvedClipSource, ResolvedRenderPlan};
 
-use super::support::{bindings, input_bindings, rekey_visual, resolved, text_fixture, time};
+use super::support::{
+    bindings, input_bindings, rekey_visual, resolved, target_name, text_fixture, time,
+};
 
 mod ass;
 mod plain;
@@ -113,19 +115,22 @@ fn caption_plan(format: CaptionSidecarFormat) -> (ResolvedRenderPlan, ExecutionB
 
     let deliverable = Deliverable {
         id: DeliverableId::new("dlv_caption").unwrap(),
-        file_name: match format {
-            CaptionSidecarFormat::Srt => "captions.srt",
-            CaptionSidecarFormat::WebVtt => "captions.vtt",
-            CaptionSidecarFormat::Ass => "captions.ass",
-        }
-        .to_owned(),
+        target: DeliverableTarget::File {
+            name: match format {
+                CaptionSidecarFormat::Srt => "captions.srt",
+                CaptionSidecarFormat::WebVtt => "captions.vtt",
+                CaptionSidecarFormat::Ass => "captions.ass",
+            }
+            .to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format,
             track_ids: vec![track.id.clone()],
         }),
     };
-    let output = PathBuf::from("/tmp").join(&deliverable.file_name);
+    let output = PathBuf::from("/tmp").join(target_name(&deliverable));
     plan.output.deliverables = vec![deliverable];
+    plan.output.raster = None;
     let bindings = bindings(&plan);
     (plan, bindings, output)
 }

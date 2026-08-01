@@ -11,9 +11,12 @@ pub(super) fn apply(
     input: String,
     enable: &str,
 ) -> Result<String, CodegenErrors> {
-    match effect.effect_type {
-        "video.color_adjust" => Ok(color_adjust(context, effect, &input, enable)),
-        "video.blur" => Ok(effects::dynamic_filter(
+    let Some(kind) = effects::effect_kind(effect.effect_type) else {
+        return Err(effects::unsupported(owner, effect, effect.effect_type));
+    };
+    match kind {
+        effects::EffectKind::VideoColorAdjust => Ok(color_adjust(context, effect, &input, enable)),
+        effects::EffectKind::VideoBlur => Ok(effects::dynamic_filter(
             context,
             effect,
             &input,
@@ -22,7 +25,7 @@ pub(super) fn apply(
             "",
             &[effects::RuntimeNumber::new("radius", "sigma", 0.0, 1.0)],
         )),
-        "video.sharpen" => Ok(effects::dynamic_filter(
+        effects::EffectKind::VideoSharpen => Ok(effects::dynamic_filter(
             context,
             effect,
             &input,
@@ -31,14 +34,15 @@ pub(super) fn apply(
             "",
             &[effects::RuntimeNumber::new("amount", "strength", 0.0, 0.1)],
         )),
-        "video.vignette" => Ok(vignette(context, effect, &input, enable)),
-        "video.grain" => Ok(grain(context, effect, &input, enable)),
-        "video.chroma_key" | "video.luma_key" | "video.chroma_spill" => {
+        effects::EffectKind::VideoVignette => Ok(vignette(context, effect, &input, enable)),
+        effects::EffectKind::VideoGrain => Ok(grain(context, effect, &input, enable)),
+        effects::EffectKind::VideoChromaKey
+        | effects::EffectKind::VideoLumaKey
+        | effects::EffectKind::VideoChromaSpill => {
             super::effect_keying::apply(context, effect, &input, enable)
         }
-        "video.stabilize" => stabilize::apply(context, owner, effect, &input),
-        "audio.normalize" => Ok(input),
-        other => Err(effects::unsupported(owner, effect, other)),
+        effects::EffectKind::VideoStabilize => stabilize::apply(context, owner, effect, &input),
+        effects::EffectKind::AudioNormalize => Ok(input),
     }
 }
 

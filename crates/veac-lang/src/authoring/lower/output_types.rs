@@ -8,10 +8,6 @@ pub(super) fn video(value: &authored::VideoEncoding) -> canonical::VideoDelivera
         container: container(value.container),
         video: video_settings(&value.video),
         audio: value.audio.as_ref().map(audio),
-        captions: match value.captions {
-            authored::CaptionOutput::BurnIn => canonical::CaptionOutput::BurnIn,
-            authored::CaptionOutput::Discard => canonical::CaptionOutput::Discard,
-        },
         optimize_for_streaming: value.optimize_for_streaming,
         pass_mode: match value.pass_mode {
             authored::PassMode::Single => canonical::PassMode::Single,
@@ -21,7 +17,14 @@ pub(super) fn video(value: &authored::VideoEncoding) -> canonical::VideoDelivera
     }
 }
 
-fn video_settings(value: &authored::VideoOutput) -> canonical::VideoOutput {
+pub(super) fn caption_output(value: authored::CaptionOutput) -> canonical::CaptionOutput {
+    match value {
+        authored::CaptionOutput::BurnIn => canonical::CaptionOutput::BurnIn,
+        authored::CaptionOutput::Discard => canonical::CaptionOutput::Discard,
+    }
+}
+
+pub(super) fn video_settings(value: &authored::VideoOutput) -> canonical::VideoOutput {
     canonical::VideoOutput {
         codec: video_codec(value.codec),
         pixel_format: pixel_format(value.pixel_format),
@@ -95,11 +98,11 @@ fn rate_control(value: &authored::VideoRateControl) -> canonical::VideoRateContr
         authored::VideoRateControl::Bitrate {
             target_bps,
             max_bps,
-            buffer_bps,
+            buffer_size_bits,
         } => canonical::VideoRateControl::Bitrate {
             target_bps: *target_bps,
             max_bps: *max_bps,
-            buffer_bps: *buffer_bps,
+            buffer_size_bits: *buffer_size_bits,
         },
         authored::VideoRateControl::Lossless => canonical::VideoRateControl::Lossless,
     }

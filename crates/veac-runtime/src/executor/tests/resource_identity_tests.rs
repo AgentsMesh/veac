@@ -155,15 +155,3 @@ fn assert_no_staging(parent: &std::path::Path) {
             .starts_with(".veac-stage-")
     }));
 }
-
-fn assert_no_checkpoint_payload(root: &std::path::Path) {
-    fn contains_payload(path: &std::path::Path) -> bool {
-        std::fs::read_dir(path).is_ok_and(|entries| {
-            entries.filter_map(Result::ok).any(|entry| {
-                entry.file_name() == "payload.bin"
-                    || (entry.path().is_dir() && contains_payload(&entry.path()))
-            })
-        })
-    }
-    assert!(!contains_payload(root));
-}

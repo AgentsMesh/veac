@@ -10,6 +10,7 @@ pub enum VisualProperty {
     Frame(Option<Frame>),
     Position(Animatable<Point>),
     Scale(Animatable<Vec2>),
+    Shear(Vec2),
     FlipHorizontal(bool),
     FlipVertical(bool),
     RotationDegrees(Animatable<f64>),

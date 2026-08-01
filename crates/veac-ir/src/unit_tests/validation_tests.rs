@@ -28,6 +28,10 @@ mod effect_tests;
 mod generator_validation_tests;
 #[path = "validation_tests/invalid_timebase_tests.rs"]
 mod invalid_timebase_tests;
+#[path = "validation_tests/matte_activity_tests.rs"]
+mod matte_activity_tests;
+#[path = "validation_tests/matte_dependency_tests.rs"]
+mod matte_dependency_tests;
 #[path = "validation_tests/media_domain_tests.rs"]
 mod media_domain_tests;
 #[path = "validation_tests/multicam_branch_tests.rs"]
@@ -48,8 +52,12 @@ mod output_tests;
 mod probe_tests;
 #[path = "validation_tests/project_tests.rs"]
 mod project_tests;
+#[path = "validation_tests/render_budget_identity_tests.rs"]
+mod render_budget_identity_tests;
 #[path = "validation_tests/render_budget_tests.rs"]
 mod render_budget_tests;
+#[path = "validation_tests/sidechain_activity_tests.rs"]
+mod sidechain_activity_tests;
 #[path = "validation_tests/source_tests.rs"]
 mod source_tests;
 #[path = "validation_tests/source_time_tests.rs"]

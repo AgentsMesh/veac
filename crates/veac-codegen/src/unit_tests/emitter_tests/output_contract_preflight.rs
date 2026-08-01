@@ -7,17 +7,23 @@ use super::support::{bindings, fixture, resolved, text_fixture};
 fn output_names_extensions_and_patterns_fail_closed() {
     let mut unsafe_name = resolved(&fixture());
     let local = bindings(&unsafe_name);
-    unsafe_name.output.deliverables[0].file_name = "../escape.mp4".into();
+    unsafe_name.output.deliverables[0].target = DeliverableTarget::File {
+        name: "../escape.mp4".into(),
+    };
     assert_code_with(&unsafe_name, &local, "PLAN_DELIVERABLE_NAME_INVALID");
 
     let mut extension = resolved(&fixture());
     let local = bindings(&extension);
-    extension.output.deliverables[0].file_name = "master.mov".into();
+    extension.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.mov".into(),
+    };
     assert_code_with(&extension, &local, "PLAN_VIDEO_FILE_FORMAT_INVALID");
 
     let mut image = resolved(&fixture());
     let local = bindings(&image);
-    image.output.deliverables[0].file_name = "frame.png".into();
+    image.output.deliverables[0].target = DeliverableTarget::ImageSequence {
+        pattern: "frame.png".into(),
+    };
     image.output.deliverables[0].kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Png,
         start_number: 0,
@@ -28,7 +34,9 @@ fn output_names_extensions_and_patterns_fail_closed() {
 #[test]
 fn padded_image_sequence_pattern_passes_preflight() {
     let mut image = resolved(&fixture());
-    image.output.deliverables[0].file_name = "frame-%04d.png".into();
+    image.output.deliverables[0].target = DeliverableTarget::ImageSequence {
+        pattern: "frame-%04d.png".into(),
+    };
     image.output.deliverables[0].kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Png,
         start_number: 0,
@@ -64,7 +72,9 @@ fn overlapping_patterns_and_invalid_aux_sources_fail_closed() {
     assert_code(&collision, "PLAN_DELIVERABLE_COLLISION");
 
     let mut caption = resolved(&text_fixture(true));
-    caption.output.deliverables[0].file_name = "captions.vtt".into();
+    caption.output.deliverables[0].target = DeliverableTarget::File {
+        name: "captions.vtt".into(),
+    };
     caption.output.deliverables[0].kind = DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
         format: CaptionSidecarFormat::WebVtt,
         track_ids: vec![TrackId::new("trk_video").unwrap()],
@@ -72,7 +82,9 @@ fn overlapping_patterns_and_invalid_aux_sources_fail_closed() {
     assert_code(&caption, "PLAN_CAPTION_SIDECAR_INVALID");
 
     let mut stem = resolved(&fixture());
-    stem.output.deliverables[0].file_name = "missing.wav".into();
+    stem.output.deliverables[0].target = DeliverableTarget::File {
+        name: "missing.wav".into(),
+    };
     stem.output.deliverables[0].kind = DeliverableKind::AudioStem(AudioStemOutput {
         format: AudioStemFormat::Wav,
         audio: AudioOutput {
@@ -80,7 +92,7 @@ fn overlapping_patterns_and_invalid_aux_sources_fail_closed() {
             sample_rate: 48_000,
             channels: 2,
         },
-        source: AudioStemSource::Track {
+        source: AudioMixSource::Track {
             track_id: TrackId::new("trk_missing").unwrap(),
         },
     });
@@ -88,9 +100,17 @@ fn overlapping_patterns_and_invalid_aux_sources_fail_closed() {
 }
 
 fn deliverable(id: &str, file_name: &str, kind: DeliverableKind) -> Deliverable {
+    let target = match &kind {
+        DeliverableKind::ImageSequence(_) => DeliverableTarget::ImageSequence {
+            pattern: file_name.into(),
+        },
+        _ => DeliverableTarget::File {
+            name: file_name.into(),
+        },
+    };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.into(),
+        target,
         kind,
     }
 }

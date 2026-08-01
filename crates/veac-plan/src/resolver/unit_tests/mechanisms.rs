@@ -90,7 +90,7 @@ fn nested_transitions_disabled_clips_and_solo_are_explicit() {
 fn audio_bus_image_freeze_font_and_generated_sources_resolve() {
     let mut value = project();
     value.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
@@ -161,7 +161,7 @@ fn audio_bus_image_freeze_font_and_generated_sources_resolve() {
 fn audio_and_freeze_bounds_and_family_font_fail_early() {
     let mut audio = project();
     audio.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

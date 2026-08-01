@@ -5,7 +5,7 @@ use super::support::{ass_script, bindings, emit_video_command, resolved, text_fi
 
 #[test]
 fn visible_overflow_preserves_surface_and_maps_anchor_into_the_layout_box() {
-    let plan = visible_overflow_plan(FitMode::Contain, (120.0, 60.0));
+    let plan = visible_overflow_plan(false, FitMode::Contain, (120.0, 60.0));
     let graph = graph(&plan);
     let ass = ass_script(&graph);
 
@@ -13,7 +13,7 @@ fn visible_overflow_preserves_surface_and_maps_anchor_into_the_layout_box() {
     assert!(!graph.contains("scale=120:60"), "graph={graph}");
     assert!(!graph.contains("overflowframev"), "graph={graph}");
     assert!(ass.contains("PlayResX: 1920\nPlayResY: 1080"), "ass={ass}");
-    for marker in ["-0.46875*w", "-0.5277777777777778*h"] {
+    for marker in ["-0.46875*iw", "-0.5277777777777778*ih"] {
         assert!(graph.contains(marker), "missing {marker}: {graph}");
     }
 }
@@ -25,7 +25,7 @@ fn visible_overflow_fits_the_layout_basis_instead_of_the_padded_surface() {
         (FitMode::Contain, "", "", false),
         (FitMode::Cover, "iw*2", "ih*2", true),
     ] {
-        let plan = visible_overflow_plan(fit, (240.0, 60.0));
+        let plan = visible_overflow_plan(false, fit, (240.0, 60.0));
         let graph = graph(&plan);
         assert_eq!(graph.contains("overflowframev"), scaled, "graph={graph}");
         if scaled {
@@ -36,13 +36,40 @@ fn visible_overflow_fits_the_layout_basis_instead_of_the_padded_surface() {
     }
 }
 
-fn visible_overflow_plan(fit: FitMode, frame: (f64, f64)) -> veac_plan::ResolvedRenderPlan {
-    let mut plan = resolved(&text_fixture(false));
+#[test]
+fn caption_visible_overflow_uses_the_same_frame_geometry_as_text() {
+    let text = graph(&visible_overflow_plan(
+        false,
+        FitMode::Contain,
+        (120.0, 60.0),
+    ));
+    let caption = graph(&visible_overflow_plan(
+        true,
+        FitMode::Contain,
+        (120.0, 60.0),
+    ));
+    for marker in ["-0.46875*iw", "-0.5277777777777778*ih"] {
+        assert!(text.contains(marker), "text graph missing {marker}: {text}");
+        assert!(
+            caption.contains(marker),
+            "caption graph missing {marker}: {caption}"
+        );
+    }
+}
+
+fn visible_overflow_plan(
+    caption: bool,
+    fit: FitMode,
+    frame: (f64, f64),
+) -> veac_plan::ResolvedRenderPlan {
+    let mut plan = resolved(&text_fixture(caption));
     let clip = &mut plan.sequences[0].tracks[1].clips[0];
-    let ResolvedClipSource::Text { content } = &mut clip.source else {
+    let (ResolvedClipSource::Text { content } | ResolvedClipSource::Caption { content, .. }) =
+        &mut clip.source
+    else {
         panic!("text fixture")
     };
-    content.style.layout = TextLayout {
+    content.styled_mut().unwrap().layout = TextLayout {
         box_width_pixels: Some(120.0),
         box_height_pixels: Some(60.0),
         overflow: TextOverflow::Visible,
@@ -66,6 +93,7 @@ fn visible_overflow_plan(fit: FitMode, frame: (f64, f64)) -> veac_plan::Resolved
             y: pixels(0.0),
         }),
         scale: Animatable::constant(Vec2 { x: 1.0, y: 1.0 }),
+        shear: Vec2 { x: 0.0, y: 0.0 },
         flip_horizontal: false,
         flip_vertical: false,
         rotation_degrees: Animatable::constant(0.0),

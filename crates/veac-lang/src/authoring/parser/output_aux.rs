@@ -1,75 +1,111 @@
 use crate::authoring::{
-    AudioStemEncoding, AudioStemSourceDecl, CaptionSidecarEncoding, ImageSequenceEncoding,
-    ScopeEncoding, SemanticBlock, SemanticValue,
+    AudioCodec, AudioMixSourceDecl, AudioStemEncoding, AudioStemFormat, CaptionSidecarEncoding,
+    CaptionSidecarFormat, ImageFormat, ImageSequenceEncoding, OutputKeyword, ScopeEncoding,
+    SemanticBlock, SemanticEntry, SemanticValue, VideoScope,
 };
 
-use super::output_fields::*;
-use super::semantic::{finish, take};
+use super::output_fields::{pixels, tagged_block, tagged_leaf};
+use super::semantic::{required, word};
 use super::Parser;
 
 impl Parser {
-    pub(super) fn image_encoding(&mut self, mut block: SemanticBlock) -> ImageSequenceEncoding {
-        let mut output = ImageSequenceEncoding::default();
-        field_enum(self, &mut block, "format", &mut output.format);
-        field_u32(self, &mut block, "start-number", &mut output.start_number);
-        finish(self, block, "image-sequence encoding");
-        output
+    pub(super) fn image_sequence_recipe(
+        &mut self,
+        body: &mut SemanticBlock,
+    ) -> Option<ImageSequenceEncoding> {
+        let numbering = required(self, body, "numbering", "image-sequence artifact")?;
+        let start_number = self.numbering(&numbering)?;
+        let encode = required(self, body, "encode", "image-sequence artifact")?;
+        let format = tagged_leaf(self, encode, "image-sequence encode")?;
+        let format = ImageFormat::parse(&format.value)
+            .or_else(|| self.invalid_recipe("image-sequence", &format))?;
+        Some(ImageSequenceEncoding {
+            format,
+            start_number,
+        })
     }
 
-    pub(super) fn caption_encoding(&mut self, mut block: SemanticBlock) -> CaptionSidecarEncoding {
-        let mut output = CaptionSidecarEncoding::default();
-        field_enum(self, &mut block, "format", &mut output.format);
-        if let Some(tracks) = take_block(self, &mut block, "tracks") {
-            for entry in tracks.entries {
-                if entry.name.value != "track" {
-                    self.error(
-                        "AUTHORING_UNKNOWN_FIELD",
-                        "tracks only accepts track entries".into(),
-                        entry.name.span,
-                    );
-                } else if let Some(id) = entry.values.first().and_then(identifier) {
-                    output.track_ids.push(id.clone());
-                } else {
-                    self.error(
-                        "AUTHORING_FIELD_SHAPE",
-                        "track requires one identifier".into(),
-                        entry.span,
-                    );
-                }
+    pub(super) fn caption_sidecar_recipe(
+        &mut self,
+        body: &mut SemanticBlock,
+    ) -> Option<CaptionSidecarEncoding> {
+        let source = required(self, body, "source", "caption-sidecar artifact")?;
+        let track_ids = self.caption_tracks(source)?;
+        let encode = required(self, body, "encode", "caption-sidecar artifact")?;
+        let format = tagged_leaf(self, encode, "caption-sidecar encode")?;
+        let format = CaptionSidecarFormat::parse(&format.value)
+            .or_else(|| self.invalid_recipe("caption-sidecar", &format))?;
+        Some(CaptionSidecarEncoding { format, track_ids })
+    }
+
+    pub(super) fn audio_stem_recipe(
+        &mut self,
+        body: &mut SemanticBlock,
+    ) -> Option<AudioStemEncoding> {
+        let source = required(self, body, "source", "audio-stem artifact")
+            .map(|entry| self.stem_source(entry))?;
+        let encode = required(self, body, "encode", "audio-stem artifact")?;
+        let (format, mut settings) = tagged_block(self, encode, "audio-stem encode")?;
+        let (format, codec) = match format.value.as_str() {
+            "wav" => {
+                let entry = required(self, &mut settings, "sample-format", "WAV encode")?;
+                let sample = word(self, &entry, "WAV sample-format")?;
+                let codec = match AudioCodec::parse(&sample.value) {
+                    Some(
+                        value
+                        @ (AudioCodec::PcmS16Le | AudioCodec::PcmS24Le | AudioCodec::PcmS32Le),
+                    ) => value,
+                    _ => return self.invalid_recipe("WAV sample-format", &sample),
+                };
+                (AudioStemFormat::Wav, codec)
             }
-        }
-        finish(self, block, "caption-sidecar encoding");
-        output
+            "flac" => (AudioStemFormat::Flac, AudioCodec::Flac),
+            _ => return self.invalid_recipe("audio-stem", &format),
+        };
+        let audio = self.audio_settings(codec, settings)?;
+        Some(AudioStemEncoding {
+            format,
+            audio,
+            source,
+        })
     }
 
-    pub(super) fn audio_stem_encoding(&mut self, mut block: SemanticBlock) -> AudioStemEncoding {
-        let mut output = AudioStemEncoding::default();
-        field_enum(self, &mut block, "format", &mut output.format);
-        if let Some(audio) = take_block(self, &mut block, "audio") {
-            output.audio = self.audio_settings(audio);
-        }
-        if let Some(entry) = take(self, &mut block, "source") {
-            output.source = self.stem_source(entry);
-        }
-        finish(self, block, "audio-stem encoding");
-        output
+    pub(super) fn scope_recipe(&mut self, body: &mut SemanticBlock) -> Option<ScopeEncoding> {
+        let analyze = required(self, body, "analyze", "scope artifact")?;
+        let scope = tagged_leaf(self, analyze, "scope analysis")?;
+        let scope = VideoScope::parse(&scope.value)
+            .or_else(|| self.invalid_recipe("scope analysis", &scope))?;
+        let frame = required(self, body, "frame", "scope artifact")?;
+        let at = self.containing_frame(&frame)?;
+        let canvas = required(self, body, "canvas", "scope artifact")?;
+        let (width, height) = self.scope_canvas(&canvas)?;
+        let encode = required(self, body, "encode", "scope artifact")?;
+        let format = tagged_leaf(self, encode, "scope encode")?;
+        let format =
+            ImageFormat::parse(&format.value).or_else(|| self.invalid_recipe("scope", &format))?;
+        Some(ScopeEncoding {
+            scope,
+            at,
+            width,
+            height,
+            format,
+        })
     }
 
-    fn stem_source(&mut self, entry: crate::authoring::SemanticEntry) -> AudioStemSourceDecl {
-        let values = &entry.values;
-        let parsed = match values.as_slice() {
+    pub(super) fn stem_source(&mut self, entry: SemanticEntry) -> AudioMixSourceDecl {
+        let parsed = match entry.values.as_slice() {
             [SemanticValue::Identifier(kind)] if kind.value == "master" => {
-                Some(AudioStemSourceDecl::Master)
+                Some(AudioMixSourceDecl::Master)
             }
             [SemanticValue::Identifier(kind), SemanticValue::Identifier(id)]
                 if kind.value == "track" =>
             {
-                Some(AudioStemSourceDecl::Track(id.clone()))
+                Some(AudioMixSourceDecl::Track(id.clone()))
             }
             [SemanticValue::Identifier(kind), SemanticValue::Identifier(id)]
                 if kind.value == "bus" =>
             {
-                Some(AudioStemSourceDecl::Bus(id.clone()))
+                Some(AudioMixSourceDecl::Bus(id.clone()))
             }
             _ => None,
         };
@@ -80,26 +116,80 @@ impl Parser {
                 entry.span,
             );
         }
-        parsed.unwrap_or(AudioStemSourceDecl::Master)
+        parsed.unwrap_or(AudioMixSourceDecl::Master)
     }
 
-    pub(super) fn scope_encoding(&mut self, mut block: SemanticBlock) -> ScopeEncoding {
-        let mut output = ScopeEncoding::default();
-        field_enum(self, &mut block, "scope", &mut output.scope);
-        if let Some(value) = take_number(self, &mut block, "at") {
-            output.at = value;
+    fn numbering(&mut self, entry: &SemanticEntry) -> Option<u32> {
+        match entry.values.as_slice() {
+            [SemanticValue::Identifier(from), SemanticValue::Number(value)]
+                if from.value == "from" && entry.block.is_none() =>
+            {
+                value.raw.parse().ok()
+            }
+            _ => {
+                self.error(
+                    "AUTHORING_IMAGE_NUMBERING",
+                    "numbering must be `from <unsigned-integer>`".into(),
+                    entry.span,
+                );
+                None
+            }
         }
-        field_u32(self, &mut block, "width", &mut output.width);
-        field_u32(self, &mut block, "height", &mut output.height);
-        field_enum(self, &mut block, "format", &mut output.format);
-        finish(self, block, "scope encoding");
-        output
     }
-}
 
-fn identifier(value: &SemanticValue) -> Option<&crate::authoring::Identifier> {
-    match value {
-        SemanticValue::Identifier(value) => Some(value),
-        _ => None,
+    fn caption_tracks(
+        &mut self,
+        entry: SemanticEntry,
+    ) -> Option<Vec<crate::authoring::Identifier>> {
+        let ([SemanticValue::Identifier(kind)], Some(block)) =
+            (entry.values.as_slice(), entry.block)
+        else {
+            self.error(
+                "AUTHORING_CAPTION_SOURCE",
+                "caption source must be `caption-tracks { ... }`".into(),
+                entry.span,
+            );
+            return None;
+        };
+        if kind.value != "caption-tracks" {
+            return self.invalid_recipe("caption source", kind);
+        }
+        let mut tracks = Vec::new();
+        for entry in block.entries {
+            match entry.values.as_slice() {
+                [SemanticValue::Identifier(id)]
+                    if entry.name.value == "track" && entry.block.is_none() =>
+                {
+                    tracks.push(id.clone());
+                }
+                _ => self.error(
+                    "AUTHORING_CAPTION_SOURCE",
+                    "caption-tracks only accepts `track <id>;`".into(),
+                    entry.span,
+                ),
+            }
+        }
+        Some(tracks)
+    }
+
+    fn scope_canvas(&mut self, entry: &SemanticEntry) -> Option<(u32, u32)> {
+        match entry.values.as_slice() {
+            [SemanticValue::Number(width), SemanticValue::Identifier(by), SemanticValue::Number(height)]
+                if by.value == "by" && entry.block.is_none() =>
+            {
+                Some((
+                    pixels(self, width, "scope width")?,
+                    pixels(self, height, "scope height")?,
+                ))
+            }
+            _ => {
+                self.error(
+                    "AUTHORING_SCOPE_CANVAS",
+                    "scope canvas must be `<width>px by <height>px`".into(),
+                    entry.span,
+                );
+                None
+            }
+        }
     }
 }

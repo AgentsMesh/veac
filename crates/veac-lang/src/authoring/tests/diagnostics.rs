@@ -110,16 +110,24 @@ fn project_entry_is_required_unique_typed_and_resolved() {
 }
 
 #[test]
-fn output_aliases_are_rejected() {
-    for alias in ["mp4", "h264", "png", "srt", "wav", "scopes"] {
+fn legacy_output_declarations_are_rejected() {
+    let declaration = ["out", "put"].concat();
+    let target = ["file", "-name"].concat();
+    for kind in [
+        "video",
+        "image-sequence",
+        "caption-sidecar",
+        "audio-stem",
+        "scope",
+    ] {
         let source = project(&format!(
-            "sequence main {{}} output {alias} bad {{ sequence main; file-name \"bad.mp4\"; encoding {{}} }}"
+            "sequence main {{}} {declaration} {kind} bad {{ sequence main; {target} \"bad.mp4\"; encoding {{}} }}"
         ));
         let errors = parse(&source).unwrap_err();
         assert!(errors
             .as_slice()
             .iter()
-            .any(|error| error.code == "AUTHORING_OUTPUT_KIND"));
+            .any(|error| error.code == "AUTHORING_PROJECT_MEMBER"));
     }
 }
 

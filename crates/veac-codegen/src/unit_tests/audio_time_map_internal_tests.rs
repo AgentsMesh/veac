@@ -15,7 +15,9 @@ fn rejects_an_empty_resolved_audio_curve() {
         ),
         _ => panic!("expected video deliverable"),
     };
-    let mut context = EmitContext::new(&plan, &execution, deliverable, alpha).expect("context");
+    let output = AudioRenderSpec::from(output);
+    let mut context =
+        EmitContext::new_visual(&plan, &execution, deliverable, alpha).expect("context");
     let clip = &plan.sequences[0].tracks[0].clips[0];
     let error = curve(
         &mut context,
@@ -23,7 +25,7 @@ fn rejects_an_empty_resolved_audio_curve() {
         "0:1",
         &[],
         SourceClock::identity(600).expect("identity clock"),
-        output,
+        &output,
         PitchPolicy::Preserve,
     )
     .unwrap_err();

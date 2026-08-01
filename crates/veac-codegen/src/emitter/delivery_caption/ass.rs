@@ -36,18 +36,24 @@ pub(super) fn render(
     let mut styles = Vec::<(String, Style)>::new();
     let mut events = Vec::with_capacity(cues.len());
     for cue in cues {
+        let resolved = cue.content.styled().ok_or_else(|| {
+            Failure::invalid(
+                "CAPTION_ASS_PRESENTATION_INVALID",
+                "ASS sidecar requires styled caption presentation",
+            )
+            .at(&cue.clip.id)
+        })?;
         let font = fonts
-            .name(&cue.content.style.font)
+            .name(&resolved.font)
             .map_err(|error| error.at(&cue.clip.id))?;
-        let style =
-            Style::resolve(&cue.content.style, font).map_err(|error| error.at(&cue.clip.id))?;
+        let style = Style::resolve(resolved, font).map_err(|error| error.at(&cue.clip.id))?;
         let style_name = register(&mut styles, &style);
-        let position =
-            position::resolve(cue, width, height).map_err(|error| error.at(&cue.clip.id))?;
+        let position = position::resolve(cue, resolved, width, height)
+            .map_err(|error| error.at(&cue.clip.id))?;
         let speaker = text::speaker(cue.speaker)
             .map_err(|error| error.at(&cue.clip.id))?
             .to_owned();
-        let rendered = text::render(cue.content, &style, &mut fonts)
+        let rendered = text::render(cue.content, resolved, &style, &mut fonts)
             .map_err(|error| error.at(&cue.clip.id))?;
         let layer = layers
             .iter()

@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use super::super::directory::{Directory, EntryState};
 use super::super::{journal, StagedFile};
-use super::{load_journal, prepare_journal};
+use super::{file_outputs, load_journal, prepare_journal};
 
 #[test]
 fn journal_load_rejects_non_regular_and_oversized_files() {
@@ -37,7 +37,7 @@ fn journal_load_rejects_empty_entries_and_parent_components() {
     let empty = stage(temp.path(), "empty-journal");
     std::fs::write(
         empty.join(journal::JOURNAL_NAME),
-        br#"{"entries":[],"schema_version":2,"state":"prepared"}"#,
+        br#"{"entries":[],"schema_version":3,"state":"prepared"}"#,
     )
     .unwrap();
     let error = load_journal(&empty).unwrap_err();
@@ -130,7 +130,8 @@ fn journal_persistence_stays_bound_to_the_open_stage_directory() {
     std::fs::create_dir(&staging).unwrap();
     std::fs::write(staging.join("sentinel"), b"foreign").unwrap();
 
-    journal::prepare(&descriptor, &output, &[file], &[identity], &[]).unwrap();
+    let outputs = file_outputs(&[file]);
+    journal::prepare(&descriptor, &output, &outputs, &[identity], &[]).unwrap();
 
     assert!(moved.join(journal::JOURNAL_NAME).is_file());
     assert!(!staging.join(journal::JOURNAL_NAME).exists());
@@ -143,7 +144,7 @@ fn assert_bounded_error(error: crate::RuntimeError) {
 
 fn valid_journal(target: &str) -> Vec<u8> {
     format!(
-        r#"{{"entries":[{{"original":null,"source":"source","source_identity":{{"device":1,"inode":1,"size_bytes":1}},"target":"{target}"}}],"schema_version":2,"state":"prepared"}}"#
+        r#"{{"entries":[{{"original":null,"source":"source","source_identity":{{"device":1,"inode":1,"node_type":"regular","size_bytes":1}},"target":"{target}"}}],"schema_version":3,"state":"prepared"}}"#
     )
     .into_bytes()
 }
@@ -157,5 +158,9 @@ fn stage(parent: &Path, name: &str) -> PathBuf {
 fn staged(staging: &Path, source: &str, target: PathBuf) -> StagedFile {
     let source = staging.join(source);
     std::fs::write(&source, b"new").unwrap();
-    StagedFile { source, target }
+    StagedFile {
+        source,
+        target,
+        allow_empty: false,
+    }
 }

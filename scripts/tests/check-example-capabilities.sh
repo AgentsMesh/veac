@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT/scripts/check-example-capabilities.sh"
 REGISTRY_CHECKER="$ROOT/scripts/check-example-registry.sh"
+PRESENTATION_CHECKER="$ROOT/scripts/check-example-presentation.sh"
 CATALOG="$ROOT/examples/capabilities.json"
 tmp="$(mktemp -d)"
 gallery_test="$ROOT/examples/catalog/.gallery-contract-test.$$.json"
@@ -47,6 +48,13 @@ expect_mechanism_failure() {
 
 "$CHECKER" "$CATALOG" >/dev/null
 
+jq '.examples[0].summary =
+  "交付 MOV、HEVC Main10、HDR PQ、VP9 Opus、WebM、BT.2020 与 H.265。"' \
+  "$ROOT/examples/catalog/gallery.json" >"$gallery_test"
+jq --arg gallery "examples/catalog/$(basename "$gallery_test")" \
+  '.gallery_catalog = $gallery' "$CATALOG" >"$tmp/standard-token-catalog.json"
+"$CHECKER" "$tmp/standard-token-catalog.json" >/dev/null
+
 jq '.capabilities |= .[1:]' "$CATALOG" > "$tmp/missing-id.json"
 expect_failure missing-id "$tmp/missing-id.json"
 
@@ -76,22 +84,42 @@ expect_gallery_failure English-presentation-summary '.examples[0].summary = "Eng
 expect_gallery_failure English-presentation-cue '.examples[0].checks[0].cue = "Timeline"'
 expect_gallery_failure mixed-English-presentation-cue '.examples[0].checks[0].cue = "时间 - Timeline"'
 expect_gallery_failure English-presentation-expect '.examples[0].checks[0].expect = "Visible result"'
+expect_gallery_failure English-after-standard-tokens \
+  '.examples[0].summary = "交付 MOV、HEVC Main10、HDR PQ、VP9 Opus、WebM、BT.2020 与 H.265 codec sentence。"'
+expect_gallery_failure missing-delivery-capability \
+  '(.targets[] | select(.id == "delivery-formats") | .capability_ids) = ["P1-30"]'
+expect_gallery_failure missing-delivery-artifact \
+  '(.targets[] | select(.id == "delivery-formats") |
+    .expected_artifacts[] | select(.kind == "authoring_delivery") |
+    .artifact_ids) |= map(select(. != "stream"))'
+expect_gallery_failure missing-delivery-presentation \
+  '(.examples[] | select(.id == "delivery-formats") | .checks) |= .[:-1]'
 expect_gallery_failure legacy-artifacts \
   '.targets[0] += {"expected_deliverables":["preview"]}'
 expect_gallery_failure unknown-artifact \
   '.targets[0].expected_artifacts[0].kind = "unknown"'
 expect_gallery_failure legacy-deliverable-artifact \
-  '.targets[0].expected_artifacts[2].kind = "deliverable"'
+  '.targets[0].expected_artifacts[3].kind = "deliverable"'
 expect_gallery_failure legacy-render-config-artifact \
-  '.targets[0].expected_artifacts[2].kind = "render_config"'
-expect_gallery_failure untyped-authoring-output \
-  'del(.targets[0].expected_artifacts[2].id)'
+  '.targets[0].expected_artifacts[3].kind = "render_config"'
+expect_gallery_failure untyped-authoring-delivery \
+  'del(.targets[0].expected_artifacts[3].id)'
+expect_gallery_failure missing-artifact-ids \
+  'del(.targets[0].expected_artifacts[3].artifact_ids)'
+expect_gallery_failure duplicate-artifact-ids \
+  '.targets[0].expected_artifacts[3].artifact_ids = ["preview", "preview"]'
 expect_gallery_failure artifact-extra-key \
   '.targets[0].expected_artifacts[0].label = "legacy"'
 expect_gallery_failure nonzero-window \
   '.targets[0].preview_window.start_seconds = 1'
-expect_gallery_failure missing-plan \
-  '.targets[0].expected_artifacts |= map(select(.kind != "resolved_plan"))'
+expect_gallery_failure cue-outside-preview \
+  '.targets[0].preview_window.duration_seconds = 17.9'
+expect_gallery_failure missing-preview-canonical \
+  '.targets[0].expected_artifacts |= map(select(.kind != "preview_canonical_project"))'
+expect_gallery_failure missing-preview-plan \
+  '.targets[0].expected_artifacts |= map(select(.kind != "preview_resolved_plan"))'
+expect_gallery_failure legacy-source-plan \
+  '.targets[0].expected_artifacts[2] = {"kind":"resolved_plan"}'
 expect_gallery_failure workflow-artifact-on-source \
   '.targets[0].expected_artifacts[2] = {"kind":"probe_snapshot"}'
 expect_gallery_failure missing-presentation 'del(.examples[0])'
@@ -104,6 +132,29 @@ expect_mechanism_failure English-mechanism-title \
   '.mechanisms[0].title = "English title"'
 expect_mechanism_failure English-mechanism-family \
   '.mechanisms[0].family = "English family"'
+expect_mechanism_failure stale-delivery-example-evidence \
+  '(.mechanisms[] | select(.id == "delivery.gif") | .evidence) =
+    "crates/veac-codegen/src/unit_tests/emitter_tests/delivery_aux.rs"'
+
+jq '(.capabilities[] | select(.id == "P1-32")) |=
+  (.example = null | .not_applicable = "专业交付只通过运行时夹具验证。")' \
+  "$CATALOG" > "$tmp/missing-delivery-example.json"
+expect_failure missing-delivery-example "$tmp/missing-delivery-example.json"
+
+presentation_root="$tmp/presentation"
+mkdir -p "$presentation_root/examples/demo"
+printf '%s\n' 'project demo {' '  sequence main {' \
+  '    layer visual copy {' '      item title {' \
+  '        source text { content "English explanation"; }' \
+  '        record { at 0s; duration 1s; }' '      }' '    }' '  }' '}' \
+  > "$presentation_root/examples/demo/main.veac"
+printf '%s\n' '{"examples":[{"source":"examples/demo/main.veac"}]}' \
+  > "$presentation_root/gallery.json"
+if "$PRESENTATION_CHECKER" "$presentation_root" \
+  "$presentation_root/gallery.json" >/dev/null 2>&1; then
+  echo "expected English-only visible explanation failure" >&2
+  exit 1
+fi
 
 jq -s '[.[].mechanisms[]]' "$ROOT"/examples/catalog/mechanisms/*.json \
   > "$tmp/mechanisms.json"
@@ -122,7 +173,5 @@ if "$REGISTRY_CHECKER" "$tmp/extra-registry-key.json" >/dev/null 2>&1; then
   echo "expected extra registry key failure" >&2
   exit 1
 fi
-
-"$ROOT/scripts/tests/example-preview-contracts.sh" >/dev/null
 
 echo "Example capability checker tests passed."

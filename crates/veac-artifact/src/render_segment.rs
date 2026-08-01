@@ -51,6 +51,9 @@ impl FullRenderSegmentContract {
         let DeliverableKind::Video(_) = &deliverable.kind else {
             return invalid("full render-segment substitution requires one video deliverable");
         };
+        let Some(raster) = &plan.output.raster else {
+            return invalid("full render-segment substitution requires a delivery raster");
+        };
         let sequence = plan
             .sequences
             .iter()
@@ -77,7 +80,7 @@ impl FullRenderSegmentContract {
             value: plan_hash,
         };
         plan_identity.validate()?;
-        let media_profile = FullRenderSegmentMediaProfile::new(plan, deliverable);
+        let media_profile = FullRenderSegmentMediaProfile::new(raster, deliverable);
         let profile = media_profile.digest()?;
         let parameters = serde_json::to_value(SegmentParameters {
             sequence_id: &plan.entry_sequence_id,

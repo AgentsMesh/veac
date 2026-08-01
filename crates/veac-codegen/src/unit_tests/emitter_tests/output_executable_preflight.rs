@@ -5,26 +5,27 @@ use super::support::{bindings, emit_video_command, fixture, resolved};
 #[test]
 fn render_geometry_must_fit_ffmpeg_option_integers_and_resource_budgets() {
     let mutations: [fn(&mut veac_plan::ResolvedRenderPlan); 7] = [
-        |plan: &mut veac_plan::ResolvedRenderPlan| plan.output.width = i32::MAX as u32 + 1,
-        |plan: &mut veac_plan::ResolvedRenderPlan| plan.output.height = i32::MAX as u32 + 1,
+        |plan: &mut veac_plan::ResolvedRenderPlan| raster(plan).width = i32::MAX as u32 + 1,
+        |plan: &mut veac_plan::ResolvedRenderPlan| raster(plan).height = i32::MAX as u32 + 1,
         |plan: &mut veac_plan::ResolvedRenderPlan| {
-            plan.output.frame_rate.numerator = i64::from(i32::MAX) + 1;
+            raster(plan).frame_rate.numerator = i64::from(i32::MAX) + 1;
         },
         |plan: &mut veac_plan::ResolvedRenderPlan| {
-            plan.output.frame_rate.denominator = i32::MAX as u32 + 1;
+            raster(plan).frame_rate.denominator = i32::MAX as u32 + 1;
         },
-        |plan: &mut veac_plan::ResolvedRenderPlan| plan.output.width = MAX_DIMENSION + 1,
+        |plan: &mut veac_plan::ResolvedRenderPlan| raster(plan).width = MAX_DIMENSION + 1,
         |plan: &mut veac_plan::ResolvedRenderPlan| {
-            (plan.output.width, plan.output.height) = (7_680, 4_320);
+            let raster = raster(plan);
+            (raster.width, raster.height) = (7_680, 4_320);
         },
         |plan: &mut veac_plan::ResolvedRenderPlan| {
-            plan.output.frame_rate = Rational::new(i64::from(MAX_FRAME_RATE) + 1, 1).unwrap();
+            raster(plan).frame_rate = Rational::new(i64::from(MAX_FRAME_RATE) + 1, 1).unwrap();
         },
     ];
     for mutate in mutations {
         let mut plan = resolved(&fixture());
         mutate(&mut plan);
-        assert_code(&plan, "PLAN_OUTPUT_INVALID");
+        assert_code(&plan, "PLAN_RASTER_INVALID");
     }
 }
 
@@ -38,7 +39,9 @@ fn sequence_and_scope_geometry_must_fit_ffmpeg_option_integers() {
     assert_code(&sequence, "PLAN_STRUCTURE_INVALID");
 
     let mut scope = resolved(&fixture());
-    scope.output.deliverables[0].file_name = "scope.png".to_owned();
+    scope.output.deliverables[0].target = DeliverableTarget::File {
+        name: "scope.png".to_owned(),
+    };
     scope.output.deliverables[0].kind = DeliverableKind::Scope(ScopeOutput {
         scope: VideoScope::Histogram,
         at: RationalTime::zero(600).unwrap(),
@@ -52,7 +55,7 @@ fn sequence_and_scope_geometry_must_fit_ffmpeg_option_integers() {
 #[test]
 fn video_settings_reject_unaligned_pixels_gop_overflow_and_malformed_levels() {
     let mut odd = resolved(&fixture());
-    odd.output.width |= 1;
+    raster(&mut odd).width |= 1;
     assert_code(&odd, "PLAN_VIDEO_SETTINGS_INVALID");
 
     let mut gop = resolved(&fixture());
@@ -75,7 +78,9 @@ fn video_settings_reject_unaligned_pixels_gop_overflow_and_malformed_levels() {
 #[test]
 fn prores_rejects_a_pixel_format_the_encoder_would_silently_replace() {
     let mut plan = resolved(&fixture());
-    plan.output.deliverables[0].file_name = "master.mov".to_owned();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.mov".to_owned(),
+    };
     let delivery = delivery(&mut plan);
     delivery.container = OutputFormat::Mov;
     delivery.video.codec = VideoCodec::ProRes;
@@ -124,7 +129,7 @@ fn rate_control_rejects_untrusted_plan_resource_overflow() {
     delivery(&mut plan).video.rate_control = VideoRateControl::Bitrate {
         target_bps: MAX_VIDEO_BITRATE + 1,
         max_bps: None,
-        buffer_bps: Some(MAX_VIDEO_BUFFER + 1),
+        buffer_size_bits: Some(MAX_VIDEO_BUFFER + 1),
     };
     assert_code(&plan, "PLAN_VIDEO_SETTINGS_INVALID");
 }
@@ -132,7 +137,9 @@ fn rate_control_rejects_untrusted_plan_resource_overflow() {
 #[test]
 fn image_sequence_last_number_must_fit_ffmpeg_integer() {
     let mut plan = resolved(&fixture());
-    plan.output.deliverables[0].file_name = "frame-%d.png".to_owned();
+    plan.output.deliverables[0].target = DeliverableTarget::ImageSequence {
+        pattern: "frame-%d.png".to_owned(),
+    };
     plan.output.deliverables[0].kind = DeliverableKind::ImageSequence(ImageSequenceOutput {
         format: ImageFormat::Png,
         start_number: i32::MAX as u32,
@@ -143,7 +150,9 @@ fn image_sequence_last_number_must_fit_ffmpeg_integer() {
 #[test]
 fn audio_stem_reuses_the_codec_aware_output_contract() {
     let mut plan = resolved(&fixture());
-    plan.output.deliverables[0].file_name = "master.wav".to_owned();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.wav".to_owned(),
+    };
     plan.output.deliverables[0].kind = DeliverableKind::AudioStem(AudioStemOutput {
         format: AudioStemFormat::Wav,
         audio: AudioOutput {
@@ -151,13 +160,19 @@ fn audio_stem_reuses_the_codec_aware_output_contract() {
             sample_rate: 384_001,
             channels: 2,
         },
-        source: AudioStemSource::Master,
+        source: AudioMixSource::Master,
     });
     assert_code(&plan, "PLAN_AUDIO_STEM_INVALID");
 }
 
 fn delivery(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut VideoDeliverable {
-    plan.output.video_deliverable_mut().unwrap()
+    plan.output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
+}
+
+fn raster(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut RasterSettings {
+    plan.output.raster.as_mut().unwrap()
 }
 
 fn assert_code(plan: &veac_plan::ResolvedRenderPlan, expected: &str) {

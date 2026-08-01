@@ -11,11 +11,13 @@ use crate::environment::Environment;
 use crate::error::{CliError, CliResult};
 
 impl Environment for FakeEnvironment {
-    fn identity(&self, _path: &Path) -> CliResult<MediaIdentity> {
+    fn identity(&self, path: &Path) -> CliResult<MediaIdentity> {
+        self.identity_paths.borrow_mut().push(path.to_owned());
         Ok(self.observed.clone())
     }
 
     fn probe(&self, path: &Path, intent: StreamIntent) -> CliResult<MediaProbeSnapshot> {
+        self.probe_paths.borrow_mut().push(path.to_owned());
         if self.fail_probe {
             return Err(CliError::new("FAKE_PROBE", "probe failed"));
         }

@@ -21,6 +21,7 @@ impl Parser {
             "composite" => self
                 .composite_modifier(id, body)
                 .map(ModifierDecl::Composite),
+            "surface" => super::modifier_surface::parse(self, id, body).map(ModifierDecl::Surface),
             "mask" => {
                 let span = id.span.join(body.span);
                 super::modifier_mask::parse(self, id, body, span).map(ModifierDecl::Mask)
@@ -37,7 +38,7 @@ impl Parser {
             _ => {
                 self.error(
                     "AUTHORING_MODIFIER_KIND",
-                    "modifier must be layout, transform, composite, mask, audio, color, or effect"
+                    "modifier must be layout, transform, composite, surface, mask, audio, color, or effect"
                         .to_owned(),
                     kind.span,
                 );
@@ -128,6 +129,9 @@ impl Parser {
     ) -> Option<TransformModifierDecl> {
         let position = take(self, &mut body, "position").and_then(|entry| point(self, &entry));
         let scale = take(self, &mut body, "scale").and_then(|entry| vector(self, &entry));
+        let shear = take(self, &mut body, "shear")
+            .and_then(|entry| super::modifier_static::vector(self, &entry))
+            .map(Box::new);
         let rotation = take(self, &mut body, "rotation").and_then(|entry| scalar(self, &entry));
         let anchor = take(self, &mut body, "anchor")
             .and_then(|entry| super::modifier_static::vector(self, &entry));
@@ -143,6 +147,7 @@ impl Parser {
             id,
             position,
             scale,
+            shear,
             rotation,
             anchor,
             crop,

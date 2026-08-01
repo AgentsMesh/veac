@@ -32,7 +32,7 @@ use super::CodegenErrors;
 pub(super) fn validate(plan: &ResolvedRenderPlan) -> Result<(), CodegenErrors> {
     let mut check = Check::default();
     check.header(plan);
-    budget::validate(&mut check, plan);
+    budget::validate_structural(&mut check, plan);
     inputs::validate(&mut check, plan);
     structure::validate(&mut check, plan);
     text::validate(&mut check, plan);
@@ -46,6 +46,7 @@ pub(super) fn validate(plan: &ResolvedRenderPlan) -> Result<(), CodegenErrors> {
     effects::validate(&mut check, plan);
     animation::validate(&mut check, plan);
     references::cycles(&mut check, plan);
+    budget::validate_visual(&mut check, plan);
     match CodegenErrors::new(check.diagnostics) {
         Some(errors) => Err(errors),
         None => Ok(()),

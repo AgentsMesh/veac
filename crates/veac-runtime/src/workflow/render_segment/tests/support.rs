@@ -32,9 +32,15 @@ pub(super) fn contract_with(
         },
     };
     clip.source_mapping = None;
-    let video = project.project.render_configs[0]
-        .video_deliverable_mut()
+    let config = &mut project.project.render_configs[0];
+    let deliverable = config
+        .deliverables
+        .iter_mut()
+        .find(|value| matches!(value.kind, veac_ir::DeliverableKind::Video(_)))
         .unwrap();
+    let veac_ir::DeliverableKind::Video(video) = &mut deliverable.kind else {
+        unreachable!();
+    };
     video.audio = with_audio.then_some(AudioOutput {
         codec: AudioCodec::Aac,
         sample_rate: 48_000,
@@ -48,9 +54,10 @@ pub(super) fn contract_with(
         veac_ir::OutputFormat::Webm => "webm",
         veac_ir::OutputFormat::Mxf => "mxf",
     };
-    let deliverable = &mut project.project.render_configs[0].deliverables[0];
-    deliverable.file_name = format!("output.{extension}");
-    let output_id = project.project.render_configs[0].id.clone();
+    deliverable.target = veac_ir::DeliverableTarget::File {
+        name: format!("output.{extension}"),
+    };
+    let output_id = config.id.clone();
     let plan = veac_plan::resolve_one(&project, &output_id).unwrap();
     FullRenderSegmentContract::new(
         &plan,

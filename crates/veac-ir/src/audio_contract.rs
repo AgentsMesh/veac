@@ -1,4 +1,31 @@
-use crate::{AudioProcessor, Compressor, Gate, Limiter, LoudnessTarget, ParametricEqBand};
+use crate::{
+    AacEncoding, AudioProcessor, Compressor, Gate, Limiter, LoudnessTarget, Mp3Encoding,
+    ParametricEqBand,
+};
+
+pub fn mp3_encoding_valid(value: &Mp3Encoding) -> bool {
+    let kbps = value.bitrate_bps / 1_000;
+    value.bitrate_bps % 1_000 == 0
+        && match value.sample_rate_hz {
+            32_000 | 44_100 | 48_000 => matches!(
+                kbps,
+                32 | 40 | 48 | 56 | 64 | 80 | 96 | 112 | 128 | 160 | 192 | 224 | 256 | 320
+            ),
+            16_000 | 22_050 | 24_000 => matches!(
+                kbps,
+                8 | 16 | 24 | 32 | 40 | 48 | 56 | 64 | 80 | 96 | 112 | 128 | 144 | 160
+            ),
+            8_000 | 11_025 | 12_000 => {
+                matches!(kbps, 8 | 16 | 24 | 32 | 40 | 48 | 56 | 64)
+            }
+            _ => false,
+        }
+}
+
+pub fn hls_aac_encoding_valid(value: &AacEncoding) -> bool {
+    (8_000..=512_000).contains(&value.bitrate_bps)
+        && matches!(value.sample_rate_hz, 32_000 | 44_100 | 48_000)
+}
 
 pub fn audio_processor_valid(value: &AudioProcessor, sample_rate: u32) -> bool {
     match value {

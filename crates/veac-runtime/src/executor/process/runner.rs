@@ -20,6 +20,7 @@ pub(super) struct ProcessLimits<'a> {
     pub max_stdout_bytes: u64,
     pub max_stderr_bytes: u64,
     pub output_root: Option<&'a Path>,
+    pub working_directory: Option<&'a Path>,
     pub max_output_bytes: u64,
 }
 
@@ -37,6 +38,9 @@ pub(super) fn run(
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout.try_clone().map_err(io_error)?))
         .stderr(Stdio::from(stderr.try_clone().map_err(io_error)?));
+    if let Some(directory) = limits.working_directory {
+        command.current_dir(directory);
+    }
     crate::process_group::configure(&mut command);
     let mut child = command.spawn().map_err(io_error)?;
     let status = loop {

@@ -2,6 +2,8 @@
 mod audio_stem_tests;
 #[path = "output_aux_tests/caption_tests.rs"]
 mod caption_tests;
+#[path = "output_aux_tests/delivery_extended_tests.rs"]
+mod delivery_extended_tests;
 #[path = "output_aux_tests/image_tests.rs"]
 mod image_tests;
 #[path = "output_aux_tests/scope_tests.rs"]
@@ -10,15 +12,27 @@ mod scope_tests;
 use super::*;
 
 fn deliverable(file_name: &str, kind: DeliverableKind) -> Deliverable {
+    let target = if matches!(kind, DeliverableKind::ImageSequence(_)) {
+        DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        }
+    } else {
+        DeliverableTarget::File {
+            name: file_name.to_owned(),
+        }
+    };
     Deliverable {
         id: DeliverableId::new("dlv_aux").unwrap(),
-        file_name: file_name.to_owned(),
+        target,
         kind,
     }
 }
 
 fn project_with(value: Deliverable) -> ProjectEnvelope {
     let mut project = sample_project();
+    if !value.kind.requires_raster() {
+        project.project.render_configs[0].raster = None;
+    }
     project.project.render_configs[0].deliverables = vec![value];
     project
 }
@@ -63,7 +77,7 @@ fn stem(
     file_name: &str,
     format: AudioStemFormat,
     codec: AudioCodec,
-    source: AudioStemSource,
+    source: AudioMixSource,
 ) -> Deliverable {
     deliverable(
         file_name,

@@ -35,7 +35,7 @@ fn media_and_freeze_reject_stream_indexes_from_different_facts() {
 fn audio_selection_must_match_the_selected_audio_facts() {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

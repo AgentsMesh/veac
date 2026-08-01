@@ -1,13 +1,15 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt::Write as _;
 
-#[derive(Debug, Default)]
+mod branch;
+
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Graph {
     nodes: Vec<Node>,
     next_label: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Node {
     inputs: Vec<String>,
     expression: String,
@@ -134,3 +136,7 @@ fn render_labels<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
         output
     })
 }
+
+#[cfg(test)]
+#[path = "../unit_tests/graph_internal_tests.rs"]
+mod tests;

@@ -20,6 +20,20 @@ pub(super) fn validate_static(path: &Path) -> Result<(), RuntimeError> {
     }
 }
 
+pub(super) fn validate_package(path: &Path) -> Result<(), RuntimeError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+            invalid("existing backend package must be a non-symlink directory")
+        }
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(RuntimeError::new(format!(
+            "cannot inspect existing backend package {}: {error}",
+            path.display()
+        ))),
+    }
+}
+
 pub(super) fn validate_pattern(pattern: &Path) -> Result<(), RuntimeError> {
     output::enumerate_pattern(pattern).map(|_| ())
 }

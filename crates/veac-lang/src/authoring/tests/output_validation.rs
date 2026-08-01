@@ -14,10 +14,13 @@ fn caption_project(tracks: &str) -> String {
     }}
     layer audio dialogue {{}}
   }}
-  output caption-sidecar captions {{
+  delivery captions {{
     sequence main;
-    file-name "captions.vtt";
-    encoding {{ format web-vtt; tracks {{ {tracks} }} }}
+    artifact caption-sidecar captions {{
+      target file "captions.vtt";
+      source caption-tracks {{ {tracks} }}
+      encode web-vtt;
+    }}
   }}
 "#
     ))
@@ -42,21 +45,21 @@ fn caption_tracks_reject_duplicates_and_wrong_kinds() {
     assert!(duplicate
         .as_slice()
         .iter()
-        .any(|value| value.code == "AUTHORING_OUTPUT_CAPTION_TRACK_DUPLICATE"));
+        .any(|value| value.code == "AUTHORING_DELIVERY_CAPTION_TRACK_DUPLICATE"));
     let wrong = parse(&caption_project("track dialogue;")).unwrap_err();
     assert!(wrong
         .as_slice()
         .iter()
-        .any(|value| value.code == "AUTHORING_OUTPUT_CAPTION_TRACK_KIND"));
+        .any(|value| value.code == "AUTHORING_DELIVERY_CAPTION_TRACK_KIND"));
 }
 
 #[test]
-fn output_file_name_is_a_bounded_safe_basename() {
+fn file_target_is_a_bounded_safe_basename() {
     let name = "a".repeat(256);
     let invalid = caption_project("track zeta;").replace("captions.vtt", &name);
     let diagnostics = parse(&invalid).unwrap_err();
     assert!(diagnostics
         .as_slice()
         .iter()
-        .any(|value| value.code == "AUTHORING_OUTPUT_FILE_NAME"));
+        .any(|value| value.code == "AUTHORING_ARTIFACT_TARGET_FILE"));
 }

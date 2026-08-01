@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use veac_ir::{
-    Anchor, Animatable, ClipSource, ColorStage, MaterialKind, Placement, ProjectEnvelope,
-    TextGranularity, TextWritingMode,
+    Anchor, Animatable, ClipSource, ColorStage, Generator, Gradient, MaterialKind, Placement,
+    ProjectEnvelope, TextGranularity, TextWritingMode,
 };
 
 use crate::support::{assert_preview_evidence, text_styles};
@@ -21,6 +21,15 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
         ) && clip.visual.as_ref().is_some_and(positioned)
     }) {
         found.insert("text.layout.position".to_owned());
+    }
+    if crate::support::clips(envelope).any(|clip| {
+        matches!(
+            &clip.source,
+            ClipSource::Text { text, .. }
+                if text.contains("中文排版") && text.contains("مرحبا")
+        )
+    }) {
+        found.insert("text.layout.unicode-bidi".to_owned());
     }
     for style in text_styles(envelope) {
         let layout = style.layout;
@@ -54,6 +63,12 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
         }
         if style.background.is_some() {
             found.insert("text.style.background".to_owned());
+        }
+        if style.spans.len() >= 2 {
+            found.insert("text.layout.rich-spans".to_owned());
+        }
+        if style.path.is_some() {
+            found.insert("text.layout.path".to_owned());
         }
         if let Some(animation) = &style.animation {
             animation_evidence(animation, &mut found);
@@ -113,19 +128,20 @@ fn animation_evidence(animation: &veac_ir::TextAnimation, found: &mut BTreeSet<S
 }
 
 fn color_evidence(envelope: &ProjectEnvelope, found: &mut BTreeSet<String>) {
+    let mut has_pipeline = false;
     for visual in crate::support::clips(envelope).filter_map(|clip| clip.visual.as_ref()) {
         let Some(pipeline) = &visual.color_pipeline else {
             continue;
         };
+        has_pipeline = true;
         for stage in &pipeline.stages {
             match stage {
-                ColorStage::Basic { .. }
-                | ColorStage::Matrix { .. }
-                | ColorStage::Hsl { .. }
-                | ColorStage::Curves { .. }
-                | ColorStage::Wheels { .. } => {
+                ColorStage::Basic { .. } | ColorStage::Matrix { .. } => {
                     found.insert("color.adjust".to_owned());
                 }
+                ColorStage::Hsl { .. } => color_stage(found, "color.hsl"),
+                ColorStage::Curves { .. } => color_stage(found, "color.curves"),
+                ColorStage::Wheels { .. } => color_stage(found, "color.wheels"),
                 ColorStage::Lut { application } => {
                     let kind = envelope
                         .project
@@ -146,4 +162,29 @@ fn color_evidence(envelope: &ProjectEnvelope, found: &mut BTreeSet<String>) {
             }
         }
     }
+    if has_pipeline && has_translucent_generator(envelope) {
+        found.insert("color.alpha".to_owned());
+    }
+}
+
+fn color_stage(found: &mut BTreeSet<String>, id: &str) {
+    found.insert("color.adjust".to_owned());
+    found.insert(id.to_owned());
+}
+
+fn has_translucent_generator(envelope: &ProjectEnvelope) -> bool {
+    envelope.project.sequences.iter().any(|sequence| {
+        sequence
+            .tracks
+            .iter()
+            .flat_map(|track| &track.clips)
+            .any(|clip| {
+                matches!(&clip.source,
+                    ClipSource::Generated {
+                        generator: Generator::Gradient {
+                            gradient: Gradient::Linear { stops, .. },
+                        },
+                    } if stops.iter().any(|stop| stop.color.alpha < 255))
+            })
+    })
 }

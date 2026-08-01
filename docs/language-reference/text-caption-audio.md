@@ -29,7 +29,7 @@ source text {
 }
 ```
 
-Style also supports fallback fonts, outline, shadow, tracking, line height, and non-overlapping scalar-index spans. Layout supports writing mode, glyph orientation, and typed paths. Animation units are block, line, word, or grapheme.
+Style also supports fallback fonts, outline, shadow, tracking, line height, and non-overlapping scalar-index spans. Layout supports writing mode, glyph orientation, and typed paths. Animation units are whole, line, word, or grapheme. On a line containing whitespace, `word` treats each non-whitespace token as an author-defined unit; without whitespace it follows Unicode word boundaries. Whitespace and rich style spans never create extra animation units, and numbering continues across lines in logical reading order.
 
 Caption adds an optional speaker while reusing the text value objects:
 

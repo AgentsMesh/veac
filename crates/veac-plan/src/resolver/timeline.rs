@@ -47,10 +47,6 @@ impl PlanResolver<'_> {
                 "render resolution requires at least one clip to derive timeline duration",
             ));
         }
-        let has_solo = sequence
-            .tracks
-            .iter()
-            .any(|track| track.state.enabled && track.state.solo);
         let authored_applies = sequence.applies.clone();
         let mut authored_tracks: Vec<_> = sequence.tracks.into_iter().enumerate().collect();
         authored_tracks.sort_by(|left, right| {
@@ -61,7 +57,7 @@ impl PlanResolver<'_> {
             let Some(source_order) = self.source_order(source_order, track.id.to_string()) else {
                 continue;
             };
-            tracks.push(self.resolve_track(&sequence.id, track, source_order, has_solo));
+            tracks.push(self.resolve_track(&sequence.id, track, source_order));
         }
         let applies = self.resolve_applies(&sequence.id, &authored_applies, &tracks);
         let resolved = ResolvedSequence {
@@ -82,22 +78,19 @@ impl PlanResolver<'_> {
         sequence_id: &SequenceId,
         track: Track,
         source_order: u32,
-        has_solo: bool,
     ) -> ResolvedTrack {
-        let state = state::effective(&track, has_solo, self.config);
+        let state = self.reachability.track_state(sequence_id, &track.id);
         let routing = state::routing(&track, state);
         let mut clips = Vec::new();
         if state.include_in_render {
             for (index, clip) in track.clips.iter().enumerate() {
-                if !clip.enabled {
+                let Some(demand) = self.reachability.clip(sequence_id, &clip.id) else {
                     continue;
-                }
+                };
                 let Some(order) = self.source_order(index, clip.id.to_string()) else {
                     continue;
                 };
-                if let Some(resolved) =
-                    self.resolve_clip(sequence_id, clip, track.kind, state, order)
-                {
+                if let Some(resolved) = self.resolve_clip(sequence_id, clip, demand, order) {
                     clips.push(resolved);
                 }
             }

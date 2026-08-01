@@ -27,7 +27,8 @@ pub(crate) fn prepare(
 ) -> CliResult<PreparedPlan> {
     let loaded = canonical::load_local(project)?;
     let config_id = select_config(&loaded.envelope, config)?;
-    let required = crate::requirements::collect(&loaded.envelope, &config_id)?;
+    let required = veac_plan::required_material_ids_one(&loaded.envelope, &config_id)
+        .map_err(diagnostic::resolution)?;
     let hydrated = canonical::hydrate(loaded, &required, environment)?;
     let plan =
         veac_plan::resolve_one(&hydrated.envelope, &config_id).map_err(diagnostic::resolution)?;

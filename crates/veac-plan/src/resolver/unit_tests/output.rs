@@ -5,7 +5,8 @@ use crate::{canonical::*, resolve};
 fn output_encoder_settings_are_preserved_in_the_plan() {
     let mut project = project();
     let output = &mut project.project.render_configs[0];
-    let delivery = output.video_deliverable_mut().unwrap();
+    let id = DeliverableId::new("dlv_main").unwrap();
+    let delivery = output.video_deliverable_mut(&id).unwrap();
     delivery.video = VideoOutput {
         codec: VideoCodec::H264,
         pixel_format: PixelFormat::Yuv420p,
@@ -19,7 +20,7 @@ fn output_encoder_settings_are_preserved_in_the_plan() {
         rate_control: VideoRateControl::Bitrate {
             target_bps: 5_000_000,
             max_bps: Some(7_000_000),
-            buffer_bps: Some(10_000_000),
+            buffer_size_bits: Some(10_000_000),
         },
         gop_size: Some(48),
         b_frames: Some(4),
@@ -29,17 +30,18 @@ fn output_encoder_settings_are_preserved_in_the_plan() {
     delivery.optimize_for_streaming = true;
     let expected = delivery.video.clone();
     let plan = resolve(&project, None).unwrap().remove(0);
-    let (_, delivery) = plan.output.video_deliverable().unwrap();
+    let (_, delivery) = plan.output.video_deliverable(&id).unwrap();
     assert_eq!(delivery.video, expected);
     assert!(delivery.optimize_for_streaming);
-    assert_eq!(delivery.captions, CaptionOutput::BurnIn);
+    assert_eq!(plan.output.raster.unwrap().captions, CaptionOutput::BurnIn);
 }
 
 #[test]
 fn discard_caption_policy_removes_visual_caption_dependencies() {
     let mut project = project();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .raster
+        .as_mut()
         .unwrap()
         .captions = CaptionOutput::Discard;
     project.project.materials.push(font_material("med_font"));
@@ -72,16 +74,16 @@ fn resolved_output_accessors_find_and_mutate_video_deliverables() {
     assert!(output
         .deliverable(&DeliverableId::new("dlv_missing").unwrap())
         .is_none());
-    output.video_deliverable_mut().unwrap().captions = CaptionOutput::Discard;
+    output.video_deliverable_mut(&id).unwrap().container = OutputFormat::Mov;
     assert_eq!(
-        output.video_deliverable().unwrap().1.captions,
-        CaptionOutput::Discard
+        output.video_deliverable(&id).unwrap().1.container,
+        OutputFormat::Mov
     );
 
     output.deliverables[0].kind = DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
         format: CaptionSidecarFormat::WebVtt,
         track_ids: vec![],
     });
-    assert!(output.video_deliverable().is_none());
-    assert!(output.video_deliverable_mut().is_none());
+    assert!(output.video_deliverable(&id).is_none());
+    assert!(output.video_deliverable_mut(&id).is_none());
 }

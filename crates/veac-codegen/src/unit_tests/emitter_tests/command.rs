@@ -128,8 +128,11 @@ fn preflight_aggregates_invalid_schema_output_ranges_and_references() {
     let mut plan = resolved(&fixture());
     let local = bindings(&plan);
     plan.header.schema = "https://invalid.test/plan".to_owned();
-    plan.output.width = 0;
-    plan.output.video_deliverable_mut().unwrap().audio = Some(AudioOutput {
+    plan.output.raster.as_mut().unwrap().width = 0;
+    plan.output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
+        .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,
         sample_rate: 0,
         channels: 0,
@@ -149,7 +152,7 @@ fn preflight_aggregates_invalid_schema_output_ranges_and_references() {
         .map(|diagnostic| diagnostic.code)
         .collect();
     assert!(codes.contains(&"PLAN_SCHEMA_UNSUPPORTED"));
-    assert!(codes.contains(&"PLAN_OUTPUT_INVALID"));
+    assert!(codes.contains(&"PLAN_RASTER_INVALID"));
     assert!(codes.contains(&"PLAN_AUDIO_OUTPUT_INVALID"));
     assert!(codes.contains(&"PLAN_INPUT_MISSING"));
     assert!(codes.contains(&"PLAN_DURATION_INVALID"));

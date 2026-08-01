@@ -49,6 +49,9 @@ pub(super) fn transform(
             vector(context, value, scale)
         })?;
     }
+    if let Some(value) = &value.shear {
+        target.transform.shear = vector(context, value, unitless)?;
+    }
     if let Some(value) = &value.rotation {
         target.transform.rotation_degrees = animation::scalar(context, value, "deg")?;
     }

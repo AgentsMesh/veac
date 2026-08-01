@@ -5,6 +5,7 @@ mod audio_processing;
 mod color_processing;
 mod composition_model;
 mod delivery;
+mod grid_motion;
 mod inspect;
 mod layout_fixture;
 mod media;
@@ -20,6 +21,7 @@ pub(crate) use color_processing::*;
 pub(crate) use composition_model::*;
 #[allow(unused_imports)]
 pub(crate) use delivery::*;
+pub(crate) use grid_motion::*;
 pub(crate) use inspect::*;
 pub(crate) use layout_fixture::*;
 pub(crate) use media::*;

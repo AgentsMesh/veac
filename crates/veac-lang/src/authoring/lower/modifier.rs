@@ -22,6 +22,7 @@ pub(super) fn lower(
     let mut layout = None;
     let mut transform = None;
     let mut composite = None;
+    let mut surface = None;
     let mut audio = None;
     let mut color = None;
     for value in values {
@@ -37,6 +38,10 @@ pub(super) fn lower(
             ModifierDecl::Composite(value) => {
                 unique(context, &mut composite, value.span, "composite")?;
                 super::modifier_visual::composite(context, &mut result.visual, value)?;
+            }
+            ModifierDecl::Surface(value) => {
+                unique(context, &mut surface, value.span, "surface")?;
+                result.visual.card = Some(super::modifier_surface::lower(context, value)?);
             }
             ModifierDecl::Mask(value) => {
                 result

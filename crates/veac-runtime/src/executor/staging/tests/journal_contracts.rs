@@ -52,7 +52,7 @@ fn malformed_journal_fails_closed_without_touching_outputs() {
     std::fs::write(&victim, b"unchanged").unwrap();
     std::fs::write(
         staging.join(journal::JOURNAL_NAME),
-        br#"{"entries":[{"original":null,"source":"source","source_identity":{"device":1,"inode":1,"size_bytes":3},"target":"../victim"}],"schema_version":2,"state":"prepared"}"#,
+        br#"{"entries":[{"original":null,"source":"source","source_identity":{"device":1,"inode":1,"node_type":"regular","size_bytes":3},"target":"../victim"}],"schema_version":3,"state":"prepared"}"#,
     )
     .unwrap();
     let error = recover(temp.path()).unwrap_err();
@@ -76,9 +76,7 @@ fn recovery_refuses_a_target_symlink_created_after_prepare() {
 
     let error = recover(temp.path()).unwrap_err();
     assert!(
-        error
-            .message
-            .contains("must be an exclusively linked regular file"),
+        error.message.contains("exclusively linked regular file"),
         "{error}"
     );
     assert_eq!(std::fs::read(victim).unwrap(), b"unchanged");
@@ -116,5 +114,6 @@ fn staged(
     StagedFile {
         source,
         target: target_parent.join(target),
+        allow_empty: false,
     }
 }

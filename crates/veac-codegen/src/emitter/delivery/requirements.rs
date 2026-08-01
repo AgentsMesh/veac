@@ -18,50 +18,71 @@ pub(super) fn collect(
         let BackendAction::Ffmpeg(command) = &task.action else {
             continue;
         };
-        for pair in command.output_args.windows(2) {
-            match pair[0].as_str() {
-                "-c" | "-c:v" | "-c:a" if pair[1] != "copy" => push(
-                    &mut requirements,
-                    task,
-                    BackendCapabilityKind::Encoder,
-                    &pair[1],
-                ),
-                "-f" => push(
-                    &mut requirements,
-                    task,
-                    BackendCapabilityKind::Muxer,
-                    &pair[1],
-                ),
-                "-hwaccel" => push(
-                    &mut requirements,
-                    task,
-                    BackendCapabilityKind::HardwareBackend,
-                    &pair[1],
-                ),
-                "-init_hw_device" => push(
-                    &mut requirements,
-                    task,
-                    BackendCapabilityKind::HardwareDevice,
-                    device_type(&pair[1]),
-                ),
-                _ => {}
-            }
-        }
-        if let Some(graph) = &command.filter_graph {
-            for name in filter::names(graph) {
-                push(
-                    &mut requirements,
-                    task,
-                    BackendCapabilityKind::Filter,
-                    &name,
-                );
-            }
-        }
-        for (kind, name) in input::capabilities(plan, bindings, command)? {
-            push(&mut requirements, task, kind, &name);
+        for command in command
+            .preparations
+            .iter()
+            .map(|value| &value.command)
+            .chain(std::iter::once(command))
+        {
+            collect_command(plan, bindings, task, command, &mut requirements)?;
         }
     }
     Ok(requirements)
+}
+
+fn collect_command(
+    plan: &ResolvedRenderPlan,
+    bindings: &ExecutionBindings,
+    task: &BackendTask,
+    command: &super::super::BackendCommand,
+    requirements: &mut Vec<BackendRequirement>,
+) -> Result<(), CodegenErrors> {
+    for pair in command.output_args.windows(2) {
+        let option = pair[0].as_str();
+        match option {
+            _ if encoder_option(option) && pair[1] != "copy" => {
+                push(requirements, task, BackendCapabilityKind::Encoder, &pair[1])
+            }
+            "-f" => push(requirements, task, BackendCapabilityKind::Muxer, &pair[1]),
+            "-hls_segment_type" if pair[1] == "mpegts" => {
+                push(requirements, task, BackendCapabilityKind::Muxer, "mpegts")
+            }
+            "-hwaccel" => push(
+                requirements,
+                task,
+                BackendCapabilityKind::HardwareBackend,
+                &pair[1],
+            ),
+            "-init_hw_device" => push(
+                requirements,
+                task,
+                BackendCapabilityKind::HardwareDevice,
+                device_type(&pair[1]),
+            ),
+            _ => {}
+        }
+    }
+    if let Some(graph) = &command.filter_graph {
+        for name in filter::names(graph) {
+            push(requirements, task, BackendCapabilityKind::Filter, &name);
+        }
+    }
+    for (kind, name) in input::capabilities(plan, bindings, command)? {
+        push(requirements, task, kind, &name);
+    }
+    Ok(())
+}
+
+fn encoder_option(value: &str) -> bool {
+    value == "-c"
+        || value == "-c:v"
+        || value == "-c:a"
+        || value.strip_prefix("-c:v:").is_some_and(index)
+        || value.strip_prefix("-c:a:").is_some_and(index)
+}
+
+fn index(value: &str) -> bool {
+    !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn push(

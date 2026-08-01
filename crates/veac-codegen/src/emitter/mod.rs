@@ -19,11 +19,16 @@ mod color_output;
 mod color_space;
 mod color_stage;
 mod command;
+mod context_impl;
 mod delivery;
+mod delivery_animated;
 mod delivery_audio;
+mod delivery_audio_file;
 mod delivery_caption;
+mod delivery_hls;
 mod delivery_image;
 mod delivery_scope;
+mod delivery_still;
 mod effect_keying;
 mod effect_video;
 mod effects;
@@ -36,8 +41,11 @@ mod generated_gradient;
 mod generated_shape;
 pub(crate) mod geometry;
 pub(crate) mod graph;
+mod hls_encoding;
 mod input;
 mod layer;
+mod layer_place;
+mod layer_placement;
 mod mask;
 mod mask_expression;
 mod mask_path;
@@ -46,10 +54,13 @@ mod multicam_source;
 mod output;
 mod output_video;
 mod preflight;
+mod preparation;
 mod process_owner;
 mod render_segment;
 mod resource;
+mod rgb_planes;
 mod sequence;
+mod shadow;
 mod source;
 mod source_boundary;
 mod text;
@@ -59,8 +70,11 @@ mod video_source;
 mod video_time_map;
 mod visual;
 mod visual_crop;
+mod visual_extent;
 mod visual_frame;
 mod visual_pipeline;
+mod visual_pivot;
+mod visual_shear;
 
 #[cfg(test)]
 #[path = "../unit_tests/emitter_internal_tests.rs"]
@@ -73,6 +87,10 @@ mod audio_source_internal_tests;
 #[cfg(test)]
 #[path = "../unit_tests/transition_internal_tests.rs"]
 mod transition_internal_tests;
+
+#[cfg(test)]
+#[path = "../unit_tests/rgb_planes_tests.rs"]
+mod rgb_planes_tests;
 
 pub use command::*;
 pub use delivery::emit_all;
@@ -102,7 +120,7 @@ fn emit_video_delivery(
     deliverable: &Deliverable,
     video: &VideoDeliverable,
 ) -> Result<BackendCommand, CodegenErrors> {
-    let context = EmitContext::new(plan, bindings, deliverable, video.video.alpha)?;
+    let context = EmitContext::new_visual(plan, bindings, deliverable, video.video.alpha)?;
     context.build_video(video)
 }
 
@@ -115,74 +133,5 @@ struct EmitContext<'a> {
     canvas: Canvas,
     graph: Graph,
     filter_bindings: Vec<BackendFilterBinding>,
-}
-
-impl<'a> EmitContext<'a> {
-    fn new(
-        plan: &'a ResolvedRenderPlan,
-        bindings: &'a ExecutionBindings,
-        deliverable: &'a Deliverable,
-        alpha: AlphaMode,
-    ) -> Result<Self, CodegenErrors> {
-        preflight::validate(plan)?;
-        let input_routes = input::resolve(plan, bindings, deliverable)?;
-        output::validate_binding(deliverable, bindings)?;
-        Ok(Self {
-            plan,
-            bindings,
-            deliverable,
-            alpha,
-            input_routes,
-            canvas: Canvas::from_output(&plan.output),
-            graph: Graph::default(),
-            filter_bindings: Vec::new(),
-        })
-    }
-
-    fn build_video(mut self, settings: &VideoDeliverable) -> Result<BackendCommand, CodegenErrors> {
-        let Some(sequence) = self
-            .plan
-            .sequences
-            .iter()
-            .find(|sequence| sequence.id == self.plan.entry_sequence_id)
-        else {
-            return Err(CodegenErrors::one(error::missing_entry(self.plan)));
-        };
-        let video = sequence::build_entry(&mut self, sequence)?;
-        let video = sequence::conform_output(&mut self, video, sequence);
-        let video = match settings.video.color_space {
-            Some(space) => color_space::tag(&mut self, video, space),
-            None => video,
-        };
-        let audio = match &settings.audio {
-            Some(output) => Some(audio::build_audio(&mut self, sequence, output)?),
-            None => None,
-        };
-        let inputs = self.input_routes.backend_inputs().to_vec();
-        let output_path = output::bound_path(self.deliverable, self.bindings)?;
-        let mut maps = vec![format!("[{video}]")];
-        if let Some(audio) = audio {
-            maps.push(format!("[{audio}]"));
-        }
-        let mut output_args = output::arguments(&self.plan.output, settings);
-        output_args.extend(["-t".to_owned(), time::seconds(sequence.duration)]);
-        let (filter_graph, filter_contract) = self.filter_graph()?;
-        Ok(BackendCommand {
-            inputs,
-            filter_graph,
-            filter_contract,
-            maps,
-            output_args,
-            output_path,
-        })
-    }
-
-    fn captions_visible(&self) -> bool {
-        match &self.deliverable.kind {
-            veac_plan::canonical::DeliverableKind::Video(settings) => {
-                settings.captions == veac_plan::canonical::CaptionOutput::BurnIn
-            }
-            _ => false,
-        }
-    }
+    preparations: Vec<BackendPreparation>,
 }

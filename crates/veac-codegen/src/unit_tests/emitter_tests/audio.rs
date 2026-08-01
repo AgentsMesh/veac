@@ -84,7 +84,7 @@ fn mono_pan_and_unaligned_record_start_are_typed_errors() {
     let mut unaligned = audio_plan(2);
     unaligned
         .output
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio
         .as_mut()
@@ -170,7 +170,7 @@ fn named_audio_buses_are_mixed_before_the_main_output() {
 pub(super) fn audio_plan(channels: u8) -> veac_plan::ResolvedRenderPlan {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

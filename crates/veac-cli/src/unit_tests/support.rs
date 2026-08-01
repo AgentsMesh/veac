@@ -8,10 +8,14 @@ use veac_ir::{HashAlgorithm, MediaIdentity, MediaProbeSnapshot, StreamIntent};
 mod capability;
 mod fake_environment;
 mod project;
+mod reachability;
 mod source;
 
 use capability::successful_filters;
 pub(crate) use project::{add_second_video, canonical_project, render};
+pub(crate) use reachability::{
+    accessed_names, assert_exact_inputs, assert_project_inputs, write_project,
+};
 pub(crate) use source::GENERATED_SOURCE;
 pub(crate) use source::MEDIA_SOURCE;
 
@@ -30,19 +34,35 @@ pub(super) fn snapshot(intent: StreamIntent, observed: MediaIdentity) -> MediaPr
         "time_base":"1/600","avg_frame_rate":"10/1","r_frame_rate":"10/1",
         "start_time":"0","width":32,"height":24,"pix_fmt":"yuv420p",
         "profile":"High","level":31,"sample_aspect_ratio":"1:1","duration":"1.000000",
-        "disposition":{"default":1,"attached_pic":0,"timed_thumbnails":0}}]
+        "disposition":{"default":1,"attached_pic":0,"timed_thumbnails":0}},
+        {"index":1,"codec_type":"audio","codec_name":"aac","time_base":"1/48000",
+        "start_time":"0","duration":"1.000000","sample_rate":"48000","channels":2,
+        "channel_layout":"stereo","disposition":{"default":1,"attached_pic":0,"timed_thumbnails":0}}]
     }"#;
-    veac_runtime::asset::parse_ffprobe_json(
+    let mut snapshot = veac_runtime::asset::parse_ffprobe_json(
         json,
         observed,
         intent,
         veac_runtime::asset::FIXTURE_PROBE_ENGINE,
     )
-    .unwrap()
+    .unwrap();
+    let selected = [
+        snapshot.selected_video_stream,
+        snapshot.selected_audio_stream,
+    ];
+    snapshot.streams.retain(|stream| {
+        selected
+            .iter()
+            .flatten()
+            .any(|selection| selection.global_index == stream.global_index)
+    });
+    snapshot
 }
 
 pub(crate) struct FakeEnvironment {
     pub observed: MediaIdentity,
+    pub identity_paths: RefCell<Vec<PathBuf>>,
+    pub probe_paths: RefCell<Vec<PathBuf>>,
     pub executed: RefCell<Vec<Vec<String>>>,
     pub consumed_inputs: RefCell<Vec<Vec<Vec<u8>>>>,
     pub fail_probe: bool,
@@ -62,6 +82,8 @@ impl FakeEnvironment {
     pub(crate) fn success() -> Self {
         Self {
             observed: identity(0x11),
+            identity_paths: RefCell::new(Vec::new()),
+            probe_paths: RefCell::new(Vec::new()),
             executed: RefCell::new(Vec::new()),
             consumed_inputs: RefCell::new(Vec::new()),
             fail_probe: false,

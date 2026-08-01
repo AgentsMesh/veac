@@ -82,6 +82,7 @@ impl FfmpegEnvironment for SystemFfmpeg {
         let output = self.run_until(
             invocation.arguments(),
             invocation.output_root,
+            invocation.working_directory,
             invocation.deadline,
         )?;
         ensure_success(&output, "FFmpeg render")
@@ -97,6 +98,7 @@ impl SystemFfmpeg {
                 "list".to_owned(),
             ],
             None,
+            None,
             deadline,
         )?;
         ensure_success(&output, "FFmpeg hardware device probe")?;
@@ -109,7 +111,7 @@ impl SystemFfmpeg {
         deadline: Instant,
     ) -> Result<FfmpegFingerprint, RuntimeError> {
         let executable_identity = self.pinned_until(deadline)?.identity().clone();
-        let output = self.run_until(&["-version".to_owned()], None, deadline)?;
+        let output = self.run_until(&["-version".to_owned()], None, None, deadline)?;
         ensure_success(&output, "FFmpeg version probe")?;
         let version = String::from_utf8_lossy(&output.stdout)
             .lines()
@@ -145,6 +147,7 @@ impl SystemFfmpeg {
     ) -> Result<BTreeSet<String>, RuntimeError> {
         let output = self.run_until(
             &["-hide_banner".to_owned(), option.to_owned()],
+            None,
             None,
             deadline,
         )?;

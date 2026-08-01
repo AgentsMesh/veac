@@ -105,11 +105,11 @@ fn sidechain_rejects_bad_parameters_ranges_and_feedback_sources() {
     let codes = validation_codes(&project);
     assert_code(&codes, "SIDECHAIN_PARAMETERS");
     assert_code(&codes, "SIDECHAIN_RANGE");
-    assert_code(&codes, "SIDECHAIN_SOURCE_BUS");
+    assert_code(&codes, "SIDECHAIN_SELF_DEPENDENCY");
 
     *sidechain_key(&mut project, "rel_sidechain") =
         RelationEndpoint::track(TrackId::new("trk_video").unwrap());
-    assert_code(&validation_codes(&project), "SIDECHAIN_SOURCE_TRACK");
+    assert_code(&validation_codes(&project), "SIDECHAIN_SELF_DEPENDENCY");
 }
 
 fn complete_chain() -> Vec<AudioProcessor> {

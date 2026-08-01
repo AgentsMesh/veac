@@ -23,7 +23,7 @@ fn run(segments: &[SourceTimeSegment]) -> Result<String, CodegenErrors> {
         DeliverableKind::Video(video) => video.video.alpha,
         _ => panic!("expected video deliverable"),
     };
-    let mut context = EmitContext::new(&plan, &execution, deliverable, alpha)?;
+    let mut context = EmitContext::new_visual(&plan, &execution, deliverable, alpha)?;
     let clip = &plan.sequences[0].tracks[0].clips[0];
     apply(
         &mut context,

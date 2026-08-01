@@ -6,54 +6,148 @@ project delivery-formats {
     sample-rate 48000hz;
   }
   entry sequence main;
+  resource audio delivery-tone {
+    locator local { path "assets/delivery-tone.m4a"; }
+    streams { video disabled; audio auto; }
+  }
 
   sequence main {
     layer visual picture {
-      item canvas { source generated solid { color #0d1b2aff; } record { at 0s; duration 3s; } }
+      item opening-stage {
+        source generated solid { color #0d1b2aff; }
+        record { at 0s; duration 1.5s; }
+      }
+      item closing-stage {
+        source generated solid { color #c43a69ff; }
+        record { at 1.5s; duration 1.5s; }
+      }
     }
     layer audio mix {
-      item silence { source generated silence; record { at 0s; duration 3s; } }
+      item reference-tone { source media resource delivery-tone; record { at 0s; duration 3s; } }
     }
     layer caption subtitles {
-      item cue {
+      item burned-label {
         source caption {
-          content "Typed delivery outputs";
-          style { font family "Inter"; size 44px; fill #ffffffff; }
+          content "类型化交付输出";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 44px; fill #ffffffff;
+          }
         }
-        record { at 0s; duration 3s; }
+        record { at 0s; duration 1.5s; }
+      }
+      item traceable-label {
+        source caption {
+          content "可追踪的字幕伴随文件";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 44px; fill #ffffffff;
+          }
+        }
+        record { at 1.5s; duration 1.5s; }
       }
     }
   }
 
-  output video master {
+  delivery master {
     sequence main;
-    file-name "master.mp4";
-    encoding {
-      container mp4;
-      optimize-for-streaming true;
-      video { codec h264; pixel-format yuv420p; }
-      audio { codec aac; sample-rate 48000; channels 2; }
-      captions burn-in;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions burn-in; }
+    artifact video master {
+      target file "master.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
+      }
     }
-  }
-  output image-sequence frames {
-    sequence main; file-name "frame-%04d.png";
-    encoding { format png; start-number 1; }
-  }
-  output caption-sidecar transcript {
-    sequence main; file-name "captions.vtt";
-    encoding { format web-vtt; tracks { track subtitles; } }
-  }
-  output audio-stem master-audio {
-    sequence main; file-name "master.wav";
-    encoding {
-      format wav;
-      audio { codec pcm-s24le; sample-rate 48000; channels 2; }
+    artifact image-sequence frames {
+      target pattern "frame-%04d.png";
+      numbering from 1;
+      encode png;
+    }
+    artifact caption-sidecar transcript {
+      target file "captions.vtt";
+      source caption-tracks { track subtitles; }
+      encode web-vtt;
+    }
+    artifact audio-stem master-audio {
+      target file "master.wav";
       source master;
+      encode wav {
+        sample-format pcm-s24le;
+        sample-rate 48khz;
+        channel-layout stereo;
+      }
     }
-  }
-  output scope luma-scope {
-    sequence main; file-name "waveform.png";
-    encoding { scope waveform; at 1s; width 1280; height 720; format png; }
+    artifact scope video-waveform {
+      target file "video-waveform.png";
+      analyze waveform;
+      frame containing 1s;
+      canvas 1280px by 720px;
+      encode png;
+    }
+    artifact audio-file podcast {
+      target file "podcast.mp3";
+      source master;
+      encode mp3 {
+        bitrate 192kbps;
+        sample-rate 48khz;
+        channel-layout stereo;
+      }
+    }
+    artifact animated-image loop-preview {
+      target file "loop-preview.gif";
+      encode gif {
+        playback forever;
+        dither sierra2;
+      }
+    }
+    artifact still-image cover {
+      target file "cover.png";
+      frame containing 2s;
+      encode png;
+    }
+    artifact adaptive-package stream {
+      target package "stream";
+      package hls {
+        segment-duration 1s;
+        audio {
+          source master;
+          encode aac {
+            bitrate 128kbps;
+            sample-rate 48khz;
+            channel-layout stereo;
+          }
+        }
+        rendition hd {
+          canvas 1280px by 720px;
+          encode h264 {
+            rate-control capped { target 3mbps; max 3210kbps; buffer 6mbit; }
+          }
+        }
+        rendition mobile {
+          canvas 640px by 360px;
+          encode h264 {
+            rate-control capped { target 1mbps; max 1100kbps; buffer 2mbit; }
+          }
+        }
+      }
+    }
   }
 }

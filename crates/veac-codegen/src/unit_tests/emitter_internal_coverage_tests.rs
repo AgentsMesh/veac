@@ -1,5 +1,6 @@
 use super::super::process_owner::ProcessOwner;
 use super::*;
+use crate::emitter::audio::AudioRenderSpec;
 use veac_plan::canonical::{AlphaMode, LutInterpolation, MaterialKind};
 use veac_plan::{PlanInputId, ResolvedInputKind, ResolvedLut, ResolvedLutKind};
 
@@ -70,9 +71,10 @@ fn multicam_direct_error(
         deliverable,
         alpha: AlphaMode::Opaque,
         input_routes: Default::default(),
-        canvas: super::super::Canvas::from_output(&plan.output),
+        canvas: super::super::Canvas::from_output(&plan.output).expect("raster"),
         graph: Default::default(),
         filter_bindings: Vec::new(),
+        preparations: Vec::new(),
     };
     let clip = &plan.sequences[0].tracks[0].clips[0];
     let audio = match &deliverable.kind {
@@ -81,7 +83,8 @@ fn multicam_direct_error(
         }
         _ => unreachable!(),
     };
-    super::super::multicam_source::audio(&mut context, clip, source, audio).unwrap_err()
+    let audio = AudioRenderSpec::from(audio);
+    super::super::multicam_source::audio(&mut context, clip, source, &audio).unwrap_err()
 }
 
 fn lut_error(plan: &ResolvedRenderPlan, lut: &ResolvedLut) -> super::super::CodegenErrors {
@@ -93,9 +96,10 @@ fn lut_error(plan: &ResolvedRenderPlan, lut: &ResolvedLut) -> super::super::Code
         deliverable,
         alpha: AlphaMode::Opaque,
         input_routes: Default::default(),
-        canvas: super::super::Canvas::from_output(&plan.output),
+        canvas: super::super::Canvas::from_output(&plan.output).expect("raster"),
         graph: Default::default(),
         filter_bindings: Vec::new(),
+        preparations: Vec::new(),
     };
     let clip = &plan.sequences[0].tracks[0].clips[0];
     super::super::color_lut::apply(

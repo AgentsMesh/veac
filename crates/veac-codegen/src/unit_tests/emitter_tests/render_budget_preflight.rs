@@ -9,9 +9,10 @@ fn mutated_plan_timeline_and_delivery_work_fail_before_bundle_creation() {
     let mut plan = resolved(&fixture());
     let long_ticks = i64::try_from(MAX_TIMELINE_SECONDS).unwrap() * 600 + 1;
     plan.sequences[0].duration = RationalTime::new(long_ticks, 600).unwrap();
-    plan.output.width = 3_840;
-    plan.output.height = 2_160;
-    plan.output.frame_rate = Rational::new(240, 1).unwrap();
+    let raster = plan.output.raster.as_mut().unwrap();
+    raster.width = 3_840;
+    raster.height = 2_160;
+    raster.frame_rate = Rational::new(240, 1).unwrap();
     let DeliverableKind::Video(video) = &mut plan.output.deliverables[0].kind else {
         unreachable!()
     };
@@ -39,7 +40,7 @@ fn mutated_plan_timeline_and_delivery_work_fail_before_bundle_creation() {
                     sample_rate: 384_000,
                     channels: 2,
                 },
-                source: AudioStemSource::Master,
+                source: AudioMixSource::Master,
             }),
         ),
         deliverable(
@@ -102,6 +103,45 @@ fn mutated_reverse_and_visual_allocations_fail_before_graph_construction() {
 }
 
 #[test]
+fn placement_allocation_is_bounded_before_graph_construction() {
+    let mut plan = resolved(&fixture());
+    let sequence = &mut plan.sequences[0];
+    let visual = sequence.tracks[0].clips[0].visual.as_mut().unwrap();
+    visual.frame = None;
+    visual.transform.scale = Animatable::constant(Vec2 { x: 6.2, y: 6.2 });
+
+    assert!(codes(&plan).contains(&"PLAN_BUDGET_VISUAL_INTERMEDIATE_PIXELS"));
+}
+
+#[test]
+fn large_shadow_offset_is_bounded_before_graph_construction() {
+    let mut plan = resolved(&fixture());
+    let visual = plan.sequences[0].tracks[0].clips[0]
+        .visual
+        .as_mut()
+        .unwrap();
+    visual.card = Some(CardStyle {
+        corner_radius_pixels: 0.0,
+        shadow: Some(Shadow {
+            blur_pixels: 0.0,
+            opacity: 1.0,
+            offset: Vec2 {
+                x: 100_000.0,
+                y: 100_000.0,
+            },
+            color: Color {
+                red: 0,
+                green: 0,
+                blue: 0,
+                alpha: 255,
+            },
+        }),
+    });
+
+    assert!(codes(&plan).contains(&"PLAN_BUDGET_VISUAL_INTERMEDIATE_PIXELS"));
+}
+
+#[test]
 fn mutated_plan_structure_is_bounded_before_reference_walks() {
     let mut plan = resolved(&fixture());
     let sequence = &mut plan.sequences[0];
@@ -120,9 +160,17 @@ fn mutated_plan_structure_is_bounded_before_reference_walks() {
 }
 
 fn deliverable(id: &str, file_name: &str, kind: DeliverableKind) -> Deliverable {
+    let target = match &kind {
+        DeliverableKind::ImageSequence(_) => DeliverableTarget::ImageSequence {
+            pattern: file_name.to_owned(),
+        },
+        _ => DeliverableTarget::File {
+            name: file_name.to_owned(),
+        },
+    };
     Deliverable {
         id: DeliverableId::new(id).unwrap(),
-        file_name: file_name.to_owned(),
+        target,
         kind,
     }
 }

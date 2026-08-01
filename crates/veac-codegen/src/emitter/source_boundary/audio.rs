@@ -1,8 +1,8 @@
 use veac_artifact::SourceClock;
-use veac_plan::canonical::AudioOutput;
 use veac_plan::ResolvedClip;
 
 use super::{invalid, Padding};
+use crate::emitter::audio::AudioRenderSpec;
 use crate::emitter::{time, CodegenErrors, EmitContext};
 
 pub(super) fn pad(
@@ -11,7 +11,7 @@ pub(super) fn pad(
     clip: &ResolvedClip,
     clock: SourceClock,
     padding: Padding,
-    output: &AudioOutput,
+    output: &AudioRenderSpec,
 ) -> Result<(String, SourceClock), CodegenErrors> {
     let logical = clock
         .logical_range()

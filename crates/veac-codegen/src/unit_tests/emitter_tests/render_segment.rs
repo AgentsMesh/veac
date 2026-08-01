@@ -1,5 +1,6 @@
 use veac_artifact::*;
 use veac_codegen::emitter::emit_all;
+use veac_plan::canonical::{DeliverableId, DeliverableTarget};
 
 use super::binding_routes::{av_plan, typed, video_command};
 use super::support::{fixture, resolved};
@@ -7,12 +8,15 @@ use super::support::{fixture, resolved};
 #[test]
 fn exact_full_segment_is_the_only_protected_input_and_skips_encoding() {
     let mut plan = resolved(&fixture());
-    let video = plan.output.video_deliverable_mut().unwrap();
+    let video = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     video.pass_mode = veac_plan::canonical::PassMode::TwoPass;
     video.video.rate_control = veac_plan::canonical::VideoRateControl::Bitrate {
         target_bps: 1_000_000,
         max_bps: None,
-        buffer_bps: None,
+        buffer_size_bits: None,
     };
     video.hardware = veac_plan::canonical::HardwareSelection::Software;
     let mut bindings = typed(&plan);
@@ -61,7 +65,7 @@ fn profile_drift_cannot_bind_an_exact_segment() {
     let record = store.put(contract.descriptor(), b"exact master").unwrap();
     let artifact = store.open(&record.key).unwrap().unwrap();
     let mut drifted = plan.clone();
-    drifted.output.width += 2;
+    drifted.output.raster.as_mut().unwrap().width += 2;
     let mut local = typed(&drifted);
     assert_eq!(
         local
@@ -75,8 +79,13 @@ fn profile_drift_cannot_bind_an_exact_segment() {
 #[test]
 fn exact_av_segment_maps_audio_and_keeps_mov_faststart_delivery_flags() {
     let mut plan = av_plan();
-    plan.output.deliverables[0].file_name = "master.mov".to_owned();
-    let video = plan.output.video_deliverable_mut().unwrap();
+    plan.output.deliverables[0].target = DeliverableTarget::File {
+        name: "master.mov".to_owned(),
+    };
+    let video = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
     video.container = veac_plan::canonical::OutputFormat::Mov;
     video.optimize_for_streaming = true;
     let mut bindings = typed(&plan);

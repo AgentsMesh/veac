@@ -4,6 +4,10 @@ use veac_plan::canonical::{
 
 use super::time;
 
+#[cfg(test)]
+#[path = "animation_tests.rs"]
+mod tests;
+
 pub(crate) fn number(value: &Animatable<f64>, clock: &str) -> String {
     expression(value, clock, |value| time::number(*value))
 }
@@ -51,6 +55,14 @@ fn curve<T>(keyframes: &[Keyframe<T>], clock: &str, render: impl Fn(&T) -> Strin
     let Some(first) = keyframes.first() else {
         return "0".to_owned();
     };
+    let first_value = render(&first.value);
+    if keyframes
+        .iter()
+        .skip(1)
+        .all(|keyframe| render(&keyframe.value) == first_value)
+    {
+        return first_value;
+    }
     let mut result = render(&keyframes.last().expect("first keyframe exists").value);
     for pair in keyframes.windows(2).rev() {
         let left = &pair[0];
@@ -85,8 +97,26 @@ fn easing(progress: &str, interpolation: &Interpolation) -> String {
         Interpolation::EaseInOut => {
             format!("pow({progress}\\,2)*(3-2*({progress}))")
         }
+        Interpolation::Spring { decay, .. } => {
+            let coefficients = interpolation
+                .spring_coefficients()
+                .expect("validated spring interpolation");
+            let decay = spring_number(*decay);
+            let frequency = spring_number(coefficients.angular_frequency);
+            let equilibrium = spring_number(coefficients.equilibrium);
+            let sine = spring_number(coefficients.sine);
+            let phase = format!("{frequency}*({progress})");
+            format!(
+                "({equilibrium})+exp(-{decay}*({progress}))*\
+                 (-({equilibrium})*cos({phase})+({sine})*sin({phase}))"
+            )
+        }
         Interpolation::CubicBezier { x1, y1, x2, y2 } => cubic_bezier(progress, *x1, *y1, *x2, *y2),
     }
+}
+
+fn spring_number(value: f64) -> String {
+    format!("{value:.17e}")
 }
 
 fn cubic_bezier(progress: &str, x1: f64, y1: f64, x2: f64, y2: f64) -> String {

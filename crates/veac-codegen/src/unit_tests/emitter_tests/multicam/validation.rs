@@ -6,6 +6,8 @@ fn one_segment_avoids_concat_and_invalid_switch_lists_fail_closed() {
     let source = multicam_source_mut(&mut one);
     source.switches.truncate(1);
     source.switches[0].range = TimeRange::new(time(0), time(600)).unwrap();
+    let selected = source.switches[0].angle_id.clone();
+    source.angles.retain(|angle| angle.id == selected);
     let emitted = emit_all(&one, &bindings(&one)).unwrap();
     let graph = command(&emitted.tasks()[0])
         .filter_graph

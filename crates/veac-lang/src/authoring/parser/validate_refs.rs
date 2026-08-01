@@ -1,7 +1,7 @@
 use super::validate::Known;
 use super::validate_numbers::record_span;
 use crate::authoring::{
-    ApplyDecl, ApplyItemTarget, ApplyScope, Diagnostic, OutputDecl, StructureDecl,
+    ApplyDecl, ApplyItemTarget, ApplyScope, DeliveryDecl, Diagnostic, StructureDecl,
 };
 use std::collections::HashSet;
 
@@ -24,21 +24,21 @@ pub(super) fn structures(
     }
 }
 
-pub(super) fn outputs(
+pub(super) fn deliveries(
     diagnostics: &mut Vec<Diagnostic>,
-    outputs: &[OutputDecl],
+    deliveries: &[DeliveryDecl],
     known: &Known<'_>,
 ) {
     let mut ids = HashSet::new();
-    for value in outputs {
+    for value in deliveries {
         if !ids.insert(&value.id.value) {
             diagnostics.push(Diagnostic {
                 code: "AUTHORING_DUPLICATE_ID",
-                message: "duplicate output id".to_owned(),
+                message: "duplicate delivery id".to_owned(),
                 span: value.id.span,
             });
         }
-        output(diagnostics, value, known);
+        delivery(diagnostics, value, known);
     }
 }
 
@@ -72,7 +72,7 @@ fn apply(diagnostics: &mut Vec<Diagnostic>, value: &ApplyDecl, known: &Known<'_>
     record_span(diagnostics, &value.record);
 }
 
-fn output(diagnostics: &mut Vec<Diagnostic>, value: &OutputDecl, known: &Known<'_>) {
+fn delivery(diagnostics: &mut Vec<Diagnostic>, value: &DeliveryDecl, known: &Known<'_>) {
     if !known.sequences.contains(value.sequence.value.as_str()) {
         diagnostics.push(Diagnostic {
             code: "AUTHORING_REFERENCE_NOT_FOUND",

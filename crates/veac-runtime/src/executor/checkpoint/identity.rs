@@ -3,7 +3,9 @@ use veac_artifact::{
     artifact_key, ArtifactDependency, ArtifactDescriptor, ArtifactKind, ContentDigest,
     ProducerFingerprint,
 };
-use veac_codegen::emitter::{BackendAction, BackendOutput, BackendProduct, BackendTask};
+use veac_codegen::emitter::{
+    BackendAction, BackendCommand, BackendOutput, BackendPreparation, BackendProduct, BackendTask,
+};
 
 use crate::executor::{output, process, FfmpegFingerprint};
 use crate::RuntimeError;
@@ -95,11 +97,7 @@ fn producer(
 
 fn task_value(task: &BackendTask) -> Result<Value, RuntimeError> {
     let action = match &task.action {
-        BackendAction::Ffmpeg(command) => json!({
-            "type": "ffmpeg",
-            "arguments": process::arguments(command),
-            "filter_contract": filter::value(command),
-        }),
+        BackendAction::Ffmpeg(command) => ffmpeg_value(command),
         BackendAction::WriteFile { path, content } => json!({
             "type": "write_file",
             "path": output::path_string(path),
@@ -120,8 +118,35 @@ fn task_value(task: &BackendTask) -> Result<Value, RuntimeError> {
             "type": "image_sequence",
             "pattern": output::path_string(pattern),
         }),
+        BackendOutput::Package {
+            root,
+            entrypoint,
+            paths,
+        } => json!({
+            "type": "package",
+            "root": output::path_string(root),
+            "entrypoint": output::path_string(entrypoint),
+            "playlist_pattern": output::path_string(&paths.playlist_pattern),
+            "segment_pattern": output::path_string(&paths.segment_pattern),
+        }),
     };
     Ok(json!({"action": action, "output": declared}))
+}
+
+fn ffmpeg_value(command: &BackendCommand) -> Value {
+    json!({
+        "type": "ffmpeg",
+        "arguments": process::arguments(command),
+        "filter_contract": filter::value(command),
+        "preparations": command.preparations.iter().map(preparation_value).collect::<Vec<_>>(),
+    })
+}
+
+fn preparation_value(value: &BackendPreparation) -> Value {
+    json!({
+        "command": ffmpeg_value(&value.command),
+        "outputs": value.outputs.iter().map(|path| output::path_string(path)).collect::<Vec<_>>(),
+    })
 }
 
 fn digest(value: Value) -> Result<ContentDigest, RuntimeError> {
@@ -137,6 +162,10 @@ fn kind(product: BackendProduct) -> ArtifactKind {
         BackendProduct::ImageSequence => ArtifactKind::ImageSequenceFrame,
         BackendProduct::CaptionSidecar => ArtifactKind::CaptionSidecar,
         BackendProduct::AudioStem => ArtifactKind::AudioStem,
+        BackendProduct::AudioFile => ArtifactKind::AudioFile,
+        BackendProduct::AnimatedImage => ArtifactKind::AnimatedImage,
+        BackendProduct::StillImage => ArtifactKind::StillImage,
+        BackendProduct::HlsVod => ArtifactKind::AdaptivePackage,
         BackendProduct::VideoWaveform => ArtifactKind::VideoWaveform,
         BackendProduct::Vectorscope => ArtifactKind::Vectorscope,
         BackendProduct::Histogram => ArtifactKind::Histogram,

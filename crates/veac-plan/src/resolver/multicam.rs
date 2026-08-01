@@ -1,4 +1,4 @@
-use veac_ir::{Clip, MulticamGroupId, MulticamSwitch, MulticamSyncBasis, RationalTime, TimeRange};
+use veac_ir::{Clip, MulticamGroupId, MulticamSwitch, RationalTime, TimeRange};
 
 use super::{bounds::BoundContext, material::InputUsage, PlanResolver};
 use crate::{ResolvedClipSource, ResolvedMulticamAngle, ResolvedMulticamSource};
@@ -20,21 +20,26 @@ impl PlanResolver<'_> {
             .iter()
             .find(|group| group.id == *group_id)
             .cloned()?;
-        let sync_audio = group.sync.basis == MulticamSyncBasis::Audio;
         let usage = InputUsage {
             video: visual,
-            audio: audio || sync_audio,
+            audio,
             font: false,
         };
-        let mut angles = Vec::with_capacity(group.angles.len());
-        for angle in &group.angles {
+        let selected: std::collections::BTreeSet<_> =
+            switches.iter().map(|value| &value.angle_id).collect();
+        let mut angles = Vec::with_capacity(selected.len());
+        for angle in group
+            .angles
+            .iter()
+            .filter(|angle| selected.contains(&angle.id))
+        {
             let input = self.material_input(&angle.material_id, usage)?;
             self.check_multicam_bounds(&input, clip, angle, switches, usage, path);
             angles.push(ResolvedMulticamAngle {
                 id: angle.id.clone(),
                 input_id: input.id,
                 video_stream: input.video.as_ref()?.selection,
-                audio_stream: (audio || sync_audio)
+                audio_stream: audio
                     .then(|| input.audio.as_ref().map(|value| value.selection))
                     .flatten(),
                 source_offset: angle.source_offset,

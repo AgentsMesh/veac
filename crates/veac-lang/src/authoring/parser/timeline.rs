@@ -1,3 +1,4 @@
+use super::item::assign;
 use super::Parser;
 use crate::authoring::{LayerDecl, LayerKind, SequenceDecl, StructureDecl};
 
@@ -60,11 +61,26 @@ impl Parser {
         };
         let id = self.identifier("layer")?;
         self.left_brace()?;
+        let mut placement = None;
+        let mut state = None;
         let mut order = None;
         let mut route_bus = None;
         let mut items = Vec::new();
         while !self.at_right_brace() && !self.at_eof() {
-            if self.at_word("order") {
+            if self.at_word("placement") {
+                let field = self.required_word("placement")?;
+                let value = self
+                    .identifier("placement mode")
+                    .and_then(|value| super::timeline_state::placement(self, value));
+                self.semicolon();
+                assign(self, "layer placement", &mut placement, value, field);
+            } else if self.at_word("state") {
+                let field = self.required_word("state")?;
+                let value = self
+                    .semantic_block()
+                    .and_then(|block| super::timeline_state::track(self, block, kind));
+                assign(self, "layer state", &mut state, value, field);
+            } else if self.at_word("order") {
                 let field = self.advance().span;
                 let value = self.number("layer order");
                 self.semicolon();
@@ -91,7 +107,7 @@ impl Parser {
                 let span = self.current().span;
                 self.error(
                     "AUTHORING_LAYER_MEMBER",
-                    "layer members must be order, route, or item".to_owned(),
+                    "layer members must be placement, state, order, route, or item".to_owned(),
                     span,
                 );
                 self.advance();
@@ -109,6 +125,8 @@ impl Parser {
         Some(LayerDecl {
             kind,
             id,
+            placement,
+            state,
             order,
             route_bus,
             items,

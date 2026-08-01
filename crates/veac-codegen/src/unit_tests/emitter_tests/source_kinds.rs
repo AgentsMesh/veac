@@ -50,9 +50,10 @@ fn nested_sequence_uses_its_canvas_and_entry_conforms_output() {
     main.tracks[0].clips[0].source = ResolvedClipSource::Sequence {
         sequence_id: child.id.clone(),
     };
-    plan.output.width = 640;
-    plan.output.height = 360;
-    plan.output.frame_rate = Rational::new(30, 1).unwrap();
+    let raster = plan.output.raster.as_mut().unwrap();
+    raster.width = 640;
+    raster.height = 360;
+    raster.frame_rate = Rational::new(30, 1).unwrap();
     plan.sequences.insert(0, child);
     let graph = graph(&plan);
     for marker in [

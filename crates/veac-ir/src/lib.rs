@@ -3,6 +3,7 @@
 //! The authoring DSL is intentionally not the persistence format. This crate owns the strict
 //! canonical JSON contract shared by agents, editors, migrations, and render-plan builders.
 
+mod activity;
 mod audio_contract;
 mod canonical;
 mod color_contract;
@@ -19,6 +20,7 @@ mod time;
 mod validation;
 mod visual_contract;
 
+pub use activity::*;
 pub use audio_contract::*;
 pub use canonical::*;
 pub use color_contract::*;
@@ -35,8 +37,8 @@ pub use validation::*;
 pub use visual_contract::*;
 
 pub const SCHEMA_ID: &str = "https://veac.dev/schemas/project";
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
-pub const MIN_READER_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 5;
+pub const MIN_READER_VERSION: u32 = 5;
 /// Largest integer represented exactly by the IEEE-754 number domain required by RFC 8785/I-JSON.
 pub const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 pub const MAX_SEQUENCE_NESTING_DEPTH: usize = 64;
@@ -69,6 +71,9 @@ mod edit_contract_tests;
 #[path = "unit_tests/edit_tests.rs"]
 mod edit_tests;
 #[cfg(test)]
+#[path = "unit_tests/effect_schema_tests.rs"]
+mod effect_schema_tests;
+#[cfg(test)]
 #[path = "unit_tests/id_time_tests.rs"]
 mod id_time_tests;
 #[cfg(test)]
@@ -90,8 +95,14 @@ mod registry_edge_tests;
 #[path = "unit_tests/registry_tests.rs"]
 mod registry_tests;
 #[cfg(test)]
+#[path = "unit_tests/relation_dependency_tests.rs"]
+mod relation_dependency_tests;
+#[cfg(test)]
 #[path = "unit_tests/relation_tests.rs"]
 mod relation_tests;
+#[cfg(test)]
+#[path = "unit_tests/sequence_activity_tests.rs"]
+mod sequence_activity_tests;
 #[cfg(test)]
 #[path = "unit_tests/strict_json_tests.rs"]
 mod strict_json_tests;

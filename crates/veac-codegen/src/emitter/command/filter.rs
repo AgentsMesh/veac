@@ -1,12 +1,19 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+mod render;
 mod token;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendFilterEscape {
     FilterValue,
     Quoted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackendInternalAccess {
+    Produce,
+    Consume,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +27,12 @@ pub enum BackendFilterBinding {
         token: String,
         directory: PathBuf,
         files: Vec<PathBuf>,
+        escape: BackendFilterEscape,
+    },
+    InternalFile {
+        token: String,
+        path: PathBuf,
+        access: BackendInternalAccess,
         escape: BackendFilterEscape,
     },
 }
@@ -53,22 +66,41 @@ impl BackendFilterBinding {
         }
     }
 
+    pub fn internal_file(
+        token: String,
+        path: PathBuf,
+        access: BackendInternalAccess,
+        escape: BackendFilterEscape,
+    ) -> Self {
+        Self::InternalFile {
+            token,
+            path,
+            access,
+            escape,
+        }
+    }
+
     pub fn files(&self) -> &[PathBuf] {
         match self {
             Self::File { path, .. } => std::slice::from_ref(path),
             Self::Directory { files, .. } => files,
+            Self::InternalFile { path, .. } => std::slice::from_ref(path),
         }
     }
 
-    fn token(&self) -> &str {
+    pub fn token(&self) -> &str {
         match self {
-            Self::File { token, .. } | Self::Directory { token, .. } => token,
+            Self::File { token, .. }
+            | Self::Directory { token, .. }
+            | Self::InternalFile { token, .. } => token,
         }
     }
 
     fn escape(&self) -> BackendFilterEscape {
         match self {
-            Self::File { escape, .. } | Self::Directory { escape, .. } => *escape,
+            Self::File { escape, .. }
+            | Self::Directory { escape, .. }
+            | Self::InternalFile { escape, .. } => *escape,
         }
     }
 
@@ -76,6 +108,7 @@ impl BackendFilterBinding {
         match self {
             Self::File { path, .. } => path,
             Self::Directory { directory, .. } => directory,
+            Self::InternalFile { path, .. } => path,
         }
     }
 }
@@ -96,7 +129,7 @@ impl BackendFilterContract {
     }
 
     pub fn render_original(&self) -> Result<String, String> {
-        self.render(|binding| Some(binding.original().to_path_buf()))
+        render::original(self)
     }
 
     pub fn render_bound(
@@ -104,36 +137,11 @@ impl BackendFilterContract {
         files: &BTreeMap<PathBuf, PathBuf>,
         directories: &BTreeMap<Vec<PathBuf>, PathBuf>,
     ) -> Result<String, String> {
-        self.render(|binding| match binding {
-            BackendFilterBinding::File { path, .. } => files.get(path).cloned(),
-            BackendFilterBinding::Directory { files, .. } => directories.get(files).cloned(),
-        })
+        render::bound(self, files, directories)
     }
 
-    fn render(
-        &self,
-        mut resolve: impl FnMut(&BackendFilterBinding) -> Option<PathBuf>,
-    ) -> Result<String, String> {
-        self.validate_tokens()?;
-        let mut replacements = Vec::with_capacity(self.bindings.len());
-        for binding in &self.bindings {
-            let path = resolve(binding)
-                .ok_or_else(|| "filter resource has no verified path binding".to_owned())?;
-            let text = path
-                .to_str()
-                .ok_or_else(|| "filter resource path is not valid UTF-8".to_owned())?;
-            let start = self
-                .template
-                .find(binding.token())
-                .ok_or_else(|| "filter resource token is absent from template".to_owned())?;
-            replacements.push((start, binding.token().len(), escape(text, binding.escape())));
-        }
-        replacements.sort_unstable_by(|left, right| right.0.cmp(&left.0));
-        let mut graph = self.template.clone();
-        for (start, length, replacement) in replacements {
-            graph.replace_range(start..start + length, &replacement);
-        }
-        Ok(graph)
+    pub fn render_internal(&self, graph: &str, root: &Path) -> Result<String, String> {
+        render::internal(self, graph, root)
     }
 
     fn validate_tokens(&self) -> Result<(), String> {
@@ -141,35 +149,7 @@ impl BackendFilterContract {
     }
 }
 
-fn escape(value: &str, syntax: BackendFilterEscape) -> String {
-    match syntax {
-        BackendFilterEscape::Quoted => value
-            .replace('\\', "\\\\")
-            .replace('\'', "\\'")
-            .replace(':', "\\:")
-            .replace(',', "\\,")
-            .replace('[', "\\[")
-            .replace(']', "\\]")
-            .replace(';', "\\;"),
-        BackendFilterEscape::FilterValue => {
-            let mut option = String::new();
-            for character in value.chars() {
-                if matches!(character, '\\' | '\'' | ':') {
-                    option.push('\\');
-                }
-                option.push(character);
-            }
-            let mut graph = String::new();
-            for character in option.chars() {
-                if matches!(character, '\\' | '\'' | '[' | ']' | ',' | ';') {
-                    graph.push('\\');
-                }
-                graph.push(character);
-            }
-            graph
-        }
-    }
-}
-
+#[cfg(test)]
+mod internal_tests;
 #[cfg(test)]
 mod tests;

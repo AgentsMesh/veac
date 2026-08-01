@@ -93,7 +93,7 @@ fn every_video_profile_lowers_exactly() {
 fn rate_control_and_optional_video_fields_preserve_values() {
     let crf = video(
         "rate-control crf { value 31; } gop-size 48; b-frames 3; level \"5.1\";",
-        "audio none; captions burn-in; optimize-for-streaming true;",
+        "audio none; optimize-for-streaming true;",
     );
     assert_eq!(
         crf.video.rate_control,
@@ -104,7 +104,6 @@ fn rate_control_and_optional_video_fields_preserve_values() {
         (Some(48), Some(3))
     );
     assert_eq!(crf.video.level.as_deref(), Some("5.1"));
-    assert_eq!(crf.captions, veac_ir::CaptionOutput::BurnIn);
     assert!(crf.optimize_for_streaming);
 
     let bitrate = video(
@@ -116,7 +115,7 @@ fn rate_control_and_optional_video_fields_preserve_values() {
         veac_ir::VideoRateControl::Bitrate {
             target_bps: 1,
             max_bps: Some(2),
-            buffer_bps: Some(3),
+            buffer_size_bits: Some(3),
         }
     );
     assert_eq!(
@@ -126,7 +125,7 @@ fn rate_control_and_optional_video_fields_preserve_values() {
         veac_ir::VideoRateControl::Lossless
     );
     let two_pass = video(
-        "rate-control bitrate { target-bps 100; }",
+        "rate-control average { target 100bps; }",
         "audio none; pass-mode two-pass; hardware software;",
     );
     assert_eq!(two_pass.pass_mode, veac_ir::PassMode::TwoPass);

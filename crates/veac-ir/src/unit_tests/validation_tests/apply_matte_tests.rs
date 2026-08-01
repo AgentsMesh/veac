@@ -102,7 +102,7 @@ fn rejects_apply_matte_self_dependency_and_short_source() {
     assert_code(&validation_codes(&short), "MATTE_SOURCE_RANGE");
 }
 
-fn project_with_apply(target: &str) -> ProjectEnvelope {
+pub(super) fn project_with_apply(target: &str) -> ProjectEnvelope {
     let mut project = sample_project();
     let mut track = project.project.sequences[0].tracks[0].clone();
     track.id = TrackId::new("trk_scope").unwrap();
@@ -115,7 +115,7 @@ fn project_with_apply(target: &str) -> ProjectEnvelope {
     project
 }
 
-fn grade(target: &str) -> Apply {
+pub(super) fn grade(target: &str) -> Apply {
     Apply {
         id: ApplyId::new("apl_grade").unwrap(),
         enabled: true,
@@ -135,7 +135,7 @@ fn grade(target: &str) -> Apply {
     }
 }
 
-fn matte(producer: RelationEndpoint, consumer: RelationEndpoint) -> Relation {
+pub(super) fn matte(producer: RelationEndpoint, consumer: RelationEndpoint) -> Relation {
     Relation {
         id: RelationId::new("rel_apply_matte").unwrap(),
         sequence_id: SequenceId::new("seq_main").unwrap(),

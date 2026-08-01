@@ -42,7 +42,10 @@ fn large_graphs_use_an_exact_ephemeral_staging_script() {
     let arguments = &environment.inner.calls.borrow()[0];
     assert_eq!(option(arguments, "-filter_complex_script"), path.to_str());
     assert!(option(arguments, "-filter_complex").is_none());
-    assert!(staged.files().iter().all(|file| file.source != path));
+    assert!(staged
+        .outputs()
+        .iter()
+        .all(|output| output.source() != &path));
 }
 
 #[test]

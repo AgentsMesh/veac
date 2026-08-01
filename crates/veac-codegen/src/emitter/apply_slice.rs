@@ -66,6 +66,25 @@ pub(super) fn offset(from: RationalTime, to: RationalTime) -> RationalTime {
     }
 }
 
+pub(super) fn intersect(left: TimeRange, right: TimeRange) -> Option<TimeRange> {
+    let start = if left.start > right.start {
+        left.start
+    } else {
+        right.start
+    };
+    let left_end = left.end().ok()?;
+    let right_end = right.end().ok()?;
+    let end = if left_end < right_end {
+        left_end
+    } else {
+        right_end
+    };
+    (start < end).then(|| TimeRange {
+        start,
+        duration: offset(start, end),
+    })
+}
+
 fn trim(
     context: &mut EmitContext<'_>,
     input: &str,

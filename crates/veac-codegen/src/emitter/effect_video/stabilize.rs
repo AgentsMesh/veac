@@ -26,7 +26,8 @@ pub(super) fn apply(
     if effect.active_range.start.value == 0
         && effect.active_range.duration == clip.record_range.duration
     {
-        return Ok(context.graph.filter(&[input], "deshake", "effectv"));
+        let token = context.prepare_stabilization(input, None)?;
+        return Ok(transform(context, input, &token));
     }
     partial(context, clip, effect, input)
 }
@@ -42,6 +43,9 @@ fn partial(
     })?;
     let has_before = effect.active_range.start.value > 0;
     let has_after = end < clip.record_range.duration;
+    let start = time::seconds(effect.active_range.start);
+    let end = time::seconds(end);
+    let token = context.prepare_stabilization(input, Some((&start, &end)))?;
     let count = 1 + usize::from(has_before) + usize::from(has_after);
     let mut inputs = context
         .graph
@@ -50,27 +54,17 @@ fn partial(
     let mut segments = Vec::with_capacity(count);
     if has_before {
         let before = inputs.next().expect("split count includes prefix");
-        segments.push(trim(
-            context,
-            &before,
-            "0",
-            &time::seconds(effect.active_range.start),
-        ));
+        segments.push(trim(context, &before, "0", &start));
     }
     let middle = inputs.next().expect("split count includes effect range");
-    let middle = trim(
-        context,
-        &middle,
-        &time::seconds(effect.active_range.start),
-        &time::seconds(end),
-    );
-    segments.push(context.graph.filter(&[&middle], "deshake", "effectv"));
+    let middle = trim(context, &middle, &start, &end);
+    segments.push(transform(context, &middle, &token));
     if has_after {
         let after = inputs.next().expect("split count includes suffix");
         segments.push(trim(
             context,
             &after,
-            &time::seconds(end),
+            &end,
             &time::seconds(clip.record_range.duration),
         ));
     }
@@ -78,6 +72,22 @@ fn partial(
     Ok(context
         .graph
         .filter(&labels, format!("concat=n={count}:v=1:a=0"), "effectv"))
+}
+
+fn transform(context: &mut EmitContext<'_>, input: &str, token: &str) -> String {
+    let input = context
+        .graph
+        .filter(&[input], "format=yuv444p16le", "stabilize");
+    let stabilized = context.graph.filter(
+        &[&input],
+        format!(
+            "vidstabtransform=input='{token}':smoothing=6:optalgo=gauss:maxshift=-1:crop=0:optzoom=0:interpol=2"
+        ),
+        "effectv",
+    );
+    context
+        .graph
+        .filter(&[&stabilized], "format=gbrp16le", "effectv")
 }
 
 fn trim(context: &mut EmitContext<'_>, input: &str, start: &str, end: &str) -> String {

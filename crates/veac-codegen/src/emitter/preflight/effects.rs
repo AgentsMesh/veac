@@ -52,11 +52,12 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
                 );
             }
             for (name, value) in &effect.parameters {
-                let valid = specification
-                    .parameters
-                    .iter()
-                    .find(|parameter| parameter.name == name)
-                    .is_some_and(|parameter| parameter_matches(*parameter, value));
+                let valid = super::super::effects::supports_parameter(value)
+                    && specification
+                        .parameters
+                        .iter()
+                        .find(|parameter| parameter.name == name)
+                        .is_some_and(|parameter| parameter_matches(*parameter, value));
                 if !valid {
                     check.push(
                         "PLAN_EFFECT_PARAMETER_INVALID",
@@ -78,11 +79,12 @@ pub(super) fn validate_apply_effect(
     let valid = effect_domain(effect_type) == Some(EffectDomain::Video)
         && built_in_effect(effect_type).is_some_and(|specification| {
             parameters.iter().all(|(name, value)| {
-                specification
-                    .parameters
-                    .iter()
-                    .find(|parameter| parameter.name == name)
-                    .is_some_and(|parameter| parameter_matches(*parameter, value))
+                super::super::effects::supports_parameter(value)
+                    && specification
+                        .parameters
+                        .iter()
+                        .find(|parameter| parameter.name == name)
+                        .is_some_and(|parameter| parameter_matches(*parameter, value))
             })
         });
     if !valid || effect_type == "video.stabilize" {

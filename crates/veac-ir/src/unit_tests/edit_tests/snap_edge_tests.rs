@@ -63,12 +63,17 @@ fn huge_frame_step_project() -> ProjectEnvelope {
         render_configs: vec![RenderConfig {
             id: RenderConfigId::new("out_huge_grid").unwrap(),
             sequence_id: sequence_id.clone(),
-            width: 16,
-            height: 16,
-            frame_rate: Rational::new(1, 1).unwrap(),
+            raster: Some(RasterSettings {
+                width: 16,
+                height: 16,
+                frame_rate: Rational::new(1, 1).unwrap(),
+                captions: CaptionOutput::Discard,
+            }),
             deliverables: vec![Deliverable {
                 id: DeliverableId::new("dlv_huge_grid").unwrap(),
-                file_name: "huge.mp4".to_owned(),
+                target: DeliverableTarget::File {
+                    name: "huge.mp4".to_owned(),
+                },
                 kind: DeliverableKind::Video(VideoDeliverable::default()),
             }],
         }],

@@ -11,6 +11,10 @@ pub(crate) struct FrameStats {
 }
 
 pub(crate) fn frame_stats(frame: &[u8]) -> FrameStats {
+    frame_stats_with_threshold(frame, 60)
+}
+
+pub(crate) fn frame_stats_with_threshold(frame: &[u8], threshold: usize) -> FrameStats {
     let background = [frame[0], frame[1], frame[2]];
     let mut count = 0_usize;
     let mut sum_x = 0_usize;
@@ -24,7 +28,7 @@ pub(crate) fn frame_stats(frame: &[u8]) -> FrameStats {
             .zip(background)
             .map(|(&value, base)| value.abs_diff(base) as usize)
             .sum();
-        if difference > 60 {
+        if difference > threshold {
             let x = index % WIDTH as usize;
             count += 1;
             sum_x += x;

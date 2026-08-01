@@ -1,7 +1,7 @@
 {
   "schema": "https://veac.dev/schemas/project",
-  "schema_version": 3,
-  "min_reader_version": 3,
+  "schema_version": 5,
+  "min_reader_version": 5,
   "project": {
     "id": "prj_fixture",
     "revision": 0,
@@ -11,13 +11,16 @@
       {
         "id": "out_main",
         "sequence_id": "seq_main",
-        "width": 1920,
-        "height": 1080,
-        "frame_rate": { "numerator": 30, "denominator": 1 },
+        "raster": {
+          "width": 1920,
+          "height": 1080,
+          "frame_rate": { "numerator": 30, "denominator": 1 },
+          "captions": "burn_in"
+        },
         "deliverables": [
           {
             "id": "dlv_main",
-            "file_name": "output.mp4",
+            "target": { "type": "file", "name": "output.mp4" },
             "kind": {
               "type": "video",
               "settings": {
@@ -34,7 +37,6 @@
                   "level": null
                 },
                 "audio": null,
-                "captions": "burn_in",
                 "optimize_for_streaming": false,
                 "pass_mode": "single",
                 "hardware": { "type": "auto" }

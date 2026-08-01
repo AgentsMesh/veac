@@ -5,7 +5,7 @@ use veac_codegen::emitter::{
     BackendAction, BackendOutput, BackendPhase, BackendProduct, BackendTask,
 };
 
-use super::super::{ffmpeg, perform};
+use super::super::{ffmpeg, perform, StaleFamily};
 use super::deadline;
 use crate::executor::tests::support::{command, FakeFfmpeg};
 use crate::executor::{FfmpegEnvironment, FfmpegFingerprint, FfmpegInvocation};
@@ -30,7 +30,7 @@ fn ffmpeg_invocation_receives_the_exact_task_deadline() {
 }
 
 #[test]
-fn image_sequence_staging_maps_frames_and_reports_stale_targets() {
+fn image_sequence_staging_maps_frames_and_defers_stale_enumeration() {
     let temp = tempfile::tempdir().unwrap();
     let staging = tempfile::tempdir_in(temp.path()).unwrap();
     let descriptor = super::super::directory::Directory::open(staging.path()).unwrap();
@@ -47,7 +47,7 @@ fn image_sequence_staging_maps_frames_and_reports_stale_targets() {
     )
     .unwrap();
     assert_eq!(files.len(), 2);
-    assert_eq!(stale, vec![temp.path().join("frame-99.png")]);
+    assert_eq!(stale, vec![StaleFamily::ImageSequence(pattern)]);
     assert!(files.iter().all(|file| file.source.is_file()));
 }
 

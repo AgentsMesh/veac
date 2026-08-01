@@ -8,7 +8,6 @@ mod frontend;
 mod fs;
 mod output;
 mod planning;
-mod requirements;
 
 use std::ffi::OsString;
 

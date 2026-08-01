@@ -1,5 +1,8 @@
 use super::{mechanism_helpers::text_clip, support::*};
-use crate::{canonical::*, resolve_one, ResolvedRenderPlan, ResolvedTrack};
+use crate::{
+    canonical::*, resolve_one, ResolvedClipSource, ResolvedRenderPlan, ResolvedTextPresentation,
+    ResolvedTrack,
+};
 
 #[test]
 fn caption_sidecar_selects_exact_tracks_without_visual_applies() {
@@ -27,12 +30,15 @@ fn caption_sidecar_selects_exact_tracks_without_visual_applies() {
     ));
     value.project.render_configs[0].deliverables = vec![Deliverable {
         id: DeliverableId::new("dlv_sidecar").unwrap(),
-        file_name: "captions.vtt".to_owned(),
+        target: DeliverableTarget::File {
+            name: "captions.vtt".to_owned(),
+        },
         kind: DeliverableKind::CaptionSidecar(CaptionSidecarOutput {
             format: CaptionSidecarFormat::WebVtt,
             track_ids: vec![selected_id],
         }),
     }];
+    value.project.render_configs[0].raster = None;
 
     let plan = resolve_one(&value, &RenderConfigId::new("out_main").unwrap()).unwrap();
     let selected = resolved_track(&plan, "trk_caption_a");
@@ -43,6 +49,38 @@ fn caption_sidecar_selects_exact_tracks_without_visual_applies() {
     assert!(!omitted.state.include_in_render);
     assert!(omitted.clips.is_empty());
     assert!(plan.sequences[0].applies.is_empty());
+    assert!(plan.inputs.is_empty());
+    let ResolvedClipSource::Caption { content, .. } = &selected.clips[0].source else {
+        unreachable!()
+    };
+    assert_eq!(
+        content.presentation,
+        ResolvedTextPresentation::Plain { has_spans: false }
+    );
+
+    let DeliverableKind::CaptionSidecar(sidecar) =
+        &mut value.project.render_configs[0].deliverables[0].kind
+    else {
+        unreachable!()
+    };
+    sidecar.format = CaptionSidecarFormat::Ass;
+    value.project.render_configs[0].deliverables[0].target = DeliverableTarget::File {
+        name: "captions.ass".to_owned(),
+    };
+    let styled = resolve_one(&value, &RenderConfigId::new("out_main").unwrap()).unwrap();
+    assert_eq!(styled.inputs.len(), 1);
+    assert_eq!(
+        styled.inputs[0].material_id.as_ref().unwrap().as_str(),
+        "med_font"
+    );
+    let selected = resolved_track(&styled, "trk_caption_a");
+    let ResolvedClipSource::Caption { content, .. } = &selected.clips[0].source else {
+        unreachable!()
+    };
+    assert!(matches!(
+        content.presentation,
+        ResolvedTextPresentation::Styled { .. }
+    ));
 }
 
 #[test]
@@ -62,7 +100,7 @@ fn track_and_bus_stems_select_only_their_routed_tracks() {
     else {
         unreachable!();
     };
-    settings.source = AudioStemSource::Bus {
+    settings.source = AudioMixSource::Bus {
         bus_id: BusId::new("bus_music").unwrap(),
     };
     let plan = resolve_one(&value, &config_id).unwrap();
@@ -86,7 +124,9 @@ fn stem_project() -> ProjectEnvelope {
         .push(track("trk_audio_b", TrackKind::Audio, 20, vec![second]));
     value.project.render_configs[0].deliverables = vec![Deliverable {
         id: DeliverableId::new("dlv_stem").unwrap(),
-        file_name: "dialogue.wav".to_owned(),
+        target: DeliverableTarget::File {
+            name: "dialogue.wav".to_owned(),
+        },
         kind: DeliverableKind::AudioStem(AudioStemOutput {
             format: AudioStemFormat::Wav,
             audio: AudioOutput {
@@ -94,11 +134,12 @@ fn stem_project() -> ProjectEnvelope {
                 sample_rate: 48_000,
                 channels: 2,
             },
-            source: AudioStemSource::Track {
+            source: AudioMixSource::Track {
                 track_id: TrackId::new("trk_audio_a").unwrap(),
             },
         }),
     }];
+    value.project.render_configs[0].raster = None;
     value
 }
 

@@ -114,6 +114,7 @@ pub(super) fn proxy_descriptor(
 ) -> ArtifactDescriptor {
     let input = &prepared.plan.inputs[0];
     let stream = input.video.as_ref().unwrap().selection;
+    let raster = prepared.plan.output.raster.as_ref().unwrap();
     MediaArtifactRequest {
         source_identity: ContentDigest {
             algorithm: DigestAlgorithm::Sha256,
@@ -138,9 +139,9 @@ pub(super) fn proxy_descriptor(
                     prepared.plan.header.source.timebase,
                 ),
             },
-            width: prepared.plan.output.width,
-            height: prepared.plan.output.height,
-            frame_rate: prepared.plan.output.frame_rate,
+            width: raster.width,
+            height: raster.height,
+            frame_rate: raster.frame_rate,
             crf: 28,
         }),
     }

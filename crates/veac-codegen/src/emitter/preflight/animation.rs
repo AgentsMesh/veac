@@ -108,7 +108,7 @@ impl Curves<'_> {
         }
     }
 
-    fn curve<T>(
+    fn curve<T: values::SpringValue>(
         &mut self,
         curve: &Animatable<T>,
         domain: RationalTime,
@@ -139,6 +139,7 @@ impl Curves<'_> {
             || !keyframes
                 .windows(2)
                 .all(|pair| pair[0].time.value < pair[1].time.value)
+            || !values::spring_ranges_valid(keyframes, valid_value)
         {
             self.invalid(owner);
         }

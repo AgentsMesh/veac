@@ -1,8 +1,8 @@
 use crate::authoring::Identifier;
 use veac_ir::{
-    AnnotationId, ApplyId, ApplyStageId, BusId, DeliverableId, EffectId, ItemId, KeyframeId,
-    MaterialId, MulticamAngleId, MulticamGroupId, ProjectId, RelationId, RenderConfigId,
-    SequenceId, TrackId,
+    AnnotationId, ApplyId, ApplyStageId, BusId, DeliverableId, EffectId, HlsRenditionId, ItemId,
+    KeyframeId, MaterialId, MulticamAngleId, MulticamGroupId, ProjectId, RelationId,
+    RenderConfigId, SequenceId, TrackId,
 };
 
 use super::context::Context;
@@ -31,6 +31,7 @@ id_fn!(apply, ApplyId, "apl_");
 id_fn!(apply_stage, ApplyStageId, "aps_");
 id_fn!(effect, EffectId, "fx_");
 id_fn!(deliverable, DeliverableId, "dlv_");
+id_fn!(hls_rendition, HlsRenditionId, "rnd_");
 id_fn!(render_config, RenderConfigId, "out_");
 
 id_fn!(key, KeyframeId, "kf_");

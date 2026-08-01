@@ -24,6 +24,7 @@ pub(super) fn task(output: BackendOutput, product: BackendProduct) -> BackendTas
         BackendOutput::File(path) => path.clone(),
         BackendOutput::Files { paths } => paths[0].clone(),
         BackendOutput::ImageSequence { pattern } => pattern.clone(),
+        BackendOutput::Package { paths, .. } => paths.playlist_pattern.clone(),
     };
     BackendTask {
         deliverable_id: veac_ir::DeliverableId::new("dlv_checkpoint_test").unwrap(),
@@ -31,6 +32,7 @@ pub(super) fn task(output: BackendOutput, product: BackendProduct) -> BackendTas
         product,
         output,
         action: BackendAction::Ffmpeg(BackendCommand {
+            preparations: vec![],
             inputs: vec![],
             filter_graph: None,
             filter_contract: None,
@@ -63,7 +65,7 @@ pub(super) fn entry(path: &str) -> CheckpointOutput {
     let task = write_task(Path::new(path), b"caption");
     let identity = identity_for(&task);
     let descriptor = identity::output(&identity, BackendProduct::CaptionSidecar, path, 0);
-    CheckpointOutput {
+    CheckpointOutput::File {
         path: path.to_owned(),
         record: ArtifactRecord {
             key: artifact_key(&descriptor).unwrap(),

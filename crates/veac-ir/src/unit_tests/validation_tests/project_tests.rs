@@ -131,13 +131,19 @@ fn output_contract_rejects_bad_refs_geometry_paths_audio_and_ids() {
     let output = &mut project.project.render_configs[0];
     output.id = serde_json::from_str("\"bad\"").unwrap();
     output.sequence_id = SequenceId::new("seq_missing").unwrap();
-    output.deliverables[0].file_name = "..\\escape.mp4".to_owned();
-    output.width = 0;
-    output.frame_rate = Rational {
+    output.deliverables[0].target = DeliverableTarget::File {
+        name: "..\\escape.mp4".to_owned(),
+    };
+    let raster = output.raster.as_mut().unwrap();
+    raster.width = 0;
+    raster.frame_rate = Rational {
         numerator: 60,
         denominator: 2,
     };
-    output.video_deliverable_mut().unwrap().audio = Some(AudioOutput {
+    output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap()
+        .audio = Some(AudioOutput {
         codec: AudioCodec::Opus,
         sample_rate: 0,
         channels: 33,
@@ -150,7 +156,7 @@ fn output_contract_rejects_bad_refs_geometry_paths_audio_and_ids() {
         "DUPLICATE_OUTPUT_ID",
         "OUTPUT_SEQUENCE_NOT_FOUND",
         "OUTPUT_GEOMETRY",
-        "OUTPUT_FILE_NAME",
+        "OUTPUT_TARGET",
         "OUTPUT_AUDIO",
     ] {
         assert_code(&codes, code);

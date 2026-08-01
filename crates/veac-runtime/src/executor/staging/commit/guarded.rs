@@ -7,7 +7,11 @@ pub(super) fn verify_original(
     expected: Option<EntryIdentity>,
 ) -> Result<(), RuntimeError> {
     match (output.state(name)?, expected) {
-        (EntryState::Regular(actual), Some(expected)) if actual == expected => Ok(()),
+        (EntryState::Regular(actual) | EntryState::Directory(actual), Some(expected))
+            if actual == expected =>
+        {
+            Ok(())
+        }
         (EntryState::Missing, None) => Ok(()),
         _ => Err(RuntimeError::new(format!(
             "refusing to replace unsafe or concurrently changed output {name}"
@@ -22,7 +26,12 @@ pub(super) fn sync(
 ) -> Result<(), RuntimeError> {
     for (name, identity) in installed {
         active(guard)?;
-        output.sync_bound(name, *identity)?;
+        output.sync_tree_bound(
+            name,
+            *identity,
+            veac_artifact::MAX_DELIVERY_PACKAGE_MEMBERS + 1,
+            &mut *guard,
+        )?;
         active(guard)?;
     }
     active(guard)?;

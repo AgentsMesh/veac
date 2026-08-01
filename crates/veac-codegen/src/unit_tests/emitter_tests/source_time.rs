@@ -8,7 +8,7 @@ use super::support::{bindings, emit_video_command, fixture, resolved, time};
 fn ramp_and_hold_emit_segmented_video_and_audio_filters() {
     let mut project = fixture();
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

@@ -11,7 +11,7 @@ fn audio_chain_color_pipeline_and_lut_resource_are_owned_by_the_plan() {
     let mut project = project();
     project.project.materials.push(lut_material());
     project.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
         .unwrap()
         .audio = Some(AudioOutput {
         codec: AudioCodec::Aac,

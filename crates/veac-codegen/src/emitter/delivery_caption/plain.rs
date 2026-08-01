@@ -1,6 +1,7 @@
 use std::fmt::Write;
 
 use veac_plan::canonical::CaptionSidecarFormat;
+use veac_plan::ResolvedTextPresentation;
 
 use super::{failure::Failure, format::timestamp, Cue};
 
@@ -56,7 +57,11 @@ fn webvtt(cues: &[Cue<'_>]) -> Result<String, Failure> {
 }
 
 fn validate_rich(cue: &Cue<'_>, format: &str) -> Result<(), Failure> {
-    if cue.content.style.spans.is_empty() {
+    let has_spans = match &cue.content.presentation {
+        ResolvedTextPresentation::Plain { has_spans } => *has_spans,
+        ResolvedTextPresentation::Styled { style } => !style.spans.is_empty(),
+    };
+    if !has_spans {
         Ok(())
     } else {
         Err(unsupported(

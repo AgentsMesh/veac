@@ -32,8 +32,11 @@ pub(crate) fn color_project(
     output_color_space: Option<ColorSpace>,
 ) -> ProjectEnvelope {
     let mut canonical = project(false);
+    let deliverable_id = canonical.project.render_configs[0].deliverables[0]
+        .id
+        .clone();
     canonical.project.render_configs[0]
-        .video_deliverable_mut()
+        .video_deliverable_mut(&deliverable_id)
         .unwrap()
         .video
         .color_space = output_color_space;
@@ -113,6 +116,7 @@ fn full_frame_visual() -> VisualProperties {
                 y: pixels(0.0),
             }),
             scale: Animatable::constant(Vec2 { x: 1.0, y: 1.0 }),
+            shear: Vec2 { x: 0.0, y: 0.0 },
             flip_horizontal: false,
             flip_vertical: false,
             rotation_degrees: Animatable::constant(0.0),

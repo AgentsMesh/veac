@@ -8,6 +8,9 @@ use crate::executor::contract::pattern;
 pub(in crate::executor::contract) fn overlaps(left: &Declaration, right: &Declaration) -> bool {
     match (left, right) {
         (Declaration::Static(left), Declaration::Static(right)) => left == right,
+        (Declaration::Tree(root), other) | (other, Declaration::Tree(root)) => {
+            tree_overlaps(root, other)
+        }
         (
             Declaration::Static(path),
             Declaration::Pattern {
@@ -88,6 +91,7 @@ pub(in crate::executor::contract) fn overlaps(left: &Declaration, right: &Declar
 pub(in crate::executor::contract) fn consumes(declaration: &Declaration, path: &Path) -> bool {
     match declaration {
         Declaration::Static(value) => value == path,
+        Declaration::Tree(root) => path.starts_with(root) || root.starts_with(path),
         Declaration::Pattern {
             parent,
             prefix,
@@ -102,6 +106,17 @@ pub(in crate::executor::contract) fn consumes(declaration: &Declaration, path: &
         Declaration::Passlog { parent, prefix } => {
             same_parent(path, parent)
                 && pattern::passlog_accepts(prefix, path.file_name().unwrap().as_encoded_bytes())
+        }
+    }
+}
+
+fn tree_overlaps(root: &Path, declaration: &Declaration) -> bool {
+    match declaration {
+        Declaration::Static(path) | Declaration::Tree(path) => {
+            path.starts_with(root) || root.starts_with(path)
+        }
+        Declaration::Pattern { parent, .. } | Declaration::Passlog { parent, .. } => {
+            parent.starts_with(root) || consumes(declaration, root)
         }
     }
 }

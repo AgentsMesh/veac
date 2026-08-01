@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AudioOutput, CaptionOutput, ColorSpace, OutputFormat};
+use crate::{AudioOutput, ColorSpace, OutputFormat};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -9,7 +9,6 @@ pub struct VideoDeliverable {
     pub container: OutputFormat,
     pub video: VideoOutput,
     pub audio: Option<AudioOutput>,
-    pub captions: CaptionOutput,
     pub optimize_for_streaming: bool,
     pub pass_mode: PassMode,
     pub hardware: HardwareSelection,
@@ -25,7 +24,6 @@ impl Default for VideoDeliverable {
                 sample_rate: 48_000,
                 channels: 2,
             }),
-            captions: CaptionOutput::BurnIn,
             optimize_for_streaming: false,
             pass_mode: PassMode::Single,
             hardware: HardwareSelection::Auto,
@@ -75,7 +73,7 @@ pub enum VideoRateControl {
         #[schemars(range(max = 9007199254740991u64))]
         max_bps: Option<u64>,
         #[schemars(range(max = 9007199254740991u64))]
-        buffer_bps: Option<u64>,
+        buffer_size_bits: Option<u64>,
     },
     Lossless,
 }

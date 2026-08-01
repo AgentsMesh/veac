@@ -1,7 +1,9 @@
 use std::path::Path;
 
+use super::super::commit::{self, CommitContext};
+use super::super::directory::Directory;
 use super::super::StagedFile;
-use super::apply;
+use super::{apply, deadline, file_outputs};
 
 #[test]
 fn commit_replaces_targets_and_removes_stale_files() {
@@ -33,6 +35,7 @@ fn commit_validation_rejects_duplicate_empty_missing_and_overlapping_files() {
     let duplicate = StagedFile {
         source: file.source.clone(),
         target: file.target.clone(),
+        allow_empty: false,
     };
     assert!(
         apply(staging.path(), &[file.clone(), duplicate], &[], false)
@@ -53,6 +56,7 @@ fn commit_validation_rejects_duplicate_empty_missing_and_overlapping_files() {
     let missing = StagedFile {
         source: staging.path().join("missing"),
         target: temp.path().join("missing.out"),
+        allow_empty: false,
     };
     assert!(apply(staging.path(), &[missing], &[], false)
         .unwrap_err()
@@ -62,6 +66,31 @@ fn commit_validation_rejects_duplicate_empty_missing_and_overlapping_files() {
     let empty = staged(staging.path(), "empty", temp.path(), "empty.out", b"");
     assert!(apply(staging.path(), std::slice::from_ref(&empty), &[], false).is_err());
     apply(staging.path(), &[empty], &[], true).unwrap();
+}
+
+#[test]
+fn empty_permission_is_scoped_to_each_staged_file() {
+    let temp = tempfile::tempdir().unwrap();
+    let staging = tempfile::tempdir_in(temp.path()).unwrap();
+    let caption = staged(staging.path(), "caption", temp.path(), "caption.srt", b"");
+    let mut video = staged(staging.path(), "video", temp.path(), "video.mp4", b"");
+    let mut caption = caption;
+    caption.allow_empty = true;
+    video.allow_empty = false;
+    let stage = Directory::open(staging.path()).unwrap();
+    let output = Directory::open(temp.path()).unwrap();
+
+    let outputs = file_outputs(&[caption, video]);
+    let error = commit::apply_locked(
+        CommitContext::new(staging.path(), &stage, &output, &outputs, &[]),
+        deadline(),
+    )
+    .unwrap_err()
+    .into_error();
+
+    assert!(error.message.contains("regular non-empty file"));
+    assert!(!temp.path().join("caption.srt").exists());
+    assert!(!temp.path().join("video.mp4").exists());
 }
 
 #[test]
@@ -96,10 +125,12 @@ fn failed_second_install_removes_new_files_and_restores_backups() {
         StagedFile {
             source: source.clone(),
             target: first_target.clone(),
+            allow_empty: false,
         },
         StagedFile {
             source,
             target: second_target.clone(),
+            allow_empty: false,
         },
     ];
     let error = apply(staging.path(), &files, &[], false).unwrap_err();
@@ -124,6 +155,7 @@ fn staged_symlink_is_rejected_before_commit() {
         &[StagedFile {
             source: link,
             target: temp.path().join("output"),
+            allow_empty: false,
         }],
         &[],
         false,
@@ -144,5 +176,6 @@ fn staged(
     StagedFile {
         source,
         target: target_parent.join(target),
+        allow_empty: false,
     }
 }

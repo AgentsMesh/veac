@@ -126,7 +126,7 @@ if valid_inputs | not then error("invalid preview parameters") else . end
         else . end
     )
   else . end
-| .project.render_configs[] |= (resized($edge) | preview_rate($fps))
+| .project.render_configs[].raster |= (resized($edge) | preview_rate($fps))
 | if $window == null then . else apply_window($window.duration_seconds) end
 | (.project.render_configs[].deliverables[]?
     | select(.kind.type == "video")

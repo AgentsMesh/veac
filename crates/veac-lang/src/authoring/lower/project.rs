@@ -4,7 +4,7 @@ use crate::authoring::{Diagnostics, Document};
 use veac_ir::{Project, ProjectEnvelope, SequenceSettings};
 
 use super::{
-    annotation, apply, context::Context, ids, material, multicam, output, relation, settings,
+    annotation, apply, context::Context, delivery, ids, material, multicam, relation, settings,
     timeline,
 };
 
@@ -54,9 +54,9 @@ pub fn lower_document(document: &Document) -> Result<ProjectEnvelope, Diagnostic
         }
     }
     let render_configs = declaration
-        .outputs
+        .deliveries
         .iter()
-        .filter_map(|value| output::lower(&mut ctx, value, &settings))
+        .filter_map(|value| delivery::lower(&mut ctx, value))
         .collect();
     let annotations = declaration
         .annotations

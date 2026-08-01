@@ -6,19 +6,19 @@ fn master_track_and_bus_stems_accept_typed_format_codec_pairs() {
         "master.WAV",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Master,
+        AudioMixSource::Master,
     ));
     assert_valid(stem(
         "master.FLAC",
         AudioStemFormat::Flac,
         AudioCodec::Flac,
-        AudioStemSource::Master,
+        AudioMixSource::Master,
     ));
     assert_valid(stem(
         "video.wav",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Track {
+        AudioMixSource::Track {
             track_id: TrackId::new("trk_video").unwrap(),
         },
     ));
@@ -27,7 +27,7 @@ fn master_track_and_bus_stems_accept_typed_format_codec_pairs() {
         "audio.wav",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Track {
+        AudioMixSource::Track {
             track_id: TrackId::new("trk_audio").unwrap(),
         },
     );
@@ -44,7 +44,7 @@ fn master_track_and_bus_stems_accept_typed_format_codec_pairs() {
         "bus.wav",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Bus {
+        AudioMixSource::Bus {
             bus_id: BusId::new("bus_dialogue").unwrap(),
         },
     );
@@ -61,7 +61,7 @@ fn audio_stems_reject_extension_codec_and_audio_parameter_mismatches() {
         "zero.wav",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Master,
+        AudioMixSource::Master,
     );
     let DeliverableKind::AudioStem(settings) = &mut zero_rate.kind else {
         panic!()
@@ -84,19 +84,19 @@ fn audio_stems_reject_extension_codec_and_audio_parameter_mismatches() {
             "wrong.flac",
             AudioStemFormat::Wav,
             AudioCodec::PcmS16Le,
-            AudioStemSource::Master,
+            AudioMixSource::Master,
         ),
         stem(
             "wrong.wav",
             AudioStemFormat::Wav,
             AudioCodec::Flac,
-            AudioStemSource::Master,
+            AudioMixSource::Master,
         ),
         stem(
             "wrong.flac",
             AudioStemFormat::Flac,
             AudioCodec::PcmS16Le,
-            AudioStemSource::Master,
+            AudioMixSource::Master,
         ),
         zero_rate,
         zero_channels,
@@ -114,7 +114,7 @@ fn stem_track_and_bus_sources_must_resolve_with_the_right_kind() {
                 "track.wav",
                 AudioStemFormat::Wav,
                 AudioCodec::PcmS16Le,
-                AudioStemSource::Track {
+                AudioMixSource::Track {
                     track_id: TrackId::new(track).unwrap(),
                 },
             ),
@@ -126,7 +126,7 @@ fn stem_track_and_bus_sources_must_resolve_with_the_right_kind() {
             "bus.wav",
             AudioStemFormat::Wav,
             AudioCodec::PcmS16Le,
-            AudioStemSource::Bus {
+            AudioMixSource::Bus {
                 bus_id: BusId::new("bus_missing").unwrap(),
             },
         ),
@@ -137,7 +137,7 @@ fn stem_track_and_bus_sources_must_resolve_with_the_right_kind() {
         "bus.wav",
         AudioStemFormat::Wav,
         AudioCodec::PcmS16Le,
-        AudioStemSource::Bus {
+        AudioMixSource::Bus {
             bus_id: BusId::new("bus_captions-only").unwrap(),
         },
     );

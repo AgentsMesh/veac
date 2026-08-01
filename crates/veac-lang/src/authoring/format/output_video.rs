@@ -3,50 +3,65 @@ use crate::authoring::{
     VideoRateControl,
 };
 
+use super::output_units::{bitrate, buffer_size, channel_layout, sample_rate};
 use super::writer::Writer;
 
 pub(super) fn video(writer: &mut Writer, value: &VideoEncoding) {
-    writer.line(format!("container {};", value.container.token()));
-    writer.block("video", |writer| video_settings(writer, &value.video));
-    match &value.audio {
-        Some(value) => writer.block("audio", |writer| audio_settings(writer, value)),
-        None => writer.line("audio none;"),
-    }
-    writer.line(format!("captions {};", value.captions.token()));
-    writer.line(format!(
-        "optimize-for-streaming {};",
-        value.optimize_for_streaming
-    ));
-    writer.line(format!("pass-mode {};", value.pass_mode.token()));
-    writer.line(format!("hardware {};", hardware(&value.hardware)));
+    writer.block(format!("mux {}", value.container.token()), |writer| {
+        writer.line(format!(
+            "layout {};",
+            if value.optimize_for_streaming {
+                "fast-start"
+            } else {
+                "standard"
+            }
+        ));
+        writer.block(format!("video {}", value.video.codec.token()), |writer| {
+            video_settings(writer, &value.video)
+        });
+        match &value.audio {
+            Some(value) => writer.block(format!("audio {}", value.codec.token()), |writer| {
+                audio_settings(writer, value)
+            }),
+            None => writer.line("audio none;"),
+        }
+        writer.line(format!("passes {};", value.pass_mode.token()));
+        writer.line(format!("accelerator {};", hardware(&value.hardware)));
+    });
 }
 
-fn video_settings(writer: &mut Writer, value: &VideoOutput) {
-    writer.line(format!("codec {};", value.codec.token()));
+pub(super) fn video_settings(writer: &mut Writer, value: &VideoOutput) {
     writer.line(format!("pixel-format {};", value.pixel_format.token()));
     writer.line(format!("alpha {};", value.alpha.token()));
-    if let Some(value) = &value.color_space {
-        writer.block("color-space", |writer| color_space(writer, value));
+    match &value.color_space {
+        Some(value) => writer.block("color-space", |writer| color_space(writer, value)),
+        None => writer.line("color-space source;"),
     }
     rate_control(writer, value.rate_control.clone());
-    if let Some(value) = value.gop_size {
-        writer.line(format!("gop-size {value};"));
-    }
-    if let Some(value) = value.b_frames {
-        writer.line(format!("b-frames {value};"));
-    }
-    if let Some(value) = &value.profile {
-        writer.line(format!("profile {};", value.token()));
-    }
-    if let Some(value) = &value.level {
-        writer.line(format!("level {};", super::value::quoted(value)));
-    }
+    writer.line(match value.gop_size {
+        Some(value) => format!("gop {value};"),
+        None => "gop automatic;".into(),
+    });
+    writer.line(match value.b_frames {
+        Some(value) => format!("b-frames {value};"),
+        None => "b-frames automatic;".into(),
+    });
+    writer.line(match &value.profile {
+        Some(value) => format!("profile {};", value.token()),
+        None => "profile automatic;".into(),
+    });
+    writer.line(match &value.level {
+        Some(value) => format!("level {};", super::value::quoted(value)),
+        None => "level automatic;".into(),
+    });
 }
 
-fn audio_settings(writer: &mut Writer, value: &AudioOutput) {
-    writer.line(format!("codec {};", value.codec.token()));
-    writer.line(format!("sample-rate {};", value.sample_rate));
-    writer.line(format!("channels {};", value.channels));
+pub(super) fn audio_settings(writer: &mut Writer, value: &AudioOutput) {
+    writer.line(format!("sample-rate {};", sample_rate(value.sample_rate)));
+    writer.line(format!(
+        "channel-layout {};",
+        channel_layout(value.channels)
+    ));
 }
 
 fn rate_control(writer: &mut Writer, value: VideoRateControl) {
@@ -56,22 +71,23 @@ fn rate_control(writer: &mut Writer, value: VideoRateControl) {
         }),
         VideoRateControl::Bitrate {
             target_bps,
-            max_bps,
-            buffer_bps,
-        } => writer.block("rate-control bitrate", |writer| {
-            writer.line(format!("target-bps {target_bps};"));
-            if let Some(value) = max_bps {
-                writer.line(format!("max-bps {value};"));
-            }
-            if let Some(value) = buffer_bps {
-                writer.line(format!("buffer-bps {value};"));
-            }
+            max_bps: Some(max_bps),
+            buffer_size_bits: Some(buffer),
+        } => writer.block("rate-control capped", |writer| {
+            writer.line(format!("target {};", bitrate(target_bps)));
+            writer.line(format!("max {};", bitrate(max_bps)));
+            writer.line(format!("buffer {};", buffer_size(buffer)));
         }),
+        VideoRateControl::Bitrate { target_bps, .. } => {
+            writer.block("rate-control average", |writer| {
+                writer.line(format!("target {};", bitrate(target_bps)));
+            })
+        }
         VideoRateControl::Lossless => writer.line("rate-control lossless;"),
     }
 }
 
-fn color_space(writer: &mut Writer, value: &ColorSpace) {
+pub(super) fn color_space(writer: &mut Writer, value: &ColorSpace) {
     writer.line(format!("primaries {};", value.primaries.token()));
     writer.line(format!("transfer {};", value.transfer.token()));
     writer.line(format!("matrix {};", value.matrix.token()));
