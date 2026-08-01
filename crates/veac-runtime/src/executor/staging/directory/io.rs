@@ -92,8 +92,8 @@ impl Directory {
             )));
         }
         let expected = opened_identity(&file)?;
-        drop(file);
         self.require(name, expected)?;
+        drop(file);
         Ok(expected)
     }
 

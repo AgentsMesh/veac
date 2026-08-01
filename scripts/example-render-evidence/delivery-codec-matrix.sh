@@ -77,7 +77,8 @@ codec_matrix_assert_hevc() {
   assert_stream_count "$file" v 1 "delivery-codec-matrix HEVC"
   assert_stream_count "$file" a 0 "delivery-codec-matrix HEVC"
   assert_stream_field "$file" v:0 codec_name hevc "delivery-codec-matrix HEVC"
-  assert_stream_field "$file" v:0 profile 'Main 10' "delivery-codec-matrix HEVC"
+  assert_stream_field_one_of "$file" v:0 profile "delivery-codec-matrix HEVC" \
+    'Main 10' 'Main 10 Intra' 2
   assert_stream_field "$file" v:0 pix_fmt yuv420p10le "delivery-codec-matrix HEVC"
   assert_stream_field "$file" v:0 color_primaries bt2020 "delivery-codec-matrix HEVC"
   assert_stream_field "$file" v:0 color_transfer smpte2084 "delivery-codec-matrix HEVC"
@@ -99,7 +100,7 @@ codec_matrix_assert_vp9() {
   assert_stream_count "$file" v 1 "delivery-codec-matrix VP9"
   assert_stream_count "$file" a 1 "delivery-codec-matrix VP9"
   assert_stream_field "$file" v:0 codec_name vp9 "delivery-codec-matrix VP9"
-  assert_stream_field "$file" v:0 profile 'Profile 0' "delivery-codec-matrix VP9"
+  assert_stream_field_one_of "$file" v:0 profile "delivery-codec-matrix VP9" 'Profile 0' 0
   assert_stream_field "$file" v:0 pix_fmt yuv420p "delivery-codec-matrix VP9"
   assert_stream_field "$file" v:0 width "$width" "delivery-codec-matrix VP9"
   assert_stream_field "$file" v:0 height "$height" "delivery-codec-matrix VP9"

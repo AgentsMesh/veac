@@ -84,14 +84,17 @@ fn rename_and_listing_stay_bound_to_descriptor_identities() {
 fn descriptor_operations_reject_links_and_replaced_identities() {
     let temp = tempfile::tempdir().unwrap();
     let root = Directory::open(temp.path()).unwrap();
-    std::fs::write(temp.path().join("original"), b"one").unwrap();
+    let original_path = temp.path().join("original");
+    std::fs::write(&original_path, b"one").unwrap();
+    let original_guard = std::fs::File::open(&original_path).unwrap();
     let EntryState::Regular(original) = root.state("original").unwrap() else {
         panic!("regular fixture");
     };
-    std::fs::remove_file(temp.path().join("original")).unwrap();
-    std::fs::write(temp.path().join("original"), b"two").unwrap();
+    std::fs::remove_file(&original_path).unwrap();
+    std::fs::write(&original_path, b"two").unwrap();
     assert!(root.require("original", original).is_err());
     assert!(root.sync_bound("original", original).is_err());
+    drop(original_guard);
 
     symlink("original", temp.path().join("symbolic")).unwrap();
     assert!(root

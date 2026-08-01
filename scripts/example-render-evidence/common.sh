@@ -83,6 +83,18 @@ assert_stream_field() {
   [[ $actual == "$expected" ]] || fail "$label: expected $field=$expected, got ${actual:-<empty>}"
 }
 
+assert_stream_field_one_of() {
+  local file=$1 selector=$2 field=$3 label=$4 actual expected choices=
+  shift 4
+  (($# > 0)) || fail "$label: no expected $field values"
+  actual=$(stream_field "$file" "$selector" "$field")
+  for expected in "$@"; do
+    [[ $actual == "$expected" ]] && return 0
+    choices="${choices:+$choices or }$expected"
+  done
+  fail "$label: expected $field=$choices, got ${actual:-<empty>}"
+}
+
 assert_duration_close() {
   local file=$1
   local expected=$2

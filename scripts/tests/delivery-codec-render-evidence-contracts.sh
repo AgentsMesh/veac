@@ -11,6 +11,23 @@ done
 # shellcheck source=/dev/null
 source "$ROOT/scripts/tests/delivery-codec-render-fixtures.sh"
 
+profile_field_variant() {
+  local stub_value=$1
+  shift
+  stream_field() { printf '%s\n' "$stub_value"; }
+  assert_stream_field_one_of ignored v:0 profile fixture "$@"
+}
+for actual in 'Main 10' 'Main 10 Intra' 2; do
+  (profile_field_variant "$actual" 'Main 10' 'Main 10 Intra' 2)
+done
+for actual in 'Profile 0' 0; do
+  (profile_field_variant "$actual" 'Profile 0' 0)
+done
+if (profile_field_variant Main 'Main 10' 'Main 10 Intra' 2) >/dev/null 2>&1; then
+  echo 'unexpected profile variant passed' >&2
+  exit 1
+fi
+
 clone_fixture() { mkdir -p "$1"; cp -R "$VALID/delivery-codec-matrix" "$1/delivery-codec-matrix"; }
 expect_failure() {
   local label=$1 root=$2 expected=$3 log="$TMP/$1.log"
