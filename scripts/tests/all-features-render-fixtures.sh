@@ -62,6 +62,7 @@ all_features_visual_filter() {
     always-panel) printf '%s' "$grade,${panel%%:enable=*},$backing,$caption" ;;
     early-panel) printf '%s' "$grade,${panel/5.999/4.999},$backing,$caption" ;;
     no-caption) printf '%s' "$grade,$panel,$backing" ;;
+    caption-gap) printf '%s' "$grade,$panel,$backing,$caption:enable='not(between(t,2,2.499))'" ;;
     late-background) printf '%s' "$grade,$panel,$backing:enable='between(t,1,5.999)',$caption" ;;
   esac
 }

@@ -56,6 +56,55 @@ json_variant() {
   expect_failure "$label" "$checker" "$root" "$expected"
 }
 
+caption_classifier_metrics() {
+  local label=$1 color=$2 video="$TMP_DIR/classifier-$1.mkv"
+  ffmpeg -nostdin -v error -y -f lavfi -i 'color=c=black:s=480x270:r=12:d=8' \
+    -vf "drawbox=x=130:y=210:w=8:h=5:color=$color:t=fill" \
+    -c:v ffv1 -pix_fmt bgr0 "$video"
+  all_features_caption_frame_metrics "$video"
+}
+
+assert_caption_classifier() {
+  local label=$1 color=$2 expected_light=$3 expected_bad=$4 actual
+  local frames dark light bad
+  actual=$(caption_classifier_metrics "$label" "$color")
+  read -r frames dark light bad <<<"$actual"
+  if [[ $frames == 96 && $dark =~ ^[0-9]+$ && $light == "$expected_light" &&
+    $bad == "$expected_bad" ]] && ((dark >= 6100)); then
+    return 0
+  fi
+  {
+    echo "caption classifier drifted for $label: $actual" >&2
+    exit 1
+  }
+}
+
+assert_caption_metric_boundaries() {
+  local metrics
+  (
+    # Invoked indirectly through the readability checker.
+    # shellcheck disable=SC2329
+    all_features_caption_frame_metrics() { printf '93 3000 35 0\n'; }
+    all_features_assert_caption_readability ignored
+  )
+  for metrics in '92 3000 35 0' '93 2999 35 0' '93 3000 34 0' \
+    '93 3000 35 1' '0 0 0 0' 'invalid'; do
+    if (
+      # Invoked indirectly through the readability checker.
+      # shellcheck disable=SC2329
+      all_features_caption_frame_metrics() { printf '%s\n' "$metrics"; }
+      all_features_assert_caption_readability ignored
+    ) >/dev/null 2>&1; then
+      echo "invalid caption readability metrics passed: $metrics" >&2
+      exit 1
+    fi
+  done
+}
+
+assert_caption_classifier neutral-boundary 0x969696 40 0
+assert_caption_classifier below-boundary 0x959595 0 96
+assert_caption_classifier saturated-bright 0x00ffff 0 96
+assert_caption_metric_boundaries
 VALID="$TMP_DIR/valid"
 make_all_features_fixture "$VALID"
 export PREVIEW_ROOT=$VALID
@@ -96,6 +145,7 @@ visual_variant neutral_rendered_grade neutral-grade 'rendered grade delta is inv
 visual_variant panel_always_visible always-panel 'lower-third lifecycle failed'
 visual_variant panel_ends_early early-panel 'lower-third lifecycle failed'
 visual_variant missing_burned_caption no-caption 'caption missing'
+visual_variant discontinuous_caption_foreground caption-gap 'caption contrast is not continuous'
 visual_variant discontinuous_caption_background late-background 'caption contrast is not continuous'
 visual_variant four_second_media truncated 'invalid video contract'
 

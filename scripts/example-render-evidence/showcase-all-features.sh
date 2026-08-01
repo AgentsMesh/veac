@@ -121,7 +121,7 @@ all_features_caption_frame_metrics() {
         rgb[channel++]=$i
         if (channel==3) {
           if (rgb[0]<=75 && rgb[1]<=75 && rgb[2]<=75) dark++
-          if (rgb[0]>=170 && rgb[1]>=170 && rgb[2]>=170) light++
+          if (rgb[0]>=150 && rgb[1]>=150 && rgb[2]>=150) light++
           pixel++; channel=0
           if (pixel==pixels) {
             frames++; if (frames==1 || dark<min_dark) min_dark=dark
@@ -132,7 +132,7 @@ all_features_caption_frame_metrics() {
         }
       }
     }
-    END { if (pixel || channel) exit 1; print frames,min_dark,min_light,bad+0 }'
+    END { if (pixel || channel) exit 1; print frames+0,min_dark+0,min_light+0,bad+0 }'
 }
 
 all_features_assert_caption_readability() {
