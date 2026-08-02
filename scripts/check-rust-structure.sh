@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/coverage-policy.sh"
 "$SCRIPT_DIR/check-file-size.sh"
 "$SCRIPT_DIR/check-capability-evidence.sh"
 "$SCRIPT_DIR/check-make-entrypoints.sh"
+"$SCRIPT_DIR/tests/ci-workflow-contracts.sh"
 
 status=0
 

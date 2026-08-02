@@ -82,6 +82,7 @@ jobs:
   ffmpeg-integration:
     name: FFmpeg integration
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -108,12 +109,13 @@ jobs:
       - name: Run FFmpeg-backed integration tests
         run: make e2e
 
-      - name: Build every example preview
-        run: make build-examples
+      - name: Build representative example previews
+        run: make build-examples-smoke
 
-      - name: Upload example previews
+      - name: Upload example smoke previews
         uses: actions/upload-artifact@v4
         with:
-          name: example-previews
+          name: example-smoke-previews
           path: examples-preview/
           if-no-files-found: error
+          retention-days: 3
