@@ -1,0 +1,52 @@
+name: Full example previews
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-example-previews-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  previews:
+    name: Full example previews
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji ripgrep
+
+      - name: Install FFmpeg 8.0
+        run: bash .github/scripts/install-ffmpeg-8.sh
+
+      - name: Verify FFmpeg baseline
+        run: |
+          ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
+          ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
+
+      - name: Build every example preview
+        run: make build-examples
+
+      - name: Upload full example previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-example-previews
+          path: examples-preview/
+          if-no-files-found: error
+          retention-days: 7

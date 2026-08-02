@@ -6,6 +6,7 @@ RUST_TOOLCHAIN ?= 1.85.0
 CARGO := cargo +$(RUST_TOOLCHAIN)
 PACKAGE ?=
 EXAMPLES ?=
+EXAMPLE_SMOKE_SET := minimal,all-features,executable-mechanisms,text-overlay,delivery-codec-matrix
 PREVIEW_DIR ?= $(CURDIR)/examples-preview
 PREVIEW_MAX_EDGE ?= 480
 PREVIEW_FPS ?= 12
@@ -13,6 +14,7 @@ PORT ?= 8000
 
 .PHONY: help doctor build check fmt fmt-check structure clippy lint test e2e
 .PHONY: coverage-package coverage-packages coverage check-examples build-examples
+.PHONY: build-examples-smoke
 .PHONY: serve-examples clean-examples check-language-docs verify
 .PHONY: check-example-capabilities test-example-capabilities test-example-index
 .PHONY: test-example-render-contracts
@@ -116,6 +118,9 @@ build-examples: check-examples ## Render every example and generate a preview in
 		VEAC_EXAMPLES="$(EXAMPLES)" \
 		RUSTUP_TOOLCHAIN=$(RUST_TOOLCHAIN) \
 		bash scripts/build-examples.sh build "$(PREVIEW_DIR)"
+
+build-examples-smoke: EXAMPLES := $(EXAMPLE_SMOKE_SET)
+build-examples-smoke: build-examples ## Render the representative CI example set.
 
 serve-examples: ## Serve previously built previews on localhost.
 	@test -f "$(PREVIEW_DIR)/index.html" || { echo "run 'make build-examples' first" >&2; exit 2; }
