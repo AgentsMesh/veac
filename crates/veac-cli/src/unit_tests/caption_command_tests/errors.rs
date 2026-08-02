@@ -139,3 +139,35 @@ fn caption_project_commands_reject_invalid_targets_and_bindings() {
     .to_string()
     .contains("CAPTION_JSON"));
 }
+
+#[test]
+fn caption_project_rejects_time_rescaling_beyond_the_safe_range() {
+    let temp = tempdir().unwrap();
+    let sidecar = temp.path().join("caption.srt");
+    let document = temp.path().join("caption.json");
+    std::fs::write(&sidecar, "1\n00:00:00,000 --> 00:00:01,000\nHello\n").unwrap();
+    run(import_command(&sidecar, Some(document.clone()))).unwrap();
+
+    let mut captions =
+        veac_caption::decode_caption_json(&std::fs::read_to_string(&document).unwrap()).unwrap();
+    captions.document.timescale = 1;
+    let cue = &mut captions.document.cues[0];
+    cue.range.start = veac_ir::RationalTime::new(veac_ir::MAX_SAFE_INTEGER as i64 - 1, 1).unwrap();
+    cue.range.duration = veac_ir::RationalTime::new(1, 1).unwrap();
+    std::fs::write(
+        &document,
+        veac_caption::canonical_caption_json(&captions).unwrap(),
+    )
+    .unwrap();
+    let (project, bindings, _, _) = project_and_bindings(&temp, &document);
+
+    let error = run(CaptionCommand::Propose {
+        project,
+        document,
+        bindings,
+        operation_id: "op_caption_range".to_owned(),
+        output: None,
+    })
+    .unwrap_err();
+    assert!(error.to_string().contains("CAPTION_TIMEBASE"));
+}

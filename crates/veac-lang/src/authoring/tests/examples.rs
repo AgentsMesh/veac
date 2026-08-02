@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::authoring::{format_document, lower_document, parse};
+use crate::program::compile_path;
 
 fn example_sources() -> Vec<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples");
@@ -21,14 +22,13 @@ fn public_pipeline_round_trips_and_lowers_every_example() {
     let sources = example_sources();
     assert!(!sources.is_empty());
     for path in sources {
-        let source = fs::read_to_string(&path).unwrap();
-        let document = parse(&source)
-            .unwrap_or_else(|values| panic!("{} parse failed: {values:?}", path.display()));
-        let formatted = format_document(&document);
+        let compiled = compile_path(&path)
+            .unwrap_or_else(|values| panic!("{} compile failed: {values:?}", path.display()));
+        let formatted = format_document(compiled.document());
         let reparsed = parse(&formatted)
             .unwrap_or_else(|values| panic!("{} reparse failed: {values:?}", path.display()));
         assert_eq!(format_document(&reparsed), formatted, "{}", path.display());
-        let envelope = lower_document(&document)
+        let envelope = lower_document(compiled.document())
             .unwrap_or_else(|values| panic!("{} lowering failed: {values:?}", path.display()));
         veac_ir::validate(&envelope)
             .unwrap_or_else(|values| panic!("{} invalid IR: {values:?}", path.display()));

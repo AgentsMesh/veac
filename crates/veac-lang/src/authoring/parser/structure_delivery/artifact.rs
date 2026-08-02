@@ -11,7 +11,7 @@ impl Parser {
     pub(super) fn artifact(&mut self) -> Option<ArtifactDecl> {
         let start = self.required_word("artifact")?;
         let kind = self.identifier("artifact kind")?;
-        let id = self.identifier("artifact")?;
+        let id = self.stable_identifier("artifact")?;
         let mut body = self.semantic_block()?;
         if let Some(legacy) = take(self, &mut body, "encoding") {
             self.error(

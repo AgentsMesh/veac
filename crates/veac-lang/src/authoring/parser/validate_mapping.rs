@@ -51,11 +51,14 @@ fn curve(
     let mut previous = None;
     for key in keys {
         if !ids.insert(&key.id.value) {
-            diagnostics.push(Diagnostic {
-                code: "AUTHORING_DUPLICATE_ID",
-                message: "duplicate mapping key id".to_owned(),
-                span: key.id.span,
-            });
+            crate::authoring::diagnostic_budget::push(
+                diagnostics,
+                Diagnostic {
+                    code: "AUTHORING_DUPLICATE_ID",
+                    message: "duplicate mapping key id".to_owned(),
+                    span: key.id.span,
+                },
+            );
         }
         let at = time(diagnostics, "curve key at", &key.at, false);
         source_time(diagnostics, "curve key source", &key.source, outside);
@@ -63,20 +66,26 @@ fn curve(
             .zip(previous)
             .is_some_and(|(at, previous)| at <= previous)
         {
-            diagnostics.push(Diagnostic {
-                code: "AUTHORING_MAPPING_KEY_ORDER",
-                message: "curve key times must be strictly increasing".to_owned(),
-                span: key.at.span,
-            });
+            crate::authoring::diagnostic_budget::push(
+                diagnostics,
+                Diagnostic {
+                    code: "AUTHORING_MAPPING_KEY_ORDER",
+                    message: "curve key times must be strictly increasing".to_owned(),
+                    span: key.at.span,
+                },
+            );
         }
         previous = at.or(previous);
     }
     if keys.is_empty() {
-        diagnostics.push(Diagnostic {
-            code: "AUTHORING_MAPPING_KEYS",
-            message: "curve mapping requires at least one key".to_owned(),
-            span,
-        });
+        crate::authoring::diagnostic_budget::push(
+            diagnostics,
+            Diagnostic {
+                code: "AUTHORING_MAPPING_KEYS",
+                message: "curve mapping requires at least one key".to_owned(),
+                span,
+            },
+        );
     }
 }
 

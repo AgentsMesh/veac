@@ -1,4 +1,5 @@
 use crate::*;
+use std::collections::HashSet;
 
 use super::Validator;
 
@@ -39,15 +40,42 @@ impl Validator {
         let loudness = audio
             .processors
             .iter()
-            .filter(|value| matches!(value, AudioProcessor::Loudness(_)))
+            .filter(|value| matches!(value.kind, AudioProcessorKind::Loudness(_)))
             .count();
         if loudness > 1 || (audio.normalize && loudness > 0) {
             self.value_error("AUDIO_PROCESSOR_CONFLICT", path, id);
         }
+        let mut processor_ids = HashSet::new();
         for (index, processor) in audio.processors.iter().enumerate() {
             let processor_path = format!("{path}/audio/processors/{index}");
+            self.check_id(
+                processor.id.is_valid(),
+                processor.id.as_str(),
+                &processor_path,
+            );
+            if !processor_ids.insert(processor.id.as_str()) {
+                self.duplicate(
+                    "DUPLICATE_AUDIO_PROCESSOR_ID",
+                    processor.id.as_str(),
+                    &processor_path,
+                );
+            }
             if !audio_processor_valid(processor, rate) {
                 self.value_error("AUDIO_PROCESSOR", &processor_path, id);
+            }
+            if let AudioProcessorKind::ParametricEq { bands } = &processor.kind {
+                self.eq_band_ids(bands, &processor_path);
+            }
+        }
+    }
+
+    fn eq_band_ids(&mut self, bands: &[ParametricEqBand], path: &str) {
+        let mut ids = HashSet::new();
+        for (index, band) in bands.iter().enumerate() {
+            let band_path = format!("{path}/kind/bands/{index}");
+            self.check_id(band.id.is_valid(), band.id.as_str(), &band_path);
+            if !ids.insert(band.id.as_str()) {
+                self.duplicate("DUPLICATE_EQ_BAND_ID", band.id.as_str(), &band_path);
             }
         }
     }

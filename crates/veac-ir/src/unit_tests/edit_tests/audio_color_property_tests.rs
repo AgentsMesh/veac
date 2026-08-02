@@ -4,11 +4,14 @@ use super::*;
 fn typed_audio_chain_crossfade_sidechain_and_color_pipeline_are_editable() {
     let project = linked_project();
     let clip_id = ItemId::new("itm_video").unwrap();
-    let processors = vec![AudioProcessor::Limiter(Limiter {
-        ceiling_db: -1.0,
-        attack_ms: 5.0,
-        release_ms: 50.0,
-    })];
+    let processors = vec![AudioProcessor {
+        id: AudioProcessorId::new("aud_final-limiter").unwrap(),
+        kind: AudioProcessorKind::Limiter(Limiter {
+            ceiling_db: -1.0,
+            attack_ms: 5.0,
+            release_ms: 50.0,
+        }),
+    }];
     let crossfade = AudioCrossfade {
         fade_in: time(30),
         fade_out: time(30),

@@ -8,7 +8,7 @@ use super::Parser;
 impl Parser {
     pub(super) fn delivery(&mut self) -> Option<DeliveryDecl> {
         let start = self.required_word("delivery")?;
-        let id = self.identifier("delivery")?;
+        let id = self.stable_identifier("delivery")?;
         self.left_brace()?;
         let mut sequence = None;
         let mut raster = None;
@@ -16,7 +16,7 @@ impl Parser {
         while !self.at_right_brace() && !self.at_eof() {
             if self.at_word("sequence") {
                 let field = self.required_word("sequence")?;
-                let value = self.identifier("delivery sequence");
+                let value = self.stable_identifier("delivery sequence");
                 self.semicolon();
                 assign(self, "delivery sequence", &mut sequence, value, field);
             } else if self.at_word("raster") {

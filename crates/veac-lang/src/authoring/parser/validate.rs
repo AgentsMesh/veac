@@ -169,9 +169,12 @@ fn push(
     message: &str,
     span: crate::authoring::Span,
 ) {
-    diagnostics.push(Diagnostic {
-        code,
-        message: message.to_owned(),
-        span,
-    });
+    crate::authoring::diagnostic_budget::push(
+        diagnostics,
+        Diagnostic {
+            code,
+            message: message.to_owned(),
+            span,
+        },
+    );
 }

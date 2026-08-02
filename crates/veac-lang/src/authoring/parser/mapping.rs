@@ -118,7 +118,7 @@ impl Parser {
 
     fn mapping_key(&mut self) -> Option<MappingKey> {
         let start = self.required_word("key")?;
-        let id = self.identifier("mapping key")?;
+        let id = self.stable_identifier("mapping key")?;
         self.left_brace()?;
         let mut at = None;
         let mut source = None;

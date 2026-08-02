@@ -22,6 +22,12 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
         (SchemaContract::EditBatch, SchemaFormat::JsonSchema) => {
             convert(veac_ir::edit_batch_json_schema())
         }
+        (SchemaContract::SourceEditBatch, SchemaFormat::JsonSchema) => {
+            convert(veac_lang::source_edit::source_edit_batch_json_schema())
+        }
+        (SchemaContract::SourceIndex, SchemaFormat::JsonSchema) => {
+            convert(veac_lang::program::source_index_json_schema())
+        }
         (SchemaContract::EditOutcome, SchemaFormat::JsonSchema) => {
             convert(veac_ir::edit_outcome_json_schema())
         }

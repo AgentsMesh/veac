@@ -62,7 +62,7 @@ project all-features {
           audio mix {
             gain -6db; pan 0; muted false; normalize true; pitch preserve;
             crossfade { fade-in 250ms; fade-out 500ms; curve equal-power; }
-            processor limiter { ceiling -1db; attack 1ms; release 80ms; }
+            processor limiter voice-limiter { ceiling -1db; attack 1ms; release 80ms; }
           }
         }
       }

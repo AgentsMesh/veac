@@ -8,6 +8,8 @@ fn schema_command_exposes_every_public_contract() {
         SchemaContract::CaptionTrackInsertion,
         SchemaContract::CaptionDocumentBindings,
         SchemaContract::EditBatch,
+        SchemaContract::SourceEditBatch,
+        SchemaContract::SourceIndex,
         SchemaContract::EditOutcome,
         SchemaContract::RenderPlan,
         SchemaContract::Artifact,

@@ -6,7 +6,7 @@ impl Parser {
     pub(super) fn relation(&mut self) -> Option<RelationDecl> {
         let start = self.required_word("relation")?;
         let relation_type = self.identifier("relation type")?;
-        let id = self.identifier("relation id")?;
+        let id = self.stable_identifier("relation id")?;
         let body = self.semantic_block()?;
         let span = start.join(body.span);
         let kind = match relation_type.value.as_str() {

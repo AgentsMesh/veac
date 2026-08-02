@@ -1,4 +1,6 @@
-use veac_plan::canonical::{AudioProcessor, Compressor, Gate, Limiter, LoudnessTarget};
+use veac_plan::canonical::{
+    AudioProcessor, AudioProcessorKind, Compressor, Gate, Limiter, LoudnessTarget,
+};
 
 use super::{time, EmitContext};
 
@@ -8,8 +10,8 @@ pub(super) fn apply(
     processors: &[AudioProcessor],
 ) -> String {
     for processor in processors {
-        let filter = match processor {
-            AudioProcessor::ParametricEq { bands } => {
+        let filter = match &processor.kind {
+            AudioProcessorKind::ParametricEq { bands } => {
                 for band in bands {
                     input = context.graph.filter(
                         &[&input],
@@ -24,20 +26,20 @@ pub(super) fn apply(
                 }
                 continue;
             }
-            AudioProcessor::HighPass {
+            AudioProcessorKind::HighPass {
                 frequency_hz,
                 q,
                 poles,
             } => pass_filter("highpass", *frequency_hz, *q, *poles),
-            AudioProcessor::LowPass {
+            AudioProcessorKind::LowPass {
                 frequency_hz,
                 q,
                 poles,
             } => pass_filter("lowpass", *frequency_hz, *q, *poles),
-            AudioProcessor::Compressor(value) => compressor(*value),
-            AudioProcessor::Limiter(value) => limiter(*value),
-            AudioProcessor::Gate(value) => gate(*value),
-            AudioProcessor::Loudness(value) => loudness(*value),
+            AudioProcessorKind::Compressor(value) => compressor(*value),
+            AudioProcessorKind::Limiter(value) => limiter(*value),
+            AudioProcessorKind::Gate(value) => gate(*value),
+            AudioProcessorKind::Loudness(value) => loudness(*value),
         };
         input = context.graph.filter(&[&input], filter, "processa");
     }

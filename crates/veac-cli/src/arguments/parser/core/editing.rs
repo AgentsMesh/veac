@@ -5,8 +5,17 @@ use super::super::shared::{
 };
 use crate::arguments::Command;
 
-pub(super) fn commands() -> [ClapCommand; 5] {
-    [compile(), check(), format(), check_ir(), edit()]
+pub(super) fn commands() -> [ClapCommand; 8] {
+    [
+        compile(),
+        check(),
+        format(),
+        check_ir(),
+        edit(),
+        source_revision(),
+        source_index(),
+        source_edit(),
+    ]
 }
 
 fn revision() -> Arg {
@@ -68,6 +77,34 @@ fn edit() -> ClapCommand {
         )
 }
 
+fn source_revision() -> ClapCommand {
+    ClapCommand::new("source-revision")
+        .about("Print the exact revision of a .veac source graph")
+        .arg(path("source"))
+}
+
+fn source_index() -> ClapCommand {
+    ClapCommand::new("source-index")
+        .about("Print the stable agent-readable inventory of editable .veac source nodes")
+        .arg(path("source"))
+}
+
+fn source_edit() -> ClapCommand {
+    ClapCommand::new("source-edit")
+        .about("Apply one atomic typed edit batch to .veac source of truth")
+        .arg(path("source"))
+        .arg(path("source_edit_batch"))
+        .arg(
+            path_option("output")
+                .short('o')
+                .long("output")
+                .visible_alias("out")
+                .value_name("PATH")
+                .help("Write the edited module to PATH; defaults to updating it in place"),
+        )
+        .arg(flag("dry_run", "dry-run").help("Validate and report without writing source"))
+}
+
 pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
     match name {
         "compile" => Command::Compile {
@@ -90,6 +127,18 @@ pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
         "edit" => Command::Edit {
             project: required_path_value(matches, "project"),
             edit_batch: required_path_value(matches, "edit_batch"),
+            output: path_value(matches, "output"),
+            dry_run: flag_value(matches, "dry_run"),
+        },
+        "source-revision" => Command::SourceRevision {
+            source: required_path_value(matches, "source"),
+        },
+        "source-index" => Command::SourceIndex {
+            source: required_path_value(matches, "source"),
+        },
+        "source-edit" => Command::SourceEdit {
+            source: required_path_value(matches, "source"),
+            source_edit_batch: required_path_value(matches, "source_edit_batch"),
             output: path_value(matches, "output"),
             dry_run: flag_value(matches, "dry_run"),
         },

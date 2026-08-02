@@ -6,18 +6,18 @@ RUST_TOOLCHAIN ?= 1.85.0
 CARGO := cargo +$(RUST_TOOLCHAIN)
 PACKAGE ?=
 EXAMPLES ?=
-EXAMPLE_SMOKE_SET := minimal,all-features,executable-mechanisms,text-overlay,delivery-codec-matrix
+EXAMPLE_SMOKE_SET := minimal,all-features,executable-mechanisms,text-overlay,delivery-codec-matrix,programming-language
 PREVIEW_DIR ?= $(CURDIR)/examples-preview
 PREVIEW_MAX_EDGE ?= 480
 PREVIEW_FPS ?= 12
 PORT ?= 8000
 
 .PHONY: help doctor build check fmt fmt-check structure clippy lint test e2e
-.PHONY: coverage-package coverage-packages coverage check-examples build-examples
-.PHONY: build-examples-smoke
+.PHONY: coverage-package coverage-packages coverage check-examples check-examples-static
+.PHONY: build-examples build-examples-smoke _build-examples
 .PHONY: serve-examples clean-examples check-language-docs verify
 .PHONY: check-example-capabilities test-example-capabilities test-example-index
-.PHONY: test-example-render-contracts
+.PHONY: test-example-preview-contracts test-example-render-contracts
 
 help: ## Show the available repository commands.
 	@awk 'BEGIN {FS = ":.*## "; print "VEAC repository commands:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -92,11 +92,14 @@ test-example-capabilities: ## Exercise positive and negative catalog checks.
 test-example-index: ## Verify example presentation and generated HTML contracts.
 	bash scripts/tests/example-index-contracts.sh
 
-test-example-render-contracts: ## Exercise preview and rendered-evidence shell contracts.
+test-example-preview-contracts: ## Exercise lightweight preview assembly contracts.
 	bash scripts/tests/example-preview-contracts.sh
 	bash scripts/tests/example-preview-fixture-contracts.sh
 	bash scripts/tests/example-preview-provenance-contracts.sh
 	bash scripts/tests/example-preview-build-flow-contracts.sh
+	bash scripts/tests/example-preview-finalization-contracts.sh
+
+test-example-render-contracts: test-example-preview-contracts ## Exercise rendered-evidence shell contracts.
 	bash scripts/tests/render-evidence-contracts.sh
 	bash scripts/tests/text-render-evidence-contracts.sh
 	bash scripts/tests/timing-render-evidence-contracts.sh
@@ -108,19 +111,23 @@ test-example-render-contracts: ## Exercise preview and rendered-evidence shell c
 	bash scripts/tests/video-stabilization-render-evidence-contracts.sh
 	bash scripts/tests/delivery-codec-render-evidence-contracts.sh
 
-check-examples: check-example-capabilities test-example-capabilities test-example-index test-example-render-contracts ## Check catalog, contracts, compile, and format examples.
+check-examples-static: check-example-capabilities test-example-capabilities test-example-index test-example-preview-contracts ## Check examples without rendering evidence media.
 	$(CARGO) test -p veac-lang --test examples_authoring \
 		--test examples_mechanism_evidence
 
-build-examples: check-examples ## Render every example and generate a preview index.
+check-examples: check-examples-static test-example-render-contracts ## Run every example contract and evidence check.
+
+_build-examples:
 	@unset VEAC_BIN; \
 		VEAC_PREVIEW_MAX_EDGE=$(PREVIEW_MAX_EDGE) VEAC_PREVIEW_FPS=$(PREVIEW_FPS) \
 		VEAC_EXAMPLES="$(EXAMPLES)" \
 		RUSTUP_TOOLCHAIN=$(RUST_TOOLCHAIN) \
 		bash scripts/build-examples.sh build "$(PREVIEW_DIR)"
 
+build-examples: check-examples _build-examples ## Render every example and generate a preview index.
+
 build-examples-smoke: EXAMPLES := $(EXAMPLE_SMOKE_SET)
-build-examples-smoke: build-examples ## Render the representative CI example set.
+build-examples-smoke: check-examples-static _build-examples ## Render the representative CI example set.
 
 serve-examples: ## Serve previously built previews on localhost.
 	@test -f "$(PREVIEW_DIR)/index.html" || { echo "run 'make build-examples' first" >&2; exit 2; }

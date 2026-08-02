@@ -4,7 +4,7 @@ use crate::authoring::{ItemDecl, ModifierDecl, RecordSpan, Span};
 impl Parser {
     pub(super) fn item(&mut self) -> Option<ItemDecl> {
         let start = self.required_word("item")?;
-        let id = self.identifier("item")?;
+        let id = self.stable_identifier("item")?;
         self.left_brace()?;
         let mut source = None;
         let mut record = None;
@@ -98,7 +98,7 @@ impl Parser {
         let mut values = Vec::new();
         while !self.at_right_brace() && !self.at_eof() {
             let modifier_kind = self.identifier("modifier kind")?;
-            let id = self.identifier("modifier")?;
+            let id = self.stable_identifier("modifier")?;
             let body = self.semantic_block()?;
             if let Some(value) = self.modifier(modifier_kind, id, body) {
                 values.push(value);

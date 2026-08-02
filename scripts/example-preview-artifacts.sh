@@ -2,6 +2,7 @@
 
 # shellcheck source=example-preview-package.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-preview-package.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-edit-evidence.sh"
 
 preview_artifact_error() {
   echo "examples preview: $*" >&2
@@ -111,13 +112,16 @@ verify_expected_preview_artifacts() {
   local preview=$3
   local plan=$4
   local rendered=$5
-  local artifact kind id canonical_id matches expected actual count=0
+  local artifact kind id canonical_id matches expected actual entry count=0
+  entry=$(dirname "$(dirname "$authoring")")
   while IFS= read -r artifact; do
     kind=$(jq -r '.kind' <<<"$artifact")
     case "$kind" in
       canonical_project) verify_preview_json "$authoring" "authoring canonical project" || return 1 ;;
       preview_canonical_project) verify_preview_json "$preview" "preview canonical project" || return 1 ;;
       preview_resolved_plan) verify_preview_json "$plan" "preview resolved plan" || return 1 ;;
+      source_revision|source_index|source_edit_batch|source_edit_outcome)
+        verify_example_source_edit_evidence "$entry" || return 1 ;;
       authoring_delivery)
         id=$(jq -r '.id' <<<"$artifact")
         if [[ ! "$id" =~ ^[a-z][a-z0-9-]*$ ]]; then

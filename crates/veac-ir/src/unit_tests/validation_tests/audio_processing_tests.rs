@@ -1,3 +1,4 @@
+use super::audio_processing_fixture::complete_chain;
 use super::*;
 use crate::test_support::{linked_project, range, time};
 
@@ -48,21 +49,30 @@ fn audio_processor_ranges_conflicts_and_fades_fail_closed() {
         .unwrap();
     audio.normalize = true;
     audio.processors = vec![
-        AudioProcessor::HighPass {
-            frequency_hz: 24_000.0,
-            q: 0.0,
-            poles: 3,
-        },
-        AudioProcessor::Loudness(LoudnessTarget {
-            integrated_lufs: -100.0,
-            true_peak_dbtp: 1.0,
-            loudness_range_lu: 0.0,
-        }),
-        AudioProcessor::Loudness(LoudnessTarget {
-            integrated_lufs: -16.0,
-            true_peak_dbtp: -1.0,
-            loudness_range_lu: 7.0,
-        }),
+        processor(
+            "aud_invalid-hpf",
+            AudioProcessorKind::HighPass {
+                frequency_hz: 24_000.0,
+                q: 0.0,
+                poles: 3,
+            },
+        ),
+        processor(
+            "aud_invalid-loudness",
+            AudioProcessorKind::Loudness(LoudnessTarget {
+                integrated_lufs: -100.0,
+                true_peak_dbtp: 1.0,
+                loudness_range_lu: 0.0,
+            }),
+        ),
+        processor(
+            "aud_valid-loudness",
+            AudioProcessorKind::Loudness(LoudnessTarget {
+                integrated_lufs: -16.0,
+                true_peak_dbtp: -1.0,
+                loudness_range_lu: 7.0,
+            }),
+        ),
     ];
     audio.crossfade = Some(AudioCrossfade {
         fade_in: time(400),
@@ -112,52 +122,11 @@ fn sidechain_rejects_bad_parameters_ranges_and_feedback_sources() {
     assert_code(&validation_codes(&project), "SIDECHAIN_SELF_DEPENDENCY");
 }
 
-fn complete_chain() -> Vec<AudioProcessor> {
-    vec![
-        AudioProcessor::ParametricEq {
-            bands: vec![ParametricEqBand {
-                frequency_hz: 1_000.0,
-                gain_db: 3.0,
-                q: 1.2,
-            }],
-        },
-        AudioProcessor::HighPass {
-            frequency_hz: 80.0,
-            q: 0.707,
-            poles: 2,
-        },
-        AudioProcessor::LowPass {
-            frequency_hz: 18_000.0,
-            q: 0.707,
-            poles: 2,
-        },
-        AudioProcessor::Compressor(Compressor {
-            threshold_db: -18.0,
-            ratio: 4.0,
-            attack_ms: 10.0,
-            release_ms: 200.0,
-            knee_db: 6.0,
-            makeup_gain_db: 3.0,
-            mix: 1.0,
-        }),
-        AudioProcessor::Limiter(Limiter {
-            ceiling_db: -1.0,
-            attack_ms: 5.0,
-            release_ms: 50.0,
-        }),
-        AudioProcessor::Gate(Gate {
-            threshold_db: -45.0,
-            ratio: 2.0,
-            attack_ms: 5.0,
-            release_ms: 150.0,
-            range_db: -80.0,
-        }),
-        AudioProcessor::Loudness(LoudnessTarget {
-            integrated_lufs: -16.0,
-            true_peak_dbtp: -1.0,
-            loudness_range_lu: 7.0,
-        }),
-    ]
+fn processor(id: &str, kind: AudioProcessorKind) -> AudioProcessor {
+    AudioProcessor {
+        id: AudioProcessorId::new(id).unwrap(),
+        kind,
+    }
 }
 
 fn sidechain_key<'a>(project: &'a mut ProjectEnvelope, id: &str) -> &'a mut RelationEndpoint {

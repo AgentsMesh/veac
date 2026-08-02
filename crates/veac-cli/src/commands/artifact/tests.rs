@@ -151,6 +151,31 @@ fn artifact_outputs_cannot_target_the_store() {
     reject_store_output(&store, None).unwrap();
 }
 
+#[test]
+fn artifact_output_io_failures_are_typed() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = temp.path().join("output.json");
+    let error = reject_store_output(&temp.path().join("missing-store"), Some(&output)).unwrap_err();
+    assert!(error.to_string().contains("ARTIFACT_FAILED"));
+
+    let store = temp.path().join("store");
+    let key = stored(&store);
+    let missing_output = temp.path().join("missing-parent/output.json");
+    let error = reject_store_output(&store, Some(&missing_output)).unwrap_err();
+    assert!(error.to_string().contains("ARTIFACT_FAILED"));
+
+    let directory = temp.path().join("directory");
+    std::fs::create_dir(&directory).unwrap();
+    let error = materialize(
+        &store,
+        &key.value,
+        &directory,
+        Instant::now() + Duration::from_secs(60),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("ARTIFACT_MATERIALIZE_FAILED"));
+}
+
 fn stored(path: &Path) -> ContentDigest {
     ArtifactStore::new(path)
         .put(&descriptor(), b"payload")

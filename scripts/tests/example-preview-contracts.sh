@@ -59,46 +59,32 @@ jq -e '
   $clip.source_mapping.time_map.segments[1].source_end.value == 7
 ' "$tmp/source-curve-preview.json" >/dev/null || fail "window did not trim source curve"
 
-cat > "$tmp/font-source.veac" <<'VEAC'
-project font-preview {
-  font family "Inter";
-  fallback-font family "Arial";
-  sequence main {}
-  entry sequence main;
-}
-VEAC
-cp "$tmp/font-source.veac" "$tmp/font-source.original.veac"
-bash "$ROOT/scripts/prepare-example-source.sh" "$tmp/font-source.veac" "$tmp/font-preview.veac"
-cmp -s "$tmp/font-source.original.veac" "$tmp/font-source.veac" ||
-  fail "source preparation mutated the authoring source"
-grep -q 'font resource preview-font;' "$tmp/font-preview.veac" || fail "primary family was not normalized"
-grep -q 'fallback-font resource preview-arabic-font;' "$tmp/font-preview.veac" ||
-  fail "fallback family lost its Arabic-capable resource"
-grep -q 'resource font preview-font' "$tmp/font-preview.veac" || fail "font fixture resource is missing"
-grep -q 'resource font preview-arabic-font' "$tmp/font-preview.veac" ||
-  fail "Arabic font fixture resource is missing"
-if grep -Eq '^[[:space:]]*delivery[[:space:]]' "$tmp/font-preview.veac"; then
-  fail "source preparation injected delivery semantics"
+jq '.project.annotations = [{style: {
+  font: {type:"family", family:"Inter"},
+  fallback_fonts: [{type:"family", family:"Noto Sans Arabic"}],
+  spans: [{font:{type:"family", family:"Arial"}}]
+}}]' "$tmp/project.json" >"$tmp/font-authoring.json"
+jq --argjson edge 240 --argjson fps 12 --argjson window null \
+  -f "$FILTER" "$tmp/font-authoring.json" >"$tmp/font-preview.json"
+jq -e '
+  .project.annotations[0].style.font ==
+    {type:"material", material_id:"med_preview-font"} and
+  .project.annotations[0].style.spans[0].font ==
+    {type:"material", material_id:"med_preview-font"} and
+  .project.annotations[0].style.fallback_fonts == [
+    {type:"material", material_id:"med_preview-arabic-font"}] and
+  ([.project.materials[] | {id, uri:.source.uri}] | sort_by(.id)) == [
+    {id:"med_preview-arabic-font", uri:"assets/preview-arabic-font.ttf"},
+    {id:"med_preview-font", uri:"assets/preview-font.ttf"}]
+' "$tmp/font-preview.json" >/dev/null || fail "canonical family fonts were not adapted"
+jq -e '[.. | objects | select(.type? == "family" and has("family"))] | length == 3' \
+  "$tmp/font-authoring.json" >/dev/null || fail "preview adaptation mutated authoring IR"
+jq '.project.materials = [{id:"med_preview-font"}]' "$tmp/font-authoring.json" \
+  >"$tmp/font-collision.json"
+if jq --argjson edge 240 --argjson fps 12 --argjson window null \
+    -f "$FILTER" "$tmp/font-collision.json" >/dev/null 2>&1; then
+  fail "reserved preview font collision was accepted"
 fi
-if grep -q 'font family' "$tmp/font-preview.veac"; then
-  fail "family font escaped deterministic preview normalization"
-fi
-bash "$ROOT/scripts/prepare-example-source.sh" \
-  "$tmp/font-preview.veac" "$tmp/font-preview.twice.veac"
-cmp -s "$tmp/font-preview.veac" "$tmp/font-preview.twice.veac" ||
-  fail "source preparation is not idempotent"
-[[ $(grep -c 'resource font preview-font' "$tmp/font-preview.veac") == 1 ]] ||
-  fail "preview font resource was injected more than once"
-[[ $(grep -c 'resource font preview-arabic-font' "$tmp/font-preview.veac") == 1 ]] ||
-  fail "Arabic preview font resource was injected more than once"
-if bash "$ROOT/scripts/prepare-example-source.sh" \
-    "$tmp/font-source.veac" "$tmp/font-source.veac" >/dev/null 2>&1; then
-  fail "source preparation accepted in-place output"
-fi
-bash "$ROOT/scripts/prepare-example-source.sh" \
-  "$ROOT/examples/delivery-codec-matrix/main.veac" "$tmp/codec-matrix.preview.veac"
-grep -q 'font resource preview-font;' "$tmp/codec-matrix.preview.veac" ||
-  fail "codec-matrix caption has no deterministic preview font"
 
 mkdir -p "$tmp/rendered"
 printf '{}\n' > "$tmp/canonical.json"

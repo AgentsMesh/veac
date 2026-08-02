@@ -1,17 +1,17 @@
 # Agent Authoring Guide
 
-This guide is for agents that create or revise VEAC projects. Treat `.veac` as
-typed source code: choose a closed primitive, put it under the correct owner,
-format it, compile it, and validate the canonical IR.
+This guide is for agents that create or revise VEAC projects. Treat the complete
+`.veac` source graph as typed source code: reuse static declarations, choose a
+closed primitive, put it under the correct owner, compile, and validate.
 
-## Two Inputs, Two Jobs
+## Three Artifacts, Three Jobs
 
-VEAC has two machine-facing inputs: `.veac` describes a complete project, while
-canonical JSON `EditBatch` describes atomic changes to schema-v5 JSON IR.
+An entry `.veac` plus imported modules is the authoring source of truth.
+`SourceEditBatch` atomically changes typed expression sites in that graph.
+Canonical JSON `EditBatch` atomically changes a canonical IR revision.
 
-There is no second textual edit language. `veac edit` does not parse `.veac` or
-rewrite authoring source; it reads a canonical project JSON plus an EditBatch
-JSON and writes a new canonical project JSON.
+Do not mix the boundaries. `veac source-edit` recompiles source; `veac edit`
+never parses or rewrites `.veac`. VEAC does not decompile edited IR to source.
 
 ## Ownership First
 
@@ -30,9 +30,8 @@ project
 ```
 
 `multicam`, `delivery`, and `annotation` are project members. Layers, items,
-transitions, relations, and Apply records belong to one sequence. An item source
-is not a reusable declaration by itself. Lowering maps layer/item to canonical
-IR Track/Clip and hoists typed relations into the project relation collection.
+relations, and Apply records belong to one sequence. Lowering maps layer/item
+to canonical IR Track/Clip and hoists relations to the project collection.
 
 ## Minimal Authoring Source
 
@@ -82,23 +81,19 @@ project sample {
 }
 ```
 
-Do not add a document version declaration. `veac fmt` is the authority for
-canonical spelling and layout.
+Do not add a document version declaration.
+
+## Reuse Before Copying
+
+Use the focused [agent reuse guide](agent-reuse.md) for modules, presets, component instances,
+nested composition, explicit parameter forwarding, and slot forwarding. The complete language
+contract remains in [Compile-Time Programming](../language-reference/programming.md).
 
 ## Choose Closed Variants
 
-Item sources are exactly media, text, caption, generated, nested sequence, or
-multicam. Their canonical heads are `source media resource`, `source text`,
-`source caption`, `source generated <kind>`, `source sequence sequence`, and
-`source multicam multicam`.
-
-Use `source generated solid`, never `source color`. Caption text is an item
-source; subtitle files such as SRT, VTT, or ASS are `artifact
-caption-sidecar` recipes inside a delivery, never media sources.
-
-Media resources select streams with only `auto` or `disabled`. These become
-canonical stream intent; probe normalization records exact selected streams for
-planning. Do not invent stream indices in `.veac`.
+Item sources are media, text, caption, generated, nested sequence, or multicam.
+Use `source generated solid`, never `source color`. Subtitle files are delivery
+artifacts. Media stream intent is `auto` or `disabled`; never invent indices.
 
 ## Express Time Explicitly
 
@@ -109,47 +104,45 @@ the source is sampled. Use one mapping primitive:
 mapping linear { from 4s; to 12s; outside strict; }
 mapping freeze { source 7s; }
 mapping curve {
-    key start { at 0s; source 4s; interpolation linear; }
-    key end   { at 5s; source 12s; interpolation hold; }
+    key start { at 0s; source 4s; interpolation linear; } key end { at 5s; source 12s; interpolation hold; }
     outside hold-last;
 }
 ```
 
-Curve keys are in item-local record time and permit only `linear` or `hold`.
-Outside policies are `strict`, `hold-first`, `hold-last`, and `hold-both`;
-freeze has none. Only media and sequence sources carry mappings.
+Curve keys use item-local record time and `linear` or `hold`; only media and sequence sources carry mappings.
 
 ## Build Ordered Processing
 
-Use `pipeline` for ordered color and effect stages. A named `lut-1d` accepts
-`nearest`, `linear`, `cosine`, `cubic`, or `spline`; `lut-3d` accepts `nearest`,
-`trilinear`, `tetrahedral`, `pyramid`, or `prism`. Do not flatten stages.
-
-Use `scope composite-band`, `scope layer`, or `scope items` for first-class
-Apply records. Scope selects the target; pipelines preserve operation order;
-`mix`, matte, opacity, and blend remain typed.
+Use `pipeline` for ordered color/effect stages; do not flatten them. Apply
+records target `scope composite-band`, `scope layer`, or `scope items` and keep
+mix, matte, opacity, and blend typed.
+LUT1D interpolation is `nearest`, `linear`, `cosine`, `cubic`, or `spline`;
+LUT3D is `nearest`, `trilinear`, `tetrahedral`, `pyramid`, or `prism`.
 
 ## Route Audio And Deliver Captions
 
-An audio layer can end with `route bus <id>;`. Referencing a bus ID establishes
-the routing identity; there is no independent `bus` declaration. Use processors
-in order, route layers to buses, then select one `master`, `track`, or `bus`
-source from each `artifact audio-stem`.
-
-Use `artifact caption-sidecar` with `source caption-tracks` and a closed `encode`
-recipe. Sidecars preserve captions as data; burned-in video does not replace
-them. See the [delivery reference](../language-reference/outputs.md) for every
-artifact and unit-bearing recipe.
+An audio layer may route to a bus; there is no independent `bus` declaration.
+Audio stems select one master, track, or bus. Caption sidecars preserve captions
+as data. See the [delivery reference](../language-reference/outputs.md).
 
 ## Deterministic Workflow
 
-For a newly authored project:
+```bash
+veac fmt project.veac --check
+veac compile project.veac --emit-ir build/project.veac.json
+veac check-ir build/project.veac.json
+```
+
+When source remains authoritative, inventory it and preview a `SourceEditBatch` before committing:
 
 ```bash
-veac fmt --check project.veac
-veac compile --emit-ir project.veac --out build/project.veac.json
-veac validate build/project.veac.json
+veac source-revision project.veac
+veac source-index project.veac
+veac source-edit project.veac source-edit.json --dry-run
+veac source-edit project.veac source-edit.json
 ```
+
+See the [source editing contract](../language-reference/source-editing.md).
 
 For an IR edit, generate canonical JSON, not invented syntax:
 
@@ -172,15 +165,13 @@ For an IR edit, generate canonical JSON, not invented syntax:
 Apply it atomically:
 
 ```bash
-veac edit build/project.veac.json edits.json --out build/project-next.veac.json
-veac validate build/project-next.veac.json
+veac edit build/project.veac.json edits.json --output build/project-next.veac.json
+veac check-ir build/project-next.veac.json
 ```
 
 Use `--dry-run` to validate a batch without committing output. Preconditions,
 locks, reference rewrites, and full-project validation are part of the edit
-transaction. If authoring source remains the source of truth, make the same
-semantic change in `.veac` and recompile instead of treating edited IR as a
-source-file patch.
+transaction. Never treat edited IR as a source-file patch.
 
 ## Agent Checklist
 
@@ -188,7 +179,7 @@ source-file patch.
 - Put every declaration under its implemented owner.
 - Keep stable IDs and explicit references.
 - Preserve ordering of layers, items, stages, processors, and edit operations.
-- Let `veac fmt` normalize source; do not hand-normalize canonical JSON.
+- Preserve imports, comments, and untouched source bytes during targeted edits.
 - Compile before planning or rendering.
 - Reject unknown fields instead of smuggling property bags through strings.
-- Validate after every generated source or EditBatch change.
+- Validate after every generated source, SourceEditBatch, or EditBatch change.

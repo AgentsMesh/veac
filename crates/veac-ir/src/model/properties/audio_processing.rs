@@ -1,11 +1,18 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{BusId, RationalTime, TrackId};
+use crate::{AudioProcessorId, BusId, EqBandId, RationalTime, TrackId};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AudioProcessor {
+    pub id: AudioProcessorId,
+    pub kind: AudioProcessorKind,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum AudioProcessor {
+pub enum AudioProcessorKind {
     ParametricEq {
         bands: Vec<ParametricEqBand>,
     },
@@ -25,9 +32,10 @@ pub enum AudioProcessor {
     Loudness(LoudnessTarget),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ParametricEqBand {
+    pub id: EqBandId,
     pub frequency_hz: f64,
     pub gain_db: f64,
     pub q: f64,

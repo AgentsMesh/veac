@@ -1,13 +1,16 @@
 # VEAC Authoring Grammar
 
-This document describes the implemented `.veac` authoring surface. The parser
-accepts comments and flexible whitespace; `veac fmt` emits the canonical form.
-There is no version declaration inside the file and no textual edit language.
+This document describes the implemented `.veac` surface. The frontend first
+resolves the static programming layer, then parses the expanded core grammar.
+JSON source and canonical edit contracts are separate from this grammar.
 
 ## Lexical Rules
 
 ```ebnf
-identifier = letter , { letter | digit | "_" | "-" } ;
+identifier = ( ASCII-letter | "_" ) , { ASCII-letter | digit | "_" }
+           , { "-" , ( ASCII-letter | digit | "_" )
+             , { ASCII-letter | digit | "_" } } ;
+qualified-identifier = identifier , { "." , identifier } ;
 string     = '"' , { character | escape } , '"' ;
 number     = [ "-" ] , digit , { digit } , [ "." , digit , { digit } ] ;
 time       = number , ( "us" | "ms" | "s" ) ;
@@ -16,13 +19,23 @@ color      = "#" , 6-or-8-hex-digits ;
 comment    = "//" , { character } | "/*" , { character } , "*/" ;
 ```
 
-Identifiers are semantic IDs and must be unique in their owning collection.
+Identifiers contain 1 to 128 ASCII bytes. Dashes separate non-empty name segments, so leading,
+trailing, and repeated dashes are invalid; `true` and `false` are reserved literals. Declarations
+contain one identifier segment, while imported references join canonical segments with `.`. The
+same contract is enforced for expression symbols and source-edit target names. Identifiers are
+semantic IDs and must be unique in their owning collection.
 Strings are text or paths, numbers with units are typed values, and colors are
 not arbitrary strings.
 
+## Compile-Time Program
+
+The module, expression, preset, component, and instance productions live in the focused
+[compile-time grammar](programming-grammar.md). Their semantics and resource limits are specified by
+the complete [compile-time reference](../language-reference/programming.md).
+
 ## Ownership
 
-Exactly one `project` is the document root:
+After static expansion, exactly one `project` is the core document root:
 
 ```ebnf
 document = "project" , identifier , "{" , { project-member } , "}" ;
@@ -43,20 +56,8 @@ use typed fields such as `timebase 1/1000;`, `canvas 1080px by 1920px;`,
 
 ## Resources And Streams
 
-Media resources are closed by kind and location:
-
-```veac
-resource video camera {
-    locator local { path "media/camera.mov"; }
-    streams { video auto; audio disabled; }
-}
-resource audio voice {
-    locator remote { uri "https://example.test/voice.wav"; identity sha256 "0000000000000000000000000000000000000000000000000000000000000000"; }
-    streams { video disabled; audio auto; }
-}
-```
-
-The authoring choices are only `auto` and `disabled`; they lower to canonical
+Media resources are closed by kind and location. The stream choices are only
+`auto` and `disabled`; they lower to canonical
 stream intent. Probe normalization records exact selections for planning.
 Fonts and LUTs use the same project resource primitive, for example
 `resource lut-3d show-look { locator local { path "color/show.cube"; } }`.
@@ -74,7 +75,7 @@ Canonical examples are:
 
 ```veac
 source media resource camera;
-source text { text "Chapter one"; style text-style title; }
+source text { content "Chapter one"; style { size 64px; fill #ffffffff; } }
 source caption { text "Hello"; language "en"; speaker "host"; }
 source generated solid { color #101820FF; }
 source sequence sequence intro;
@@ -94,18 +95,8 @@ record { at 2s; duration 4s; }
 mapping linear { from 10s; to 14s; outside strict; }
 ```
 
-The mapping variants are closed:
-
-```veac
-mapping freeze { source 12s; }
-mapping curve {
-    key start { at 0s; source 10s; interpolation linear; }
-    key stop  { at 4s; source 16s; interpolation hold; }
-    outside hold-last;
-}
-```
-
-Only media and sequence sources accept mappings. Linear and curve accept
+The mapping variants are `linear`, `curve`, and `freeze`. Only media and
+sequence sources accept mappings. Linear and curve accept
 `strict`, `hold-first`, `hold-last`, or `hold-both`; freeze has no outside field.
 Curve keys are ordered by record time. Source-time interpolation is only
 `linear` or `hold`.
@@ -186,7 +177,8 @@ under their semantic owner; there is no anonymous recipe property block.
 ## Canonicalization And Validation
 
 `veac fmt` is idempotent and preserves declaration order where order is
-semantic. `veac validate` rejects unknown variants, unknown fields, duplicate
+semantic. `veac check-ir` rejects unknown variants, unknown fields, duplicate
 IDs, invalid ownership, unresolved references, illegal time mappings, and
-unsupported artifact combinations. Successful compilation emits typed AST and
-then canonical JSON IR; JSON is not alternate `.veac` syntax.
+unsupported artifact combinations. Successful compilation emits a fully
+expanded typed `Document` and then canonical JSON IR. The IR contains no
+imports, expressions, presets, components, instances, or scripts.

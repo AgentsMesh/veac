@@ -102,7 +102,7 @@ fn parse_key<T>(
     value: &impl Fn(&mut Parser, &SemanticEntry) -> Option<T>,
 ) -> Option<ParameterKey<T>> {
     let id = match entry.values.as_slice() {
-        [SemanticValue::Identifier(value)] => value.clone(),
+        [SemanticValue::Identifier(value)] if crate::name::is_name(&value.value) => value.clone(),
         _ => {
             parser.error(
                 "AUTHORING_CURVE_KEY",

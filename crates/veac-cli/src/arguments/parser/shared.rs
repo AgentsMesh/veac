@@ -77,6 +77,7 @@ fn value_name(id: &str) -> &'static str {
         "emit_ir" => "EMIT_IR",
         "revision" => "REVISION",
         "edit_batch" => "EDIT_BATCH",
+        "source_edit_batch" => "SOURCE_EDIT_BATCH",
         "contract" => "CONTRACT",
         "config" => "CONFIG",
         "destination" => "DESTINATION",

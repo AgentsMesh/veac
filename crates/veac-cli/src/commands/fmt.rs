@@ -3,7 +3,8 @@ use std::path::Path;
 use crate::error::{CliError, CliResult};
 
 pub(crate) fn run(file: &Path, check: bool, stdout: bool) -> CliResult {
-    let (source, formatted) = crate::frontend::format(file)?;
+    let location = crate::fs::SourceLocation::resolve(file)?;
+    let (source, formatted) = crate::frontend::format(location.path())?;
     if check {
         if source == formatted {
             println!("Source is canonically formatted: {}", file.display());
@@ -18,8 +19,8 @@ pub(crate) fn run(file: &Path, check: bool, stdout: bool) -> CliResult {
         return crate::fs::write_stdout(&formatted);
     }
     if source != formatted {
-        let canonical = crate::fs::canonical_file(file, "source")?;
-        crate::fs::atomic_write(&canonical, &formatted)?;
+        let source_lock = crate::fs::SourceGraphLock::acquire(location.root())?;
+        source_lock.commit_module(location.root(), location.module(), &source, &formatted)?;
     }
     println!("Formatted: {}", file.display());
     Ok(())

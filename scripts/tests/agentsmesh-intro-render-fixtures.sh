@@ -65,7 +65,6 @@ make_agentsmesh_fixture() {
   local dir="$1/agentsmesh-intro-15s" project="$1/agentsmesh-intro-15s/project"
   mkdir -p "$project" "$dir/plans/preview" "$dir/rendered"
   printf 'project agentsmesh fixture\n' >"$project/main.veac"
-  printf 'project agentsmesh preview fixture\n' >"$project/main.preview.veac"
   write_agentsmesh_authoring "$project/project.veac.json"
   write_agentsmesh_preview "$project/project.veac.json" "$project/project.preview.veac.json"
   write_agentsmesh_plan "$project/project.preview.veac.json" "$dir/plans/preview/out_preview.json"

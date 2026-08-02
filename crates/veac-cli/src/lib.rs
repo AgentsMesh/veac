@@ -66,6 +66,14 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             output,
             dry_run,
         } => commands::edit(&project, &edit_batch, output.as_deref(), dry_run),
+        Command::SourceRevision { source } => commands::source_revision(&source),
+        Command::SourceIndex { source } => commands::source_index(&source),
+        Command::SourceEdit {
+            source,
+            source_edit_batch,
+            output,
+            dry_run,
+        } => commands::source_edit(&source, &source_edit_batch, output.as_deref(), dry_run),
         Command::Schema { contract, format } => commands::schema(contract, format),
         Command::Plan {
             project,

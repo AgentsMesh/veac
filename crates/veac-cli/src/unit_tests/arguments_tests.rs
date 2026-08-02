@@ -112,6 +112,10 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
         Command::CheckIr { .. }
     ));
     assert!(matches!(
+        parse(&["veac", "source-index", "main.veac"]).command,
+        Command::SourceIndex { .. }
+    ));
+    assert!(matches!(
         parse(&["veac", "edit", "project.json", "batch.json", "--dry-run"]).command,
         Command::Edit { dry_run: true, .. }
     ));

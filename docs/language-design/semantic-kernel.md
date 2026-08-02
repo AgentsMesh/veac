@@ -4,13 +4,16 @@ The semantic kernel is the closed model shared by authoring, canonical IR,
 planning, and execution:
 
 ```text
-.veac -> parser -> typed AST -> lowering -> canonical JSON IR
-      -> planner -> backend artifact -> runtime
+.veac source graph -> resolve/evaluate/expand -> typed Document
+  -> lowering -> canonical JSON IR -> planner -> backend artifact -> runtime
 
-canonical JSON IR + JSON EditBatch -> atomic edit -> canonical JSON IR
+SourceEditBatch + source graph -> atomic edit -> recompile
+EditBatch + canonical JSON IR  -> atomic edit -> canonical JSON IR
 ```
 
-The edit path neither defines a textual edit DSL nor rewrites `.veac`.
+Compile-time modules, constants, presets, and components generate kernel facts;
+they are not kernel facts and never enter canonical IR. Neither edit path
+decompiles canonical JSON into `.veac`.
 
 ## Authoring And Canonical Ownership
 

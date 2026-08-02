@@ -24,6 +24,10 @@ mod render_delivery;
 mod render_segment_e2e;
 #[path = "integration/source.rs"]
 mod source;
+#[path = "integration/source_index.rs"]
+mod source_index;
+#[path = "integration/source_program.rs"]
+mod source_program;
 #[path = "integration/support/mod.rs"]
 mod support;
 #[path = "integration/template.rs"]

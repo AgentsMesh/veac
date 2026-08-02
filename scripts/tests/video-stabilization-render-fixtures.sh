@@ -54,7 +54,6 @@ make_stabilization_fixture() {
   local dir="$1/video-effects" author preview plan
   mkdir -p "$dir/project" "$dir/plans/preview" "$dir/rendered"
   printf 'video stabilization fixture\n' >"$dir/project/main.veac"
-  printf 'video stabilization preview fixture\n' >"$dir/project/main.preview.veac"
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
   plan=$(example_preview_plan "$dir" out_preview)
   write_stabilization_canonical "$author"; cp "$author" "$preview"

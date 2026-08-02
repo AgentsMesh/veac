@@ -1,6 +1,6 @@
 # Editing Capability Matrix And Roadmap
 
-Snapshot: 2026-07-24
+Snapshot: 2026-08-02
 
 VEAC targets editing-mechanism parity with mainstream products such as CapCut/Jianying. Bundled
 media, music, fonts, stickers, effect/template packages, catalogs, licensing, accounts, publishing,
@@ -23,7 +23,9 @@ and [sequence preview](https://helpx.adobe.com/premiere/desktop/render-and-expor
 workflows. VEAC accepts mechanisms, not vendor quality or proprietary asset claims.
 
 ```text
-typed authoring source or typed EditBatch
+authoring source graph
+    -> module resolution + pure expressions + static expansion
+    -> typed authoring Document
     -> Canonical JSON IR
     -> ResolvedRenderPlan
     -> sealed BackendBundle
@@ -99,6 +101,7 @@ explicit hardware upload/device implementation.
 | `P1-37` | P1 | Proxy/analysis/optical-flow/source-segment derivation and exact render-segment reuse | Delivered | [P1-37](capabilities/p1-evidence-b.md#p1-37) |
 | `P1-38` | P1 | Canonical source/edit/template/render/caption/OTIO/provider/artifact CLI workflows | Delivered | [P1-38](capabilities/p1-evidence-b.md#p1-38) |
 | `P1-39` | P1 | Scoped snapshots, deadlines, atomic commit/recovery, locks and alias defenses | Delivered | [P1-39](capabilities/p1-evidence-b.md#p1-39) |
+| `P1-40` | P1 | Confined modules, exact pure expressions, typed presets/components, hygienic expansion and revisioned source edits | Delivered | [P1-40](capabilities/p1-evidence-b.md#p1-40) |
 | `P2-01` | P2 | ASR/language/translation/TTS/dubbing contracts and evidence-bound project mappings | Delivered/Contract | [P2-01](capabilities/p2-evidence.md#p2-01) |
 | `P2-02` | P2 | Local audio EQ/dynamics/ducking plus denoise/separation media application | Delivered/Contract | [P2-02](capabilities/p2-evidence.md#p2-02) |
 | `P2-03` | P2 | Advanced color/LUT/scopes plus evidence-bound color-match application | Delivered/Contract | [P2-03](capabilities/p2-evidence.md#p2-03) |

@@ -7,6 +7,7 @@ mod audio_processor;
 mod color_space;
 mod color_stage;
 mod delivery_raster;
+mod entry;
 mod generator;
 mod generator_geometry;
 mod generator_gradient;
@@ -72,26 +73,12 @@ mod validate_source;
 mod validate_template_slot;
 mod value;
 
-use super::lexer::{lex, Token, TokenKind};
-use super::{Diagnostic, Diagnostics, Document, Span};
+use super::lexer::{Token, TokenKind};
+use super::{Diagnostic, Span};
 
-pub fn parse(source: &str) -> Result<Document, Diagnostics> {
-    let (tokens, diagnostics) = lex(source);
-    let mut parser = Parser {
-        tokens,
-        cursor: 0,
-        diagnostics,
-    };
-    let document = parser.project();
-    if let Some(document) = &document {
-        validate::document(&mut parser.diagnostics, document);
-    }
-    if parser.diagnostics.is_empty() {
-        Ok(document.expect("a successful parse has a project"))
-    } else {
-        Err(parser.diagnostics.into())
-    }
-}
+pub use entry::parse;
+#[cfg(test)]
+pub(super) use entry::parse_with_limits;
 
 pub(super) struct Parser {
     tokens: Vec<Token>,
@@ -110,6 +97,7 @@ impl Parser {
 
     pub(super) fn at_eof(&self) -> bool {
         matches!(self.current().kind, TokenKind::Eof)
+            || crate::authoring::diagnostic_budget::exhausted(&self.diagnostics)
     }
 
     pub(super) fn at_word(&self, expected: &str) -> bool {
@@ -167,15 +155,18 @@ impl Parser {
     }
 
     pub(super) fn error(&mut self, code: &'static str, message: String, span: Span) {
-        self.diagnostics.push(Diagnostic {
-            code,
-            message,
-            span,
-        });
+        crate::authoring::diagnostic_budget::push(
+            &mut self.diagnostics,
+            Diagnostic {
+                code,
+                message,
+                span,
+            },
+        );
     }
 
     pub(super) fn diagnostic(&mut self, diagnostic: Diagnostic) {
-        self.diagnostics.push(diagnostic);
+        crate::authoring::diagnostic_budget::push(&mut self.diagnostics, diagnostic);
     }
 
     pub(super) fn duplicate(&mut self, field: &'static str, span: Span) {

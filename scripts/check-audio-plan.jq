@@ -29,20 +29,31 @@ and ($voice.audio.gain.keyframes | map(.time)) == [t(0), t(1000)]
 and $voice.audio.pan.value == -0.65
 and $voice.audio.normalize and $voice.audio.pitch_policy == "preserve"
 and $voice.audio.crossfade.curve == "equal_power"
-and ($voice.audio.processors | map(.type)) == ["high_pass", "parametric_eq", "limiter"]
+and ($voice.audio.processors | map({id, type:.kind.type})) == [
+  {"id":"aud_dialogue-hpf", "type":"high_pass"},
+  {"id":"aud_dialogue-eq", "type":"parametric_eq"},
+  {"id":"aud_dialogue-limiter", "type":"limiter"}
+]
+and ($voice.audio.processors[1].kind.bands | map(.id)) == ["eqb_presence"]
 and $music.audio.sidechain.relation_id == "rel_duck"
 and $music.audio.sidechain.source == {"type":"bus", "bus_id":"bus_key-bus"}
-and ($music.audio.processors | map(.type)) == ["compressor"]
+and ($music.audio.processors | map({id, type:.kind.type})) == [
+  {"id":"aud_music-compressor", "type":"compressor"}
+]
 and $gated.record_range == r(2000; 2000)
 and $gated.source_mapping.time_map.rate == {"numerator":2, "denominator":1}
 and $gated.source_mapping.time_map.source_range_per_repeat.duration == t(4000)
 and $gated.audio.pitch_policy == "follow_speed"
 and $gated.audio.crossfade.curve == "linear"
-and ($gated.audio.processors | map(.type)) == ["gate"]
+and ($gated.audio.processors | map({id, type:.kind.type})) == [
+  {"id":"aud_noise-gate", "type":"gate"}
+]
 and $loudness.record_range == r(4000; 2000)
 and $loudness.source_mapping.time_map.source_range_per_repeat.start == t(4000)
 and $loudness.audio.crossfade.curve == "exponential"
-and ($loudness.audio.processors | map(.type)) == ["loudness"]
+and ($loudness.audio.processors | map({id, type:.kind.type})) == [
+  {"id":"aud_target-loudness", "type":"loudness"}
+]
 and $effect.record_range == r(6000; 2000)
 and $effect.source_mapping.time_map.source_range_per_repeat.start == t(6000)
 and any($effect.effects[];

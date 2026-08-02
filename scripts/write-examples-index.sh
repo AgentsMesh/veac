@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/example-preview-layout.sh"
 source "$SCRIPT_DIR/example-preview-provenance.sh"
+source "$SCRIPT_DIR/example-source-edit-evidence.sh"
 
 OUTPUT=${1:?output directory is required}
 EXPECTED=${2:?expected example count is required}
@@ -82,7 +83,24 @@ while IFS= read -r name; do
   done < <(find "$dir/rendered" -type f | sort)
   {
     printf '</div><nav class="links"><a href="%s/project/main.veac">创作源码</a>' "$name_html"
-    printf '<a href="%s/project/main.preview.veac">预览适配源码</a>' "$name_html"
+    while IFS= read -r module; do
+      relative=${module#"$dir/project/"}
+      relative_html=$(jq -nr --arg value "$relative" '$value | @html')
+      printf '<a href="%s/project/%s">模块源码 %s</a>' \
+        "$name_html" "$relative_html" "$relative_html"
+    done < <(find "$dir/project" -type f -name '*.veac' \
+      ! -name 'main.veac' | sort)
+    if source_edit_evidence_requested "$target"; then
+      while IFS=$'\t' read -r file label; do
+        require_preview_regular_file "$dir/project/$file" "$label" || exit 1
+        printf '<a href="%s/project/%s">%s</a>' "$name_html" "$file" "$label"
+      done <<'ARTIFACTS'
+source.revision.json	源码版本
+source.index.json	源码索引
+source-edit.json	源码编辑批次
+source-edit.outcome.json	源码编辑预演结果
+ARTIFACTS
+    fi
     printf '<a href="%s/project/project.veac.json">创作 canonical IR</a>' "$name_html"
     printf '<a href="%s/project/project.preview.veac.json">预览派生 IR</a>' "$name_html"
     while IFS= read -r config; do

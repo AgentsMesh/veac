@@ -11,7 +11,10 @@ GALLERY="$TMP/gallery.json"
 cat > "$GALLERY" <<'JSON'
 {
   "targets": [
-    {"id":"zeta","expected_artifacts":[{"kind":"authoring_delivery","id":"preview"}]},
+    {"id":"zeta","expected_artifacts":[
+      {"kind":"source_revision"},{"kind":"source_index"},
+      {"kind":"source_edit_batch"},{"kind":"source_edit_outcome"},
+      {"kind":"authoring_delivery","id":"preview"}]},
     {"id":"alpha","expected_artifacts":[{"kind":"authoring_delivery","id":"preview"}]}
   ],
   "examples": [
@@ -32,7 +35,7 @@ cat > "$GALLERY" <<'JSON'
 JSON
 
 make_example() {
-  local output=$1 name=$2 artifact=$3 entry="$1/$2"
+  local name=$2 artifact=$3 entry="$1/$2"
   prepare_preview_fixture_dirs "$entry"
   : > "$entry/rendered/$artifact"
   cat >"$entry/project/project.veac.json" <<JSON
@@ -49,6 +52,12 @@ FULL="$TMP/full"
 mkdir -p "$FULL"
 make_example "$FULL" alpha tone.wav
 make_example "$FULL" zeta output.txt
+printf 'module {}\n' >"$FULL/alpha/project/brand.veac"
+for evidence in source.revision.json source.index.json source-edit.json \
+    source-edit.outcome.json; do
+  printf '{}\n' >"$FULL/zeta/project/$evidence"
+  printf '{}\n' >"$FULL/alpha/project/$evidence"
+done
 bash "$WRITER" "$FULL" 2 "$GALLERY"
 
 [[ $(rg -o 'data-example="[^"]+"' "$FULL/index.html" | wc -l | tr -d ' ') -eq 2 ]]
@@ -63,7 +72,23 @@ rg -F '甲 &amp; 乙 &quot;双引号&quot; &apos;单引号&apos;' "$FULL/index.h
 rg -F '<div class="output-name">tone.wav</div>' "$FULL/index.html" >/dev/null
 rg -F '>打开 output.txt</a>' "$FULL/index.html" >/dev/null
 rg -F '>创作源码</a>' "$FULL/index.html" >/dev/null
-rg -F '>预览适配源码</a>' "$FULL/index.html" >/dev/null
+rg -F '>模块源码 brand.veac</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/source.revision.json">源码版本</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/source.index.json">源码索引</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/source-edit.json">源码编辑批次</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/source-edit.outcome.json">源码编辑预演结果</a>' \
+  "$FULL/index.html" >/dev/null
+for evidence in source.revision.json source.index.json source-edit.json \
+    source-edit.outcome.json; do
+  if rg -F "href=\"alpha/project/$evidence\"" "$FULL/index.html" >/dev/null; then
+    echo "example index exposed undeclared source edit evidence: $evidence" >&2
+    exit 1
+  fi
+done
+if rg -F '>预览适配源码</a>' "$FULL/index.html" >/dev/null; then
+  echo "example index exposed a second source of truth" >&2
+  exit 1
+fi
 rg -F '>创作 canonical IR</a>' "$FULL/index.html" >/dev/null
 rg -F '>预览派生 IR</a>' "$FULL/index.html" >/dev/null
 rg -F '>预览计划 out_preview</a>' "$FULL/index.html" >/dev/null

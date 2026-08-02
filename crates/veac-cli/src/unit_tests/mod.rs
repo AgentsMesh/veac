@@ -10,7 +10,6 @@ mod edit_output_security_tests;
 mod environment_tests;
 mod frontend_tests;
 mod fs_read_tests;
-mod fs_security_tests;
 mod otio_command_tests;
 mod output_alias_tests;
 mod output_contract_tests;

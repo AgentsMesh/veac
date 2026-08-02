@@ -1,0 +1,45 @@
+{
+  "schema": "https://veac.dev/schemas/source-edit",
+  "schema_version": 1,
+  "operation_id": "op_programming_language_duration",
+  "base_revision": {
+    "source_graph_sha256": "b468160b8a643e90abb37fd89196ff681aa11b1f665492370ec39988a4c27ced"
+  },
+  "atomic": true,
+  "preconditions": [
+    {
+      "type": "expression_equals",
+      "target": {
+        "module": "main.veac",
+        "path": {
+          "kind": "constant",
+          "constant": "section_duration"
+        }
+      },
+      "site": {
+        "type": "constant_value"
+      },
+      "expression": {
+        "source": "brand.card_duration"
+      }
+    }
+  ],
+  "operations": [
+    {
+      "type": "set_expression",
+      "target": {
+        "module": "main.veac",
+        "path": {
+          "kind": "constant",
+          "constant": "section_duration"
+        }
+      },
+      "site": {
+        "type": "constant_value"
+      },
+      "expression": {
+        "source": "6s"
+      }
+    }
+  ]
+}

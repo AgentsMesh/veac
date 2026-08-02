@@ -21,21 +21,21 @@ write_audio_plan() {
     {"id":"trk_dialogue","routing":{"audio":{"type":"bus","bus_id":"bus_dialogue-bus"}},"clips":[{
       "id":"itm_voiceover","record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":2000}},
       "source_mapping":{"time_map":{"source_range_per_repeat":{"start":{"timescale":1000,"value":0}}}},
-      "audio":{"gain":{"type":"keyframes","keyframes":[{"time":{"timescale":1000,"value":0}},{"time":{"timescale":1000,"value":1000}}]},"pan":{"value":-0.65},"normalize":true,"pitch_policy":"preserve","crossfade":{"curve":"equal_power"},"processors":[{"type":"high_pass"},{"type":"parametric_eq"},{"type":"limiter"}]},"effects":[]
+      "audio":{"gain":{"type":"keyframes","keyframes":[{"time":{"timescale":1000,"value":0}},{"time":{"timescale":1000,"value":1000}}]},"pan":{"value":-0.65},"normalize":true,"pitch_policy":"preserve","crossfade":{"curve":"equal_power"},"processors":[{"id":"aud_dialogue-hpf","kind":{"type":"high_pass"}},{"id":"aud_dialogue-eq","kind":{"type":"parametric_eq","bands":[{"id":"eqb_presence"}]}},{"id":"aud_dialogue-limiter","kind":{"type":"limiter"}}]},"effects":[]
     }]},
     {"id":"trk_music","routing":{"audio":{"type":"bus","bus_id":"bus_music-bus"}},"clips":[{
-      "id":"itm_music-bed","audio":{"sidechain":{"relation_id":"rel_duck","source":{"type":"bus","bus_id":"bus_key-bus"}},"processors":[{"type":"compressor"}]},"effects":[]
+      "id":"itm_music-bed","audio":{"sidechain":{"relation_id":"rel_duck","source":{"type":"bus","bus_id":"bus_key-bus"}},"processors":[{"id":"aud_music-compressor","kind":{"type":"compressor"}}]},"effects":[]
     }]},
     {"id":"trk_key","routing":{"audio":{"type":"bus","bus_id":"bus_key-bus"}},"clips":[]},
     {"id":"trk_gated","clips":[{
       "id":"itm_gated-tone","record_range":{"start":{"timescale":1000,"value":2000},"duration":{"timescale":1000,"value":2000}},
       "source_mapping":{"time_map":{"rate":{"numerator":2,"denominator":1},"source_range_per_repeat":{"duration":{"timescale":1000,"value":4000}}}},
-      "audio":{"pitch_policy":"follow_speed","crossfade":{"curve":"linear"},"processors":[{"type":"gate"}]},"effects":[]
+      "audio":{"pitch_policy":"follow_speed","crossfade":{"curve":"linear"},"processors":[{"id":"aud_noise-gate","kind":{"type":"gate"}}]},"effects":[]
     }]},
     {"id":"trk_normalized","clips":[{
       "id":"itm_normalized-tone","record_range":{"start":{"timescale":1000,"value":4000},"duration":{"timescale":1000,"value":2000}},
       "source_mapping":{"time_map":{"source_range_per_repeat":{"start":{"timescale":1000,"value":4000}}}},
-      "audio":{"crossfade":{"curve":"exponential"},"processors":[{"type":"loudness"}]},"effects":[]
+      "audio":{"crossfade":{"curve":"exponential"},"processors":[{"id":"aud_target-loudness","kind":{"type":"loudness"}}]},"effects":[]
     }]},
     {"id":"trk_normalized-effect","clips":[{
       "id":"itm_normalized-effect-tone","record_range":{"start":{"timescale":1000,"value":6000},"duration":{"timescale":1000,"value":2000}},

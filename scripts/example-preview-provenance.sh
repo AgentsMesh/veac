@@ -63,14 +63,12 @@ verify_preview_plan_set() {
 }
 
 verify_example_preview_layout() {
-  local entry=$1 authoring preview source prepared
+  local entry=$1 authoring preview source
   source=$(example_authoring_source "$entry")
-  prepared=$(example_preview_source "$entry")
   authoring=$(example_authoring_canonical "$entry")
   preview=$(example_preview_canonical "$entry")
   reject_legacy_preview_layout "$entry" || return 1
   require_preview_regular_file "$source" "authoring source" || return 1
-  require_preview_regular_file "$prepared" "preview source" || return 1
   verify_canonical_roles "$authoring" "$preview" || return 1
   verify_preview_plan_set "$entry" "$preview"
 }

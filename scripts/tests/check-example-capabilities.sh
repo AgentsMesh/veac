@@ -122,6 +122,8 @@ expect_gallery_failure legacy-source-plan \
   '.targets[0].expected_artifacts[2] = {"kind":"resolved_plan"}'
 expect_gallery_failure workflow-artifact-on-source \
   '.targets[0].expected_artifacts[2] = {"kind":"probe_snapshot"}'
+expect_gallery_failure partial-source-edit-evidence \
+  '(.targets[] | select(.id == "programming-language") | .expected_artifacts) |= map(select(.kind != "source_index"))'
 expect_gallery_failure missing-presentation 'del(.examples[0])'
 expect_gallery_failure empty-presentation-checks '.examples[0].checks = []'
 expect_gallery_failure blank-presentation-summary '.examples[0].summary = "   "'

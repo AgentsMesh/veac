@@ -9,21 +9,27 @@ fn eq_high_pass_and_low_pass_change_measured_frequency_energy() {
     let cases = [
         (
             "highpass",
-            AudioProcessor::HighPass {
-                frequency_hz: 1_000.0,
-                q: 0.707,
-                poles: 2,
-            },
+            identified_processor(
+                "highpass",
+                AudioProcessorKind::HighPass {
+                    frequency_hz: 1_000.0,
+                    q: 0.707,
+                    poles: 2,
+                },
+            ),
             3_000.0,
             200.0,
         ),
         (
             "lowpass",
-            AudioProcessor::LowPass {
-                frequency_hz: 1_000.0,
-                q: 0.707,
-                poles: 2,
-            },
+            identified_processor(
+                "lowpass",
+                AudioProcessorKind::LowPass {
+                    frequency_hz: 1_000.0,
+                    q: 0.707,
+                    poles: 2,
+                },
+            ),
             200.0,
             3_000.0,
         ),
@@ -45,13 +51,17 @@ fn eq_high_pass_and_low_pass_change_measured_frequency_energy() {
     render_audio_chain(
         &eq_source,
         1_000,
-        vec![AudioProcessor::ParametricEq {
-            bands: vec![ParametricEqBand {
-                frequency_hz: 1_000.0,
-                gain_db: -18.0,
-                q: 4.0,
-            }],
-        }],
+        vec![identified_processor(
+            "equalizer",
+            AudioProcessorKind::ParametricEq {
+                bands: vec![ParametricEqBand {
+                    id: EqBandId::new("eqb_notch").unwrap(),
+                    frequency_hz: 1_000.0,
+                    gain_db: -18.0,
+                    q: 4.0,
+                }],
+            },
+        )],
         None,
         &eq_output,
     );

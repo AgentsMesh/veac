@@ -8,6 +8,18 @@ use crate::environment::Environment;
 use crate::unit_tests::support::{canonical_project, FakeEnvironment, GENERATED_SOURCE};
 
 #[test]
+fn invalid_ffmpeg_fingerprints_remain_typed_cli_errors() {
+    let fingerprint = veac_runtime::executor::FfmpegFingerprint {
+        version: " ".into(),
+        configuration: ContentDigest::sha256(b"configuration"),
+    };
+
+    let error = super::super::producer(fingerprint).unwrap_err();
+
+    assert!(error.to_string().contains("FFMPEG_FINGERPRINT_INVALID"));
+}
+
+#[test]
 fn post_render_output_replacement_cannot_be_promoted_as_an_exact_segment() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
