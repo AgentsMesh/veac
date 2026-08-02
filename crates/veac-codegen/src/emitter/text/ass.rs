@@ -7,15 +7,11 @@ use veac_plan::ResolvedTextStyle;
 
 use super::animation::Sample;
 use super::ass_fonts;
-use super::ass_tags::{
-    alpha, color, fill_decoration, piece as piece_tags, shadow_decoration, shadow_piece,
-    text as escaped_text,
-};
 use super::escape::{ass_name, filter_escape};
 use super::fonts::EmbeddedFont;
-use super::model::{AnimatedLine, AssLayout};
-use crate::emitter::time;
+use super::model::AssLayout;
 
+mod line_events;
 mod placed;
 
 pub(super) fn script(
@@ -29,37 +25,10 @@ pub(super) fn script(
     output.push_str(&ass_fonts::section(fonts));
     output.push_str("[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n");
     match layout {
-        AssLayout::Lines(lines) => line_events(&mut output, lines, samples, style),
+        AssLayout::Lines(lines) => line_events::events(&mut output, lines, samples, style),
         AssLayout::Placed(pieces) => placed::events(&mut output, pieces, samples, style),
     }
     output
-}
-
-fn line_events(
-    output: &mut String,
-    lines: &[AnimatedLine],
-    samples: &[Sample],
-    style: &ResolvedTextStyle,
-) {
-    for sample in samples {
-        for line in lines {
-            if let Some(background) = &style.background {
-                background_event(output, line, sample, background);
-            }
-        }
-    }
-    if let Some(shadow) = &style.shadow {
-        for sample in samples {
-            for line in lines {
-                shadow_event(output, line, sample, shadow);
-            }
-        }
-    }
-    for sample in samples {
-        for line in lines {
-            fill_event(output, line, sample, style);
-        }
-    }
 }
 
 pub(super) fn filter(script: &str, font_directory: &Path) -> String {
@@ -86,88 +55,6 @@ fn header(surface: (u32, u32), layout: &AssLayout) -> String {
         surface.1,
         ass_name(font)
     )
-}
-
-fn fill_event(
-    output: &mut String,
-    line: &AnimatedLine,
-    sample: &Sample,
-    style: &ResolvedTextStyle,
-) {
-    let mut text = format!(
-        "{{\\an7\\q2\\pos({},{}){}}}",
-        time::number(line.x),
-        time::number(line.y),
-        fill_decoration(style)
-    );
-    for piece in &line.pieces {
-        let unit = sample.units.get(piece.unit);
-        let opacity = unit.map_or(0.0, |value| value.opacity);
-        let fill = unit.and_then(|value| value.fill_override);
-        text.push_str(&piece_tags(piece, opacity, fill, style));
-        text.push_str(&escaped_text(&piece.text));
-    }
-    event(output, 2, sample, &text);
-}
-
-fn shadow_event(
-    output: &mut String,
-    line: &AnimatedLine,
-    sample: &Sample,
-    shadow: &veac_plan::canonical::Shadow,
-) {
-    let mut text = format!(
-        "{{\\an7\\q2\\pos({},{}){}}}",
-        time::number(line.x + shadow.offset.x),
-        time::number(line.y + shadow.offset.y),
-        shadow_decoration(shadow)
-    );
-    for piece in &line.pieces {
-        let opacity = sample
-            .units
-            .get(piece.unit)
-            .map_or(0.0, |unit| unit.opacity);
-        text.push_str(&shadow_piece(piece, opacity, shadow));
-        text.push_str(&escaped_text(&piece.text));
-    }
-    event(output, 1, sample, &text);
-}
-
-fn background_event(
-    output: &mut String,
-    line: &AnimatedLine,
-    sample: &Sample,
-    background: &veac_plan::canonical::TextBackground,
-) {
-    let opacity = line
-        .pieces
-        .iter()
-        .filter_map(|piece| sample.units.get(piece.unit))
-        .map(|value| value.opacity)
-        .fold(0.0, f64::max);
-    if opacity <= 0.0 {
-        return;
-    }
-    let padding = background.padding_pixels;
-    let (left, top) = (line.x - padding, line.y - padding);
-    let (right, bottom) = (
-        line.x + line.width + padding,
-        line.y + line.height + padding,
-    );
-    let text = format!(
-        "{{\\an7\\pos(0,0)\\p1\\bord0\\shad0\\1c{}\\1a{}}}m {} {} l {} {} {} {} {} {}",
-        color(background.color),
-        alpha(background.color, opacity),
-        time::number(left),
-        time::number(top),
-        time::number(right),
-        time::number(top),
-        time::number(right),
-        time::number(bottom),
-        time::number(left),
-        time::number(bottom),
-    );
-    event(output, 0, sample, &text);
 }
 
 pub(super) fn event(output: &mut String, layer: u8, sample: &Sample, text: &str) {

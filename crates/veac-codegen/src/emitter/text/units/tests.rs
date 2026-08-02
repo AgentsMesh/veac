@@ -1,4 +1,6 @@
-use veac_plan::canonical::{Color, FontStyle, FontWeight, TextGranularity};
+use veac_plan::canonical::{
+    Color, FontStyle, FontWeight, HorizontalTextAlignment, TextGranularity,
+};
 
 use super::super::model::{GlyphStyle, LinePiece, RenderLine};
 use super::annotate;
@@ -81,6 +83,7 @@ fn line(values: &[(&str, usize)]) -> RenderLine {
                 style: glyph(*style),
             })
             .collect(),
+        alignment: HorizontalTextAlignment::Left,
         width: 0.0,
         height: 0.0,
         x: 0.0,

@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use veac_plan::canonical::{Color, FontStyle, FontWeight};
+use veac_plan::canonical::{Color, FontStyle, FontWeight, HorizontalTextAlignment};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct GlyphStyle {
@@ -37,6 +37,7 @@ pub(super) struct LinePiece {
 #[derive(Debug, Clone)]
 pub(super) struct RenderLine {
     pub pieces: Vec<LinePiece>,
+    pub alignment: HorizontalTextAlignment,
     pub width: f64,
     pub height: f64,
     pub x: f64,
@@ -53,6 +54,7 @@ pub(super) struct AnimatedPiece {
 #[derive(Debug, Clone)]
 pub(super) struct AnimatedLine {
     pub pieces: Vec<AnimatedPiece>,
+    pub alignment: HorizontalTextAlignment,
     pub width: f64,
     pub height: f64,
     pub x: f64,

@@ -1,3 +1,4 @@
+mod alignment;
 mod fonts;
 mod layout;
 

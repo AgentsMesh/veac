@@ -44,6 +44,16 @@ expect_animation_failure() {
   }
 }
 
+expect_overlay_failure() {
+  local video=$1 label=$2 log="$TMP_DIR/$2.log"
+  if (check_text_render_contract text-overlay "$TMP_DIR/text-overlay" "$video") >"$log" 2>&1; then
+    fail "$label should fail"
+  fi
+  rg -qF "shadow direction is invalid" "$log" || {
+    cat "$log" >&2; fail "$label failed for the wrong reason"
+  }
+}
+
 make_example() {
   local name=$1
   mkdir -p "$TMP_DIR/$name/rendered"
@@ -60,7 +70,7 @@ make_video "$TMP_DIR/text-animation/rendered/preview.mp4" 12 480x270 \
 
 make_example text-overlay
 make_video "$TMP_DIR/text-overlay/rendered/preview.mp4" 4 480x270 \
-  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=158:y=128:w=180:h=28:color=0xff477e@0.8:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
+  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=193:y=136:w=110:h=9:color=0xff477e@0.8:t=fill,drawbox=x=185:y=127:w=110:h=9:color=cyan:t=fill,drawbox=x=187:y=129:w=106:h=5:color=white:t=fill"
 
 make_example captions-and-sidecars
 mkdir -p "$TMP_DIR/captions-and-sidecars/project"
@@ -80,7 +90,7 @@ make_video "$TMP_DIR/agentsmesh-intro-15s/rendered/preview.mp4" 15 480x270 \
 
 make_example hello-world
 make_video "$TMP_DIR/hello-world/rendered/preview.mp4" 4 480x270 \
-  "drawbox=x=0:y=0:w=480:h=135:color=0x143642:t=fill,drawbox=x=0:y=135:w=480:h=135:color=0x0f1a20:t=fill,drawbox=x=155:y=120:w=170:h=25:color=white:t=fill"
+  "drawbox=x=0:y=0:w=480:h=135:color=0x143642:t=fill,drawbox=x=0:y=135:w=480:h=135:color=0x0f1a20:t=fill,drawbox=x=195:y=129:w=90:h=12:color=white:t=fill"
 
 for name in text-layout text-animation text-overlay captions-and-sidecars agentsmesh-intro-15s hello-world; do
   check_text_render_contract "$name" "$TMP_DIR/$name" "$TMP_DIR/$name/rendered/preview.mp4"
@@ -156,21 +166,15 @@ expect_animation_failure "$TMP_DIR/no-grapheme-reveal.mp4" \
 
 make_video "$TMP_DIR/no-shadow-overlay.mp4" 4 480x270 \
   "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
-if (check_text_render_contract text-overlay "$TMP_DIR/text-overlay" "$TMP_DIR/no-shadow-overlay.mp4"); then
-  fail "text overlay without a right-down shadow should fail"
-fi
+expect_overlay_failure "$TMP_DIR/no-shadow-overlay.mp4" "overlay-without-shadow"
 
 make_video "$TMP_DIR/no-down-shadow-overlay.mp4" 4 480x270 \
-  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=158:y=126:w=180:h=18:color=0xff477e@0.8:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
-if (check_text_render_contract text-overlay "$TMP_DIR/text-overlay" "$TMP_DIR/no-down-shadow-overlay.mp4"); then
-  fail "text overlay without a downward shadow should fail"
-fi
+  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=140:y=110:w=220:h=50:color=black@0.6:t=fill,drawbox=x=158:y=121:w=180:h=30:color=0xff477e@0.8:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
+expect_overlay_failure "$TMP_DIR/no-down-shadow-overlay.mp4" "overlay-without-down-shadow"
 
 make_video "$TMP_DIR/no-right-shadow-overlay.mp4" 4 480x270 \
-  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=150:y=128:w=180:h=28:color=0xff477e@0.8:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
-if (check_text_render_contract text-overlay "$TMP_DIR/text-overlay" "$TMP_DIR/no-right-shadow-overlay.mp4"); then
-  fail "text overlay without a rightward shadow should fail"
-fi
+  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=150:y=121:w=180:h=28:color=black@0.6:t=fill,drawbox=x=150:y=128:w=184:h=28:color=0xff477e@0.8:t=fill,drawbox=x=153:y=124:w=174:h=22:color=cyan:t=fill,drawbox=x=155:y=126:w=170:h=18:color=white:t=fill"
+expect_overlay_failure "$TMP_DIR/no-right-shadow-overlay.mp4" "overlay-without-right-shadow"
 
 make_video "$TMP_DIR/short-hello.mp4" 3 480x270 \
   "drawbox=x=0:y=0:w=480:h=135:color=0x143642:t=fill,drawbox=x=0:y=135:w=480:h=135:color=0x0f1a20:t=fill,drawbox=x=155:y=120:w=170:h=25:color=white:t=fill"

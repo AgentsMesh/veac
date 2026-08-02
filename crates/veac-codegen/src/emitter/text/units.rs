@@ -146,6 +146,7 @@ fn push(output: &mut Vec<AnimatedPiece>, text: &str, style: &GlyphStyle, unit: u
 fn copy_line(line: &RenderLine, pieces: Vec<AnimatedPiece>) -> AnimatedLine {
     AnimatedLine {
         pieces,
+        alignment: line.alignment,
         width: line.width,
         height: line.height,
         x: line.x,

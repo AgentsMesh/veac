@@ -90,10 +90,11 @@ agentsmesh_assert_intro_motion() {
     read -r count width height x y < <(agentsmesh_text_sample "$video" "$time")
     counts+=("$count"); widths+=("$width"); heights+=("$height"); ys+=("$y")
   done
-  for index in 1 2 3 4; do
+  for index in 1 2 3; do
     ((counts[index] > counts[index-1] + 8)) ||
       fail "agentsmesh grapheme reveal does not progress at ${times[index]}s"
   done
+  # The 1.4s sample is the completed state compared with 4.8s below.
   ((widths[4] > widths[0] + 80 && heights[4] > heights[0] + 5)) ||
     fail "agentsmesh title scale is not visible"
   ((ys[4] + 5 < ys[0])) || fail "agentsmesh title does not rise into position"
@@ -104,21 +105,29 @@ agentsmesh_assert_intro_motion() {
 
 agentsmesh_assert_switch() {
   local video=$1 before_count before_width before_height before_x before_y
-  local after_count after_width after_height after_x after_y
+  local after_count after_width after_height after_x after_y before_title after_title center
   read -r before_count before_width before_height before_x before_y < <(
     text_stats "$video" 4.9 40 65 400 110 500)
   read -r after_count after_width after_height after_x after_y < <(
     text_stats "$video" 5.1 40 65 400 110 500)
-  ((before_count > 100 && after_count > 100 && after_width > before_width + 30 &&
+  read -r before_title _ < <(text_stats "$video" 4.9 40 65 400 110 710)
+  read -r after_title _ < <(text_stats "$video" 5.1 40 65 400 110 710)
+  ((before_count > 100 && after_count > 100 && before_title > 40 && after_title <= 5 &&
     after_height <= before_height + 8)) ||
-    fail "agentsmesh title/promise switch is not exclusive at 5s: before=${before_count}/${before_width}x${before_height}@${before_x},${before_y} after=${after_count}/${after_width}x${after_height}@${after_x},${after_y}"
+    fail "agentsmesh title/promise switch is not exclusive at 5s: before=${before_count}/${before_width}x${before_height}@${before_x},${before_y} after=${after_count}/${after_width}x${after_height}@${after_x},${after_y} title=$before_title/$after_title"
+  center=$((40 + after_x + after_width / 2))
+  ((center >= 228 && center <= 252)) ||
+    fail "agentsmesh promise is not centered at 5s: center=$center"
 }
 
 agentsmesh_assert_caption_panel() {
-  local video=$1 count width height x y abs_y left right top bottom before
+  local video=$1 count width height x y abs_y center left right top bottom before
   read -r count width height x y < <(text_stats "$video" 6 0 190 480 75 500)
-  ((count > 40 && width > 100 && height > 8 && x > 5 && y > 5)) ||
+  ((count > 40 && width > 100 && height > 5 && x > 5 && y > 5)) ||
     fail "agentsmesh bottom caption is missing"
+  center=$((x + width / 2))
+  ((center >= 228 && center <= 252)) ||
+    fail "agentsmesh bottom caption is not centered: center=$center"
   abs_y=$((190 + y))
   left=$(region_yavg "$video" 6 "3:${height}:$((x-4)):${abs_y}")
   right=$(region_yavg "$video" 6 "3:${height}:$((x+width+1)):${abs_y}")

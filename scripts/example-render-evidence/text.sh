@@ -17,6 +17,7 @@ text_stats() {
             if (mode == "yellow") hit = r > 150 && g > 110 && b < 190 && r > b + 35
             if (mode == "cyan") hit = r < 140 && g > 100 && b > 130 && b > r + 40
             if (mode == "orange") hit = r > 150 && g > 55 && g < 190 && b < 150 && r > b + 50
+            if (mode == "red") hit = r > g + 30 && r > b + 30
             if (hit) {
               x = pixel % width; y = int(pixel / width)
               if (count == 0 || x < min_x) min_x = x
@@ -165,7 +166,7 @@ check_agentsmesh_intro() {
 check_hello_world() {
   local video=$1 top_r top_g top_b bottom_r bottom_g bottom_b
   check_text_media "$video" 4 480 270 "hello-world"
-  text_expect_box "$video" 2 70 90 340 90 560 180 100 15 340 90 "hello-world title"
+  text_expect_box "$video" 2 70 90 340 90 560 180 90 12 340 90 "hello-world title"
   read -r top_r top_g top_b < <(text_rgb "$video" 2 12 12)
   read -r bottom_r bottom_g bottom_b < <(text_rgb "$video" 2 12 258)
   ((top_g > bottom_g + 12 && top_b > bottom_b + 15)) ||

@@ -33,27 +33,6 @@ region_color_count() {
       END { print count + 0 }'
 }
 
-region_red_excess_avg() {
-  local video=$1 time=$2 crop=$3
-  ffmpeg -v error -ss "$time" -i "$video" -frames:v 1 \
-    -vf "crop=$crop,format=rgb24" -f rawvideo - 2>/dev/null |
-    od -An -v -tu1 | awk '
-      {
-        for (i = 1; i <= NF; i++) {
-          channel = bytes % 3
-          if (channel == 0) r = $i
-          else if (channel == 1) g = $i
-          else {
-            other = g > $i ? g : $i
-            if (r > other) total += r - other
-            pixels++
-          }
-          bytes++
-        }
-      }
-      END { if (pixels) printf "%.4f\n", total/pixels }'
-}
-
 region_yuv_spread() {
   local video=$1 time=$2 crop=$3
   ffmpeg -v error -ss "$time" -i "$video" -frames:v 1 \

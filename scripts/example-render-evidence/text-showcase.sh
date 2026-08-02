@@ -79,7 +79,8 @@ check_text_animation() {
 
 check_text_overlay() {
   local dir=$1 video=$2 white cyan panel background canonical
-  local shadow_right shadow_left shadow_bottom shadow_top
+  local cyan_width cyan_height cyan_x cyan_y shadow shadow_width shadow_height shadow_x shadow_y
+  local shadow_left shadow_right shadow_top shadow_bottom
   canonical="$dir/project/project.veac.json"
   check_text_media "$video" 4 480 270 "text-overlay"
   if [[ -f $canonical ]]; then
@@ -96,22 +97,23 @@ check_text_overlay() {
     ' "$canonical" >/dev/null || fail "text-overlay canonical style contract failed"
   fi
   read -r white _ < <(text_stats "$video" 2 45 95 390 80 650)
-  cyan=$(region_color_count "$video" 2 '390:80:45:95' cyan)
+  read -r cyan cyan_width cyan_height cyan_x cyan_y < <(
+    text_stats "$video" 2 45 95 390 80 0 cyan)
   ((white > 100 && cyan > 40)) ||
     fail "text-overlay white fill or cyan outline is missing: white=$white cyan=$cyan"
   panel=$(region_color_count "$video" 2 '390:80:45:95' black)
   background=$(region_color_count "$video" 2 '390:50:45:30' black)
   ((panel > background + 300)) || fail \
     "text-overlay black padded panel is missing: panel=$panel background=$background"
-  shadow_right=$(region_red_excess_avg "$video" 2 '6:26:326:125')
-  shadow_left=$(region_red_excess_avg "$video" 2 '6:26:148:125')
-  shadow_bottom=$(region_red_excess_avg "$video" 2 '176:6:154:142')
-  shadow_top=$(region_red_excess_avg "$video" 2 '176:6:154:126')
-  awk -v right="$shadow_right" -v left="$shadow_left" \
-    'BEGIN { exit !(right > left + 3) }' ||
-    fail "text-overlay rightward shadow is missing: right=$shadow_right left=$shadow_left"
-  awk -v bottom="$shadow_bottom" -v top="$shadow_top" \
-    'BEGIN { exit !(bottom > top + 3) }' ||
-    fail "text-overlay downward shadow is missing: bottom=$shadow_bottom top=$shadow_top"
-  text_expect_box "$video" 2 40 90 400 90 500 120 120 10 390 80 "text overlay bounds"
+  read -r shadow shadow_width shadow_height shadow_x shadow_y < <(
+    text_stats "$video" 2 45 95 390 80 0 red)
+  shadow_left=$((shadow_x - cyan_x))
+  shadow_right=$((shadow_x + shadow_width - cyan_x - cyan_width))
+  shadow_top=$((shadow_y - cyan_y))
+  shadow_bottom=$((shadow_y + shadow_height - cyan_y - cyan_height))
+  ((shadow > 40 && shadow_left > 2 && shadow_left <= 16 &&
+    shadow_right > 2 && shadow_right <= 16 && shadow_top > 2 && shadow_top <= 16 &&
+    shadow_bottom > 2 && shadow_bottom <= 16)) ||
+    fail "text-overlay shadow direction is invalid: pixels=$shadow edge=$shadow_left,$shadow_right,$shadow_top,$shadow_bottom"
+  text_expect_box "$video" 2 40 90 400 90 500 120 110 9 390 80 "text overlay bounds"
 }

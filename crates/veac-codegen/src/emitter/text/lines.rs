@@ -43,6 +43,7 @@ pub(super) fn compose(
         };
         lines.push(RenderLine {
             pieces,
+            alignment: layout.horizontal_alignment,
             width,
             height: line.height,
             x: 0.0,

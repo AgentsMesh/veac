@@ -40,14 +40,16 @@ agentsmesh_title_filter() {
 make_agentsmesh_video() {
   local dir=$1 mode=${2:-valid} duration=15 title promise caption panel source filter
   title=$(agentsmesh_title_filter "$mode")
-  promise="drawbox=x=75:y=108:w=330:h=24:color=0xd8f3ef:t=fill:enable='gte(t,5)'"
-  caption="drawbox=x=150:y=225:w=180:h=14:color=white:t=fill:enable='between(t,2,11.999)'"
+  promise="drawbox=x=150:y=108:w=180:h=24:color=0xd8f3ef:t=fill:enable='gte(t,5)'"
+  caption="drawbox=x=150:y=225:w=180:h=7:color=white:t=fill:enable='between(t,2,11.999)'"
   panel="drawbox=x=145:y=220:w=190:h=24:color=0x001f2d@0.8:t=fill:enable='between(t,2,11.999)'"
   source="nullsrc=s=480x270:r=12:d=15,format=gbrp,geq=r='16+18*(X/W+Y/H)/2':g='42+155*(X/W+Y/H)/2':b='67+27*(X/W+Y/H)/2'"
   case $mode in
     overlap) promise="$promise,drawbox=x=120:y=72:w=240:h=28:color=white:t=fill:enable='gte(t,5)'" ;;
     no-promise) promise=null ;;
+    off-center-promise) promise="drawbox=x=70:y=108:w=180:h=24:color=0xd8f3ef:t=fill:enable='gte(t,5)'" ;;
     no-caption) caption=null ;;
+    off-center-caption) caption="drawbox=x=70:y=225:w=180:h=7:color=white:t=fill:enable='between(t,2,11.999)'" ;;
     no-panel) panel=null ;;
     late-caption) caption="drawbox=x=150:y=225:w=180:h=14:color=white:t=fill:enable='gte(t,2)'"; panel="drawbox=x=145:y=220:w=190:h=24:color=0x001f2d@0.8:t=fill:enable='gte(t,2)'" ;;
     solid) source='color=c=0x0f766e:s=480x270:r=12:d=15' ;;
