@@ -1,94 +1,122 @@
-// VEAC All-Features Demo
-// Demonstrates all 7 capabilities in a single project.
+project all-features {
+  settings {
+    timebase 1/1000;
+    canvas 1920px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource video footage {
+    locator local { path "assets/footage.mp4"; }
+    streams { video auto; audio auto; }
+  }
+  resource audio music {
+    locator local { path "assets/music.wav"; }
+    streams { video disabled; audio auto; }
+  }
 
-// ---- P1: include (template/module reuse) ----
-include "./shared_assets.veac"
-
-project "all-features-demo" {
-    resolution = "1920x1080"
-    fps = 30
-    format = "mp4"
-    codec = "h264"
-    quality = "high"
-}
-
-// Variables
-let intro_start = 0s
-let intro_end = 10s
-
-// Main video assets
-asset intro = video("assets/intro.mp4")
-asset scene1 = video("assets/scene1.mp4")
-asset outro = video("assets/outro.mp4")
-
-timeline main {
-    // ---- Primary video track ----
-    track video {
-        // Normal clip
-        clip intro { from = intro_start  to = intro_end }
-
-        // P0: transition (fade between clips)
-        transition { type = "fade"  duration = 1s }
-
-        // P1: speed control (2x fast-forward) + P2: color grading
-        clip scene1 {
-            from       = 0s
-            to         = 12s
-            speed      = 2.0
-            brightness = 0.06
-            contrast   = 1.15
-            saturation = 1.3
+  sequence main {
+    layer video picture {
+      item shot {
+        source media resource footage;
+        record { at 0s; duration 8s; }
+        mapping linear { from 2s; to 10s; }
+        modifiers {
+          layout canvas-fill {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1920px; height 1080px; fit cover; }
+          }
+          color grade {
+            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
+            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
+            basic {
+              exposure 0.1stops; temperature 6600k; tint 0;
+              highlights -0.04; shadows 0.06; fade 1%;
+            }
+          }
         }
-
-        // P0: transition (dissolve)
-        transition { type = "dissolve"  duration = 1.5s }
-
-        // P1: audio fade on clip
-        clip outro {
-            from     = 0s
-            to       = 8s
-            fade_in  = 1s
-            fade_out = 2s
-        }
+      }
     }
-
-    // ---- P1: separate audio track with fade + volume ----
-    track audio {
-        clip bgm {
-            volume   = 0.3
-            fade_in  = 2s
-            fade_out = 3s
+    layer visual graphics {
+      item lower-third {
+        source generated solid { color #03045edd; }
+        record { at 1s; duration 5s; }
+        modifiers {
+          layout lower-third-frame {
+            placement anchor { at bottom; inset { x 0px; y 80px; } }
+            frame { width 1500px; height 180px; fit fill; }
+          }
+          transform lower-third-pivot { anchor { x 0.5; y 1; } }
+          composite top { opacity 95%; z-index 20; blend normal; }
         }
+      }
     }
-
-    // ---- P0: image overlay (watermark logo) ----
-    track overlay {
-        image logo {
-            at       = 0s
-            duration = 25s
-            position = "top-right"
-            scale    = 0.5
-            opacity  = 0.6
+    layer audio score {
+      route bus music-bus;
+      item music-item {
+        source media resource music;
+        record { at 0s; duration 8s; }
+        mapping linear { from 0s; to 8s; }
+        modifiers {
+          audio mix {
+            gain -6db; pan 0; muted false; normalize true; pitch preserve;
+            crossfade { fade-in 250ms; fade-out 500ms; curve equal-power; }
+            processor limiter { ceiling -1db; attack 1ms; release 80ms; }
+          }
         }
+      }
     }
-
-    // ---- Text overlay ----
-    track text {
-        text "VEAC All-Features Demo" {
-            at       = 1s
-            duration = 4s
-            font     = "Arial"
-            size     = 64
-            color    = #FFFFFF
-            position = "center"
+    layer caption subtitles {
+      item cue {
+        source caption {
+          content "一种语言，一份类型化中间表示，一套渲染计划。";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 48px; fill #ffffffff;
+            background { color #000000cc; padding 20px; }
+          }
         }
-        text "Video Editing as Code" {
-            at       = 6s
-            duration = 3s
-            font     = "Arial"
-            size     = 36
-            color    = #CCCCCC
-            position = "bottom"
+        record { at 0s; duration 8s; }
+        modifiers {
+          layout caption-placement {
+            placement absolute { position { x 960px; y 850px; } }
+            frame { width 1500px; height 140px; fit contain; }
+          }
         }
+      }
     }
+    relation group edit-unit { members { item shot; item music-item; } }
+    relation av-link linked-av {
+      endpoints { video item shot; audio { item music-item; } }
+    }
+  }
+
+  delivery master {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video master {
+      target file "all-features.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

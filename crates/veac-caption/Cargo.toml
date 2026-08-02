@@ -1,0 +1,16 @@
+[package]
+name = "veac-caption"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+schemars = "1.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_json_canonicalizer = "0.3"
+sha2 = "0.10"
+# `ass` references its feature-gated `Ssa` tag in subtitler 2.6.1. Enabling the
+# zero-dependency sibling feature is required to compile ASS; VEAC exposes no SSA API.
+subtitler = { version = "2.6.1", default-features = false, features = ["srt", "vtt", "ass", "ssa"] }
+veac-ir = { path = "../veac-ir" }

@@ -1,0 +1,73 @@
+project template-fill {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+  resource video hero-placeholder {
+    locator local { path "assets/placeholder.mp4"; }
+    streams { video auto; audio disabled; }
+  }
+
+  sequence main {
+    layer video media-slots {
+      item hero {
+        source media resource hero-placeholder;
+        record { at 0s; duration 6s; }
+        mapping linear { from 0s; to 6s; }
+        modifiers {
+          layout canvas-fill {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 1280px; height 720px; fit cover; }
+          }
+        }
+        template-slot media {
+          accepts video;
+          fill fit-duration;
+          label "主视觉媒体";
+          minimum-source-duration 2s;
+        }
+      }
+    }
+    layer visual text-slots {
+      item title {
+        source text {
+          content "可替换标题";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 56px; fill #ffffffff;
+          }
+        }
+        record { at 0s; duration 6s; }
+        template-slot text;
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

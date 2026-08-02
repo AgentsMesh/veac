@@ -1,51 +1,33 @@
-# Language Reference
+# VEAC Language Reference
 
-## Overview
-VEAC (Video Editing as Code) is a declarative, non-Turing-complete domain-specific language for video editing. It compiles `.veac` source files into FFmpeg commands.
+VEAC is an agent-oriented authoring language for deterministic video editing. It is not a textual JSON encoding. The surface language owns intent, source spans, omitted state, and closed variants; canonical JSON is the execution IR.
 
-## Design Principles
-- **Declarative**: Describe what the video should be, not how to process it
-- **Non-Turing-complete**: Variables and references only — no loops, conditionals, or recursion
-- **Agent-friendly**: Clear syntax and helpful errors for AI-assisted editing
-- **Single source format**: `.veac` files are the canonical representation
+The only supported compilation path is:
 
-## File Structure
-```
-my-project/
-├── main.veac
-├── shared.veac        # Optional: included modules
-└── assets/
-    ├── intro.mp4
-    ├── bgm.mp3
-    └── logo.png
+```text
+.veac -> typed authoring AST -> canonical JSON IR -> plan -> FFmpeg/artifacts
 ```
 
-## Language Elements
+The current canonical project envelope uses schema version 5 and minimum reader 5.
 
-A `.veac` file consists of top-level declarations:
+Core algebra:
 
-| Declaration | Purpose | Reference |
-|---|---|---|
-| `project` | Output configuration | [Project](project.md) |
-| `asset` | Media file references | [Assets](assets.md) |
-| `let` | Variable bindings | [Variables & Includes](variables-and-includes.md) |
-| `include` | Module imports | [Variables & Includes](variables-and-includes.md) |
-| `timeline` | Video composition | [Timeline & Tracks](timeline-and-tracks.md) |
+```text
+Project   = settings + resources + entry + multicams + sequences + annotations + deliveries
+Delivery  = sequence + optional raster + typed artifacts
+Sequence  = layers + relations + applies
+Layer     = ordered items + optional audio routing
+Item      = source + record span + optional source mapping + modifiers + optional template slot
+Parameter = constant<T> | curve<T>
+```
 
-## Track Items
+References are typed by their grammar position (`resource`, `sequence`, `layer`, `item`, `group`, `angle`, `track`, or `bus`). Unknown kinds, fields, duplicate fields, wrong units, and unresolved references are errors.
 
-Within timelines, different track types support different items:
+- [Project and resources](project.md)
+- [Timeline and mapping](timeline.md)
+- [Sources](sources.md)
+- [Modifiers and relations](modifiers-relations.md)
+- [Text, captions, and audio](text-caption-audio.md)
+- [Deliveries and artifacts](outputs.md)
 
-| Item | Tracks | Reference |
-|---|---|---|
-| `clip` | video, audio | [Clips](clips.md) |
-| `transition` | video | [Transitions](transitions.md) |
-| `text` | text | [Overlays](overlays.md) |
-| `image` | overlay | [Overlays](overlays.md) |
-| `pip` | overlay | [Overlays](overlays.md) |
-| `subtitle` | overlay | [Overlays](overlays.md) |
-| `gap` | video, audio | [Overlays](overlays.md) |
-| `freeze` | video | [Overlays](overlays.md) |
-
-## Literal Types
-See [Literals](literals.md) for time, color, and number formats.
+Every public mechanism has an executable source under [`examples/`](../../examples/). `make check-examples` parses, formats, lowers, and validates every cataloged example.

@@ -1,0 +1,118 @@
+project generated-graphics {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual transparency-base {
+      item light-cells {
+        source generated solid { color #d9dde3ff; }
+        record { at 0s; duration 1s; }
+      }
+    }
+    layer visual dark-top-left {
+      item top-left-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
+        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 320px; y 180px; } } } } }
+    }
+    layer visual dark-bottom-right {
+      item bottom-right-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
+        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 960px; y 540px; } } } } }
+    }
+    layer visual graphics {
+      item transparent {
+        source generated transparent;
+        record { at 0s; duration 1s; }
+      }
+      item solid {
+        source generated solid { color #005f73ff; }
+        record { at 1s; duration 1s; }
+      }
+      item gradient {
+        source generated gradient radial {
+          center 50% 50%; radius 70%;
+          stop 0% #ee9b00ff; stop 55% #ca6702ff; stop 100% #9b2226ff;
+        }
+        record { at 2s; duration 1s; }
+      }
+      item rectangle {
+        source generated shape {
+          geometry rounded-rectangle { bounds 8% 12% 84% 76%; radius 24px; }
+          fill gradient linear {
+            from 0% 0%; to 100% 100%;
+            stop 0% #94d2bdff; stop 50% #0a9396ff; stop 100% #005f73ff;
+          }
+          stroke 8px solid #001219ff;
+        }
+        record { at 3s; duration 1s; }
+      }
+      item polygon {
+        source generated shape {
+          geometry polygon { point 50% 5%; point 95% 90%; point 5% 90%; }
+          fill solid #e9d8a6ff;
+        }
+        record { at 4s; duration 1s; }
+      }
+      item path {
+        source generated shape {
+          geometry path { move 10% 10%; line 90% 10%; line 50% 90%; close; }
+          stroke 10px gradient radial {
+            center 50% 50%; radius 55%;
+            stop 0% #ffffffff; stop 100% #ee4d8bff;
+          }
+        }
+        record { at 5s; duration 1s; }
+      }
+      item ellipse {
+        source generated shape {
+          geometry ellipse { bounds 10% 15% 80% 70%; }
+          fill solid #5bc0beff;
+        }
+        record { at 6s; duration 1s; }
+      }
+      item rectangle-plain {
+        source generated shape {
+          geometry rectangle { bounds 12% 18% 76% 64%; }
+          fill solid #3a86ffff;
+        }
+        record { at 7s; duration 1s; }
+      }
+    }
+    layer audio tone {
+      item silence {
+        source generated silence;
+        record { at 0s; duration 8s; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio aac {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

@@ -1,0 +1,127 @@
+project delivery-codec-matrix {
+  entry sequence main;
+
+  settings {
+    timebase 1/1000;
+    canvas 640px by 360px;
+    frame-rate 24fps;
+    sample-rate 48000hz;
+  }
+
+  resource audio codec-tone {
+    locator local {
+      path "assets/codec-tone.m4a";
+    }
+    streams {
+      video disabled;
+      audio auto;
+    }
+  }
+
+  sequence main {
+    layer visual picture {
+      item color-reference {
+        source generated gradient linear {
+          from 0% 50%;
+          to 100% 50%;
+          stop 0% #071a52ff;
+          stop 35% #086972ff;
+          stop 70% #f8b500ff;
+          stop 100% #ff4b5cff;
+        }
+        record {
+          at 0s;
+          duration 1s;
+        }
+      }
+    }
+
+    layer audio reference {
+      item tone {
+        source media resource codec-tone;
+        record {
+          at 0s;
+          duration 1s;
+        }
+      }
+    }
+
+    layer caption labels {
+      item codecs {
+        source caption {
+          content "十位深交付";
+          style {
+            font family "Arial Unicode MS";
+          }
+          layout {
+          }
+        }
+        record {
+          at 0s;
+          duration 1s;
+        }
+      }
+    }
+  }
+
+  delivery codec-matrix {
+    sequence main;
+    raster {
+      canvas 640px by 360px;
+      frame-rate 24fps;
+      captions burn-in;
+    }
+
+    artifact video hevc-main10 {
+      target file "hevc.mov";
+      mux mov {
+        layout standard;
+        video h265 {
+          pixel-format yuv420p10le;
+          alpha opaque;
+          color-space {
+            primaries bt2020;
+            transfer smpte2084;
+            matrix bt2020-ncl;
+            range limited;
+          }
+          rate-control crf {
+            value 28;
+          }
+          gop automatic;
+          b-frames automatic;
+          profile h265-main10;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator software;
+      }
+    }
+
+    artifact video vp9-opus {
+      target file "vp9.webm";
+      mux webm {
+        layout standard;
+        video vp9 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf {
+            value 30;
+          }
+          gop automatic;
+          b-frames automatic;
+          profile vp9-profile0;
+          level automatic;
+        }
+        audio opus {
+          sample-rate 48khz;
+          channel-layout stereo;
+        }
+        passes single;
+        accelerator software;
+      }
+    }
+  }
+}

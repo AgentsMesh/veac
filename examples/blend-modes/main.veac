@@ -1,0 +1,71 @@
+project blend-modes {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence foreground {
+    layer visual plate {
+      item color-test {
+        source generated gradient radial {
+          center 38% 42%; radius 85%;
+          stop 0% #f4c95dff; stop 48% #d1495bff; stop 100% #2866b1ff;
+        }
+        record { at 0s; duration 1s; }
+      }
+    }
+  }
+
+  sequence main {
+    layer visual base {
+      item test-background {
+        source generated gradient linear {
+          from 0% 0%; to 100% 100%;
+          stop 0% #19324aff; stop 50% #4f6575ff; stop 100% #8a5367ff;
+        }
+        record { at 0s; duration 12s; }
+      }
+    }
+    layer visual overlays {
+      item screen { source sequence sequence foreground; record { at 0s; duration 1s; } modifiers { composite mode { opacity 82%; blend screen; } } }
+      item multiply { source sequence sequence foreground; record { at 1s; duration 1s; } modifiers { composite mode { opacity 82%; blend multiply; } } }
+      item overlay { source sequence sequence foreground; record { at 2s; duration 1s; } modifiers { composite mode { opacity 82%; blend overlay; } } }
+      item darken { source sequence sequence foreground; record { at 3s; duration 1s; } modifiers { composite mode { opacity 82%; blend darken; } } }
+      item lighten { source sequence sequence foreground; record { at 4s; duration 1s; } modifiers { composite mode { opacity 82%; blend lighten; } } }
+      item color-dodge { source sequence sequence foreground; record { at 5s; duration 1s; } modifiers { composite mode { opacity 82%; blend color-dodge; } } }
+      item color-burn { source sequence sequence foreground; record { at 6s; duration 1s; } modifiers { composite mode { opacity 82%; blend color-burn; } } }
+      item hard-light { source sequence sequence foreground; record { at 7s; duration 1s; } modifiers { composite mode { opacity 82%; blend hard-light; } } }
+      item soft-light { source sequence sequence foreground; record { at 8s; duration 1s; } modifiers { composite mode { opacity 82%; blend soft-light; } } }
+      item difference { source sequence sequence foreground; record { at 9s; duration 1s; } modifiers { composite mode { opacity 82%; blend difference; } } }
+      item exclusion { source sequence sequence foreground; record { at 10s; duration 1s; } modifiers { composite mode { opacity 82%; blend exclusion; } } }
+      item normal { source sequence sequence foreground; record { at 11s; duration 1s; } modifiers { composite mode { opacity 82%; blend normal; } } }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

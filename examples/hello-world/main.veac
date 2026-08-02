@@ -1,55 +1,64 @@
-// VEAC Hello World Example
-// A simple video project demonstrating basic VEAC features.
+project hello-world {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-project "hello-world" {
-    resolution = "1920x1080"
-    fps        = 30
-    format     = "mp4"
-    codec      = "h264"
-    quality    = "high"
-}
-
-// Asset declarations
-asset intro  = video("./assets/intro.mp4")
-asset scene1 = video("./assets/scene1.mp4")
-asset bgm    = audio("./assets/bgm.mp3")
-
-// Variables
-let default_volume = 0.8
-
-// Main timeline
-timeline main {
-
-    // Video track: sequential clips
-    track video {
-        clip intro {
-            from = 0s
-            to   = 10s
+  sequence main {
+    layer visual background {
+      item field {
+        source generated gradient linear {
+          from 50% 0%; to 50% 100%;
+          stop 0% #143642ff; stop 100% #0f1a20ff;
         }
-
-        clip scene1 {
-            from     = 5s
-            to       = 30s
-            volume   = 0.5
-        }
+        record { at 0s; duration 4s; }
+      }
     }
-
-    // Background music
-    track audio {
-        clip bgm {
-            volume = default_volume
+    layer visual title {
+      item greeting {
+        source text {
+          content "你好，VEAC";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 72px; fill #ffffffff;
+          }
+          layout {
+            box-width 1000px;
+            box-height 180px;
+            horizontal-align center;
+            vertical-align middle;
+          }
         }
+        record { at 0s; duration 4s; }
+      }
     }
+  }
 
-    // Text overlay
-    track text {
-        text "Hello World" {
-            at       = 3s
-            duration = 5s
-            font     = "Arial"
-            size     = 48
-            color    = #FFFFFF
-            position = "center"
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
         }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
+  }
 }

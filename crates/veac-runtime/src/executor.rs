@@ -1,42 +1,27 @@
-use std::process::Command;
+//! Fail-closed execution for emitter commands and multi-deliverable bundles.
 
-use veac_codegen::ffmpeg::FfmpegCommand;
+mod bundle;
+mod checkpoint;
+mod contract;
+mod deadline;
+mod locking;
+mod model;
+mod output;
+mod process;
+mod snapshot;
+mod staging;
+
+pub use bundle::{execute_bundle, BundleExecution, BundleExecutor, TaskExecution};
+pub use deadline::{BundleSetupLimits, TaskExecutionLimits};
+pub use process::{FfmpegEnvironment, FfmpegFingerprint, FfmpegInvocation, SystemFfmpeg};
 
 use crate::RuntimeError;
 
-/// Execute an FFmpeg command as a subprocess.
-pub fn execute(cmd: &FfmpegCommand) -> Result<(), RuntimeError> {
-    let args = cmd.to_args();
-    execute_ffmpeg(&args)
-}
-
-/// Execute FFmpeg with the given argument list.
-pub fn execute_ffmpeg(args: &[String]) -> Result<(), RuntimeError> {
-    check_ffmpeg()?;
-
-    let output = Command::new("ffmpeg")
-        .args(args)
-        .output()
-        .map_err(|e| RuntimeError::new(format!("failed to run ffmpeg: {e}")))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(RuntimeError::new(format!("ffmpeg failed:\n{stderr}")));
-    }
-
-    Ok(())
-}
-
-/// Verify that FFmpeg is installed and return its version string.
+/// Verify that system FFmpeg is available and return its version line.
 pub fn check_ffmpeg() -> Result<String, RuntimeError> {
-    let output = Command::new("ffmpeg")
-        .arg("-version")
-        .output()
-        .map_err(|_| {
-            RuntimeError::new("ffmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
-        })?;
-
-    let version = String::from_utf8_lossy(&output.stdout);
-    let first_line = version.lines().next().unwrap_or("unknown").to_string();
-    Ok(first_line)
+    Ok(FfmpegEnvironment::fingerprint(&SystemFfmpeg::default())?.version)
 }
+
+#[cfg(test)]
+#[path = "executor/tests.rs"]
+mod tests;

@@ -1,0 +1,111 @@
+project apply-scopes {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual base {
+      order 0;
+      item background {
+        source generated gradient linear {
+          from 0% 0%; to 100% 100%;
+          stop 0% #264653ff; stop 100% #2a9d8fff;
+        }
+        record { at 0s; duration 6s; }
+      }
+    }
+
+    layer visual overlay {
+      order 1;
+      item accent {
+        source generated solid { color #ef476fdd; }
+        record { at 0s; duration 6s; }
+        modifiers {
+          mask accent-window {
+            shape circle;
+            position { x 50%; y 50%; }
+            scale { x 42%; y 72%; }
+            feather 0px;
+          }
+        }
+      }
+    }
+    relation group selected-items {
+      members { item background; item accent; }
+    }
+    apply band-stack {
+      scope composite-band { from layer base; through layer overlay; }
+      record { at 0s; duration 2s; }
+      pipeline {
+        stage effect band-contrast {
+          type video.color_adjust;
+          parameter contrast 1.3;
+        }
+        stage effect band-soften {
+          type video.blur;
+          parameter radius 14;
+        }
+      }
+      mix {
+        opacity 88%;
+        blend screen;
+        mask band-window {
+          shape circle;
+          position { x 50%; y 50%; }
+          scale { x 60%; y 78%; }
+          feather 24px;
+        }
+      }
+    }
+    apply overlay-layer {
+      scope layer overlay;
+      record { at 2s; duration 2s; }
+      pipeline {
+        stage effect overlay-brightness {
+          type video.color_adjust;
+          parameter brightness 0.35;
+        }
+      }
+      mix {}
+    }
+    apply selected-item-set {
+      scope items { group selected-items; }
+      record { at 4s; duration 2s; }
+      pipeline {
+        stage effect selection-contrast {
+          type video.color_adjust;
+          parameter contrast 1.55;
+        }
+      }
+      mix { opacity 70%; blend multiply; }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

@@ -1,118 +1,118 @@
 # Getting Started
 
-This guide walks you through installing VEAC, creating your first project, and rendering a video.
-
 ## Prerequisites
 
-### Rust Toolchain (1.70+)
+- Rust toolchain `1.85.0`
+- FFmpeg and ffprobe for planning/rendering and E2E tests
+- jq for example catalog/build tooling
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+make doctor
+make build
 ```
 
-Verify the installation:
+## Write a Project
 
-```bash
-rustc --version
-```
-
-### FFmpeg (4.0+)
-
-**macOS (Homebrew):**
-
-```bash
-brew install ffmpeg
-```
-
-**Ubuntu / Debian:**
-
-```bash
-apt install ffmpeg
-```
-
-Verify the installation:
-
-```bash
-ffmpeg -version
-```
-
-## Installation
-
-Clone the repository and install the CLI:
-
-```bash
-git clone https://github.com/AgentsMesh/veac.git
-cd veac
-cargo install --path crates/veac-cli
-```
-
-Confirm that the `veac` command is available:
-
-```bash
-veac --help
-```
-
-## Your First Project
-
-Create a project directory with an asset:
-
-```
-my-project/
-├── main.veac
-└── assets/
-    └── intro.mp4
-```
-
-Write a minimal `main.veac` file:
+Create `main.veac`:
 
 ```veac
-project "my-first-video" {
-    resolution = "1920x1080"
-    fps = 30
-    format = "mp4"
-}
+project intro {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset intro = video("assets/intro.mp4")
-
-timeline main {
-    track video {
-        clip intro { from = 0s  to = 10s }
+  sequence main {
+    layer visual canvas {
+      item background {
+        source generated solid { color #18202aff; }
+        record { at 0s; duration 4s; }
+      }
     }
+    layer visual title {
+      item greeting {
+        source text {
+          content "Hello, VEAC";
+          style { font family "Inter"; size 72px; fill #ffffffff; }
+          layout {
+            box-width 1000px; box-height 180px;
+            horizontal-align center; vertical-align middle;
+          }
+        }
+        record { at 0s; duration 4s; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }
 ```
 
-This project declares a 1920x1080 video at 30 fps, imports a single video asset, and places the first 10 seconds of that asset on a video track.
-
-## Build and Run
-
-Use the following commands from inside your project directory:
-
-**Validate the file:**
+## Check and Format
 
 ```bash
-veac check main.veac
+cargo run -p veac-cli -- check main.veac
+cargo run -p veac-cli -- fmt --check main.veac
+cargo run -p veac-cli -- fmt main.veac
 ```
 
-This parses the file and runs semantic analysis without rendering. Errors are reported with line numbers and suggestions.
+Parser diagnostics include an authoring code and exact source span. Unknown fields, duplicate singleton fields, unresolved typed references, wrong units, and incomplete variants fail before planning.
 
-**Preview the FFmpeg commands:**
+## Compile, Plan, and Render
 
 ```bash
-veac plan main.veac
+cargo run -p veac-cli -- compile main.veac --out project.json
+cargo run -p veac-cli -- plan project.json --config out_preview --out plan.json
+cargo run -p veac-cli -- render project.json --out-dir output
 ```
 
-This is a dry-run that prints the FFmpeg commands VEAC would execute, useful for debugging.
+Compilation emits canonical project IR schema version 5 and does not probe media
+or invoke FFmpeg. Planning resolves media, stream selection, clocks, graph
+structure, and artifact compatibility. Rendering executes typed backend tasks.
 
-**Compile and render the video:**
+## Explore Mechanisms
 
 ```bash
-veac build main.veac -o output.mp4
+make check-examples
+make build-examples
+make serve-examples
 ```
 
-This compiles the `.veac` file and invokes FFmpeg to produce the final video.
+The ignored `examples-preview/` directory contains canonical projects, resolved plans, render logs, deliverables, and a gallery index for every cataloged example.
 
-## What's Next
+## Run Guards
 
-- [CLI Reference](cli-reference.md) -- all available commands and their options
-- [Language Reference](language-reference/) -- the full VEAC language specification
-- [Examples](../examples/) -- more complex projects demonstrating advanced features
+```bash
+make fmt-check
+make clippy
+make test
+make e2e
+make coverage
+```
+
+See the [language reference](language-reference/README.md), [architecture](architecture.md), and [CLI reference](cli-reference.md) for the full contracts.

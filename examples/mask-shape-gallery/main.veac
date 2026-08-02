@@ -1,0 +1,159 @@
+project mask-shape-gallery {
+  entry sequence main;
+
+  settings {
+    timebase 1/1000;
+    canvas 640px by 360px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+
+  sequence main {
+    layer visual background {
+      item canvas {
+        source generated gradient linear {
+          from 0% 0%;
+          to 100% 100%;
+          stop 0% #101820ff;
+          stop 100% #314158ff;
+        }
+        record {
+          at 0s;
+          duration 4s;
+        }
+      }
+    }
+
+    layer visual shapes {
+      item heart {
+        source generated solid {
+          color #ff477eff;
+        }
+        record {
+          at 0s;
+          duration 1s;
+        }
+        modifiers {
+          mask heart-window {
+            shape heart;
+            position {
+              x 50%;
+              y 47%;
+            }
+            scale {
+              x 65%;
+              y 65%;
+            }
+            feather 8px;
+          }
+        }
+      }
+
+      item star {
+        source generated solid {
+          color #ffd166ff;
+        }
+        record {
+          at 1s;
+          duration 1s;
+        }
+        modifiers {
+          mask star-window {
+            shape star;
+            position {
+              x 50%;
+              y 48%;
+            }
+            scale {
+              x 65%;
+              y 65%;
+            }
+            rotation 8deg;
+            feather 8px;
+          }
+        }
+      }
+
+      item linear {
+        source generated solid {
+          color #2dd4bfff;
+        }
+        record {
+          at 2s;
+          duration 1s;
+        }
+        modifiers {
+          mask linear-window {
+            shape linear;
+            position {
+              x 50%;
+              y 50%;
+            }
+            scale {
+              x 60%;
+              y 60%;
+            }
+            rotation 20deg;
+            feather 8px;
+          }
+        }
+      }
+
+      item mirror {
+        source generated solid {
+          color #7aa2f7ff;
+        }
+        record {
+          at 3s;
+          duration 1s;
+        }
+        modifiers {
+          mask mirror-window {
+            shape mirror;
+            position {
+              x 50%;
+              y 50%;
+            }
+            scale {
+              x 60%;
+              y 60%;
+            }
+            rotation -12deg;
+            feather 8px;
+          }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster {
+      canvas 640px by 360px;
+      frame-rate 30fps;
+      captions discard;
+    }
+
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf {
+            value 23;
+          }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

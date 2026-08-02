@@ -1,146 +1,171 @@
-project "agentsmesh-intro-15s" {
-    resolution = "1920x1080"
-    fps        = 30
-    format     = "mp4"
-    codec      = "h264"
-    quality    = "high"
-}
+project agentsmesh-intro-15s {
+  settings {
+    timebase 1/1000;
+    canvas 1920px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset overview = video("assets/platform-overview.mp4")
-asset loop_demo = video("assets/loop-demo.mp4")
-asset narration = audio("assets/narration.mp3")
-
-let fast = 0.3s
-let mid  = 0.5s
-
-timeline main {
-    track video {
-        // Shot 1 (0~2s): KANBAN BOARD — "Write a ticket. It gets done."
-        clip overview {
-            from     = 208s
-            to       = 210s
-            fade_in  = 0.3s
+  sequence main {
+    layer visual background {
+      item backdrop {
+        source generated gradient linear {
+          from 0% 0%; to 100% 100%;
+          stop 0% #102a43ff;
+          stop 55% #0f766eff;
+          stop 100% #22c55eff;
         }
-
-        transition { type = "fade-black"  duration = fast }
-
-        // Shot 2 (2~4s): CHANNELS — E2E report, agents communicating
-        clip overview {
-            from     = 238s
-            to       = 240s
-        }
-
-        transition { type = "pixelize"  duration = fast }
-
-        // Shot 3 (4~6s): POD EXECUTION — agent actively coding
-        clip overview {
-            from     = 123s
-            to       = 125s
-            speed    = 1.2
-        }
-
-        transition { type = "fade-black"  duration = fast }
-
-        // Shot 4 (6~8s): MESH TOPOLOGY — the hero shot
-        clip overview {
-            from     = 273s
-            to       = 275s
-        }
-
-        transition { type = "dissolve"  duration = mid }
-
-        // Shot 5 (8~12s): DUAL POD PARALLEL — two agents working simultaneously
-        clip loop_demo {
-            from     = 298s
-            to       = 302s
-        }
-
-        transition { type = "fade-black"  duration = mid }
-
-        // Shot 6 (12~15s): LOOPS DASHBOARD — automated 24/7 + CTA
-        clip overview {
-            from     = 303s
-            to       = 306s
-            fade_out = 0.5s
-        }
+        record { at 0s; duration 15s; }
+      }
     }
 
-    track audio {
-        clip narration {
-            volume   = 1.0
-            fade_out = 0.8s
+    layer visual brand {
+      item title {
+        source text {
+          content "AgentsMesh";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            weight bold;
+            size 112px;
+            fill #f7fbffff;
+            shadow {
+              color #001f2dff; opacity 80%; blur 18px;
+              offset { x 0px; y 10px; }
+            }
+          }
+          layout {
+            box-width 1600px;
+            box-height 300px;
+            wrap none;
+            overflow visible;
+            horizontal-align center;
+            vertical-align middle;
+          }
+          animation {
+            unit grapheme;
+            stagger 45ms;
+            reveal curve {
+              key brand-visible { at 0s; value 10%; interpolation ease-out; }
+              key brand-revealed { at 900ms; value 100%; interpolation linear; }
+            }
+            opacity curve {
+              key brand-soft { at 0s; value 75%; interpolation ease-out; }
+              key brand-opaque { at 700ms; value 100%; interpolation linear; }
+            }
+            transform {
+              position curve {
+                key brand-low {
+                  at 0s; value { x 0px; y 48px; } interpolation ease-out;
+                }
+                key brand-centered {
+                  at 900ms; value { x 0px; y 0px; } interpolation linear;
+                }
+              }
+              scale curve {
+                key brand-small {
+                  at 0s; value { x 50%; y 50%; } interpolation ease-out;
+                }
+                key brand-full {
+                  at 900ms; value { x 100%; y 100%; } interpolation linear;
+                }
+              }
+              rotation 0deg;
+            }
+          }
         }
+        record { at 0s; duration 5s; }
+      }
     }
 
-    track text {
-        // Shot 1: Kanban
-        text "Write a ticket. It gets done." {
-            at         = 0.2s
-            duration   = 1.8s
-            font       = "Arial"
-            size       = 36
-            color      = #FFFFFF
-            position   = "bottom"
-            fade_in    = 0.15s
-            fade_out   = 0.15s
-            background = "black@0.5"
-            background_padding = 14
+    layer visual promise {
+      item promise {
+        source text {
+          content "一次构建系统，持续交付类型化产品。";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            weight bold;
+            size 64px;
+            fill #d8f3efff;
+            shadow {
+              color #001f2dff; opacity 67%; blur 10px;
+              offset { x 0px; y 6px; }
+            }
+          }
+          layout {
+            box-width 1600px;
+            box-height 260px;
+            wrap word;
+            overflow visible;
+            horizontal-align center;
+            vertical-align middle;
+          }
         }
-
-        // Shot 2: Channels
-        text "They talk to each other." {
-            at         = 2.2s
-            duration   = 1.8s
-            font       = "Arial"
-            size       = 36
-            color      = #FFFFFF
-            position   = "bottom"
-            fade_in    = 0.15s
-            fade_out   = 0.15s
-            background = "black@0.5"
-            background_padding = 14
+        record { at 5s; duration 10s; }
+        modifiers {
+          layout promise-placement {
+            placement absolute { position { x 960px; y 490px; } }
+            frame { width 1600px; height 260px; fit contain; }
+          }
         }
-
-        // Shot 3: Pods
-        text "Every agent gets a desk." {
-            at         = 4.2s
-            duration   = 1.8s
-            font       = "Arial"
-            size       = 36
-            color      = #FFFFFF
-            position   = "bottom"
-            fade_in    = 0.15s
-            fade_out   = 0.15s
-            background = "black@0.5"
-            background_padding = 14
-        }
-
-        // Shot 4: Mesh
-        text "See everything. Real-time." {
-            at         = 6.2s
-            duration   = 1.8s
-            font       = "Arial"
-            size       = 36
-            color      = #FFFFFF
-            position   = "bottom"
-            fade_in    = 0.15s
-            fade_out   = 0.15s
-            background = "black@0.5"
-            background_padding = 14
-        }
-
-        // Shot 6: CTA
-        text "agentsmesh.ai" {
-            at         = 12.5s
-            duration   = 3s
-            font       = "Arial"
-            size       = 52
-            color      = #FFFFFF
-            position   = "bottom"
-            fade_in    = 0.2s
-            fade_out   = 0.5s
-            background = "black@0.6"
-            background_padding = 16
-        }
+      }
     }
+
+    layer caption captions {
+      item caption {
+        source caption {
+          content "视频编辑成为类型化、可审查的代码。";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            weight bold;
+            size 44px;
+            fill #ffffffff;
+            background { color #001f2dcc; padding 18px; }
+          }
+          layout {
+            box-width 1600px;
+            box-height 160px;
+            wrap word;
+            overflow visible;
+            horizontal-align center;
+            vertical-align bottom;
+          }
+        }
+        record { at 2s; duration 10s; }
+        modifiers {
+          layout caption-placement {
+            placement absolute { position { x 960px; y 914px; } }
+            frame { width 1600px; height 160px; fit contain; }
+          }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout fast-start;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

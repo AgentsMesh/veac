@@ -1,27 +1,63 @@
-// Video with watermark logo overlay.
-project "overlay-demo" {
-    resolution = "1920x1080"
-    fps = 30
-    format = "mp4"
-    codec = "h264"
-    quality = "high"
-}
+project image-overlay {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset main_video = video("assets/main.mp4")
-asset logo = image("assets/logo.png")
+  resource image logo {
+    locator local { path "assets/logo.png"; }
+  }
 
-timeline main {
-    track video {
-        clip main_video { from = 0s to = 60s }
+  sequence main {
+    layer visual base {
+      item background {
+        source generated solid { color #203040ff; }
+        record { at 0s; duration 4s; }
+      }
     }
-
-    track overlay {
-        image logo {
-            at       = 0s
-            duration = 60s
-            position = "top-right"
-            scale    = 0.1
-            opacity  = 0.8
+    layer visual overlay {
+      item logo {
+        source media resource logo;
+        record { at 0s; duration 4s; }
+        modifiers {
+          layout corner {
+            placement anchor { at bottom-right; inset { x 48px; y 48px; } }
+            frame { width 320px; height 320px; fit contain; }
+          }
+          transform scale {
+            scale { x 0.75; y 0.75; }
+            anchor { x 1; y 1; }
+          }
+          composite blend { opacity 90%; z-index 20; blend screen; }
         }
+      }
     }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

@@ -1,5 +1,12 @@
 [workspace]
 members = [
+    "crates/veac-ir",
+    "crates/veac-plan",
+    "crates/veac-artifact",
+    "crates/veac-provider",
+    "crates/veac-caption",
+    "crates/veac-otio",
+    "crates/veac-template",
     "crates/veac-lang",
     "crates/veac-codegen",
     "crates/veac-runtime",
@@ -10,4 +17,5 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "MIT"

@@ -1,8 +1,5 @@
-pub mod ast;
-pub mod error;
-pub mod ir;
-pub mod lexer;
-pub mod parser;
-pub mod resolve;
-pub mod semantic;
-pub mod token;
+//! Agent-oriented VEAC authoring language lowered directly to canonical IR.
+
+pub mod authoring;
+
+pub use authoring::{format_document, lower_document, parse, Diagnostics, Document};

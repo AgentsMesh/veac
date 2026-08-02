@@ -1,0 +1,199 @@
+project video-effects {
+  entry sequence main;
+
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+
+  resource image plate {
+    locator local {
+      path "assets/effects-plate.png";
+    }
+  }
+
+  resource video shaky {
+    locator local {
+      path "assets/shaky.mp4";
+    }
+    streams {
+      video auto;
+      audio disabled;
+    }
+  }
+
+  sequence main {
+    layer visual background {
+      item reveal {
+        source generated solid {
+          color #d1495bff;
+        }
+        record {
+          at 0s;
+          duration 8s;
+        }
+      }
+    }
+
+    layer visual effects {
+      item focus {
+        source media resource plate;
+        record {
+          at 0s;
+          duration 1s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+          effect animated-blur {
+            type video.blur;
+            record {
+              at 0s;
+              duration 1s;
+            }
+            parameter radius curve {
+              key soft {
+                at 0s;
+                value 16;
+                interpolation ease-out;
+              }
+              key sharp {
+                at 1s;
+                value 0;
+                interpolation linear;
+              }
+            }
+          }
+        }
+      }
+
+      item finish {
+        source media resource plate;
+        record {
+          at 1s;
+          duration 1s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+          effect sharpen {
+            type video.sharpen;
+            parameter amount 8;
+          }
+          effect color-adjust {
+            type video.color_adjust;
+            parameter brightness 0.08;
+            parameter contrast 1.25;
+            parameter saturation 0.35;
+          }
+          effect vignette {
+            type video.vignette;
+            parameter amount 0.65;
+          }
+          effect grain {
+            type video.grain;
+            parameter amount 0.28;
+          }
+        }
+      }
+
+      item chroma {
+        source media resource plate;
+        record {
+          at 2s;
+          duration 1s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+          effect chroma-key {
+            type video.chroma_key;
+            parameter blend 0.08;
+            parameter color #2dc264;
+            parameter similarity 0.18;
+          }
+          effect chroma-spill {
+            type video.chroma_spill;
+            parameter amount 1;
+            parameter color #2dc264;
+            parameter range 0.2;
+          }
+        }
+      }
+
+      item luma {
+        source media resource plate;
+        record {
+          at 3s;
+          duration 1s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+          effect luma-key {
+            type video.luma_key;
+            parameter invert false;
+            parameter softness 0.08;
+            parameter threshold 0.12;
+            parameter tolerance 0.08;
+          }
+        }
+      }
+
+      item stabilize-before {
+        source media resource shaky;
+        record {
+          at 4s;
+          duration 2s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+        }
+      }
+
+      item stabilize-after {
+        source media resource shaky;
+        record {
+          at 6s;
+          duration 2s;
+        }
+        modifiers {
+          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
+          effect stabilize {
+            type video.stabilize;
+            parameter enabled true;
+          }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster {
+      canvas 1280px by 720px;
+      frame-rate 30fps;
+      captions discard;
+    }
+
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf {
+            value 23;
+          }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

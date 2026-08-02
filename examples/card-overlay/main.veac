@@ -1,35 +1,71 @@
-// Card overlays: fit + rounded corners + drop shadow + fade — a promo-grade "floating widget"
-// shot composed declaratively. A still on the main track now honors `duration`.
-project "card-overlay" {
-    resolution = "1080x1920"
-    fps        = 30
-    format     = "mp4"
-    codec      = "h264"
-    quality    = "high"
-}
+project card-overlay {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset bg      = image("assets/bg.png")       // a premium background still
-asset widget  = video("assets/widget.mov")   // a widget/app-capture clip
-asset caption = image("assets/caption.png")  // a pre-rendered caption strip (transparent PNG)
+  sequence main {
+    layer visual base {
+      item background {
+        source generated gradient linear {
+          from 0% 20%; to 100% 80%;
+          stop 0% #0b132bff; stop 100% #1c2541ff;
+        }
+        record { at 0s; duration 4s; }
+      }
+    }
+    layer visual card {
+      item panel {
+        source generated shape {
+          geometry rectangle { bounds 0% 0% 100% 100%; }
+          fill solid #f7f7f2ff;
+          stroke 14px solid #5bc0beff;
+        }
+        record { at 0s; duration 4s; }
+        modifiers {
+          layout card-frame {
+            placement anchor { at center; inset { x 0px; y 0px; } }
+            frame { width 720px; height 380px; fit fill; }
+          }
+          surface raised {
+            corner-radius 36px;
+            shadow {
+              color #000000ff;
+              opacity 38%;
+              blur 28px;
+              offset { x 0px; y 16px; }
+            }
+          }
+          composite translucent { opacity 92%; z-index 10; }
+        }
+      }
+    }
+  }
 
-timeline main {
-    track video {
-        clip bg { duration = 4s }            // looped to 4s — no more collapse to one frame
-    }
-    track overlay {
-        // The widget as a rounded, shadowed card, aspect-preserved inside its box.
-        pip widget {
-            at = 0s   duration = 4s
-            width = 740  height = 775  y = 900
-            fit    = "cover"
-            radius = 56
-            shadow = true  shadow_blur = 34  shadow_opacity = 0.5  shadow_y = 30
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
         }
-        // The caption dissolves in/out at an exact position.
-        image caption {
-            at = 0.3s  duration = 3.4s
-            y  = 150
-            fade_in = 0.3s  fade_out = 0.4s
-        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
     }
+  }
 }

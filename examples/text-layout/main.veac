@@ -1,0 +1,162 @@
+project text-layout {
+  settings {
+    timebase 1/1000;
+    canvas 1080px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual background {
+      item dark-canvas {
+        source generated gradient linear {
+          from 0% 0%;
+          to 100% 100%;
+          stop 0% #101827ff;
+          stop 100% #243447ff;
+        }
+        record { at 0s; duration 6s; }
+      }
+    }
+    layer visual text {
+      item paragraph {
+        source text {
+          content "中文排版 · مرحبا · VEAC";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 64px;
+            weight semi-bold;
+            fill #f7f7f2ff;
+            outline { color #101827ff; width 2px; }
+            background { color #14213dcc; padding 16px; }
+            span { start 0; end 4; fill #2dd4bfff; weight bold; }
+            span { start 7; end 12; fill #ffd166ff; weight bold; }
+          }
+          layout {
+            box-width 984px;
+            box-height 420px;
+            wrap word;
+            overflow clip;
+            horizontal-align center;
+            vertical-align middle;
+            writing-mode horizontal-tb;
+            orientation mixed;
+          }
+        }
+        record { at 0s; duration 2s; }
+        modifiers {
+          layout paragraph-placement {
+            placement anchor { at top-left; inset { x 48px; y 72px; } }
+          }
+          transform paragraph-pivot { anchor { x 0.0; y 0.0; } }
+        }
+      }
+    }
+    layer visual vertical-text {
+      item vertical-label {
+        source text {
+          content "右起第一列纵排\n次";
+          style { font family "Arial Unicode MS"; size 58px; weight bold; fill #2dd4bfff; }
+          layout {
+            box-width 420px;
+            box-height 820px;
+            wrap none;
+            overflow clip;
+            horizontal-align left;
+            vertical-align top;
+            writing-mode vertical-rl;
+            orientation upright;
+          }
+        }
+        record { at 2s; duration 2s; }
+        modifiers {
+          layout vertical-placement {
+            placement anchor { at top-right; inset { x 72px; y 72px; } }
+          }
+          transform vertical-pivot { anchor { x 1.0; y 0.0; } }
+        }
+      }
+      item vertical-left-label {
+        source text {
+          content "左起第一列纵排\n次";
+          style { font family "Arial Unicode MS"; size 58px; weight bold; fill #ff8a5bff; }
+          layout {
+            box-width 420px;
+            box-height 820px;
+            wrap none;
+            overflow clip;
+            horizontal-align left;
+            vertical-align top;
+            writing-mode vertical-lr;
+            orientation mixed;
+          }
+        }
+        record { at 2s; duration 2s; }
+        modifiers {
+          layout vertical-left-placement {
+            placement anchor { at bottom-left; inset { x 72px; y 72px; } }
+          }
+          transform vertical-left-pivot { anchor { x 0.0; y 1.0; } }
+        }
+      }
+    }
+    layer visual path-text {
+      item path-label {
+        source text {
+          content "文字沿折线路径排列";
+          style { font family "Arial Unicode MS"; size 64px; weight bold; fill #ffd166ff; }
+          layout {
+            box-width 984px;
+            box-height 760px;
+            overflow clip;
+            horizontal-align center;
+            vertical-align middle;
+            writing-mode horizontal-tb;
+            orientation upright;
+            path {
+              point { x 8%; y 72%; }
+              point { x 50%; y 18%; }
+              point { x 92%; y 72%; }
+              start-offset 50%;
+              reverse false;
+              align center;
+            }
+          }
+        }
+        record { at 4s; duration 2s; }
+        modifiers {
+          layout path-placement {
+            placement anchor { at top-left; inset { x 48px; y 160px; } }
+          }
+          transform path-pivot { anchor { x 0.0; y 0.0; } }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1080px by 1080px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

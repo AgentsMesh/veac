@@ -2,6 +2,17 @@
 name = "veac-codegen"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-veac-lang = { path = "../veac-lang" }
+base64 = "0.22"
+cosmic-text = { version = "=0.16.0", default-features = false, features = ["std"] }
+ttf-parser = "0.25"
+unicode-segmentation = "1.12"
+unicode-script = "0.5"
+veac-artifact = { path = "../veac-artifact" }
+veac-plan = { path = "../veac-plan" }
+
+[dev-dependencies]
+serde_json = "1.0"
+tempfile = "3.10"

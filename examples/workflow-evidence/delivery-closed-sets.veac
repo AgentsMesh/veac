@@ -1,0 +1,63 @@
+project delivery-closed-sets {
+  settings {
+    canvas 320px by 180px;
+    frame-rate 24fps;
+    sample-rate 48000hz;
+    timebase 1/1000;
+  }
+  entry sequence main;
+  sequence main {
+    layer visual picture {
+      item background {
+        source generated solid { color #202020ff; }
+        record { at 0s; duration 1s; }
+      }
+    }
+    layer caption captions {
+      item caption {
+        source caption { content "Closed delivery sets"; }
+        record { at 0s; duration 1s; }
+      }
+    }
+  }
+
+  delivery closed-sets {
+    sequence main;
+    raster { canvas 320px by 180px; frame-rate 24fps; captions discard; }
+
+    artifact video h264-mp4 { target file "h264.mp4"; mux mp4 { video h264 {} audio none; } }
+    artifact video h265-mkv { target file "h265.mkv"; mux mkv { video h265 {} audio none; } }
+    artifact video vp9-webm { target file "vp9.webm"; mux webm { video vp9 {} audio none; } }
+    artifact video av1-mkv { target file "av1.mkv"; mux mkv { video av1 {} audio none; } }
+    artifact video prores-mov { target file "prores.mov"; mux mov { video prores { pixel-format yuva444p10le; alpha straight; profile prores-4444; rate-control lossless; } audio none; } }
+    artifact video dnxhr-mxf { target file "dnxhr.mxf"; mux mxf { video dnxhr { pixel-format yuv422p; profile dnxhr-hq; rate-control lossless; } audio none; } }
+
+    artifact video audio-aac { target file "aac.mp4"; mux mp4 { video h264 {} audio aac { sample-rate 48khz; channel-layout stereo; } } }
+    artifact video audio-opus { target file "opus.webm"; mux webm { video vp9 {} audio opus { sample-rate 48khz; channel-layout stereo; } } }
+    artifact video audio-pcm16 { target file "pcm16.mov"; mux mov { video h264 {} audio pcm-s16le { sample-rate 48khz; channel-layout stereo; } } }
+    artifact video audio-pcm24 { target file "pcm24.mov"; mux mov { video h264 {} audio pcm-s24le { sample-rate 48khz; channel-layout stereo; } } }
+    artifact video audio-pcm32 { target file "pcm32.mov"; mux mov { video h264 {} audio pcm-s32le { sample-rate 48khz; channel-layout stereo; } } }
+    artifact video audio-flac { target file "flac.mkv"; mux mkv { video h264 {} audio flac { sample-rate 48khz; channel-layout stereo; } } }
+
+    artifact image-sequence image-png { target pattern "png-%04d.png"; numbering from 0; encode png; }
+    artifact image-sequence image-jpeg { target pattern "jpeg-%04d.jpg"; numbering from 0; encode jpeg; }
+    artifact image-sequence image-tiff { target pattern "tiff-%04d.tiff"; numbering from 0; encode tiff; }
+    artifact image-sequence image-exr { target pattern "exr-%04d.exr"; numbering from 0; encode exr; }
+
+    artifact caption-sidecar caption-srt { target file "captions.srt"; source caption-tracks { track captions; } encode srt; }
+    artifact caption-sidecar caption-webvtt { target file "captions.vtt"; source caption-tracks { track captions; } encode web-vtt; }
+    artifact caption-sidecar caption-ass { target file "captions.ass"; source caption-tracks { track captions; } encode ass; }
+
+    artifact audio-stem stem-wav { target file "master.wav"; source master; encode wav { sample-format pcm-s16le; sample-rate 48khz; channel-layout stereo; } }
+    artifact audio-stem stem-flac { target file "master.flac"; source master; encode flac { sample-rate 48khz; channel-layout stereo; } }
+
+    artifact scope scope-waveform { target file "waveform.png"; analyze waveform; frame containing 0s; canvas 320px by 180px; encode png; }
+    artifact scope scope-vectorscope { target file "vectorscope.png"; analyze vectorscope; frame containing 0s; canvas 320px by 180px; encode png; }
+    artifact scope scope-histogram { target file "histogram.png"; analyze histogram; frame containing 0s; canvas 320px by 180px; encode png; }
+
+    artifact audio-file audio-mp3 { target file "master.mp3"; source master; encode mp3 { bitrate 192kbps; sample-rate 48khz; channel-layout stereo; } }
+    artifact animated-image image-gif { target file "preview.gif"; encode gif { playback forever; dither sierra2; } }
+    artifact still-image image-still { target file "still.png"; frame containing 500ms; encode png; }
+    artifact adaptive-package package-hls { target package "stream"; package hls { segment-duration 1s; audio none; rendition hd { canvas 320px by 180px; encode h264 { rate-control capped { target 1mbps; max 1100kbps; buffer 2mbit; } } } rendition sd { canvas 160px by 90px; encode h264 { rate-control capped { target 400kbps; max 440kbps; buffer 800kbit; } } } } }
+  }
+}

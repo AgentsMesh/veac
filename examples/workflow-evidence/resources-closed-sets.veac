@@ -1,0 +1,26 @@
+project resource-closed-sets {
+  settings {
+    canvas 320px by 180px;
+    frame-rate 24fps;
+    sample-rate 48000hz;
+    timebase 1/1000;
+  }
+  entry sequence main;
+  resource font remote-font {
+    locator remote {
+      uri "https://example.invalid/veac-font.ttf";
+      identity sha256 "0000000000000000000000000000000000000000000000000000000000000000";
+    }
+  }
+  sequence main {
+    layer visual text {
+      item label {
+        source text {
+          content "Deterministic remote font evidence";
+          style { font resource remote-font; size 24px; fill #ffffffff; }
+        }
+        record { at 0s; duration 1s; }
+      }
+    }
+  }
+}

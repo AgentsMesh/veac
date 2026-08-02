@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "category": "project-structure",
+  "mechanisms": [
+    {"id":"apply.scope.composite-band","title":"合成区段应用","family":"应用","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
+    {"id":"apply.scope.layer","title":"图层应用","family":"应用","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
+    {"id":"apply.scope.items","title":"条目集合应用","family":"应用","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
+    {"id":"relation.group","title":"条目分组","family":"关系","coverage":"preview_required","capability_id":"P1-27","preview_target":"apply-scopes"},
+    {"id":"relation.av-link","title":"音视频链接","family":"关系","coverage":"workflow_evidence","evidence":"examples/all-features/main.veac"},
+    {"id":"source.sequence","title":"嵌套序列源","family":"源","coverage":"preview_required","capability_id":"P1-07","preview_target":"nested-and-multicam"},
+    {"id":"source.multicam","title":"多机位源","family":"源","coverage":"preview_required","capability_id":"P1-07","preview_target":"nested-and-multicam"},
+    {"id":"project.multicam","title":"多机位声明","family":"项目","coverage":"workflow_evidence","evidence":"examples/nested-and-multicam/main.veac"},
+    {"id":"project.sequence","title":"嵌套序列声明","family":"项目","coverage":"workflow_evidence","evidence":"examples/nested-and-multicam/main.veac"},
+    {"id":"template.slot.media","title":"媒体模板槽位","family":"模板","coverage":"preview_required","capability_id":"P1-05","preview_target":"template-fill"},
+    {"id":"template.slot.text","title":"文本模板槽位","family":"模板","coverage":"preview_required","capability_id":"P1-05","preview_target":"template-fill"},
+    {"id":"annotation.marker","title":"标记标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.language","title":"语言标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.scene-boundary","title":"场景边界标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.scene","title":"场景标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.beat","title":"节拍标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.silence","title":"静音标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.filler","title":"填充词标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.highlight","title":"精彩片段标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"},
+    {"id":"annotation.review","title":"审阅标注","family":"标注","coverage":"workflow_evidence","evidence":"examples/executable-mechanisms/main.veac"}
+  ]
+}

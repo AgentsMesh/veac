@@ -1,22 +1,51 @@
-// Multi-segment video with fade transitions.
-project "transitions-demo" {
-    resolution = "1920x1080"
-    fps = 30
-    format = "mp4"
-    codec = "h264"
-    quality = "high"
-}
+project transitions {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-asset intro = video("assets/intro.mp4")
-asset scene1 = video("assets/scene1.mp4")
-asset outro = video("assets/outro.mp4")
-
-timeline main {
-    track video {
-        clip intro { from = 0s to = 10s }
-        transition { type = "fade" duration = 1s }
-        clip scene1 { from = 0s to = 20s }
-        transition { type = "dissolve" duration = 1.5s }
-        clip outro { from = 0s to = 8s }
+  sequence main {
+    layer visual scenes {
+      item first {
+        source generated solid { color #e63946ff; }
+        record { at 0s; duration 2s; }
+      }
+      item second {
+        source generated solid { color #457b9dff; }
+        record { at 2s; duration 2s; }
+      }
     }
+    relation transition dissolve-cut {
+      endpoints { from item first; to item second; }
+      timing { duration 400ms; alignment centered; }
+      style { dissolve; }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

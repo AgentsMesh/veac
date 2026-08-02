@@ -1,0 +1,118 @@
+{
+  "schema": "https://veac.dev/schemas/project",
+  "schema_version": 5,
+  "min_reader_version": 5,
+  "project": {
+    "id": "prj_fixture",
+    "revision": 0,
+    "timebase": 600,
+    "entry_sequence_id": "seq_main",
+    "render_configs": [
+      {
+        "id": "out_main",
+        "sequence_id": "seq_main",
+        "raster": {
+          "width": 1920,
+          "height": 1080,
+          "frame_rate": { "numerator": 30, "denominator": 1 },
+          "captions": "burn_in"
+        },
+        "deliverables": [
+          {
+            "id": "dlv_main",
+            "target": { "type": "file", "name": "output.mp4" },
+            "kind": {
+              "type": "video",
+              "settings": {
+                "container": "mp4",
+                "video": {
+                  "codec": "h264",
+                  "pixel_format": "yuv420p",
+                  "alpha": "opaque",
+                  "color_space": null,
+                  "rate_control": { "type": "crf", "value": 23 },
+                  "gop_size": null,
+                  "b_frames": null,
+                  "profile": null,
+                  "level": null
+                },
+                "audio": null,
+                "optimize_for_streaming": false,
+                "pass_mode": "single",
+                "hardware": { "type": "auto" }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "multicam_groups": [],
+    "annotations": [],
+    "relations": [],
+    "materials": [
+      {
+        "id": "med_video",
+        "kind": "video",
+        "source": { "type": "file", "uri": "media/video.mp4" },
+        "identity": null,
+        "stream_intent": { "video": { "type": "auto" }, "audio": { "type": "auto" } },
+        "probe": null,
+        "metadata": {}
+      }
+    ],
+    "sequences": [
+      {
+        "id": "seq_main",
+        "name": "Main",
+        "settings": {
+          "width": 1920,
+          "height": 1080,
+          "frame_rate": { "numerator": 30, "denominator": 1 },
+          "sample_rate": 48000
+        },
+        "tracks": [
+          {
+            "id": "trk_video",
+            "kind": "video",
+            "order": 0,
+            "placement_mode": "magnetic",
+            "state": { "enabled": true, "muted": false, "solo": false, "locked": false },
+            "routing": { "type": "default" },
+            "clips": [
+              {
+                "id": "itm_video",
+                "enabled": true,
+                "record_range": {
+                  "start": { "value": 0, "timescale": 600 },
+                  "duration": { "value": 600, "timescale": 600 }
+                },
+                "source": { "type": "media", "material_id": "med_video" },
+                "source_mapping": {
+                  "time_map": {
+                    "type": "linear",
+                    "source_start": { "value": 0, "timescale": 600 },
+                    "rate": { "numerator": 1, "denominator": 1 },
+                    "repeat": 1,
+                    "direction": "forward"
+                  },
+                  "frame_synthesis": "nearest",
+                  "out_of_range": "strict"
+                },
+                "visual": null,
+                "audio": null,
+                "effects": [],
+                "replaceable": null,
+                "template_editable_text": false,
+                "metadata": {}
+              }
+            ]
+        }
+      ],
+      "applies": [],
+      "metadata": {}
+      }
+    ],
+    "applied_operations": [],
+    "metadata": {}
+  }
+}

@@ -1,39 +1,73 @@
-// VEAC Text Overlay Example
-// Demonstrates text overlays on video.
+project text-overlay {
+  settings {
+    timebase 1/1000;
+    canvas 1920px by 1080px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
 
-project "text-demo" {
-    resolution = "1920x1080"
-    fps        = 30
-    format     = "mp4"
-}
-
-asset background = video("./assets/background.mp4")
-
-timeline main {
-    track video {
-        clip background {
-            from = 0s
-            to   = 30s
-        }
+  sequence main {
+    layer visual background {
+      item base {
+        source generated solid { color #1b263bff; }
+        record { at 0s; duration 5s; }
+      }
     }
-
-    track text {
-        text "Welcome to VEAC" {
-            at       = 2s
-            duration = 5s
-            font     = "Arial"
-            size     = 72
-            color    = #FFFFFF
-            position = "center"
+    layer visual typography {
+      item title {
+        source text {
+          content "面向智能体的视频编辑";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 68px;
+            weight bold;
+            fill #ffffffff;
+            tracking 1px;
+            line-height 1.2;
+            background { color #00000099; padding 14px; }
+            outline { color #00b4d8ff; width 2px; }
+            shadow {
+              color #ff477eff; opacity 80%; blur 8px;
+              offset { x 24px; y 28px; }
+            }
+          }
+          layout {
+            box-width 1540px;
+            box-height 240px;
+            wrap word;
+            overflow ellipsis;
+            horizontal-align center;
+            vertical-align middle;
+          }
         }
-
-        text "Video Editing as Code" {
-            at       = 8s
-            duration = 4s
-            font     = "Arial"
-            size     = 48
-            color    = #00FF00
-            position = "bottom"
-        }
+        record { at 0s; duration 5s; }
+      }
     }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1920px by 1080px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
 }

@@ -15,27 +15,105 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
+      - name: Check Rust module structure
+        run: bash scripts/check-rust-structure.sh
 
-  test:
-    name: Test
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  coverage:
+    name: Test and coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.85.0
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Run tests
-        run: cargo test --workspace
+      - name: Install fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji ripgrep
+
+      - name: Install FFmpeg 8.0
+        run: bash .github/scripts/install-ffmpeg-8.sh
+
+      - name: Verify FFmpeg baseline
+        run: |
+          ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
+          ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
+
+      - name: Verify pinned FFmpeg execution
+        run: cargo test -p veac-runtime --lib executor::tests::reports_installed_ffmpeg_version -- --exact
+
+      - name: Install cargo-llvm-cov 0.8.4
+        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        with:
+          tool: cargo-llvm-cov@0.8.4
+
+      - name: Gate package-owned unit targets
+        run: bash scripts/coverage.sh packages
+
+      - name: Run full suite with coverage
+        run: bash scripts/coverage.sh workspace target/coverage/lcov.info
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov-report
+          path: target/coverage/lcov.info
+          if-no-files-found: warn
+
+  ffmpeg-integration:
+    name: FFmpeg integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji ripgrep
+
+      - name: Install FFmpeg 8.0
+        run: bash .github/scripts/install-ffmpeg-8.sh
+
+      - name: Verify FFmpeg baseline
+        run: |
+          ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
+          ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
+
+      - name: Verify pinned FFmpeg execution
+        run: cargo test -p veac-runtime --lib executor::tests::reports_installed_ffmpeg_version -- --exact
+
+      - name: Run FFmpeg-backed integration tests
+        run: make e2e
+
+      - name: Build every example preview
+        run: make build-examples
+
+      - name: Upload example previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-previews
+          path: examples-preview/
+          if-no-files-found: error

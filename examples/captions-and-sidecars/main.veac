@@ -1,0 +1,84 @@
+project captions-and-sidecars {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual background {
+      item canvas {
+        source generated solid { color #111827ff; }
+        record { at 0s; duration 6s; }
+      }
+    }
+    layer caption subtitles {
+      item opening {
+        source caption {
+          content "字幕是时间线中的类型化源。";
+          speaker "旁白";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 48px; fill #ffffffff;
+            background { color #000000aa; padding 12px; }
+          }
+        }
+        record { at 0s; duration 3s; }
+        modifiers {
+          layout opening-placement {
+            placement anchor { at bottom; inset { x 0px; y 48px; } }
+          }
+        }
+      }
+      item closing {
+        source caption {
+          content "伴随文件从类型化字幕图层中选择内容。";
+          speaker "旁白";
+          style {
+            font family "Arial Unicode MS";
+            fallback-font family "Arial";
+            size 48px; fill #ffffffff;
+          }
+        }
+        record { at 3s; duration 3s; }
+        modifiers {
+          layout closing-placement {
+            placement anchor { at bottom; inset { x 0px; y 48px; } }
+          }
+        }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions burn-in; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+    artifact caption-sidecar transcript {
+      target file "captions.vtt";
+      source caption-tracks { track subtitles; }
+      encode web-vtt;
+    }
+  }
+}
