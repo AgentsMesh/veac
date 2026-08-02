@@ -14,8 +14,8 @@ all_features_audio_contract() {
     $music.audio.muted == false and $music.audio.normalize == true and
     $music.audio.pitch_policy == "preserve" and
     $music.audio.crossfade == {"curve":"equal_power","fade_in":t(250),"fade_out":t(500)} and
-    $music.audio.processors == [{"attack_ms":1,"ceiling_db":-1,
-      "release_ms":80,"type":"limiter"}]
+    $music.audio.processors == [{"id":"aud_voice-limiter","kind":{
+      "attack_ms":1,"ceiling_db":-1,"release_ms":80,"type":"limiter"}}]
   ' "$canonical" >/dev/null || fail "all-features $label audio-chain contract failed"
 }
 

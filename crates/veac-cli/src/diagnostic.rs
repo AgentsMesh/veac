@@ -34,6 +34,49 @@ pub(crate) fn authoring(
     CliError::from_diagnostics(diagnostics)
 }
 
+pub(crate) fn program(path: &Path, errors: veac_lang::program::Diagnostics) -> CliError {
+    let root = path.parent().unwrap_or_else(|| Path::new("."));
+    let canonical_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+    let diagnostics = errors
+        .as_slice()
+        .iter()
+        .map(|diagnostic| {
+            let requested = canonical_root.join(&diagnostic.path);
+            let source = std::fs::canonicalize(&requested)
+                .ok()
+                .filter(|path| path.starts_with(&canonical_root))
+                .and_then(|path| {
+                    crate::fs::read_utf8_bounded(&path, "diagnostic source", 16 * 1024 * 1024).ok()
+                })
+                .unwrap_or_default();
+            let (line, column) = line_column(&source, diagnostic.span.start);
+            CliDiagnostic {
+                code: program_code(diagnostic.code).to_owned(),
+                object_id: None,
+                source_span: Some(SourceSpan {
+                    path: root.join(&diagnostic.path).display().to_string(),
+                    start: diagnostic.span.start,
+                    end: diagnostic.span.end,
+                    line,
+                    column,
+                }),
+                pointer: None,
+                location: None,
+                message: diagnostic.message.clone(),
+                suggested_repair: None,
+            }
+        })
+        .collect();
+    CliError::from_diagnostics(diagnostics)
+}
+
+fn program_code(code: &'static str) -> &'static str {
+    match code {
+        "PROGRAM_ENTRY_LOAD" => "READ_FAILED",
+        other => other,
+    }
+}
+
 fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = source.get(..offset.min(source.len())).unwrap_or(source);
     let line = prefix.bytes().filter(|value| *value == b'\n').count() + 1;

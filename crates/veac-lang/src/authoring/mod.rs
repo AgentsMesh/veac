@@ -1,4 +1,5 @@
 mod ast;
+mod diagnostic_budget;
 mod format;
 mod lexer;
 mod lower;

@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use veac_ir::{
-    Animatable, AudioFadeCurve, AudioProcessor, Interpolation, PitchPolicy, PlaybackDirection,
+    Animatable, AudioFadeCurve, AudioProcessorKind, Interpolation, PitchPolicy, PlaybackDirection,
     ProjectEnvelope, Rational, RelationKind, SequenceId, SourceMapping, SourceOutOfRangePolicy,
     SourceTimeMap, TrackRouting,
 };
@@ -127,16 +127,16 @@ fn audio_evidence(audio: &veac_ir::AudioProperties, found: &mut BTreeSet<String>
         || audio
             .processors
             .iter()
-            .any(|value| matches!(value, AudioProcessor::Loudness(_)))
+            .any(|value| matches!(value.kind, AudioProcessorKind::Loudness(_)))
     {
         found.insert("audio.normalize".to_owned());
     }
     for processor in &audio.processors {
-        let id = match processor {
-            AudioProcessor::ParametricEq { .. } => Some("audio.equalizer"),
-            AudioProcessor::Compressor(_) => Some("audio.compressor"),
-            AudioProcessor::Limiter(_) => Some("audio.limiter"),
-            AudioProcessor::Gate(_) => Some("audio.noise-gate"),
+        let id = match processor.kind {
+            AudioProcessorKind::ParametricEq { .. } => Some("audio.equalizer"),
+            AudioProcessorKind::Compressor(_) => Some("audio.compressor"),
+            AudioProcessorKind::Limiter(_) => Some("audio.limiter"),
+            AudioProcessorKind::Gate(_) => Some("audio.noise-gate"),
             _ => None,
         };
         found.extend(id.map(str::to_owned));

@@ -1,23 +1,25 @@
 # Authoring To Canonical IR Mapping
 
-This document defines the implemented boundary between `.veac`, canonical JSON
-IR schema version 5, and transactional edits. It is a semantic mapping, not a
-property-name translation table.
+This defines the semantic boundary between a `.veac` source graph, canonical
+JSON IR schema version 5, and both transactions, not a property-name table.
 
 ## One Compilation Path
 
 ```text
-.veac
-  -> lexer/parser
-  -> typed authoring AST
+entry .veac + imported modules
+  -> resolve exports and pure expressions
+  -> expand typed presets and sequence components
+  -> core lexer/parser
+  -> typed authoring Document
   -> reference and material lowering
   -> canonical project JSON (schema version 5, minimum reader 5)
   -> planner -> backend
 ```
 
-`veac fmt` operates on the AST. `veac compile --emit-ir` performs lowering.
-Planner and backend code consume only canonical IR. Unknown syntax, variants,
-fields, units, references, or unsupported combinations fail before planning.
+`veac compile --emit-ir` runs the complete graph pipeline. A core-only file is
+the degenerate one-node graph. Planner and backend code consume only fully
+expanded canonical IR. Unknown symbols, syntax, types, variants, references, or
+unsupported combinations fail before planning.
 
 ## Ownership Mapping
 
@@ -149,9 +151,9 @@ file, animated image, still image, or adaptive package. Typed recipe primitives
 become codec/container/image/package enums and settings, never an untyped map.
 No delivery is owned by a sequence; it holds a typed sequence reference.
 
-## Canonical EditBatch Only
+## Separate Edit Boundaries
 
-There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
+There is no inline `edit project { ... }` syntax. IR edits are canonical JSON:
 
 ```json,canonical-edit-batch
 {
@@ -172,13 +174,18 @@ There is no syntax such as `edit project { ... }`. IR edits are canonical JSON:
 Apply it to canonical project JSON:
 
 ```bash
-veac edit project.veac.json edits.json --out project-next.veac.json
+veac edit project.veac.json edits.json --output project-next.veac.json
 ```
 
 The editor checks revision/preconditions and locks, applies operations in order,
 rewrites typed references where the operation contract requires it, validates
 the complete project, and commits or rolls back the full batch. `--dry-run`
 performs the same checks without writing output. It never patches `.veac` text.
+
+When `.veac` is authoritative, `SourceEditBatch` targets a module-qualified
+source node and expression site under an exact graph revision. The transaction
+preserves untouched bytes and recompiles through canonical validation. It does
+not reverse-map an IR edit. See [source editing](../language-reference/source-editing.md).
 
 ## Verification Invariants
 
@@ -187,4 +194,6 @@ performs the same checks without writing output. It never patches `.veac` text.
 - Source, artifact, target, and recipe unions are closed.
 - Ownership and typed reference namespaces are preserved.
 - Ordered collections remain ordered where order is semantic.
+- Static expansion is deterministic, hygienic, bounded, and absent from IR.
+- A source edit produces a valid recompiled graph or changes no source bytes.
 - Editing a canonical project yields another fully valid canonical project.

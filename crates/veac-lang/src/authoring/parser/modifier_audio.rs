@@ -2,6 +2,7 @@ use crate::authoring::{
     AudioCrossfadeDecl, AudioFadeCurveDecl, AudioModifierDecl, Identifier, PitchPolicyDecl,
     SemanticBlock, SemanticEntry, SemanticValue, Spanned,
 };
+use std::collections::HashSet;
 
 use super::{audio_processor, parameter, semantic, Parser};
 
@@ -32,7 +33,8 @@ pub(super) fn parse(
     let processors = processor_entries
         .iter()
         .filter_map(|entry| audio_processor::parse(parser, entry))
-        .collect();
+        .collect::<Vec<_>>();
+    duplicate_processor_ids(parser, &processors);
     let crossfade = match semantic::take(parser, &mut body, "crossfade") {
         Some(entry) => Some(crossfade(parser, &entry)?),
         None => None,
@@ -49,6 +51,22 @@ pub(super) fn parse(
         crossfade,
         span,
     })
+}
+
+fn duplicate_processor_ids(
+    parser: &mut Parser,
+    processors: &[crate::authoring::AudioProcessorDecl],
+) {
+    let mut seen = HashSet::new();
+    for processor in processors {
+        if !seen.insert(processor.id.value.as_str()) {
+            parser.error(
+                "AUTHORING_DUPLICATE_ID",
+                format!("duplicate audio processor id '{}'", processor.id.value),
+                processor.id.span,
+            );
+        }
+    }
 }
 
 fn scalar(

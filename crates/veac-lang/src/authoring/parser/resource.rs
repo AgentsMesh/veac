@@ -9,7 +9,7 @@ impl Parser {
     pub(super) fn resource(&mut self) -> Option<ResourceDecl> {
         let start = self.required_word("resource")?;
         let kind = self.resource_kind()?;
-        let id = self.identifier("resource")?;
+        let id = self.stable_identifier("resource")?;
         self.left_brace()?;
         let mut locator = None;
         let mut streams = None;

@@ -1,0 +1,72 @@
+import "./brand.veac" as brand;
+
+const time section_duration = brand.card_duration;
+const text second_title = "同一组件" + "，再次实例化";
+
+instance sequence first-card from brand.title_card {
+  bind title "模块、表达式与组件";
+  fill backdrop {
+    source generated gradient linear {
+      from 0% 0%; to 100% 100%;
+      stop 0% #123047ff; stop 100% #2b6574ff;
+    }
+  }
+}
+
+instance sequence second-card from brand.title_card {
+  bind title second_title;
+  bind duration max(2s, section_duration);
+  fill backdrop {
+    source generated gradient radial {
+      center 50% 50%; radius 72%;
+      stop 0% #7b315dff; stop 100% #25182dff;
+    }
+  }
+}
+
+project programming-language {
+  settings {
+    timebase 1/1000;
+    canvas 1280px by 720px;
+    frame-rate 30fps;
+    sample-rate 48000hz;
+  }
+  entry sequence main;
+
+  sequence main {
+    layer visual cards {
+      item first {
+        source sequence sequence first-card;
+        record { at 0s; duration ${section_duration}; }
+      }
+      item second {
+        source sequence sequence second-card;
+        record { at ${section_duration}; duration ${section_duration}; }
+      }
+    }
+  }
+
+  delivery preview {
+    sequence main;
+    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
+    artifact video preview {
+      target file "preview.mp4";
+      mux mp4 {
+        layout standard;
+        video h264 {
+          pixel-format yuv420p;
+          alpha opaque;
+          color-space source;
+          rate-control crf { value 23; }
+          gop automatic;
+          b-frames automatic;
+          profile automatic;
+          level automatic;
+        }
+        audio none;
+        passes single;
+        accelerator auto;
+      }
+    }
+  }
+}

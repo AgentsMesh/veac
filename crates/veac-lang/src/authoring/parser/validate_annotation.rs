@@ -13,11 +13,14 @@ pub(super) fn validate(
     let mut ids = HashSet::new();
     for value in values {
         if !ids.insert(value.id.value.as_str()) {
-            diagnostics.push(Diagnostic::new(
-                "AUTHORING_DUPLICATE_ID",
-                format!("duplicate annotation id '{}'", value.id.value),
-                value.id.span,
-            ));
+            crate::authoring::diagnostic_budget::push(
+                diagnostics,
+                Diagnostic::new(
+                    "AUTHORING_DUPLICATE_ID",
+                    format!("duplicate annotation id '{}'", value.id.value),
+                    value.id.span,
+                ),
+            );
         }
         match &value.target {
             AnnotationTargetDecl::Project { .. } => {}
@@ -29,11 +32,16 @@ pub(super) fn validate(
             AnnotationTargetDecl::Resource(id) => {
                 target(diagnostics, "resource", id, &known.resources)
             }
-            AnnotationTargetDecl::Multicam(id) => diagnostics.push(Diagnostic::new(
-                "AUTHORING_UNKNOWN_REFERENCE",
-                format!("unknown multicam reference '{}'", id.value),
-                id.span,
-            )),
+            AnnotationTargetDecl::Multicam(id) => {
+                crate::authoring::diagnostic_budget::push(
+                    diagnostics,
+                    Diagnostic::new(
+                        "AUTHORING_UNKNOWN_REFERENCE",
+                        format!("unknown multicam reference '{}'", id.value),
+                        id.span,
+                    ),
+                );
+            }
         }
         timing(diagnostics, &value.timing);
     }
@@ -46,11 +54,14 @@ fn target(
     known: &HashSet<&str>,
 ) {
     if !known.contains(id.value.as_str()) {
-        diagnostics.push(Diagnostic::new(
-            "AUTHORING_UNKNOWN_REFERENCE",
-            format!("unknown {kind} reference '{}'", id.value),
-            id.span,
-        ));
+        crate::authoring::diagnostic_budget::push(
+            diagnostics,
+            Diagnostic::new(
+                "AUTHORING_UNKNOWN_REFERENCE",
+                format!("unknown {kind} reference '{}'", id.value),
+                id.span,
+            ),
+        );
     }
 }
 

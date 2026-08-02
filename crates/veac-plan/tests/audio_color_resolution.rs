@@ -94,18 +94,25 @@ fn audio_chain_color_pipeline_and_lut_resource_are_owned_by_the_plan() {
 fn processed_audio() -> AudioProperties {
     AudioProperties {
         processors: vec![
-            AudioProcessor::ParametricEq {
-                bands: vec![ParametricEqBand {
-                    frequency_hz: 1_000.0,
-                    gain_db: 2.0,
-                    q: 1.0,
-                }],
+            AudioProcessor {
+                id: AudioProcessorId::new("aud_tone-shaper").unwrap(),
+                kind: AudioProcessorKind::ParametricEq {
+                    bands: vec![ParametricEqBand {
+                        id: EqBandId::new("eqb_presence").unwrap(),
+                        frequency_hz: 1_000.0,
+                        gain_db: 2.0,
+                        q: 1.0,
+                    }],
+                },
             },
-            AudioProcessor::Limiter(Limiter {
-                ceiling_db: -1.0,
-                attack_ms: 5.0,
-                release_ms: 50.0,
-            }),
+            AudioProcessor {
+                id: AudioProcessorId::new("aud_final-limiter").unwrap(),
+                kind: AudioProcessorKind::Limiter(Limiter {
+                    ceiling_db: -1.0,
+                    attack_ms: 5.0,
+                    release_ms: 50.0,
+                }),
+            },
         ],
         crossfade: Some(AudioCrossfade {
             fade_in: time(30),

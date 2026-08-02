@@ -53,8 +53,8 @@ audio voice {
   normalize false;
   pitch preserve;
   crossfade { fade-in 80ms; fade-out 120ms; curve equal-power; }
-  processor high-pass { frequency 80hz; q 0.707; poles 2; }
-  processor compressor {
+  processor high-pass voice-hpf { frequency 80hz; q 0.707; poles 2; }
+  processor compressor voice-compressor {
     threshold -18db; ratio 3; attack 10ms; release 120ms;
     knee 6db; makeup-gain 2db; mix 100%;
   }

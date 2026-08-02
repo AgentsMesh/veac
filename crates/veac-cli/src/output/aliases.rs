@@ -29,6 +29,19 @@ pub(super) fn conflicts(candidate: &Path, protected: &[PathBuf]) -> CliResult<bo
     folded_conflict(candidate, &peers, detect(parent)?)
 }
 
+pub(super) fn conflicts_portable(candidate: &Path, protected: &[PathBuf]) -> CliResult<bool> {
+    for path in protected {
+        if candidate == path || same_existing(candidate, path)? {
+            return Ok(true);
+        }
+    }
+    let policy = Policy {
+        case_insensitive: true,
+        normalization_insensitive: true,
+    };
+    folded_conflict(candidate, &protected.iter().collect::<Vec<_>>(), policy)
+}
+
 fn folded_conflict(candidate: &Path, peers: &[&PathBuf], policy: Policy) -> CliResult<bool> {
     let candidate = fold(candidate, policy)?;
     peers
@@ -80,7 +93,7 @@ fn fold(path: &Path, policy: Policy) -> CliResult<PathBuf> {
     Ok(path.parent().unwrap_or(Path::new(".")).join(name))
 }
 
-fn same_existing(left: &Path, right: &Path) -> CliResult<bool> {
+pub(super) fn same_existing(left: &Path, right: &Path) -> CliResult<bool> {
     let (Some(left), Some(right)) = (metadata(left)?, metadata(right)?) else {
         return Ok(false);
     };

@@ -7,7 +7,7 @@ impl Parser {
     pub(super) fn annotation(&mut self) -> Option<AnnotationDecl> {
         let start = self.required_word("annotation")?;
         let kind = self.identifier("annotation kind")?;
-        let id = self.identifier("annotation")?;
+        let id = self.stable_identifier("annotation")?;
         let mut body = self.semantic_block()?;
         let target_entry = fields::required(self, &mut body, "target")?;
         let target = annotation_target::target(self, &target_entry)?;

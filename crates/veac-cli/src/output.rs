@@ -65,6 +65,27 @@ pub(crate) fn guarded_write_many<'a>(
     Ok(candidate)
 }
 
+pub(crate) fn guarded_write_portable<'a>(
+    path: &Path,
+    protected: impl Iterator<Item = &'a Path>,
+) -> CliResult<PathBuf> {
+    let candidate = path::destination(path)?;
+    let protected = protected.map(path::normalize_input).collect::<Vec<_>>();
+    if aliases::conflicts_portable(&candidate, &protected)? {
+        return Err(CliError::new(
+            "OUTPUT_OVERWRITES_INPUT",
+            format!("output {} aliases a project input", candidate.display()),
+        ));
+    }
+    Ok(candidate)
+}
+
+pub(crate) fn same_existing_or_equal(left: &Path, right: &Path) -> CliResult<bool> {
+    let left = path::normalize_input(left);
+    let right = path::normalize_input(right);
+    Ok(left == right || aliases::same_existing(&left, &right)?)
+}
+
 fn candidates(
     project_directory: &Path,
     deliverables: &[veac_ir::Deliverable],

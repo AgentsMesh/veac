@@ -20,6 +20,20 @@ impl Parser {
         }
     }
 
+    pub(super) fn stable_identifier(&mut self, context: &'static str) -> Option<Identifier> {
+        let value = self.identifier(context)?;
+        if crate::name::is_name(&value.value) {
+            Some(value)
+        } else {
+            self.error(
+                "AUTHORING_IDENTIFIER",
+                format!("{context} must be {}", crate::name::NAME_CONTRACT),
+                value.span,
+            );
+            None
+        }
+    }
+
     pub(super) fn number(&mut self, context: &'static str) -> Option<NumberLiteral> {
         let token = self.advance();
         if let TokenKind::Number(raw) = token.kind {

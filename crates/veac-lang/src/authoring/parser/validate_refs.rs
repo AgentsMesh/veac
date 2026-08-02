@@ -32,11 +32,14 @@ pub(super) fn deliveries(
     let mut ids = HashSet::new();
     for value in deliveries {
         if !ids.insert(&value.id.value) {
-            diagnostics.push(Diagnostic {
-                code: "AUTHORING_DUPLICATE_ID",
-                message: "duplicate delivery id".to_owned(),
-                span: value.id.span,
-            });
+            crate::authoring::diagnostic_budget::push(
+                diagnostics,
+                Diagnostic {
+                    code: "AUTHORING_DUPLICATE_ID",
+                    message: "duplicate delivery id".to_owned(),
+                    span: value.id.span,
+                },
+            );
         }
         delivery(diagnostics, value, known);
     }
@@ -62,11 +65,14 @@ fn apply(diagnostics: &mut Vec<Diagnostic>, value: &ApplyDecl, known: &Known<'_>
     let mut stage_ids = HashSet::new();
     for stage in &value.pipeline {
         if !stage_ids.insert(stage.id().value.as_str()) {
-            diagnostics.push(Diagnostic {
-                code: "AUTHORING_DUPLICATE_ID",
-                message: "duplicate apply stage id".to_owned(),
-                span: stage.id().span,
-            });
+            crate::authoring::diagnostic_budget::push(
+                diagnostics,
+                Diagnostic {
+                    code: "AUTHORING_DUPLICATE_ID",
+                    message: "duplicate apply stage id".to_owned(),
+                    span: stage.id().span,
+                },
+            );
         }
     }
     record_span(diagnostics, &value.record);
@@ -74,11 +80,14 @@ fn apply(diagnostics: &mut Vec<Diagnostic>, value: &ApplyDecl, known: &Known<'_>
 
 fn delivery(diagnostics: &mut Vec<Diagnostic>, value: &DeliveryDecl, known: &Known<'_>) {
     if !known.sequences.contains(value.sequence.value.as_str()) {
-        diagnostics.push(Diagnostic {
-            code: "AUTHORING_REFERENCE_NOT_FOUND",
-            message: format!("sequence `{}` does not exist", value.sequence.value),
-            span: value.sequence.span,
-        });
+        crate::authoring::diagnostic_budget::push(
+            diagnostics,
+            Diagnostic {
+                code: "AUTHORING_REFERENCE_NOT_FOUND",
+                message: format!("sequence `{}` does not exist", value.sequence.value),
+                span: value.sequence.span,
+            },
+        );
     }
 }
 
@@ -89,11 +98,14 @@ fn known_id(
     known: &HashSet<&str>,
 ) {
     if !known.contains(value.value.as_str()) {
-        diagnostics.push(Diagnostic {
-            code: "AUTHORING_REFERENCE_NOT_FOUND",
-            message: format!("{kind} `{}` does not exist", value.value),
-            span: value.span,
-        });
+        crate::authoring::diagnostic_budget::push(
+            diagnostics,
+            Diagnostic {
+                code: "AUTHORING_REFERENCE_NOT_FOUND",
+                message: format!("{kind} `{}` does not exist", value.value),
+                span: value.span,
+            },
+        );
     }
 }
 
@@ -104,10 +116,13 @@ fn structure_id<'a>(
     seen: &mut HashSet<(&'a str, &'a str)>,
 ) {
     if !seen.insert((kind, &value.value)) {
-        diagnostics.push(Diagnostic {
-            code: "AUTHORING_DUPLICATE_ID",
-            message: format!("duplicate {kind} id"),
-            span: value.span,
-        });
+        crate::authoring::diagnostic_budget::push(
+            diagnostics,
+            Diagnostic {
+                code: "AUTHORING_DUPLICATE_ID",
+                message: format!("duplicate {kind} id"),
+                span: value.span,
+            },
+        );
     }
 }

@@ -106,6 +106,51 @@ def apply_window($duration):
   | (.project.relations |= map(select(relation_valid($items; $applies))))
   | (.project.annotations |= map(select(annotation_valid($items))));
 
+def preview_font_material($id; $uri):
+  {
+    id: $id,
+    kind: "font",
+    source: {type: "file", uri: $uri},
+    identity: null,
+    stream_intent: {
+      video: {type: "disabled"},
+      audio: {type: "disabled"}
+    },
+    probe: null,
+    metadata: {}
+  };
+
+def family_font_paths:
+  paths(objects |
+    .type? == "family" and
+    (.family? | type) == "string" and
+    (keys_unsorted | sort) == ["family", "type"]);
+
+def preview_font_id($path):
+  if ($path | any(. == "fallback_fonts")) then
+    "med_preview-arabic-font"
+  else "med_preview-font" end;
+
+def preview_font_uri($id):
+  if $id == "med_preview-arabic-font" then
+    "assets/preview-arabic-font.ttf"
+  else "assets/preview-font.ttf" end;
+
+def adapt_family_fonts:
+  [family_font_paths] as $paths
+  | reduce $paths[] as $path (.;
+      setpath($path; {
+        type: "material",
+        material_id: preview_font_id($path)
+      }))
+  | ([$paths[] | preview_font_id(.)] | unique) as $material_ids
+  | reduce $material_ids[] as $id (.;
+      if any(.project.materials[]?; .id == $id) then
+        error("reserved preview font material already exists: \($id)")
+      else
+        .project.materials += [preview_font_material($id; preview_font_uri($id))]
+      end);
+
 def valid_inputs:
   ($edge | type == "number" and . > 0 and floor == .) and
   ($fps | type == "number" and . > 0 and floor == .) and
@@ -116,6 +161,7 @@ def valid_inputs:
       ($window.duration_seconds | type == "number" and . > 0)));
 
 if valid_inputs | not then error("invalid preview parameters") else . end
+| adapt_family_fonts
 | .project.sequences[].settings |= preview_rate($fps)
 | .project.sequences[].tracks[] |= if .kind == "video" then
     .clips |= map(

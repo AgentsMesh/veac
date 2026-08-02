@@ -109,6 +109,12 @@ typed_id!(
     r"^ang_[A-Za-z0-9][A-Za-z0-9_-]{0,123}$"
 );
 typed_id!(EffectId, "fx_", r"^fx_[A-Za-z0-9][A-Za-z0-9_-]{0,124}$");
+typed_id!(
+    AudioProcessorId,
+    "aud_",
+    r"^aud_[A-Za-z0-9][A-Za-z0-9_-]{0,123}$"
+);
+typed_id!(EqBandId, "eqb_", r"^eqb_[A-Za-z0-9][A-Za-z0-9_-]{0,123}$");
 typed_id!(KeyframeId, "kf_", r"^kf_[A-Za-z0-9][A-Za-z0-9_-]{0,124}$");
 typed_id!(
     RenderConfigId,

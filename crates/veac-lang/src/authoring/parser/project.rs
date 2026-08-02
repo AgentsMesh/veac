@@ -5,7 +5,7 @@ use crate::authoring::{Document, ProjectDecl, ProjectSettings};
 impl Parser {
     pub(super) fn project(&mut self) -> Option<Document> {
         let start = self.required_word("project")?;
-        let id = self.identifier("project")?;
+        let id = self.stable_identifier("project")?;
         self.left_brace()?;
         let mut entry = None;
         let mut settings = None;

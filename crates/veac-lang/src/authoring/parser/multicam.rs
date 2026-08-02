@@ -8,7 +8,7 @@ use crate::authoring::{
 impl Parser {
     pub(super) fn multicam(&mut self) -> Option<MulticamDecl> {
         let start = self.required_word("multicam")?;
-        let id = self.identifier("multicam")?;
+        let id = self.stable_identifier("multicam")?;
         self.left_brace()?;
         let mut sync = None;
         let mut angles = Vec::new();
@@ -65,7 +65,7 @@ impl Parser {
 
     fn multicam_angle(&mut self) -> Option<MulticamAngleDecl> {
         let start = self.required_word("angle")?;
-        let id = self.identifier("multicam angle")?;
+        let id = self.stable_identifier("multicam angle")?;
         self.left_brace()?;
         let mut resource = None;
         let mut offset = None;

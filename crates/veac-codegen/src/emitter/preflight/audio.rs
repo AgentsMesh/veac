@@ -1,5 +1,5 @@
 use veac_plan::canonical::{
-    audio_processor_valid, AudioProcessor, RationalTime, SidechainSource, TimeRange, TrackKind,
+    audio_processor_valid, AudioProcessorKind, RationalTime, SidechainSource, TimeRange, TrackKind,
 };
 use veac_plan::{
     EffectiveAudioProperties, ResolvedClip, ResolvedSequence, ResolvedSidechain, ResolvedTrack,
@@ -49,7 +49,7 @@ fn processors_valid(audio: &EffectiveAudioProperties, sample_rate: u32) -> bool 
     let loudness = audio
         .processors
         .iter()
-        .filter(|value| matches!(value, AudioProcessor::Loudness(_)))
+        .filter(|value| matches!(value.kind, AudioProcessorKind::Loudness(_)))
         .count();
     audio.processors.len() <= 64
         && loudness <= 1

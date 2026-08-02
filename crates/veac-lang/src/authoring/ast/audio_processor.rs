@@ -1,8 +1,15 @@
-use super::{NumberLiteral, Span};
+use super::{Identifier, NumberLiteral, Span};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AudioProcessorDecl {
-    ParametricEq { bands: Vec<EqBandDecl>, span: Span },
+pub struct AudioProcessorDecl {
+    pub id: Identifier,
+    pub kind: AudioProcessorKindDecl,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AudioProcessorKindDecl {
+    ParametricEq { bands: Vec<EqBandDecl> },
     HighPass(FilterDecl),
     LowPass(FilterDecl),
     Compressor(CompressorDecl),
@@ -13,6 +20,7 @@ pub enum AudioProcessorDecl {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EqBandDecl {
+    pub id: Identifier,
     pub frequency: NumberLiteral,
     pub gain: NumberLiteral,
     pub q: NumberLiteral,

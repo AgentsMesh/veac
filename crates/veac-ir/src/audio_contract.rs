@@ -1,6 +1,6 @@
 use crate::{
-    AacEncoding, AudioProcessor, Compressor, Gate, Limiter, LoudnessTarget, Mp3Encoding,
-    ParametricEqBand,
+    AacEncoding, AudioProcessor, AudioProcessorKind, Compressor, Gate, Limiter, LoudnessTarget,
+    Mp3Encoding, ParametricEqBand,
 };
 
 pub fn mp3_encoding_valid(value: &Mp3Encoding) -> bool {
@@ -28,18 +28,18 @@ pub fn hls_aac_encoding_valid(value: &AacEncoding) -> bool {
 }
 
 pub fn audio_processor_valid(value: &AudioProcessor, sample_rate: u32) -> bool {
-    match value {
-        AudioProcessor::ParametricEq { bands } => {
+    match &value.kind {
+        AudioProcessorKind::ParametricEq { bands } => {
             !bands.is_empty()
                 && bands.len() <= 32
-                && bands.iter().all(|band| band_valid(*band, sample_rate))
+                && bands.iter().all(|band| band_valid(band, sample_rate))
         }
-        AudioProcessor::HighPass {
+        AudioProcessorKind::HighPass {
             frequency_hz,
             q,
             poles,
         }
-        | AudioProcessor::LowPass {
+        | AudioProcessorKind::LowPass {
             frequency_hz,
             q,
             poles,
@@ -48,14 +48,14 @@ pub fn audio_processor_valid(value: &AudioProcessor, sample_rate: u32) -> bool {
                 && finite_range(*q, 0.01, 100.0)
                 && (1..=2).contains(poles)
         }
-        AudioProcessor::Compressor(value) => compressor_valid(*value),
-        AudioProcessor::Limiter(value) => limiter_valid(*value),
-        AudioProcessor::Gate(value) => gate_valid(*value),
-        AudioProcessor::Loudness(value) => loudness_valid(*value),
+        AudioProcessorKind::Compressor(value) => compressor_valid(*value),
+        AudioProcessorKind::Limiter(value) => limiter_valid(*value),
+        AudioProcessorKind::Gate(value) => gate_valid(*value),
+        AudioProcessorKind::Loudness(value) => loudness_valid(*value),
     }
 }
 
-fn band_valid(value: ParametricEqBand, sample_rate: u32) -> bool {
+fn band_valid(value: &ParametricEqBand, sample_rate: u32) -> bool {
     frequency(value.frequency_hz, sample_rate)
         && db(value.gain_db, -24.0, 24.0)
         && finite_range(value.q, 0.01, 100.0)

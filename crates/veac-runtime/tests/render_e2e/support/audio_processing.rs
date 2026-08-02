@@ -90,6 +90,13 @@ pub(crate) fn render_audio_chain(
     )
 }
 
+pub(crate) fn identified_processor(id: &str, kind: AudioProcessorKind) -> AudioProcessor {
+    AudioProcessor {
+        id: AudioProcessorId::new(format!("aud_{id}")).unwrap(),
+        kind,
+    }
+}
+
 pub(crate) fn peak(samples: &[f64]) -> f64 {
     samples.iter().copied().map(f64::abs).fold(0.0, f64::max)
 }

@@ -127,9 +127,12 @@ pub(super) fn push(
     message: String,
     value: &NumberLiteral,
 ) {
-    diagnostics.push(Diagnostic {
-        code,
-        message,
-        span: value.span,
-    });
+    crate::authoring::diagnostic_budget::push(
+        diagnostics,
+        Diagnostic {
+            code,
+            message,
+            span: value.span,
+        },
+    );
 }

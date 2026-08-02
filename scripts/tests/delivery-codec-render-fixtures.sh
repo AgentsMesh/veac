@@ -66,7 +66,6 @@ make_codec_fixture() {
   local dir="$1/delivery-codec-matrix" author preview plan
   mkdir -p "$dir/project" "$dir/plans/preview" "$dir/rendered"
   printf 'codec matrix fixture\n' >"$dir/project/main.veac"
-  printf 'codec matrix preview fixture\n' >"$dir/project/main.preview.veac"
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
   plan=$(example_preview_plan "$dir" out_codec-matrix)
   write_codec_canonical "$author" 640 360 24; write_codec_canonical "$preview" 480 270 12

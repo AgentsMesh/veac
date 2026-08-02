@@ -76,9 +76,11 @@ project audio-processing {
             normalize true;
             pitch preserve;
             crossfade { fade-in 80ms; fade-out 120ms; curve equal-power; }
-            processor high-pass { frequency 80hz; q 0.707; poles 2; }
-            processor eq { band { frequency 2800hz; gain 2db; q 1; } }
-            processor limiter { ceiling -1db; attack 1ms; release 80ms; }
+            processor high-pass dialogue-hpf { frequency 80hz; q 0.707; poles 2; }
+            processor eq dialogue-eq {
+              band presence { frequency 2800hz; gain 2db; q 1; }
+            }
+            processor limiter dialogue-limiter { ceiling -1db; attack 1ms; release 80ms; }
           }
         }
       }
@@ -94,7 +96,7 @@ project audio-processing {
             gain 0.7;
             pan 0.25;
             pitch preserve;
-            processor compressor {
+            processor compressor music-compressor {
               threshold -18db; ratio 3; attack 10ms; release 120ms;
               knee 6db; makeup-gain 2db; mix 100%;
             }
@@ -126,7 +128,7 @@ project audio-processing {
           audio gate-demo {
             pitch follow-speed;
             crossfade { fade-in 90ms; fade-out 90ms; curve linear; }
-            processor gate {
+            processor gate noise-gate {
               threshold -38db; ratio 4; attack 5ms; release 80ms; range -48db;
             }
           }
@@ -142,7 +144,9 @@ project audio-processing {
           audio loudness-demo {
             pitch preserve;
             crossfade { fade-in 110ms; fade-out 110ms; curve exponential; }
-            processor loudness { integrated -16lufs; true-peak -1dbtp; range 7lu; }
+            processor loudness target-loudness {
+              integrated -16lufs; true-peak -1dbtp; range 7lu;
+            }
           }
         }
       }

@@ -17,6 +17,7 @@ pub(super) fn parse(
     let working = color_space::parse(parser, &working_entry)?;
     let output_entry = semantic::required(parser, &mut body, "output-space", "color modifier")?;
     let output = color_space::parse(parser, &output_entry)?;
+    reject_repeated_basic(parser, &body);
     let stages = body
         .entries
         .drain(..)
@@ -30,6 +31,21 @@ pub(super) fn parse(
         stages,
         span,
     })
+}
+
+fn reject_repeated_basic(parser: &mut Parser, body: &SemanticBlock) {
+    let mut matching = body
+        .entries
+        .iter()
+        .filter(|entry| entry.name.value == "basic");
+    let _ = matching.next();
+    for duplicate in matching {
+        parser.error(
+            "AUTHORING_DUPLICATE_FIELD",
+            "color pipeline supports only one basic section".to_owned(),
+            duplicate.span,
+        );
+    }
 }
 
 fn stage(parser: &mut Parser, entry: &SemanticEntry) -> Option<ColorStageDecl> {

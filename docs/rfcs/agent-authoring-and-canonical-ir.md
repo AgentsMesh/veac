@@ -4,10 +4,12 @@ Status: Accepted
 
 ## Decision
 
-VEAC has one agent-oriented authoring language and one canonical JSON execution IR. Historical source compatibility is explicitly out of scope.
+VEAC has one static, agent-oriented authoring language and one canonical JSON
+execution IR. Historical source compatibility is explicitly out of scope.
 
 ```text
-.veac -> typed AST -> canonical JSON -> plan -> typed backend bundle -> artifacts
+.veac source graph -> resolve/evaluate/expand -> typed Document
+  -> canonical JSON -> plan -> typed backend bundle -> artifacts
 ```
 
 ## Motivation
@@ -40,9 +42,25 @@ Item      = source + record + optional mapping + modifiers + optional template s
 Source, modifier, relation, annotation, generator, audio processor, color stage,
 text layout, artifact, target, and recipe are closed variants.
 
+## Static Programming Layer
+
+The authoring source graph may declare confined imports, exported typed
+constants, closed-kind presets, sequence components, and instances. Expressions
+are typed, pure, exact, and bounded. Components expose typed parameters and
+source slots; local `@id` names expand hygienically through the instance ID.
+
+This layer exists only at compile time. Resolution and expansion must produce a
+valid core `Document`; canonical IR contains no modules, expressions, presets,
+components, instances, runtime scripts, or opaque property bags.
+
+The exact source graph remains independently editable through a revisioned
+`SourceEditBatch`. Canonical `EditBatch` remains the IR transaction contract.
+Neither contract is translated into the other, and IR is never decompiled to
+recover `.veac` source.
+
 ## Canonical Boundary
 
-Canonical IR uses exact rational time, stable typed IDs, deterministic ordering, and serde schemas. It is the boundary for editing, template filling, planning, caching, signatures, and external tooling.
+Canonical IR uses exact rational time, stable typed IDs, deterministic ordering, and serde schemas. It is the boundary for IR editing, template filling, planning, caching, signatures, and external tooling.
 The current project envelope is schema version 5 with minimum reader version 5.
 
 The following accepted media fragment is kept executable by the IR documentation test:

@@ -57,7 +57,6 @@ make_mask_shape_fixture() {
   local dir="$1/mask-shape-gallery" author preview plan
   mkdir -p "$dir/project" "$dir/plans/preview" "$dir/rendered"
   printf 'mask shape fixture\n' >"$dir/project/main.veac"
-  printf 'mask shape preview fixture\n' >"$dir/project/main.preview.veac"
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
   plan=$(example_preview_plan "$dir" out_preview)
   write_mask_shape_canonical "$author"; cp "$author" "$preview"

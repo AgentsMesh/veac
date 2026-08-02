@@ -15,7 +15,8 @@ pub(super) fn commands() -> Vec<ClapCommand> {
 
 pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
     match name {
-        "compile" | "check" | "fmt" | "check-ir" | "edit" => editing::from_matches(name, matches),
+        "compile" | "check" | "fmt" | "check-ir" | "edit" | "source-revision" | "source-index"
+        | "source-edit" => editing::from_matches(name, matches),
         "schema" => schema::from_matches(matches),
         _ => delivery::from_matches(name, matches),
     }

@@ -5,7 +5,7 @@ use crate::authoring::{ApplyDecl, ApplyStageDecl};
 impl Parser {
     pub(super) fn apply(&mut self) -> Option<ApplyDecl> {
         let start = self.required_word("apply")?;
-        let id = self.identifier("apply")?;
+        let id = self.stable_identifier("apply")?;
         self.left_brace()?;
         let mut scope = None;
         let mut record = None;
@@ -68,7 +68,7 @@ impl Parser {
             }
             self.advance();
             let kind = self.identifier("apply stage kind")?;
-            let id = self.identifier("apply stage")?;
+            let id = self.stable_identifier("apply stage")?;
             let body = self.semantic_block()?;
             let span = kind.span.join(body.span);
             let stage = match kind.value.as_str() {

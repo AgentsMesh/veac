@@ -6,7 +6,7 @@ MAKEFILE="$ROOT/Makefile"
 CI="$ROOT/.github/workflows/ci.yml"
 FULL="$ROOT/.github/workflows/example-previews.yml"
 CATALOG="$ROOT/examples/catalog/gallery.json"
-EXPECTED_SMOKE="minimal,all-features,executable-mechanisms,text-overlay,delivery-codec-matrix"
+EXPECTED_SMOKE="minimal,all-features,executable-mechanisms,text-overlay,delivery-codec-matrix,programming-language"
 
 fail() {
   echo "CI workflow contract failed: $*" >&2
@@ -27,11 +27,14 @@ done
 
 rg -Fq 'build-examples-smoke: EXAMPLES := $(EXAMPLE_SMOKE_SET)' "$MAKEFILE" ||
   fail "smoke target must bind the selected example set"
-rg -q '^build-examples-smoke: build-examples ' "$MAKEFILE" ||
-  fail "smoke target must reuse the full preview pipeline"
+rg -q '^build-examples-smoke: check-examples-static _build-examples ' "$MAKEFILE" ||
+  fail "smoke target must use static checks and the shared preview builder"
 dry_run=$(make -s -n -C "$ROOT" build-examples-smoke)
 rg -Fq "VEAC_EXAMPLES=\"$EXPECTED_SMOKE\"" <<<"$dry_run" ||
   fail "smoke target does not pass its selection to the preview builder"
+if rg -q 'render-evidence-contracts|test-example-render-contracts' <<<"$dry_run"; then
+  fail "smoke target must not repeat heavyweight render-evidence contracts"
+fi
 
 ffmpeg_job=$(awk '
   $0 == "  ffmpeg-integration:" { found = 1 }

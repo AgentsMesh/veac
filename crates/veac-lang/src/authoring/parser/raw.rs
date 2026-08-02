@@ -44,7 +44,7 @@ impl Parser {
 
     pub(super) fn typed_reference(&mut self) -> Option<TypedReference> {
         let kind = self.identifier("reference type")?;
-        let id = self.identifier("reference target")?;
+        let id = self.stable_identifier("reference target")?;
         Some(TypedReference {
             span: kind.span.join(id.span),
             kind,

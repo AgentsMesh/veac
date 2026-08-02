@@ -4,12 +4,14 @@ use clap::{ArgMatches, Command as ClapCommand};
 use super::super::shared::{required_string, value};
 use crate::arguments::{Command, SchemaContract, SchemaFormat};
 
-const CONTRACTS: [&str; 20] = [
+const CONTRACTS: [&str; 22] = [
     "project",
     "caption",
     "caption-track-insertion",
     "caption-document-bindings",
     "edit-batch",
+    "source-edit-batch",
+    "source-index",
     "edit-outcome",
     "render-plan",
     "artifact",
@@ -58,6 +60,8 @@ fn contract(value: &str) -> SchemaContract {
         "caption-track-insertion" => SchemaContract::CaptionTrackInsertion,
         "caption-document-bindings" => SchemaContract::CaptionDocumentBindings,
         "edit-batch" => SchemaContract::EditBatch,
+        "source-edit-batch" => SchemaContract::SourceEditBatch,
+        "source-index" => SchemaContract::SourceIndex,
         "edit-outcome" => SchemaContract::EditOutcome,
         "render-plan" => SchemaContract::RenderPlan,
         "artifact" => SchemaContract::Artifact,

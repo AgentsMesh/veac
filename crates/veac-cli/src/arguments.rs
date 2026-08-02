@@ -99,6 +99,17 @@ pub(super) enum Command {
         /// Compute and emit the outcome without writing a project.
         dry_run: bool,
     },
+    /// Print the exact revision of a `.veac` source graph.
+    SourceRevision { source: PathBuf },
+    /// Print the stable, agent-readable inventory of editable `.veac` source nodes.
+    SourceIndex { source: PathBuf },
+    /// Apply one atomic typed edit batch to `.veac` source of truth.
+    SourceEdit {
+        source: PathBuf,
+        source_edit_batch: PathBuf,
+        output: Option<PathBuf>,
+        dry_run: bool,
+    },
     /// Print one public JSON Schema contract.
     Schema {
         contract: SchemaContract,
@@ -163,6 +174,8 @@ pub(super) enum SchemaContract {
     CaptionTrackInsertion,
     CaptionDocumentBindings,
     EditBatch,
+    SourceEditBatch,
+    SourceIndex,
     EditOutcome,
     RenderPlan,
     Artifact,

@@ -22,11 +22,14 @@ fn delayed_source_ranges_survive_loudness_processing() {
     ));
 
     let mut loudness = ranged_clip("itm_loudness", 4_000);
-    loudness.audio.as_mut().unwrap().processors = vec![AudioProcessor::Loudness(LoudnessTarget {
-        integrated_lufs: -16.0,
-        true_peak_dbtp: -1.0,
-        loudness_range_lu: 7.0,
-    })];
+    loudness.audio.as_mut().unwrap().processors = vec![identified_processor(
+        "timeline-loudness",
+        AudioProcessorKind::Loudness(LoudnessTarget {
+            integrated_lufs: -16.0,
+            true_peak_dbtp: -1.0,
+            loudness_range_lu: 7.0,
+        }),
+    )];
     let mut normalize = ranged_clip("itm_normalize", 6_000);
     normalize.effects.push(EffectInstance {
         id: EffectId::new("fx_normalize").unwrap(),

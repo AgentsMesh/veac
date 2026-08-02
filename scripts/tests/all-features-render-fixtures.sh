@@ -23,7 +23,7 @@ write_all_features_authoring() {
 "record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
 "audio":{"gain":{"type":"constant","value":0.5011872336272722},"pan":{"type":"constant","value":0},"muted":false,"normalize":true,"pitch_policy":"preserve",
 "crossfade":{"curve":"equal_power","fade_in":{"timescale":1000,"value":250},"fade_out":{"timescale":1000,"value":500}},
-"processors":[{"attack_ms":1,"ceiling_db":-1,"release_ms":80,"type":"limiter"}]}}]},
+    "processors":[{"id":"aud_voice-limiter","kind":{"attack_ms":1,"ceiling_db":-1,"release_ms":80,"type":"limiter"}}]}}]},
 {"id":"trk_subtitles","kind":"caption","clips":[{"id":"itm_cue","record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
 "source":{"text":"一种语言，一份类型化中间表示，一套渲染计划。","style":{"background":{"color":{"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20}}}}]}]}],
 "relations":[{"id":"rel_edit-unit","kind":{"members":[{"item_id":"itm_shot","type":"item"},{"item_id":"itm_music-item","type":"item"}],"type":"group"},"sequence_id":"seq_main"},
@@ -102,7 +102,6 @@ make_all_features_fixture() {
   local dir="$1/all-features" project="$1/all-features/project"
   mkdir -p "$project/assets" "$dir/plans/preview" "$dir/rendered"
   printf 'project all-features fixture\n' >"$project/main.veac"
-  printf 'project all-features preview fixture\n' >"$project/main.preview.veac"
   write_all_features_authoring "$project/project.veac.json"
   write_all_features_preview "$project/project.veac.json" "$project/project.preview.veac.json"
   write_all_features_plan "$project/project.preview.veac.json" "$dir/plans/preview/out_master.json"

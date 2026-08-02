@@ -9,9 +9,11 @@ source "$ROOT/scripts/example-preview-artifacts.sh"
 source "$ROOT/scripts/example-preview-cli.sh"
 source "$ROOT/scripts/example-preview-publish.sh"
 source "$ROOT/scripts/example-preview-entry.sh"
+source "$ROOT/scripts/example-preview-finalization.sh"
 GALLERY="$ROOT/examples/catalog/gallery.json"
 GALLERY_SCHEMA="$ROOT/scripts/check-gallery-catalog.jq"
-PREPARE_SOURCE="$ROOT/scripts/prepare-example-source.sh"
+# Consumed by build_example from the sourced entry module.
+# shellcheck disable=SC2034
 PREVIEW_FILTER="$ROOT/scripts/example-preview.jq"
 ACTION=${1:-build}
 OUTPUT_INPUT=${2:-"$ROOT/examples-preview"}
@@ -102,6 +104,7 @@ VEAC=$(prepare_example_preview_cli "$ROOT" "$TOOLCHAIN")
 SELECTOR=${ONLY_EXAMPLES//,/ }
 EXAMPLES=()
 AVAILABLE=()
+PUBLICATION_GUARDS=()
 while IFS= read -r source; do
   name=$(basename "$(dirname "$source")")
   AVAILABLE+=("$name")
@@ -124,9 +127,21 @@ FIXTURES="$BUILD_OUTPUT/.fixtures"
 prepare_preview_fixtures "$FIXTURES"
 for source_dir in "${EXAMPLES[@]}"; do
   build_example "$source_dir" "$BUILD_OUTPUT" "$FIXTURES" "$VEAC"
+  name=$(basename "$source_dir")
+  target=$(jq -ce --arg id "$name" '.targets[] | select(.id == $id)' "$GALLERY")
+  guard=$(capture_example_publication_guard "$source_dir" "$BUILD_OUTPUT/$name" "$target") ||
+    fail "failed to capture publication guard: $name"
+  PUBLICATION_GUARDS+=("$guard")
 done
 bash "$ROOT/scripts/check-example-render-evidence.sh" "$BUILD_OUTPUT"
 rm -rf "$FIXTURES"
 bash "$ROOT/scripts/write-examples-index.sh" "$BUILD_OUTPUT" "${#EXAMPLES[@]}" "$GALLERY"
+for index in "${!EXAMPLES[@]}"; do
+  source_dir=${EXAMPLES[$index]}
+  name=$(basename "$source_dir")
+  target=$(jq -ce --arg id "$name" '.targets[] | select(.id == $id)' "$GALLERY")
+  verify_example_publication_guard "$source_dir" "$BUILD_OUTPUT/$name" "$target" \
+    "${PUBLICATION_GUARDS[$index]}" || fail "publication guard failed: $name"
+done
 publish_preview_staging "$ROOT" "$OUTPUT"
 echo "example previews: $OUTPUT/index.html"

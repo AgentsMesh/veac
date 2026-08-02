@@ -1,16 +1,19 @@
-use crate::authoring::AudioProcessorDecl;
-use veac_ir::{AudioProcessor, Compressor, Gate, Limiter, LoudnessTarget, ParametricEqBand};
+use crate::authoring::{AudioProcessorDecl, AudioProcessorKindDecl};
+use veac_ir::{
+    AudioProcessor, AudioProcessorKind, Compressor, Gate, Limiter, LoudnessTarget, ParametricEqBand,
+};
 
 use super::context::Context;
 use super::value;
 
 pub(super) fn lower(ctx: &mut Context, value: &AudioProcessorDecl) -> Option<AudioProcessor> {
-    Some(match value {
-        AudioProcessorDecl::ParametricEq { bands, .. } => AudioProcessor::ParametricEq {
+    let kind = match &value.kind {
+        AudioProcessorKindDecl::ParametricEq { bands } => AudioProcessorKind::ParametricEq {
             bands: bands
                 .iter()
                 .map(|band| {
                     Some(ParametricEqBand {
+                        id: super::ids::eq_band(ctx, &band.id)?,
                         frequency_hz: value::scalar(ctx, &band.frequency, "hz")?,
                         gain_db: value::scalar(ctx, &band.gain, "db")?,
                         q: value::unitless(ctx, &band.q)?,
@@ -18,17 +21,17 @@ pub(super) fn lower(ctx: &mut Context, value: &AudioProcessorDecl) -> Option<Aud
                 })
                 .collect::<Option<Vec<_>>>()?,
         },
-        AudioProcessorDecl::HighPass(value) => AudioProcessor::HighPass {
+        AudioProcessorKindDecl::HighPass(value) => AudioProcessorKind::HighPass {
             frequency_hz: scalar(ctx, &value.frequency, "hz")?,
             q: unitless(ctx, &value.q)?,
             poles: poles(ctx, &value.poles)?,
         },
-        AudioProcessorDecl::LowPass(value) => AudioProcessor::LowPass {
+        AudioProcessorKindDecl::LowPass(value) => AudioProcessorKind::LowPass {
             frequency_hz: scalar(ctx, &value.frequency, "hz")?,
             q: unitless(ctx, &value.q)?,
             poles: poles(ctx, &value.poles)?,
         },
-        AudioProcessorDecl::Compressor(value) => AudioProcessor::Compressor(Compressor {
+        AudioProcessorKindDecl::Compressor(value) => AudioProcessorKind::Compressor(Compressor {
             threshold_db: scalar(ctx, &value.threshold, "db")?,
             ratio: unitless(ctx, &value.ratio)?,
             attack_ms: scalar(ctx, &value.attack, "ms")?,
@@ -37,23 +40,27 @@ pub(super) fn lower(ctx: &mut Context, value: &AudioProcessorDecl) -> Option<Aud
             makeup_gain_db: scalar(ctx, &value.makeup_gain, "db")?,
             mix: value::scale(ctx, &value.mix)?,
         }),
-        AudioProcessorDecl::Limiter(value) => AudioProcessor::Limiter(Limiter {
+        AudioProcessorKindDecl::Limiter(value) => AudioProcessorKind::Limiter(Limiter {
             ceiling_db: scalar(ctx, &value.ceiling, "db")?,
             attack_ms: scalar(ctx, &value.attack, "ms")?,
             release_ms: scalar(ctx, &value.release, "ms")?,
         }),
-        AudioProcessorDecl::Gate(value) => AudioProcessor::Gate(Gate {
+        AudioProcessorKindDecl::Gate(value) => AudioProcessorKind::Gate(Gate {
             threshold_db: scalar(ctx, &value.threshold, "db")?,
             ratio: unitless(ctx, &value.ratio)?,
             attack_ms: scalar(ctx, &value.attack, "ms")?,
             release_ms: scalar(ctx, &value.release, "ms")?,
             range_db: scalar(ctx, &value.range, "db")?,
         }),
-        AudioProcessorDecl::Loudness(value) => AudioProcessor::Loudness(LoudnessTarget {
+        AudioProcessorKindDecl::Loudness(value) => AudioProcessorKind::Loudness(LoudnessTarget {
             integrated_lufs: scalar(ctx, &value.integrated, "lufs")?,
             true_peak_dbtp: scalar(ctx, &value.true_peak, "dbtp")?,
             loudness_range_lu: scalar(ctx, &value.range, "lu")?,
         }),
+    };
+    Some(AudioProcessor {
+        id: super::ids::audio_processor(ctx, &value.id)?,
+        kind,
     })
 }
 

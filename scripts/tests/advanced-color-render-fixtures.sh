@@ -43,7 +43,6 @@ make_advanced_color_fixture() {
   local dir="$1/advanced-color" author preview plan
   mkdir -p "$dir/project" "$dir/plans/preview" "$dir/rendered"
   printf 'advanced color fixture\n' >"$dir/project/main.veac"
-  printf 'advanced color preview fixture\n' >"$dir/project/main.preview.veac"
   author=$(example_authoring_canonical "$dir")
   preview=$(example_preview_canonical "$dir")
   plan=$(example_preview_plan "$dir" out_preview)

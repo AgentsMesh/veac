@@ -1,0 +1,91 @@
+module {
+  // 前向引用由依赖图解析，不依赖声明顺序。
+  export const length title_size = base_size + 8px;
+  export const time card_duration = clamp(base_duration + 500ms, 2s, 3s);
+  const length base_size = 56px;
+  const time base_duration = 2s /* 表达式内的块注释不会改变求值结果。 */ + 500ms;
+
+  preset text-style readable {
+    font family "Arial";
+    fill #ffffffff;
+    background { color #00000099; padding 18px; }
+    outline { color #123047ff; width 2px; }
+  }
+
+  export preset text-style title {
+    use text-style readable;
+    size ${title_size};
+    weight bold;
+  }
+
+  export preset text-layout centered {
+    box-width 1040px;
+    box-height 180px;
+    wrap word;
+    overflow clip;
+    horizontal-align center;
+    vertical-align middle;
+  }
+
+  // 私有子组件接收父组件转发的背景，同时管理完整卡面与开场强调条。
+  component sequence card_visuals {
+    param time duration;
+    param time accent_duration;
+    slot visual backdrop;
+    body {
+      layer visual @background-layer {
+        item @backdrop {
+          source slot backdrop;
+          record { at 0s; duration ${duration}; }
+        }
+      }
+      layer visual @accent-layer {
+        item @accent {
+          source generated solid { color #38d6b5ff; }
+          record { at 0s; duration ${accent_duration}; }
+          modifiers {
+            layout accent-layout {
+              placement absolute { position { x 640px; y 500px; } }
+              frame { width 320px; height 12px; fit fill; }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  export component sequence title_card {
+    param text title;
+    param time duration default card_duration;
+    param time accent_duration default duration / 3;
+    slot visual backdrop;
+
+    // 父 slot 通过 fill 显式转发；子组件不会捕获顶层调用者。
+    instance sequence @visuals from card_visuals {
+      bind duration duration;
+      bind accent_duration accent_duration;
+      fill backdrop {
+        source slot backdrop;
+      }
+    }
+
+    body {
+      layer visual @visual-composition-layer {
+        item @visual-composition {
+          source sequence sequence @visuals;
+          record { at 0s; duration ${duration}; }
+        }
+      }
+      layer visual @copy-layer {
+        item @title {
+          source text {
+            content ${title};
+            style { use text-style title; }
+            layout { use text-layout centered; }
+          }
+          record { at 0s; duration ${duration}; }
+        }
+      }
+    }
+  }
+}

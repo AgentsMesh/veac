@@ -20,6 +20,8 @@ fn typed_ids_accept_stable_ascii_ids() {
     assert_id!(MulticamGroupId, "mcg_a");
     assert_id!(MulticamAngleId, "ang_a");
     assert_id!(EffectId, "fx_a");
+    assert_id!(AudioProcessorId, "aud_a");
+    assert_id!(EqBandId, "eqb_a");
     assert_id!(KeyframeId, "kf_a");
     assert_id!(RelationId, "rel_a");
     assert_id!(BusId, "bus_a");
@@ -39,6 +41,8 @@ fn typed_ids_reject_wrong_prefix_empty_invalid_and_long_suffixes() {
     assert!(ProjectId::new("prj_bad.dot").is_err());
     assert!(RelationId::new("transition_intro").is_err());
     assert!(BusId::new("dialogue").is_err());
+    assert!(AudioProcessorId::new("eqb_wrong").is_err());
+    assert!(EqBandId::new("aud_wrong").is_err());
     assert!(ProjectId::new(format!("prj_{}", "a".repeat(125))).is_err());
 
     let invalid: ProjectId = serde_json::from_str("\"invalid\"").unwrap();

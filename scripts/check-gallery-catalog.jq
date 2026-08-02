@@ -34,7 +34,8 @@ def expected_artifact:
       ($artifact.kind as $kind | [
         "canonical_project", "resolved_plan", "provider_observations",
         "preview_canonical_project", "preview_resolved_plan", "caption_sidecar",
-        "template_bindings", "edit_outcome", "probe_snapshot"
+        "template_bindings", "edit_outcome", "probe_snapshot", "source_revision",
+        "source_index", "source_edit_batch", "source_edit_outcome"
       ] | index($kind) != null)
     end;
 
@@ -51,11 +52,20 @@ def evidence_owner:
 def source_artifacts:
   all(.expected_artifacts[];
     .kind == "canonical_project" or .kind == "preview_canonical_project" or
-    .kind == "preview_resolved_plan" or .kind == "authoring_delivery") and
+    .kind == "preview_resolved_plan" or .kind == "authoring_delivery" or
+    .kind == "source_revision" or .kind == "source_index" or
+    .kind == "source_edit_batch" or .kind == "source_edit_outcome") and
   ([.expected_artifacts[] | select(.kind == "canonical_project")] | length == 1) and
   ([.expected_artifacts[] | select(.kind == "preview_canonical_project")] | length == 1) and
   ([.expected_artifacts[] | select(.kind == "preview_resolved_plan")] | length == 1) and
-  any(.expected_artifacts[]; .kind == "authoring_delivery");
+  any(.expected_artifacts[]; .kind == "authoring_delivery") and
+  ([.expected_artifacts[] | select(
+    .kind == "source_revision" or .kind == "source_index" or
+    .kind == "source_edit_batch" or .kind == "source_edit_outcome")] |
+    length == 0 or
+    (length == 4 and
+      ([.[].kind] | sort) ==
+      ["source_edit_batch", "source_edit_outcome", "source_index", "source_revision"]));
 
 def presentation_check:
   exact_keys(["cue", "expect"]) and

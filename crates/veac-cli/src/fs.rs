@@ -6,6 +6,15 @@ use veac_artifact::{ArtifactCommitState, ContentDigest, OwnedStagedFile};
 
 use crate::error::{CliError, CliResult};
 
+mod source_graph;
+mod source_location;
+mod source_lock;
+
+pub(crate) use source_graph::ensure_source_graph_unchanged;
+pub(crate) use source_location::SourceLocation;
+pub(crate) use source_lock::SourceGraphLock;
+pub(crate) use source_lock::SOURCE_LOCK_NAME;
+
 pub(crate) fn read_utf8(path: &Path, role: &str) -> CliResult<String> {
     read_utf8_bounded(path, role, veac_artifact::MAX_IN_MEMORY_ARTIFACT_BYTES)
 }
@@ -38,14 +47,10 @@ pub(crate) fn write_stdout(value: &str) -> CliResult {
 }
 
 pub(crate) fn atomic_write(path: &Path, value: &str) -> CliResult {
-    atomic_write_with(path, value, |_| {})
+    atomic_write_impl(path, value, |_| {})
 }
 
-pub(crate) fn atomic_write_with(
-    path: &Path,
-    value: &str,
-    after_open: impl FnOnce(&Path),
-) -> CliResult {
+fn atomic_write_impl(path: &Path, value: &str, after_open: impl FnOnce(&Path)) -> CliResult {
     let parent = path.parent().filter(|value| !value.as_os_str().is_empty());
     let parent = parent.unwrap_or(Path::new("."));
     path.file_name().ok_or_else(|| {

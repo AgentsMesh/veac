@@ -5,7 +5,7 @@ use crate::authoring::{LayerDecl, LayerKind, SequenceDecl, StructureDecl};
 impl Parser {
     pub(super) fn sequence(&mut self) -> Option<SequenceDecl> {
         let start = self.required_word("sequence")?;
-        let id = self.identifier("sequence")?;
+        let id = self.stable_identifier("sequence")?;
         self.left_brace()?;
         let mut layers = Vec::new();
         let mut structures = Vec::new();
@@ -59,7 +59,7 @@ impl Parser {
                 return None;
             }
         };
-        let id = self.identifier("layer")?;
+        let id = self.stable_identifier("layer")?;
         self.left_brace()?;
         let mut placement = None;
         let mut state = None;

@@ -64,4 +64,26 @@ mv "$MISROUTED_SIDECHAIN/plan.tmp" \
   "$MISROUTED_SIDECHAIN/audio-processing/plans/preview/out_preview.json"
 expect_fail misrouted_audio_sidechain "$MISROUTED_SIDECHAIN"
 
+WRONG_PROCESSOR_ID="$TMP_DIR/wrong-processor-id"
+mkdir -p "$WRONG_PROCESSOR_ID"
+cp -R "$VALID/audio-processing" "$WRONG_PROCESSOR_ID/audio-processing"
+jq '(.. | objects | select(.id? == "itm_voiceover") |
+  .audio.processors[0].id) = "aud_wrong"' \
+  "$WRONG_PROCESSOR_ID/audio-processing/plans/preview/out_preview.json" \
+  >"$WRONG_PROCESSOR_ID/plan.tmp"
+mv "$WRONG_PROCESSOR_ID/plan.tmp" \
+  "$WRONG_PROCESSOR_ID/audio-processing/plans/preview/out_preview.json"
+expect_fail wrong_audio_processor_id "$WRONG_PROCESSOR_ID"
+
+WRONG_EQ_BAND_ID="$TMP_DIR/wrong-eq-band-id"
+mkdir -p "$WRONG_EQ_BAND_ID"
+cp -R "$VALID/audio-processing" "$WRONG_EQ_BAND_ID/audio-processing"
+jq '(.. | objects | select(.id? == "itm_voiceover") |
+  .audio.processors[1].kind.bands[0].id) = "eqb_wrong"' \
+  "$WRONG_EQ_BAND_ID/audio-processing/plans/preview/out_preview.json" \
+  >"$WRONG_EQ_BAND_ID/plan.tmp"
+mv "$WRONG_EQ_BAND_ID/plan.tmp" \
+  "$WRONG_EQ_BAND_ID/audio-processing/plans/preview/out_preview.json"
+expect_fail wrong_eq_band_id "$WRONG_EQ_BAND_ID"
+
 echo "audio render evidence contract tests passed"

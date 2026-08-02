@@ -51,6 +51,8 @@ fn public_schema_and_strict_decoder_are_available_to_tools() {
     assert!(schema.get("$schema").is_some());
     let schema_text = serde_json::to_string(&schema).unwrap();
     assert!(schema_text.contains("^prj_"));
+    assert!(schema_text.contains("^aud_"));
+    assert!(schema_text.contains("^eqb_"));
     assert!(schema_text.contains("9007199254740991"));
 
     let mut with_unknown: serde_json::Value = serde_json::from_str(FIXTURE).unwrap();

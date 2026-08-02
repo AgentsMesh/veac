@@ -19,6 +19,7 @@ demo-mix/
 /examples-preview/
 /examples-preview.staging.*/
 /examples-preview.previous.*/
+.veac-source.lock
 
 # IDE
 .idea/

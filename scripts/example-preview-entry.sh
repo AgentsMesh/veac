@@ -2,11 +2,14 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-preview-layout.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-preview-provenance.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-graph.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-edit-evidence.sh"
 
 build_example() {
   local source_dir=$1 output=$2 fixtures=$3 veac=$4
-  local name entry project source prepared authoring preview_input preview rendered log
+  local name entry project source authoring preview rendered log
   local target window primary_delivery primary_config config config_plan authoring_oid plan_dir
+  local source_edit_oid=""
   name=$(basename "$source_dir")
   [[ $name =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "unsafe example name: $name"
   target=$(jq -ce --arg id "$name" '.targets[] | select(.id == $id)' "$GALLERY")
@@ -17,24 +20,26 @@ build_example() {
     | if length == 1 then .[0] else error("expected one authoring delivery") end
   ' <<<"$target") || fail "gallery must select one authoring delivery: $name"
   entry="$output/$name"; project="$entry/project"; rendered="$entry/rendered"
-  source=$(example_authoring_source "$entry"); prepared=$(example_preview_source "$entry")
+  source=$(example_authoring_source "$entry")
   authoring=$(example_authoring_canonical "$entry"); preview=$(example_preview_canonical "$entry")
-  preview_input="$project/.project.preview-input.veac.json"; log="$entry/build.log"
+  log="$entry/build.log"
   plan_dir=$(example_preview_plan_dir "$entry")
   mkdir -p "$project" "$rendered" "$plan_dir"
-  [[ -f $source_dir/main.veac && ! -L $source_dir/main.veac ]] ||
-    fail "example source must be a regular non-symlink file: $name"
-  cp "$source_dir/main.veac" "$source"
-  "$PREPARE_SOURCE" "$source" "$prepared"
-  cmp -s "$source_dir/main.veac" "$source" || fail "authoring source copy drifted: $name"
-  echo "[$name] authoring compile -> preview derive -> plan -> render -> probe"
+  stage_example_source_graph "$source_dir" "$project" ||
+    fail "example source graph staging failed: $name"
+  verify_example_source_graph "$source_dir" "$project" ||
+    fail "authoring source graph copy drifted: $name"
+  echo "[$name] source graph compile -> preview IR derive -> plan -> render -> probe"
   if ! (
+    build_example_source_edit_evidence "$target" "$source_dir" "$entry" "$source" "$veac" || exit 1
+    if source_edit_evidence_requested "$target"; then
+      source_edit_oid=$(source_edit_evidence_oid "$entry") || exit 1
+    fi
     "$veac" compile --emit-ir "$authoring" "$source" || exit 1
     authoring_oid=$(git hash-object --no-filters "$authoring") || exit 1
-    "$veac" compile --emit-ir "$preview_input" "$prepared" || exit 1
     jq --argjson edge "$PREVIEW_EDGE" --argjson fps "$PREVIEW_FPS" \
-      --argjson window "$window" -f "$PREVIEW_FILTER" "$preview_input" >"$preview" || exit 1
-    verify_preview_derivation "$preview_input" "$preview" "$PREVIEW_FILTER" \
+      --argjson window "$window" -f "$PREVIEW_FILTER" "$authoring" >"$preview" || exit 1
+    verify_preview_derivation "$authoring" "$preview" "$PREVIEW_FILTER" \
       "$PREVIEW_EDGE" "$PREVIEW_FPS" "$window" || exit 1
     verify_canonical_roles "$authoring" "$preview" || exit 1
     materialize_preview_assets "$project" "$preview" "$fixtures" || exit 1
@@ -50,11 +55,14 @@ build_example() {
         --config "$config" --destination "$rendered" "$preview" || exit 1
     done < <(jq -r '.project.render_configs[].id' "$preview")
     rm -f "$rendered/.veac-render.lock"
-    verify_preview_derivation "$preview_input" "$preview" "$PREVIEW_FILTER" \
+    verify_preview_derivation "$authoring" "$preview" "$PREVIEW_FILTER" \
       "$PREVIEW_EDGE" "$PREVIEW_FPS" "$window" || exit 1
-    cmp -s "$source_dir/main.veac" "$source" || exit 1
+    verify_example_source_graph "$source_dir" "$project" || exit 1
+    if source_edit_evidence_requested "$target"; then
+      verify_declared_source_edit_evidence "$source_dir" "$entry" || exit 1
+      [[ $(source_edit_evidence_oid "$entry") == "$source_edit_oid" ]] || exit 1
+    fi
     [[ $(git hash-object --no-filters "$authoring") == "$authoring_oid" ]] || exit 1
-    rm -f "$preview_input"
     verify_example_preview_layout "$entry" || exit 1
     config_plan=$(example_preview_plan "$entry" "$primary_config") || exit 1
     verify_expected_preview_artifacts "$target" "$authoring" "$preview" \

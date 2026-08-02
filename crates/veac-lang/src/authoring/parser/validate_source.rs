@@ -64,9 +64,12 @@ fn source_span(value: &SourceDecl) -> Span {
 }
 
 fn push(diagnostics: &mut Vec<Diagnostic>, code: &'static str, message: &'static str, span: Span) {
-    diagnostics.push(Diagnostic {
-        code,
-        message: message.to_owned(),
-        span,
-    });
+    crate::authoring::diagnostic_budget::push(
+        diagnostics,
+        Diagnostic {
+            code,
+            message: message.to_owned(),
+            span,
+        },
+    );
 }

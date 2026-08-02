@@ -8,8 +8,12 @@ mod apply_matte_tests;
 mod apply_pipeline_tests;
 #[path = "validation_tests/apply_target_tests.rs"]
 mod apply_target_tests;
+#[path = "validation_tests/audio_processing_fixture.rs"]
+mod audio_processing_fixture;
 #[path = "validation_tests/audio_processing_tests.rs"]
 mod audio_processing_tests;
+#[path = "validation_tests/audio_processor_identity_tests.rs"]
+mod audio_processor_identity_tests;
 #[path = "validation_tests/caption_speaker_tests.rs"]
 mod caption_speaker_tests;
 #[path = "validation_tests/color_matrix_tests.rs"]

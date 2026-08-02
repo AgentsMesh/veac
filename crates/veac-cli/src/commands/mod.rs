@@ -17,6 +17,9 @@ mod provider_run;
 mod relink;
 mod render;
 mod schema;
+mod source_edit;
+mod source_index;
+mod source_revision;
 mod template;
 pub(crate) mod workflow_io;
 
@@ -41,6 +44,9 @@ pub(crate) use render::run as render;
 #[cfg(test)]
 pub(crate) use schema::encode as schema_json;
 pub(crate) use schema::run as schema;
+pub(crate) use source_edit::run as source_edit;
+pub(crate) use source_index::run as source_index;
+pub(crate) use source_revision::run as source_revision;
 #[cfg(test)]
 pub(crate) use template::replacement_material_paths;
 pub(crate) use template::run as template;

@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use veac_lang::authoring::{format_document, lower_document, parse};
+use veac_lang::program::{check_source, compile_path};
 
 fn examples_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
@@ -25,11 +26,10 @@ fn every_example_round_trips_and_lowers_to_valid_canonical_ir() {
     let paths = example_sources();
     assert!(!paths.is_empty(), "no examples discovered");
     for path in paths {
-        let source = fs::read_to_string(&path).unwrap();
-        let document = parse(&source).unwrap_or_else(|diagnostics| {
-            panic!("{} failed to parse: {diagnostics:?}", path.display())
+        let compiled = compile_path(&path).unwrap_or_else(|diagnostics| {
+            panic!("{} failed to compile: {diagnostics:?}", path.display())
         });
-        let formatted = format_document(&document);
+        let formatted = format_document(compiled.document());
         let reparsed = parse(&formatted).unwrap_or_else(|diagnostics| {
             panic!("{} failed after format: {diagnostics:?}", path.display())
         });
@@ -39,7 +39,7 @@ fn every_example_round_trips_and_lowers_to_valid_canonical_ir() {
             "{} is not format-idempotent",
             path.display()
         );
-        let envelope = lower_document(&document).unwrap_or_else(|diagnostics| {
+        let envelope = lower_document(compiled.document()).unwrap_or_else(|diagnostics| {
             panic!("{} failed to lower: {diagnostics:?}", path.display())
         });
         veac_ir::validate(&envelope)
@@ -48,25 +48,33 @@ fn every_example_round_trips_and_lowers_to_valid_canonical_ir() {
 }
 
 #[test]
-fn example_directories_have_one_canonical_source_file() {
+fn example_directories_have_one_entry_and_only_reachable_modules() {
     for path in example_sources() {
         let directory = path.parent().unwrap();
-        let sources = fs::read_dir(directory)
+        let mut sources = fs::read_dir(directory)
             .unwrap()
             .filter_map(Result::ok)
-            .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .is_some_and(|value| value == "veac")
-            })
-            .count();
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().is_some_and(|value| value == "veac"))
+            .collect::<Vec<_>>();
+        sources.sort();
+        let compiled = compile_path(&path).unwrap();
+        let graph: BTreeSet<_> = compiled.sources().keys().map(String::as_str).collect();
+        let files: BTreeSet<_> = sources
+            .iter()
+            .map(|source| source.file_name().unwrap().to_str().unwrap())
+            .collect();
         assert_eq!(
-            sources,
-            1,
-            "{} must own one .veac file",
+            files,
+            graph,
+            "{} contains an unreachable .veac module",
             directory.display()
         );
+        for source in sources.into_iter().filter(|source| source != &path) {
+            let text = fs::read_to_string(&source).unwrap();
+            assert!(text.trim_start().starts_with("module {"));
+            check_source(source.to_str().unwrap(), &text).unwrap();
+        }
     }
 }
 

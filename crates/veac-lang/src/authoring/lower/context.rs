@@ -23,7 +23,10 @@ impl Context {
     }
 
     pub fn error(&mut self, code: &'static str, message: impl Into<String>, span: Span) {
-        self.diagnostics.push(Diagnostic::new(code, message, span));
+        crate::authoring::diagnostic_budget::push(
+            &mut self.diagnostics,
+            Diagnostic::new(code, message, span),
+        );
     }
 
     pub fn unsupported(&mut self, mechanism: &str, span: Span) {

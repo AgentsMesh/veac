@@ -14,15 +14,18 @@ fn compressor_limiter_and_gate_change_measured_level_and_peak() {
     render_audio_chain(
         &source,
         1_000,
-        vec![AudioProcessor::Compressor(Compressor {
-            threshold_db: -30.0,
-            ratio: 20.0,
-            attack_ms: 1.0,
-            release_ms: 100.0,
-            knee_db: 0.0,
-            makeup_gain_db: 0.0,
-            mix: 1.0,
-        })],
+        vec![identified_processor(
+            "compressor",
+            AudioProcessorKind::Compressor(Compressor {
+                threshold_db: -30.0,
+                ratio: 20.0,
+                attack_ms: 1.0,
+                release_ms: 100.0,
+                knee_db: 0.0,
+                makeup_gain_db: 0.0,
+                mix: 1.0,
+            }),
+        )],
         None,
         &compressed,
     );
@@ -33,11 +36,14 @@ fn compressor_limiter_and_gate_change_measured_level_and_peak() {
     render_audio_chain(
         &source,
         1_000,
-        vec![AudioProcessor::Limiter(Limiter {
-            ceiling_db: -12.0,
-            attack_ms: 5.0,
-            release_ms: 50.0,
-        })],
+        vec![identified_processor(
+            "limiter",
+            AudioProcessorKind::Limiter(Limiter {
+                ceiling_db: -12.0,
+                attack_ms: 5.0,
+                release_ms: 50.0,
+            }),
+        )],
         None,
         &limited,
     );
@@ -48,13 +54,16 @@ fn compressor_limiter_and_gate_change_measured_level_and_peak() {
     render_audio_chain(
         &quiet,
         1_000,
-        vec![AudioProcessor::Gate(Gate {
-            threshold_db: -20.0,
-            ratio: 20.0,
-            attack_ms: 1.0,
-            release_ms: 50.0,
-            range_db: -80.0,
-        })],
+        vec![identified_processor(
+            "gate",
+            AudioProcessorKind::Gate(Gate {
+                threshold_db: -20.0,
+                ratio: 20.0,
+                attack_ms: 1.0,
+                release_ms: 50.0,
+                range_db: -80.0,
+            }),
+        )],
         None,
         &gated,
     );
@@ -65,11 +74,14 @@ fn compressor_limiter_and_gate_change_measured_level_and_peak() {
 fn loudness_target_is_repeatable_and_crossfade_shapes_clip_edges() {
     let temp = tempdir().unwrap();
     let source = tone_wav(temp.path(), "loudness", 440, 1.0, 0.4);
-    let processor = AudioProcessor::Loudness(LoudnessTarget {
-        integrated_lufs: -16.0,
-        true_peak_dbtp: -1.0,
-        loudness_range_lu: 7.0,
-    });
+    let processor = identified_processor(
+        "loudness",
+        AudioProcessorKind::Loudness(LoudnessTarget {
+            integrated_lufs: -16.0,
+            true_peak_dbtp: -1.0,
+            loudness_range_lu: 7.0,
+        }),
+    );
     let first = temp.path().join("loudness-a.mp4");
     let second = temp.path().join("loudness-b.mp4");
     render_audio_chain(&source, 1_000, vec![processor.clone()], None, &first);

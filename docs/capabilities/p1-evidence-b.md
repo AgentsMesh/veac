@@ -92,3 +92,9 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-39 implementation: [descriptor-relative recovery](../../crates/veac-runtime/src/executor/staging/recovery.rs)
 - P1-39 verification: [recovery safety contracts](../../crates/veac-runtime/src/executor/staging/tests/recovery_safety_contracts.rs)
 - P1-39 observable: [checkpoint delivery E2E](../../crates/veac-runtime/tests/delivery_e2e/checkpoint.rs)
+### P1-40
+- P1-40 implementation: [compile-time program layer](../../crates/veac-lang/src/program/mod.rs)
+- P1-40 verification: [language integration](../../crates/veac-lang/tests/programming_language.rs)
+- P1-40 source editing: [source transaction](../../crates/veac-lang/src/program/source_transaction.rs)
+- P1-40 observable: [programming language example](../../examples/programming-language/main.veac)
+- P1-40 source-of-truth transaction: [revision-bound edit batch](../../examples/programming-language/source-edit.json)
