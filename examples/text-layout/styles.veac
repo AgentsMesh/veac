@@ -1,0 +1,102 @@
+module {
+  fn metrics(font: Resource, size: length, fill: color) -> TextMetrics {
+    text_metrics(
+      font_stack(font_resource_ref(font), []),
+      weight_bold(), font_style_normal(), size, 1px, 1.25, fill
+    )
+  }
+
+  fn decoration(accent: color) -> TextDecoration {
+    text_decoration(
+      text_background_present(#07131dcc, 12px),
+      text_outline_present(accent, 2px),
+      shadow_present(5px, 50%, vector(3.0, 4.0), #000000cc)
+    )
+  }
+
+  export fn horizontal(font: Resource) -> TextStyle {
+    text_style(
+      metrics(font, 34px, #ffffffff),
+      text_layout(
+        text_box_fixed(560px, 120px), text_wrap_character(), text_overflow_ellipsis(),
+        text_align_left(), text_align_top(),
+        writing_horizontal_tb(), orientation_mixed()
+      ),
+      text_path_none(), decoration(#22d3eeff),
+      [
+        text_span(0, 4, text_run_style(
+          font_family("Noto Sans SC"), weight_black(), font_style_normal(),
+          42px, #facc15ff
+        )),
+        text_span(7, 12, text_run_style(
+          font_family("Noto Sans Arabic"), weight_medium(), font_style_italic(),
+          36px, #f472b6ff
+        ))
+      ],
+      text_animation_none()
+    )
+  }
+
+  export fn vertical(
+    font: Resource, writing: TextWritingMode, orientation: TextOrientation,
+    accent: color
+  ) -> TextStyle {
+    text_style(
+      metrics(font, 28px, accent),
+      text_layout(
+        text_box_fixed(150px, 260px), text_wrap_none(), text_overflow_clip(),
+        text_align_right(), text_align_bottom(), writing, orientation
+      ),
+      text_path_none(), decoration(accent), [], text_animation_none()
+    )
+  }
+
+  export fn word(font: Resource) -> TextStyle {
+    text_style(
+      metrics(font, 26px, #ffffffff),
+      text_layout(
+        text_box_fixed(240px, 92px), text_wrap_word(), text_overflow_clip(),
+        text_align_center(), text_align_middle(),
+        writing_horizontal_tb(), orientation_mixed()
+      ),
+      text_path_none(), decoration(#22d3eeff), [], text_animation_none()
+    )
+  }
+
+  export fn path(font: Resource) -> TextStyle {
+    text_style(
+      metrics(font, 34px, #facc15ff),
+      text_layout(
+        text_box_width(560px), text_wrap_none(), text_overflow_visible(),
+        text_align_center(), text_align_middle(),
+        writing_horizontal_tb(), orientation_sideways()
+      ),
+      text_path_present(text_path(
+        [point(40px, 210px), point(320px, 100px), point(600px, 210px)],
+        300px, false, text_path_align_center()
+      )),
+      decoration(#facc15ff), [], text_animation_none()
+    )
+  }
+
+  export fn positioned(anchor: Anchor, inset: Vector, pivot: Vector) -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor, inset), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(18px, 12px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(
+            vector(0.0, 0.0), flip_none(), pivot, crop_none()
+          )
+        )
+      ),
+      visual_surface(
+        percent_constant(100%), compositing(2, blend_normal()), card_none()
+      ),
+      [], color_pipeline_none()
+    )
+  }
+}

@@ -1,3 +1,5 @@
+mod window;
+
 use crate::*;
 
 use super::Validator;
@@ -19,10 +21,14 @@ impl Validator {
             &format!("{path}/kind/transition/duration"),
             id.as_str(),
         );
-        if !transition_parameters_valid(&transition.kind)
-            || transition.duration > from.clip.record_range.duration
-        {
+        if !transition_parameters_valid(&transition.kind) {
             self.value_error("TRANSITION", path, id.as_str());
+        }
+        if !matches!(from.track.kind, TrackKind::Video | TrackKind::Visual) {
+            self.value_error("TRANSITION_TRACK_TYPE", path, id.as_str());
+        }
+        if from.clip.visual.is_none() || to.clip.visual.is_none() {
+            self.value_error("TRANSITION_VISUAL_ENDPOINT", path, id.as_str());
         }
         if endpoint_blend(from.clip) != BlendMode::Normal
             || endpoint_blend(to.clip) != BlendMode::Normal
@@ -32,12 +38,15 @@ impl Validator {
         if endpoint_z(from.clip) != endpoint_z(to.clip) {
             self.value_error("TRANSITION_Z_ORDER", path, id.as_str());
         }
-        let outgoing = outgoing_part(transition);
-        let adjacent = from.clip.record_range.end().ok() == Some(to.clip.record_range.start);
-        let handles = from.clip.record_range.duration.value >= outgoing
-            && to.clip.record_range.duration.value >= transition.duration.value - outgoing;
-        if !adjacent || !handles {
-            self.value_error("TRANSITION_HANDLES", path, id.as_str());
+        let Some(record_window) = window::exact(from.clip, to.clip) else {
+            self.value_error("TRANSITION_OVERLAP", path, id.as_str());
+            return;
+        };
+        if transition.duration != record_window.duration {
+            self.value_error("TRANSITION_DURATION_MISMATCH", path, id.as_str());
+        }
+        if window::third_item_crosses(from, to, record_window) {
+            self.value_error("TRANSITION_THIRD_ITEM", path, id.as_str());
         }
     }
 
@@ -53,20 +62,9 @@ impl Validator {
                     if incoming.to.clip.id != outgoing.from.clip.id {
                         continue;
                     }
-                    let incoming_end = incoming.to.clip.record_range.start.value.checked_add(
-                        incoming.transition.duration.value - outgoing_part(incoming.transition),
-                    );
-                    let outgoing_start = outgoing
-                        .to
-                        .clip
-                        .record_range
-                        .start
-                        .value
-                        .checked_sub(outgoing_part(outgoing.transition));
-                    if incoming_end
-                        .zip(outgoing_start)
-                        .is_some_and(|(end, start)| end > start)
-                    {
+                    let windows = window::exact(incoming.from.clip, incoming.to.clip)
+                        .zip(window::exact(outgoing.from.clip, outgoing.to.clip));
+                    if windows.is_some_and(|(left, right)| window::intersects(left, right)) {
                         let path = format!("/project/relations/{}/kind", outgoing.relation_id);
                         self.value_error(
                             "TRANSITION_WINDOW_OVERLAP",
@@ -77,14 +75,6 @@ impl Validator {
                 }
             }
         }
-    }
-}
-
-fn outgoing_part(value: &Transition) -> i64 {
-    match value.alignment {
-        TransitionAlignment::BeforeCut => value.duration.value,
-        TransitionAlignment::Centered => value.duration.value / 2,
-        TransitionAlignment::AfterCut => 0,
     }
 }
 

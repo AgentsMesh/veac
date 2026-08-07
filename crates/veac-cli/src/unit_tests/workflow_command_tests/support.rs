@@ -124,6 +124,7 @@ pub(super) fn caption_project(temp: &tempfile::TempDir) -> (PathBuf, CaptionProp
         .visual
         .clone()
         .unwrap();
+    let sequence_id = project.project.sequences[0].id.clone();
     project.project.sequences[0].tracks.push(Track {
         id: TrackId::new("trk_provider_captions").unwrap(),
         kind: TrackKind::Caption,
@@ -138,13 +139,14 @@ pub(super) fn caption_project(temp: &tempfile::TempDir) -> (PathBuf, CaptionProp
         routing: TrackRouting::Default,
         clips: Vec::new(),
     });
+    project.project.sequences[0].authorship = None;
     std::fs::write(&project_file, veac_ir::canonical_json(&project).unwrap()).unwrap();
     let context = CaptionProposalContext::AsrCaptions(Box::new(AsrCaptionApplication {
         header: ApplicationHeader {
             project_revision: project.project.revision,
             operation_id: OperationId::new("op_provider_cli").unwrap(),
         },
-        sequence_id: SequenceId::new("seq_main").unwrap(),
+        sequence_id,
         track_id: TrackId::new("trk_provider_captions").unwrap(),
         style: TextStyle::default(),
         visual,

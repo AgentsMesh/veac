@@ -11,12 +11,22 @@ fn full_segment_identity_binds_plan_profile_range_fidelity_and_source_clocks() {
         .descriptor()
         .dependencies
         .iter()
-        .map(|value| value.role.as_str())
+        .map(|value| value.role)
         .collect();
-    assert_eq!(roles, ["plan", "profile", "source_clocks"]);
     assert_eq!(
-        base.descriptor().parameters["fidelity"],
-        "exact_delivery_master"
+        roles,
+        [
+            ArtifactDependencyRole::Plan,
+            ArtifactDependencyRole::Profile,
+            ArtifactDependencyRole::SourceClocks,
+        ]
+    );
+    let ArtifactParameters::RenderSegment(parameters) = &base.descriptor().parameters else {
+        unreachable!()
+    };
+    assert_eq!(
+        parameters.fidelity,
+        RenderSegmentFidelity::ExactDeliveryMaster
     );
     assert_eq!(base.range().start.value, 0);
 
@@ -41,6 +51,19 @@ fn full_segment_identity_binds_plan_profile_range_fidelity_and_source_clocks() {
         key(&base),
         key(&contract(&range, bindings.input_substitution_proof()))
     );
+}
+
+#[test]
+fn full_segment_identity_binds_the_backend_producer() {
+    let plan = test_support::plan(b"source");
+    let clocks = originals(&plan, "/media/source.mp4").input_substitution_proof();
+    let first = test_support::producer();
+    let mut second = first.clone();
+    second.configuration = ContentDigest::sha256(b"different backend build");
+    let first = FullRenderSegmentContract::new(&plan, clocks.clone(), first).unwrap();
+    let second = FullRenderSegmentContract::new(&plan, clocks, second).unwrap();
+    assert_ne!(first.descriptor().producer, second.descriptor().producer);
+    assert_ne!(key(&first), key(&second));
 }
 
 #[test]

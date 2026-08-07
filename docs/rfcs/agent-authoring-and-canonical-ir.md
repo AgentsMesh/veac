@@ -1,76 +1,71 @@
-# RFC: Agent Authoring and Canonical IR
+# RFC: Executable Agent Source And Canonical IR
 
-Status: Accepted
+Status: Accepted and implemented
 
 ## Decision
 
-VEAC has one static, agent-oriented authoring language and one canonical JSON
-execution IR. Historical source compatibility is explicitly out of scope.
+VEAC has one executable, agent-oriented source language and one canonical JSON execution IR. Historical
+source compatibility is out of scope.
 
 ```text
-.veac source graph -> resolve/evaluate/expand -> typed Document
-  -> canonical JSON -> plan -> typed backend bundle -> artifacts
+.veac source graph
+  -> resolve + type/effect/stage verification
+  -> verified Core v10
+  -> bounded graph execution + Temporal residualization
+  -> canonical JSON IR schema 9
+  -> plan -> typed backend bundle -> artifacts
 ```
 
-## Motivation
+The source graph is the source of truth. JSON IR is a validation, interchange, caching and execution ABI;
+it is never decompiled to recover `.veac`.
 
-A flat attribute language makes every declaration look like a JSON object with different punctuation. Agents cannot reliably distinguish ownership, stable identity, typed references, source/record time, or legal combinations. Open maps also push diagnostics into FFmpeg, where source spans and domain intent are gone.
+## Why A Language
 
-## Authoring Rules
+A flat attribute surface is JSON with different punctuation. It cannot make ownership, typed handles,
+source/record time, reusable construction, legal combinations or effects obvious to an agent. Open maps
+also defer useful diagnostics until source spans and domain intent have disappeared.
 
-1. Declaration heads contain a stable entity kind and ID only.
-2. Ownership is expressed by blocks.
+VEAC instead supplies modules, immutable nominal values, pure functions, methods, closures, exhaustive
+matching, bounded collections and closed Domain constructors. `main(Context) -> Project` is the only entry
+ABI. Root `animate` declarations residualize approved Temporal leaves without making graph topology dynamic.
+
+## Semantic Rules
+
+1. Entity identity is an explicit typed constructor operand.
+2. Ownership is formed by typed attachment methods, never property projection.
 3. Cross-owner behavior is a first-class relation.
-4. Value variants and units are closed and typed.
-5. Repeated dynamic values use `Parameter<T> = constant | curve`.
-6. Unknown declarations, fields, enum values, and units fail.
-7. Duplicate singleton fields fail.
-8. References resolve by expected type.
-9. The AST retains spans and omitted state.
-10. Lowering is explicit and followed by canonical validation.
+4. Values, variants and units are closed and typed.
+5. Effects are ordered `Pure < LocalMutation < GraphEmit`.
+6. Stages are ordered `Const < Build < Temporal`.
+7. Topology is static; only approved scalar/vector leaf values may be Temporal.
+8. Unknown calls, variants, fields and units fail before execution.
+9. Runtime executes verified Core, not Surface syntax or arbitrary host callbacks.
+10. Lowering is explicit and canonical validation follows every build.
 
-## Core Model
+## Reuse
 
-```text
-Project   = settings + resources + entry + multicams + sequences + annotations + deliveries
-Delivery  = sequence + optional raster + typed artifacts
-Sequence  = layers + relations + applies
-Layer     = ordered items + optional bus route
-Item      = source + record + optional mapping + modifiers + optional template slot
-```
+Ordinary functions and methods are the component system. Nominal structs and enums carry reusable typed
+configuration; modules publish stable APIs. Factories return Domain handles and attach children explicitly.
+There is no parallel preset/component macro grammar, generated source interpolation or property bag.
 
-Source, modifier, relation, annotation, generator, audio processor, color stage,
-text layout, artifact, target, and recipe are closed variants.
-
-## Static Programming Layer
-
-The authoring source graph may declare confined imports, exported typed
-constants, closed-kind presets, sequence components, and instances. Expressions
-are typed, pure, exact, and bounded. Components expose typed parameters and
-source slots; local `@id` names expand hygienically through the instance ID.
-
-This layer exists only at compile time. Resolution and expansion must produce a
-valid core `Document`; canonical IR contains no modules, expressions, presets,
-components, instances, runtime scripts, or opaque property bags.
-
-The exact source graph remains independently editable through a revisioned
-`SourceEditBatch`. Canonical `EditBatch` remains the IR transaction contract.
-Neither contract is translated into the other, and IR is never decompiled to
-recover `.veac` source.
+Entity keys remain visible at call sites. Hygienic identity comes from typed owner paths and length-framed
+canonical ID derivation, not hidden string concatenation.
 
 ## Canonical Boundary
 
-Canonical IR uses exact rational time, stable typed IDs, deterministic ordering, and serde schemas. It is the boundary for IR editing, template filling, planning, caching, signatures, and external tooling.
-The current project envelope is schema version 5 with minimum reader version 5.
+Canonical IR uses exact rational time, stable typed IDs, deterministic ordering and closed serde schemas.
+The current project envelope is schema version 9 with minimum reader version 9. IR contains graph facts and
+residual Temporal programs, not modules, functions, closures, nominal declarations or Surface expressions.
 
-The following accepted media fragment is kept executable by the IR documentation test:
+This accepted media fragment is parsed by the IR documentation test so the RFC cannot drift from the
+canonical ABI:
 
 ```json,veac-media
 {
   "id": "med_logo",
   "identity": null,
   "kind": "image",
-  "metadata": {},
+  "authorship": null,
   "probe": null,
   "source": {
     "type": "file",
@@ -83,35 +78,37 @@ The following accepted media fragment is kept executable by the IR documentation
 }
 ```
 
-The authoring AST does not reuse canonical structs. Surface values may have richer provenance and omission information; lowering maps them to the minimal executable canonical fact.
+The authoring and canonical edit contracts are deliberately separate:
 
-## Time
+- `SourceEditBatch` addresses declarations and typed body sites in a revisioned `.veac` graph, then rebuilds
+  and validates the complete program before commit.
+- `EditBatch` atomically edits canonical IR for downstream tools. It never patches source.
 
-Record time, item-local time, source time, and delivery frame/sample time are
-distinct domains. Authoring literals lower exactly to the project timescale.
-Parameters use item-local time. Source mappings map item-local record duration
-into source time. Multicam switches partition item-local time.
+## Time And Temporal Values
 
-## Relations
+Record time, sequence time, item-local time, source time and delivery frame/sample time are distinct domains.
+Source mappings transform item-local time into source time. An `animate` body may use typed implicit clocks
+and Pure helpers; the compiler residualizes a verified canonical DAG bound to one approved sink.
 
-Transition, matte, sidechain, group, and AV-link are relation facts. Planner projections are derived, never independently authored. A canonical validator must reject divergence between a relation and any persisted execution projection.
+The approved sink set is closed to visual position, scale, rotation, crop and opacity plus audio gain and
+pan. A Temporal value cannot choose an entity, attach a child, change ordering or emit graph topology.
 
-## Templates
+## Relations And Delivery
 
-Template slots are item-owned constraints; the item ID is slot identity. Bindings are separate versioned request artifacts. Fill proposals produce atomic edit batches and validate the candidate project before commit.
+Transition, matte, sidechain, group and AV-link are typed relation facts. Schema-v9 transitions are
+centered-only true overlaps: adjacent real visual streams must both cover the exact intersection, and the
+backend may not manufacture endpoints with held-frame `tpad`.
 
-## Deliveries
-
-Each project delivery selects a sequence and owns typed artifacts. An artifact
-has one target and one closed recipe composed from domain primitives such as
-`mux`, `encode`, `source`, `frame`, `canvas`, `numbering`, and `package`.
-Lowering creates stable render config and deliverable IDs. Target compatibility,
-image patterns, caption tracks, and audio source kinds validate before execution.
+A project-owned delivery selects a sequence and owns typed deliverables. Separate constructors model video,
+image sequence, caption sidecar, audio stem, scope, audio file, animated image, still image and adaptive
+package recipes. Lowering creates stable render-config and deliverable IDs; compatibility validates before
+planning or execution.
 
 ## Consequences
 
-- The old frontend is deleted, not maintained behind a compatibility flag.
-- Examples and docs compile against the same frontend as the CLI.
-- New mechanisms require parse, format, lower, canonical, plan/codegen, and proportional E2E coverage.
-- Planner/backend limitations may withhold a surface primitive rather than accept syntax that cannot execute faithfully.
-- All controlled implementation and tooling files remain below 200 lines.
+- The legacy property frontend and preset/component expansion frontend are deleted.
+- CLI, docs, examples and source editing all use the executable frontend.
+- New mechanisms require a closed Domain operation, direct lowering, rejection coverage and proportional
+  planning/codegen/E2E evidence.
+- Compiler/runtime budgets are deterministic and cannot be reset by modules, calls or collection loops.
+- Controlled implementation, test, documentation and tooling files remain below 200 lines.

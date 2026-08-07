@@ -1,5 +1,6 @@
 use super::super::{CodegenErrors, EmitContext};
 use super::EffectSpec;
+use veac_plan::canonical::EffectKind;
 
 pub(super) fn apply<F>(
     context: &mut EmitContext<'_>,
@@ -12,7 +13,7 @@ where
 {
     let (color, source_alpha) = split_input(context, input);
     let processed = apply_effect(context, color)?;
-    if super::effect_kind(effect.effect_type).is_some_and(super::EffectKind::replaces_alpha) {
+    if replaces_alpha(effect.effect.kind()) {
         combine_key_alpha(context, &processed, &source_alpha)
     } else {
         Ok(attach(
@@ -22,6 +23,10 @@ where
             "effectalphamergev",
         ))
     }
+}
+
+fn replaces_alpha(kind: EffectKind) -> bool {
+    matches!(kind, EffectKind::VideoChromaKey | EffectKind::VideoLumaKey)
 }
 
 fn split_input(context: &mut EmitContext<'_>, input: &str) -> (String, String) {

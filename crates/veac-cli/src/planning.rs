@@ -9,6 +9,22 @@ use crate::canonical;
 use crate::diagnostic;
 use crate::environment::Environment;
 use crate::error::{CliError, CliResult};
+use crate::material_root::MaterialRoot;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct InputResolution<'a> {
+    material_root: Option<&'a Path>,
+    binding_file: Option<&'a Path>,
+}
+
+impl<'a> InputResolution<'a> {
+    pub(crate) fn new(material_root: Option<&'a Path>, binding_file: Option<&'a Path>) -> Self {
+        Self {
+            material_root,
+            binding_file,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct PreparedPlan {
@@ -16,20 +32,23 @@ pub(crate) struct PreparedPlan {
     pub plan: ResolvedRenderPlan,
     pub bindings: ExecutionBindings,
     pub project_file: PathBuf,
+    pub material_root: Option<MaterialRoot>,
     pub material_paths: BTreeMap<MaterialId, PathBuf>,
     pub binding_file: Option<PathBuf>,
 }
 
-pub(crate) fn prepare(
+pub(crate) fn prepare_with_material_root(
     project: &Path,
     config: Option<&str>,
+    material_root: Option<&Path>,
     environment: &dyn Environment,
 ) -> CliResult<PreparedPlan> {
     let loaded = canonical::load_local(project)?;
     let config_id = select_config(&loaded.envelope, config)?;
     let required = veac_plan::required_material_ids_one(&loaded.envelope, &config_id)
         .map_err(diagnostic::resolution)?;
-    let hydrated = canonical::hydrate(loaded, &required, environment)?;
+    let hydrated =
+        canonical::hydrate_with_material_root(loaded, &required, material_root, environment)?;
     let plan =
         veac_plan::resolve_one(&hydrated.envelope, &config_id).map_err(diagnostic::resolution)?;
     let bindings = input_bindings(&plan, &hydrated.material_paths)?;
@@ -38,19 +57,30 @@ pub(crate) fn prepare(
         plan,
         bindings,
         project_file: hydrated.project_file,
+        material_root: Some(hydrated.material_root),
         material_paths: hydrated.material_paths,
         binding_file: None,
     })
 }
 
-pub(crate) fn prepare_with_bindings(
+pub(crate) fn prepare_with_input_resolution(
     project: &Path,
     config: Option<&str>,
-    binding_file: Option<&Path>,
+    resolution: InputResolution<'_>,
     environment: &dyn Environment,
 ) -> CliResult<PreparedPlan> {
+    let InputResolution {
+        material_root,
+        binding_file,
+    } = resolution;
+    if material_root.is_some() && binding_file.is_some() {
+        return Err(CliError::new(
+            "MATERIAL_ROOT_BINDINGS_CONFLICT",
+            "--material-root and --bindings are alternative input-resolution authorities",
+        ));
+    }
     let Some(binding_file) = binding_file else {
-        return prepare(project, config, environment);
+        return prepare_with_material_root(project, config, material_root, environment);
     };
     let loaded = canonical::load_local(project)?;
     let config_id = select_config(&loaded.envelope, config)?;
@@ -77,6 +107,7 @@ pub(crate) fn prepare_with_bindings(
         plan,
         bindings,
         project_file: loaded.project_file,
+        material_root: None,
         material_paths,
         binding_file: Some(binding_file),
     })

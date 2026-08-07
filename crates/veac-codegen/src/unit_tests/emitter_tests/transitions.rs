@@ -1,35 +1,24 @@
 use super::support::{
-    add_transition, bindings, emit_video_command, fixture, resolved, time, visual,
+    add_transition, bindings, emit_video_command, fixture, resolved, time, transition_visual,
+    visual,
 };
 use veac_codegen::emitter::CodegenErrorKind;
 use veac_plan::canonical::*;
 use veac_plan::ResolvedClipSource;
 
 #[test]
-fn before_and_after_cut_alignments_materialize_zero_handle_sampling() {
-    let before = transition_plan(TransitionAlignment::BeforeCut, TransitionKind::Dissolve);
-    let before_graph = graph(&before);
-    assert!(before_graph.contains("trim=start=0.8:duration=0.2"));
-    assert!(before_graph.contains("trim=end_frame=1,setpts=PTS-STARTPTS"));
-    assert!(before_graph.contains("tpad=start_mode=clone:start_duration=0.2"));
-    assert!(before_graph.contains("afade=t=out:st=0.8:d=0.2"));
-    assert!(!before_graph.contains("afade=t=in"));
-
-    let after = transition_plan(TransitionAlignment::AfterCut, TransitionKind::Dissolve);
-    let after_graph = graph(&after);
-    assert!(after_graph.contains("trim=start=0.933333333333,reverse,trim=end_frame=1"));
-    assert!(after_graph.contains("tpad=stop_mode=clone:stop_duration=0.2"));
-    assert!(after_graph.contains("trim=start=0:duration=0.2"));
-    assert!(after_graph.contains("transitionoutboundv"));
-    assert!(after_graph.contains("transitioninboundv"));
-    assert!(
-        after_graph
-            .matches("stop_duration=0.2,trim=duration=0.2")
-            .count()
-            >= 2
-    );
-    assert!(after_graph.contains("afade=t=in:st=0:d=0.2"));
-    assert!(!after_graph.contains("afade=t=out"));
+fn centered_overlap_trims_both_real_sources_for_the_full_window() {
+    let plan = transition_plan(TransitionAlignment::Centered, TransitionKind::Dissolve);
+    let graph = graph(&plan);
+    assert!(graph.contains("trim=start=0.8:duration=0.2,setpts=PTS-STARTPTS"));
+    assert!(graph.contains("trim=start=0:duration=0.2,setpts=PTS-STARTPTS"));
+    assert!(graph.contains("xfade=transition=fade:duration=0.2:offset=0"));
+    assert!(!graph.contains("transitionoutboundv"));
+    assert!(!graph.contains("transitioninboundv"));
+    assert!(!graph.contains("tpad=stop_mode=clone:stop_duration=0.2"));
+    assert!(!graph.contains("tpad=start_mode=clone:start_duration=0.2"));
+    assert!(graph.contains("afade=t=out:st=0.8:d=0.2"));
+    assert!(graph.contains("afade=t=in:st=0:d=0.2"));
 }
 
 #[test]
@@ -131,6 +120,7 @@ pub(crate) fn transition_plan(
         channels: 2,
     });
     let track = &mut project.project.sequences[0].tracks[0];
+    track.clips[0].visual = Some(transition_visual());
     track.clips[0].audio = Some(audio());
     let transition = Transition {
         kind,
@@ -139,7 +129,7 @@ pub(crate) fn transition_plan(
     };
     let mut incoming = track.clips[0].clone();
     incoming.id = ItemId::new("itm_transition_in").unwrap();
-    incoming.record_range.start = time(600);
+    incoming.record_range.start = time(480);
     track.clips.push(incoming);
     add_transition(
         &mut project,

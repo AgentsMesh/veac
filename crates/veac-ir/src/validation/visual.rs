@@ -150,7 +150,7 @@ fn invalid_crop(crop: Rect) -> bool {
 fn crop_values(value: &Animatable<Rect>) -> impl Iterator<Item = Rect> + '_ {
     let constant = match value {
         Animatable::Constant { value } => Some(*value),
-        Animatable::Keyframes { .. } => None,
+        Animatable::Keyframes { .. } | Animatable::Binding { .. } => None,
     };
     constant.into_iter().chain(
         value

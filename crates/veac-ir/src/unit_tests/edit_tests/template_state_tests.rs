@@ -17,6 +17,15 @@ fn slot() -> SlotConstraint {
     }
 }
 
+fn text_slot() -> SlotConstraint {
+    SlotConstraint {
+        kind: SlotKind::Text,
+        fill: FillMode::FitDuration,
+        label: "Title".to_owned(),
+        min_source_duration: None,
+    }
+}
+
 #[test]
 fn clears_template_state_atomically() {
     let mut project = sample_project();
@@ -63,4 +72,32 @@ fn post_validation_rejects_invalid_template_state() {
     );
     assert_rejected(outcome, "TEMPLATE_EDITABLE_TEXT");
     assert!(!project.project.sequences[0].tracks[1].clips[0].template_editable_text);
+}
+
+#[test]
+fn post_validation_accepts_a_typed_editable_text_state() {
+    let mut project = sample_project();
+    let track = &mut project.project.sequences[0].tracks[1];
+    track.kind = TrackKind::Visual;
+    let clip = &mut track.clips[0];
+    let ClipSource::Caption { text, style, .. } = &clip.source else {
+        panic!("caption fixture");
+    };
+    clip.source = ClipSource::Text {
+        text: text.clone(),
+        style: style.clone(),
+    };
+    let id = clip.id.clone();
+    let outcome = apply_edit_batch(
+        &project,
+        &batch(
+            "op_text_template",
+            &project,
+            vec![state(id, Some(text_slot()), true)],
+        ),
+    );
+    let output = applied(outcome);
+    let clip = &output.project.sequences[0].tracks[1].clips[0];
+    assert_eq!(clip.replaceable.as_ref().unwrap().kind, SlotKind::Text);
+    assert!(clip.template_editable_text);
 }

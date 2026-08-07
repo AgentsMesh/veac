@@ -1,71 +1,67 @@
-project card-overlay {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual base {
-      item background {
-        source generated gradient linear {
-          from 0% 20%; to 100% 80%;
-          stop 0% #0b132bff; stop 100% #1c2541ff;
-        }
-        record { at 0s; duration 4s; }
-      }
-    }
-    layer visual card {
-      item panel {
-        source generated shape {
-          geometry rectangle { bounds 0% 0% 100% 100%; }
-          fill solid #f7f7f2ff;
-          stroke 14px solid #5bc0beff;
-        }
-        record { at 0s; duration 4s; }
-        modifiers {
-          layout card-frame {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 720px; height 380px; fit fill; }
-          }
-          surface raised {
-            corner-radius 36px;
-            shadow {
-              color #000000ff;
-              opacity 38%;
-              blur 28px;
-              offset { x 0px; y 16px; }
-            }
-          }
-          composite translucent { opacity 92%; z-index 10; }
-        }
-      }
-    }
-  }
+fn card_style() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(720px, 380px, fit_fill()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+      )
+    ),
+    visual_surface(
+      percent_constant(92%), compositing(10, blend_normal()),
+      card_present(36px, shadow_present(28px, 38%, vector(0.0, 16.0), #000000ff))
+    ),
+    [], color_pipeline_none()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("background"), item_enabled(), during(0s, 4s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.2), vector(1.0, 0.8),
+      [gradient_stop(0%, #0b132bff), gradient_stop(100%, #1c2541ff)]
+    ))), source_timing_native()
+  ));
+  let panel = item(
+    identifier("panel"), item_enabled(), during(0s, 4s),
+    source_generated(vector_shape(
+      geometry_rectangle(rect(0.0, 0.0, 1.0, 1.0)),
+      paint_present(paint_solid(#f7f7f2ff)),
+      stroke_present(paint_solid(#5bc0beff), 14px)
+    )), source_timing_native()
+  ).with_visual(card_style());
+  let card = visual_layer(
+    identifier("card"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(panel);
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 4s),
+    source_text(
+      "卡片表面：圆角、柔和投影、半透明度与描边",
+      showcase.caption_style(font, 38px, 700px)
+    ), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "卡片与投影",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(base).with_layer(card).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("card-overlay"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

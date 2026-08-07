@@ -1,48 +1,57 @@
-# Sources
+# Source
 
-`source` is a closed sum type. A source variant owns only configuration meaningful to that variant.
+Item source 是闭合 Domain value。每个 variant 只拥有与自身有意义的 operand；不存在
+`source { type = "..." }` property bag。
 
-Media and nested sequence:
+## Media 与 Nested Sequence
 
-```veac
-source media resource camera-a;
-source sequence sequence intro;
+```veac,fragment
+item(key, item_enabled(), during(0s, 4s),
+  source_media(footage), source_timing_native())
+
+item(key, item_enabled(), during(0s, 2s),
+  source_nested_sequence(intro), source_timing_native())
 ```
 
-Generated sources:
+Media source 引用已创建并由 Project 持有的 Resource handle。Nested source 引用 Sequence handle；
+freeze/lowering 会检查 owner、cycle、depth 与 source-time mapping。
 
-```veac
-source generated transparent;
-source generated silence;
-source generated solid { color #112233ff; }
-source generated gradient linear {
-  from 0% 0%; to 100% 100%;
-  stop 0% #112233ff;
-  stop 50% #6677aaff;
-  stop 100% #ffeeccff;
-}
-source generated shape {
-  geometry rounded-rectangle { bounds 0% 0% 100% 100%; radius 16px; }
-  fill solid #ffffffff;
-  stroke 2px solid #000000ff;
-}
+## Generated Source
+
+```veac,fragment
+source_generated(generator_transparent())
+source_generated(generator_silence())
+source_generated(generator_solid(#112233ff))
+source_generated(generator_gradient(gradient_linear(
+  vector(0.0, 0.0), vector(1.0, 1.0),
+  [gradient_stop(0%, #112233ff), gradient_stop(100%, #ffeeccff)]
+)))
+source_generated(vector_shape(
+  geometry_rectangle(rect(0.0, 0.0, 1.0, 1.0)),
+  paint_present(paint_solid(#ffffffff)), stroke_none()
+))
 ```
 
-Multicam is a project entity plus an item-local switch program:
+Generated graphics、shape、gradient 和 silence 都是 typed source，不需要伪造素材文件。
 
-```veac
-multicam interview {
-  sync audio { reference angle host; }
-  angle host { source resource host-video; source-offset 0s; }
-  angle guest { source resource guest-video; source-offset 120ms; }
-}
+## Multicam
 
-source multicam multicam interview {
-  switch angle host { at 0s; duration 4s; }
-  switch angle guest { at 4s; duration 3s; }
-}
+```veac,fragment
+let host_angle = multicam_angle(identifier("host"), host, 0s);
+let guest_angle = multicam_angle(identifier("guest"), guest, 120ms);
+let interview = multicam_group(
+  identifier("interview"), multicam_sync(multicam_sync_audio(), host_angle),
+  [host_angle, guest_angle]
+);
+source_multicam(interview, [
+  multicam_switch(host_angle, during(0s, 4s)),
+  multicam_switch(guest_angle, during(4s, 3s))
+])
 ```
 
-Switches must form a contiguous clip-local partition from zero through the complete item duration. Angles require video resources, and sync references must belong to the group.
+Switch 必须从零开始连续覆盖完整 clip-local duration；angle 必须属于同一 group，resource kind、sync
+reference 与 offset 都在 freeze 前验证。
 
-Text and caption are structured sources rather than quoted declaration tails. Their shared style and layout primitives are described in [Text, captions, and audio](text-caption-audio.md).
+Text 与 caption 使用 `source_text` / `source_caption` 并携带 typed `TextStyle`。共同的 font、layout、
+decoration 与 animation contract 见[Text、caption 与 audio](text-caption-audio.md)。完整 source family
+示例见 [`examples/`](../../examples/)。

@@ -1,0 +1,57 @@
+module {
+  fn style(shape: MaskShape, scale: Vector, rotation: angle) -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      [mask(
+        shape,
+        mask_motion(
+          vector_constant(vector(0.5, 0.5)), vector_constant(scale),
+          angle_constant(rotation)
+        ),
+        mask_edge(length_constant(8px), length_constant(0px)), false
+      )],
+      color_pipeline_none()
+    )
+  }
+
+  export fn sample(
+    key: identifier, start: time, fill: color,
+    shape: MaskShape, scale: Vector, rotation: angle
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, 1s),
+      source_generated(generator_solid(fill)), source_timing_native()
+    ).with_visual(style(shape, scale, rotation))
+  }
+
+  export fn label(font: Resource, key: identifier, start: time, value: text) -> Item {
+    item(
+      key, item_enabled(), during(start, 1s),
+      source_text(value, text_style(
+        text_metrics(
+          font_stack(font_resource_ref(font), []),
+          weight_bold(), font_style_normal(), 28px, 0px, 1.2, #ffffffff
+        ),
+        text_layout(
+          text_box_width(360px), text_wrap_none(), text_overflow_visible(),
+          text_align_center(), text_align_bottom(), writing_horizontal_tb(), orientation_mixed()
+        ),
+        text_path_none(),
+        text_decoration(
+          text_background_present(#07131dcc, 8px), text_outline_none(), shadow_none()
+        ),
+        [], text_animation_none()
+      )), source_timing_native()
+    )
+  }
+}

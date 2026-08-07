@@ -1,71 +1,62 @@
-project blend-modes {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./blends.veac" as blends;
+import "./showcase.veac" as showcase;
 
-  sequence foreground {
-    layer visual plate {
-      item color-test {
-        source generated gradient radial {
-          center 38% 42%; radius 85%;
-          stop 0% #f4c95dff; stop 48% #d1495bff; stop 100% #2866b1ff;
-        }
-        record { at 0s; duration 1s; }
-      }
-    }
-  }
-
-  sequence main {
-    layer visual base {
-      item test-background {
-        source generated gradient linear {
-          from 0% 0%; to 100% 100%;
-          stop 0% #19324aff; stop 50% #4f6575ff; stop 100% #8a5367ff;
-        }
-        record { at 0s; duration 12s; }
-      }
-    }
-    layer visual overlays {
-      item screen { source sequence sequence foreground; record { at 0s; duration 1s; } modifiers { composite mode { opacity 82%; blend screen; } } }
-      item multiply { source sequence sequence foreground; record { at 1s; duration 1s; } modifiers { composite mode { opacity 82%; blend multiply; } } }
-      item overlay { source sequence sequence foreground; record { at 2s; duration 1s; } modifiers { composite mode { opacity 82%; blend overlay; } } }
-      item darken { source sequence sequence foreground; record { at 3s; duration 1s; } modifiers { composite mode { opacity 82%; blend darken; } } }
-      item lighten { source sequence sequence foreground; record { at 4s; duration 1s; } modifiers { composite mode { opacity 82%; blend lighten; } } }
-      item color-dodge { source sequence sequence foreground; record { at 5s; duration 1s; } modifiers { composite mode { opacity 82%; blend color-dodge; } } }
-      item color-burn { source sequence sequence foreground; record { at 6s; duration 1s; } modifiers { composite mode { opacity 82%; blend color-burn; } } }
-      item hard-light { source sequence sequence foreground; record { at 7s; duration 1s; } modifiers { composite mode { opacity 82%; blend hard-light; } } }
-      item soft-light { source sequence sequence foreground; record { at 8s; duration 1s; } modifiers { composite mode { opacity 82%; blend soft-light; } } }
-      item difference { source sequence sequence foreground; record { at 9s; duration 1s; } modifiers { composite mode { opacity 82%; blend difference; } } }
-      item exclusion { source sequence sequence foreground; record { at 10s; duration 1s; } modifiers { composite mode { opacity 82%; blend exclusion; } } }
-      item normal { source sequence sequence foreground; record { at 11s; duration 1s; } modifiers { composite mode { opacity 82%; blend normal; } } }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("background"), item_enabled(), during(0s, 12s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.0), vector(1.0, 1.0), [
+        gradient_stop(0%, #19324aff), gradient_stop(50%, #4f6575ff),
+        gradient_stop(100%, #8a5367ff)
+      ]
+    ))), source_timing_native()
+  ));
+  let overlays = visual_layer(
+    identifier("overlays"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(blends.sample(identifier("screen"), 0s, blend_screen()))
+    .with_item(blends.sample(identifier("multiply"), 1s, blend_multiply()))
+    .with_item(blends.sample(identifier("overlay"), 2s, blend_overlay()))
+    .with_item(blends.sample(identifier("darken"), 3s, blend_darken()))
+    .with_item(blends.sample(identifier("lighten"), 4s, blend_lighten()))
+    .with_item(blends.sample(identifier("color-dodge"), 5s, blend_color_dodge()))
+    .with_item(blends.sample(identifier("color-burn"), 6s, blend_color_burn()))
+    .with_item(blends.sample(identifier("hard-light"), 7s, blend_hard_light()))
+    .with_item(blends.sample(identifier("soft-light"), 8s, blend_soft_light()))
+    .with_item(blends.sample(identifier("difference"), 9s, blend_difference()))
+    .with_item(blends.sample(identifier("exclusion"), 10s, blend_exclusion()))
+    .with_item(blends.sample(identifier("normal"), 11s, blend_normal()));
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(blends.label(font, identifier("screen-label"), 0s, "滤色"))
+    .with_item(blends.label(font, identifier("multiply-label"), 1s, "正片叠底"))
+    .with_item(blends.label(font, identifier("overlay-label"), 2s, "叠加"))
+    .with_item(blends.label(font, identifier("darken-label"), 3s, "变暗"))
+    .with_item(blends.label(font, identifier("lighten-label"), 4s, "变亮"))
+    .with_item(blends.label(font, identifier("dodge-label"), 5s, "颜色减淡"))
+    .with_item(blends.label(font, identifier("burn-label"), 6s, "颜色加深"))
+    .with_item(blends.label(font, identifier("hard-label"), 7s, "强光"))
+    .with_item(blends.label(font, identifier("soft-label"), 8s, "柔光"))
+    .with_item(blends.label(font, identifier("difference-label"), 9s, "差值"))
+    .with_item(blends.label(font, identifier("exclusion-label"), 10s, "排除"))
+    .with_item(blends.label(font, identifier("normal-label"), 11s, "正常参照"));
+  let timeline = sequence(
+    identifier("main"), "十二种混合模式",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(base).with_layer(overlays).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("blend-modes"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

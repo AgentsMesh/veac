@@ -8,7 +8,15 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
 }
 
 fn usage(plan: &ResolvedRenderPlan) -> RenderStructureUsage {
-    let mut total = RenderStructureUsage::default();
+    let mut total = RenderStructureUsage {
+        temporal_programs: count(plan.temporal.programs.len()),
+        temporal_bindings: count(plan.temporal.bindings.len()),
+        temporal_nodes: plan.temporal.programs.iter().fold(0_u64, |sum, program| {
+            sum.saturating_add(count(program.nodes.len()))
+        }),
+        temporal_provenance: count(plan.temporal.provenance.len()),
+        ..RenderStructureUsage::default()
+    };
     for track in plan.sequences.iter().flat_map(|value| &value.tracks) {
         total.tracks = total.tracks.saturating_add(1);
         for clip in &track.clips {
@@ -36,8 +44,8 @@ fn clip_usage(clip: &ResolvedClip) -> RenderStructureUsage {
             .saturating_add(keys(&audio.pan));
     }
     for effect in &clip.effects {
-        for parameter in effect.parameters.values() {
-            if let ParameterValue::NumberCurve { value: curve } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(curve) = effect.effect.curve(parameter) {
                 value.keyframes = value.keyframes.saturating_add(keys(curve));
             }
         }
@@ -143,6 +151,30 @@ fn report(check: &mut Check, usage: RenderStructureUsage, project_id: &str) {
             MAX_TOTAL_CAPTION_CUES,
             "PLAN_BUDGET_CAPTION_CUES",
             "render plan caption cues exceed the execution budget",
+        ),
+        (
+            usage.temporal_programs,
+            MAX_TOTAL_TEMPORAL_PROGRAMS,
+            "PLAN_BUDGET_TEMPORAL_PROGRAMS",
+            "render plan temporal programs exceed the execution budget",
+        ),
+        (
+            usage.temporal_bindings,
+            MAX_TOTAL_TEMPORAL_BINDINGS,
+            "PLAN_BUDGET_TEMPORAL_BINDINGS",
+            "render plan temporal bindings exceed the execution budget",
+        ),
+        (
+            usage.temporal_nodes,
+            MAX_TOTAL_TEMPORAL_NODES,
+            "PLAN_BUDGET_TEMPORAL_NODES",
+            "render plan temporal nodes exceed the execution budget",
+        ),
+        (
+            usage.temporal_provenance,
+            MAX_TOTAL_TEMPORAL_PROVENANCE,
+            "PLAN_BUDGET_TEMPORAL_PROVENANCE",
+            "render plan temporal provenance exceeds the execution budget",
         ),
     ];
     for (actual, limit, code, message) in limits {

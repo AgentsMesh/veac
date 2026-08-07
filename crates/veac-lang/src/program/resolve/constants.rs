@@ -3,23 +3,28 @@ use std::sync::Arc;
 
 use crate::program::dependency_budget::DependencyBudget;
 use crate::program::diagnostic::Diagnostic;
-use crate::program::expression::{self, Value};
+use crate::program::expression::{
+    self, ExecutionBudget, ExpressionContext, FunctionMap, TypeEnvironment, Value,
+};
 use crate::program::model::{ConstDecl, Scope, SurfaceFile};
 
 use super::retained;
+
+mod declaration;
+mod dependency;
+
+pub(super) use declaration::types as declaration_types;
 
 pub(super) fn resolve(
     file: &SurfaceFile,
     scope: &mut Scope,
     retained: &mut retained::Budget,
+    execution: &ExecutionBudget,
+    functions: Arc<FunctionMap>,
+    types: TypeEnvironment,
 ) -> Result<BTreeSet<String>, Diagnostic> {
     let mut declarations = BTreeMap::new();
     for declaration in &file.constants {
-        if declarations.contains_key(&declaration.name)
-            || scope.values.contains_key(&declaration.name)
-        {
-            return Err(duplicate(file, declaration));
-        }
         declarations.insert(declaration.name.clone(), declaration.clone());
     }
     let exported = declarations
@@ -28,13 +33,20 @@ pub(super) fn resolve(
         .map(|value| value.name.clone())
         .collect();
     let names = declarations.keys().cloned().collect::<Vec<_>>();
+    let context = scope
+        .expression_context()
+        .with_functions_arc(functions)
+        .with_provisional_values(types.clone());
     let mut resolver = Constants {
         file,
         declarations,
+        types,
+        context,
         values: Arc::make_mut(&mut scope.values),
         active: Vec::new(),
         budget: DependencyBudget::default(),
         retained,
+        execution,
     };
     for name in names {
         resolver.value(&name)?;
@@ -45,10 +57,13 @@ pub(super) fn resolve(
 struct Constants<'a> {
     file: &'a SurfaceFile,
     declarations: BTreeMap<String, ConstDecl>,
+    types: TypeEnvironment,
+    context: ExpressionContext,
     values: &'a mut BTreeMap<String, Arc<Value>>,
     active: Vec<String>,
     budget: DependencyBudget,
     retained: &'a mut retained::Budget,
+    execution: &'a ExecutionBudget,
 }
 
 impl Constants<'_> {
@@ -82,23 +97,33 @@ impl Constants<'_> {
     }
 
     fn evaluate(&mut self, declaration: &ConstDecl) -> Result<Value, Diagnostic> {
-        let references = expression::referenced_symbols(&declaration.expression)
+        let references = dependency::names(&declaration.expression, &self.types, &self.context)
             .map_err(|error| expression_error(self.file, declaration, error))?;
         for dependency in references {
             if self.declarations.contains_key(&dependency) {
                 self.value(&dependency)?;
             }
         }
-        let value = expression::evaluate_with(&declaration.expression, self.values)
-            .map_err(|error| expression_error(self.file, declaration, error))?;
-        if value.kind() != declaration.value_type {
+        let trusted = expression::TrustedValueLookup::new(self.values);
+        let value = expression::evaluate_lookup_with_budget(
+            &declaration.expression,
+            &trusted,
+            &self.context,
+            self.execution,
+        )
+        .map_err(|error| expression_error(self.file, declaration, error))?;
+        let expected = self
+            .types
+            .get(&declaration.name)
+            .expect("declared constant has a resolved type");
+        if *expected != value.value_type() {
             return Err(Diagnostic::new(
                 "PROGRAM_CONST_TYPE",
                 &self.file.path,
                 format!(
                     "constant `{}` expects {}, got {}",
                     declaration.name,
-                    declaration.value_type,
+                    expected,
                     value.kind()
                 ),
                 declaration.expression_span,
@@ -122,10 +147,10 @@ fn expression_error(
     declaration: &ConstDecl,
     error: expression::ExpressionError,
 ) -> Diagnostic {
-    Diagnostic::new(
+    crate::program::expression_diagnostic::runtime(
         "PROGRAM_CONST_EXPRESSION",
         &file.path,
-        error.to_string(),
         declaration.expression_span,
+        error,
     )
 }

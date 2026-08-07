@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use crate::test_support::{negotiated, output_for, requests};
@@ -10,6 +8,8 @@ mod context;
 pub(super) use context::*;
 #[path = "support/annotation.rs"]
 mod annotation;
+#[path = "support/executable.rs"]
+mod executable;
 pub(super) use annotation::*;
 #[path = "support/application.rs"]
 mod application;
@@ -23,7 +23,7 @@ pub(super) use visual_support::*;
 
 pub(crate) fn project() -> ProjectEnvelope {
     let sequence_id = SequenceId::new("seq_main").unwrap();
-    ProjectEnvelope::new(Project {
+    executable::project_envelope(Project {
         id: ProjectId::new("prj_provider").unwrap(),
         revision: 7,
         timebase: 100,
@@ -49,10 +49,10 @@ pub(crate) fn project() -> ProjectEnvelope {
                 video_track(),
             ],
             applies: Vec::new(),
-            metadata: BTreeMap::new(),
+            authorship: None,
         }],
         applied_operations: Vec::new(),
-        metadata: BTreeMap::new(),
+        authorship: None,
     })
 }
 
@@ -125,6 +125,7 @@ fn caption_clip() -> Clip {
         ClipSource::Caption {
             text: "existing".into(),
             speaker: None,
+            cue: Box::default(),
             style: TextStyle::default(),
         },
     )
@@ -142,7 +143,7 @@ fn clip(id: &str, record_range: TimeRange, source: ClipSource) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

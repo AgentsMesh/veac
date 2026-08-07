@@ -17,14 +17,18 @@ mod tests;
 pub(crate) fn run(
     project: &Path,
     config: Option<&str>,
-    bindings: Option<&Path>,
+    input_resolution: crate::planning::InputResolution<'_>,
     destination: Option<&Path>,
     proxy_policy: SubstitutionPolicy,
     segment_policy: SubstitutionPolicy,
     environment: &dyn Environment,
 ) -> CliResult {
-    let mut prepared =
-        crate::planning::prepare_with_bindings(project, config, bindings, environment)?;
+    let mut prepared = crate::planning::prepare_with_input_resolution(
+        project,
+        config,
+        input_resolution,
+        environment,
+    )?;
     let outputs = crate::output::bind_render_outputs(&mut prepared, destination)?;
     let project_directory = prepared.project_file.parent().unwrap_or(Path::new("."));
     let store = ArtifactStore::new(project_directory.join(".veac-artifacts"));

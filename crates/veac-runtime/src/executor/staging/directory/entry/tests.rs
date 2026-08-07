@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use rustix::fs::fstat;
+use rustix::fs::{fstat, AtFlags};
 
 use super::*;
 use crate::executor::staging::directory::Directory;
@@ -55,4 +55,25 @@ fn opened_identity_rejects_multiply_linked_files() {
 
     let error = opened_identity(&File::open(path).unwrap()).unwrap_err();
     assert!(error.message.contains("exclusively linked regular file"));
+}
+
+#[test]
+fn directory_identity_keeps_directory_specific_operations() {
+    let directory = EntryIdentity::Directory {
+        device: 1,
+        inode: 2,
+    };
+    let regular = EntryIdentity::Regular {
+        device: 1,
+        inode: 3,
+        size_bytes: 4,
+    };
+
+    assert_eq!(directory.size_bytes(), None);
+    assert_eq!(directory.remove_flags(), AtFlags::REMOVEDIR);
+    assert!(directory.same_kind(directory));
+    assert!(!directory.same_kind(regular));
+    let state = EntryState::from_identity(directory);
+    assert!(matches!(state, EntryState::Directory(value) if value == directory));
+    assert!(state.matches(directory));
 }

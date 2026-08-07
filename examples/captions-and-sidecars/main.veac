@@ -1,84 +1,79 @@
-project captions-and-sidecars {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual background {
-      item canvas {
-        source generated solid { color #111827ff; }
-        record { at 0s; duration 6s; }
-      }
-    }
-    layer caption subtitles {
-      item opening {
-        source caption {
-          content "字幕是时间线中的类型化源。";
-          speaker "旁白";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 48px; fill #ffffffff;
-            background { color #000000aa; padding 12px; }
-          }
-        }
-        record { at 0s; duration 3s; }
-        modifiers {
-          layout opening-placement {
-            placement anchor { at bottom; inset { x 0px; y 48px; } }
-          }
-        }
-      }
-      item closing {
-        source caption {
-          content "伴随文件从类型化字幕图层中选择内容。";
-          speaker "旁白";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 48px; fill #ffffffff;
-          }
-        }
-        record { at 3s; duration 3s; }
-        modifiers {
-          layout closing-placement {
-            placement anchor { at bottom; inset { x 0px; y 48px; } }
-          }
-        }
-      }
-    }
-  }
+fn caption_visual() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_bottom(), vector(0.0, 48.0)), frame_none(),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 1.0), crop_none())
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions burn-in; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-    artifact caption-sidecar transcript {
-      target file "captions.vtt";
-      source caption-tracks { track subtitles; }
-      encode web-vtt;
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let style = showcase.caption_style(font, 30px, 580px);
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("plate"), #134e4aff, 0s, 6s));
+  let captions = caption_layer(
+    identifier("captions"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(item(
+      identifier("speaker"), item_enabled(), during(0s, 2s),
+      source_caption_speaker("字幕既能烧录，也能独立交付", "讲述者", style),
+      source_timing_native()
+    ).with_visual(caption_visual()))
+    .with_item(item(
+      identifier("timing"), item_enabled(), during(2s, 2s),
+      source_caption("每条字幕都有明确的半开时间范围", style),
+      source_timing_native()
+    ).with_visual(caption_visual()))
+    .with_item(item(
+      identifier("sidecar"), item_enabled(), during(4s, 2s),
+      source_caption("同一字幕轨输出 WebVTT 边车文件", style),
+      source_timing_native()
+    ).with_visual(caption_visual()));
+  let timeline = sequence(
+    identifier("main"), "字幕与边车",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(captions);
+  let picture = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(20), gop_auto(), b_frames_auto(),
+    video_profile_present(profile_h264_high()), video_level_auto()
+  );
+  let video = deliverable_video(
+    identifier("preview"), delivery_file("preview.mp4"),
+    video_delivery(
+      container_mp4(), picture, embedded_audio_none(),
+      true, pass_single(), hardware_software()
+    )
+  );
+  let sidecar = deliverable_caption_sidecar(
+    identifier("captions"), delivery_file("captions.vtt"),
+    caption_webvtt(), [captions]
+  );
+  let output = delivery(
+    identifier("preview"), timeline,
+    raster_settings(
+      canvas(640px, 360px), frame_rate(30, 1), caption_burn_in()
+    ),
+    [video, sidecar]
+  );
+  project(identifier("captions-and-sidecars"), project_settings(600))
+    .with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

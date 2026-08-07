@@ -1,6 +1,16 @@
 mod evaluate;
+mod sampling;
 
+pub(super) use sampling::samples;
 use veac_plan::canonical::{Animatable, Color, Rational, RationalTime, TextAnimation};
+
+pub(super) struct SamplingSpec<'a> {
+    pub(super) plan: &'a veac_plan::ResolvedRenderPlan,
+    pub(super) clip: &'a veac_plan::ResolvedClip,
+    pub(super) duration: RationalTime,
+    pub(super) frame_rate: Rational,
+    pub(super) surface: (u32, u32),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct UnitSample {
@@ -16,50 +26,6 @@ pub(super) struct Sample {
     pub start: f64,
     pub end: f64,
     pub units: Vec<UnitSample>,
-}
-
-pub(super) fn samples(
-    animation: Option<&TextAnimation>,
-    duration: RationalTime,
-    frame_rate: Rational,
-    units: usize,
-    surface: (u32, u32),
-    frames: usize,
-) -> Vec<Sample> {
-    let seconds = time(duration);
-    let Some(animation) = animation else {
-        return vec![constant(seconds, units, None, surface)];
-    };
-    if all_constant(animation) {
-        return vec![constant(seconds, units, Some(animation), surface)];
-    }
-    let fps = frame_rate.numerator as f64 / f64::from(frame_rate.denominator);
-    let stagger = time(animation.stagger);
-    let samples = (0..frames)
-        .map(|frame| {
-            let start = frame as f64 / fps;
-            let end = ((frame + 1) as f64 / fps).min(seconds);
-            let visible = visible_units(evaluate::number(&animation.reveal, start), units);
-            let values = (0..units)
-                .map(|unit| {
-                    unit_sample(
-                        animation,
-                        start - unit as f64 * stagger,
-                        unit < visible,
-                        unit,
-                        units,
-                        surface,
-                    )
-                })
-                .collect();
-            Sample {
-                start,
-                end,
-                units: values,
-            }
-        })
-        .collect();
-    coalesce(samples)
 }
 
 pub(super) fn sample_count(
@@ -88,60 +54,7 @@ pub(super) fn has_transform(animation: Option<&TextAnimation>) -> bool {
     })
 }
 
-fn constant(
-    duration: f64,
-    units: usize,
-    animation: Option<&TextAnimation>,
-    surface: (u32, u32),
-) -> Sample {
-    let visible = animation.map_or(units, |value| {
-        visible_units(evaluate::number(&value.reveal, 0.0), units)
-    });
-    let values = (0..units)
-        .map(|unit| match animation {
-            Some(value) => unit_sample(value, 0.0, unit < visible, unit, units, surface),
-            None => identity(),
-        })
-        .collect();
-    Sample {
-        start: 0.0,
-        end: duration,
-        units: values,
-    }
-}
-
-fn unit_sample(
-    animation: &TextAnimation,
-    seconds: f64,
-    visible: bool,
-    unit: usize,
-    units: usize,
-    surface: (u32, u32),
-) -> UnitSample {
-    UnitSample {
-        opacity: if visible {
-            evaluate::number(&animation.opacity, seconds)
-        } else {
-            0.0
-        },
-        fill_override: highlight_fill(animation, seconds, unit, units),
-        offset: evaluate::point(&animation.transform.position_offset, seconds, surface),
-        scale: evaluate::vec2(&animation.transform.scale, seconds),
-        rotation_degrees: evaluate::number(&animation.transform.rotation_degrees, seconds),
-    }
-}
-
-fn identity() -> UnitSample {
-    UnitSample {
-        opacity: 1.0,
-        fill_override: None,
-        offset: (0.0, 0.0),
-        scale: (1.0, 1.0),
-        rotation_degrees: 0.0,
-    }
-}
-
-fn all_constant(value: &TextAnimation) -> bool {
+pub(super) fn all_constant(value: &TextAnimation) -> bool {
     evaluate::constant(&value.reveal)
         && value
             .highlight
@@ -153,39 +66,6 @@ fn all_constant(value: &TextAnimation) -> bool {
         && evaluate::constant(&value.transform.rotation_degrees)
 }
 
-fn highlight_fill(
-    animation: &TextAnimation,
-    seconds: f64,
-    unit: usize,
-    units: usize,
-) -> Option<Color> {
-    let highlight = animation.highlight.as_ref()?;
-    let progress = evaluate::number(&highlight.progress, seconds).clamp(0.0, 1.0);
-    let unit_end = (unit + 1) as f64 / units.max(1) as f64;
-    (unit_end <= progress).then_some(highlight.fill)
-}
-
-fn coalesce(samples: Vec<Sample>) -> Vec<Sample> {
-    let mut merged: Vec<Sample> = Vec::with_capacity(samples.len());
-    for sample in samples {
-        if let Some(previous) = merged
-            .last_mut()
-            .filter(|value| value.units == sample.units)
-        {
-            previous.end = sample.end;
-        } else {
-            merged.push(sample);
-        }
-    }
-    merged
-}
-
-fn visible_units(reveal: f64, units: usize) -> usize {
-    ((reveal.clamp(0.0, 1.0) * units as f64) + 1e-9)
-        .floor()
-        .min(units as f64) as usize
-}
-
-fn time(value: RationalTime) -> f64 {
+pub(super) fn time(value: RationalTime) -> f64 {
     value.value as f64 / f64::from(value.timescale)
 }

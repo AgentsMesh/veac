@@ -4,40 +4,33 @@ use veac_ir::StreamChoice;
 use super::support::*;
 
 #[test]
-fn centered_cross_dissolve_preserves_video_audio_and_duration() {
+fn centered_cross_dissolve_uses_full_video_and_audio_overlap() {
     let temp = tempdir().unwrap();
-    let tone_440 = tone_fixture(temp.path(), "transition440", 440);
-    let tone_880 = tone_fixture(temp.path(), "transition880", 880);
+    let red_source = color_tone_fixture(temp.path(), "transition-red", "red", 440);
+    let blue_source = color_tone_fixture(temp.path(), "transition-blue", "blue", 880);
     let mut canonical = project(true);
     canonical.project.materials.extend([
         material(
-            "med_transition440",
-            MaterialKind::Audio,
-            StreamChoice::Disabled,
+            "med_red",
+            MaterialKind::Video,
+            StreamChoice::Auto,
             StreamChoice::Auto,
         ),
         material(
-            "med_transition880",
-            MaterialKind::Audio,
-            StreamChoice::Disabled,
+            "med_blue",
+            MaterialKind::Video,
+            StreamChoice::Auto,
             StreamChoice::Auto,
         ),
     ]);
-    let red = solid_clip("itm_red", color(255, 0, 0), 0, 1_000);
-    let blue = solid_clip("itm_blue", color(0, 0, 255), 1_000, 1_000);
-    let mut first_tone = media_clip("itm_audio440", "med_transition440", 0, 1_000);
-    first_tone.audio = Some(audio_properties(0.7));
-    let mut second_tone = media_clip("itm_audio880", "med_transition880", 1_000, 1_000);
-    second_tone.audio = Some(audio_properties(0.7));
-    canonical.project.sequences[0].tracks.extend([
-        track("trk_transition_video", TrackKind::Video, 0, vec![red, blue]),
-        track(
-            "trk_transition_audio",
-            TrackKind::Audio,
-            1,
-            vec![first_tone, second_tone],
-        ),
-    ]);
+    let red = av_clip("itm_red", "med_red", 0);
+    let blue = av_clip("itm_blue", "med_blue", 750);
+    canonical.project.sequences[0].tracks.push(track(
+        "trk_transition_video",
+        TrackKind::Video,
+        0,
+        vec![red, blue],
+    ));
     add_transition(
         &mut canonical,
         "seq_main",
@@ -45,16 +38,9 @@ fn centered_cross_dissolve_preserves_video_audio_and_duration() {
         "itm_blue",
         cross_dissolve(),
     );
-    add_transition(
-        &mut canonical,
-        "seq_main",
-        "itm_audio440",
-        "itm_audio880",
-        cross_dissolve(),
-    );
     let assets = BTreeMap::from([
-        ("med_transition440".to_owned(), tone_440),
-        ("med_transition880".to_owned(), tone_880),
+        ("med_red".to_owned(), red_source),
+        ("med_blue".to_owned(), blue_source),
     ]);
     let output = temp.path().join("transition.mp4");
     let rendered = render(canonical, &assets, &output);
@@ -68,12 +54,12 @@ fn centered_cross_dissolve_preserves_video_audio_and_duration() {
         .iter()
         .flat_map(|track| &track.transitions)
         .collect();
-    assert_eq!(transitions.len(), 2);
+    assert_eq!(transitions.len(), 1);
     assert!(transitions.iter().all(|transition| {
         transition.record_window.start == time(750)
             && transition.record_window.duration == time(500)
-            && transition.outgoing_handle.duration == time(250)
-            && transition.incoming_handle.duration == time(250)
+            && transition.outgoing_range == range(750, 500)
+            && transition.incoming_range == range(0, 500)
     }));
     assert_media_contract(&output, 1, 2.0);
     assert_red(rgb_at(&output, 0.5, WIDTH / 2, HEIGHT / 2));
@@ -81,58 +67,25 @@ fn centered_cross_dissolve_preserves_video_audio_and_duration() {
     assert!(middle[0] > 70 && middle[2] > 70, "middle={middle:?}");
     assert_blue(rgb_at(&output, 1.5, WIDTH / 2, HEIGHT / 2));
 
-    let before = audio_samples(&output, 0.5, 0.2);
+    let before = audio_samples(&output, 0.5, 0.15);
     let boundary = audio_samples(&output, 0.94, 0.12);
-    let after = audio_samples(&output, 1.4, 0.2);
+    let after = audio_samples(&output, 1.45, 0.15);
     assert_tone(&before, 440.0, 880.0);
     assert_tone(&after, 880.0, 440.0);
-    assert!(rms_db(&boundary) < rms_db(&before) - 4.0);
-    let peak = boundary.iter().copied().map(f64::abs).fold(0.0, f64::max);
-    let max_step = boundary
-        .windows(2)
-        .map(|pair| (pair[1] - pair[0]).abs())
-        .fold(0.0, f64::max);
+    let low = tone_power(&boundary, 440.0);
+    let high = tone_power(&boundary, 880.0);
+    assert!(low > 0.002 && high > 0.002, "low={low}, high={high}");
     assert!(
-        peak < 0.2 && max_step < 0.09,
-        "peak={peak}, step={max_step}"
+        (0.4..=2.5).contains(&(low / high)),
+        "low={low}, high={high}"
     );
 }
 
-#[test]
-fn edge_aligned_transitions_sample_real_endpoint_frames() {
-    let temp = tempdir().unwrap();
-    for (alignment, middle_time, name) in [
-        (TransitionAlignment::BeforeCut, 0.75, "before"),
-        (TransitionAlignment::AfterCut, 1.25, "after"),
-    ] {
-        let mut canonical = project(false);
-        let red = solid_clip("itm_edge_red", color(255, 0, 0), 0, 1_000);
-        let transition = Transition {
-            kind: TransitionKind::Dissolve,
-            duration: time(500),
-            alignment,
-        };
-        let blue = solid_clip("itm_edge_blue", color(0, 0, 255), 1_000, 1_000);
-        canonical.project.sequences[0].tracks.push(track(
-            "trk_edge_transition",
-            TrackKind::Video,
-            0,
-            vec![red, blue],
-        ));
-        add_transition(
-            &mut canonical,
-            "seq_main",
-            "itm_edge_red",
-            "itm_edge_blue",
-            transition,
-        );
-        let output = temp.path().join(format!("transition-{name}.mp4"));
-        render(canonical, &BTreeMap::new(), &output);
-        assert_red(rgb_at(&output, 0.25, WIDTH / 2, HEIGHT / 2));
-        let middle = rgb_at(&output, middle_time, WIDTH / 2, HEIGHT / 2);
-        assert!(middle[0] > 55 && middle[2] > 55, "{name}={middle:?}");
-        assert_blue(rgb_at(&output, 1.75, WIDTH / 2, HEIGHT / 2));
-    }
+fn av_clip(id: &str, material: &str, start: i64) -> Clip {
+    let mut clip = media_clip(id, material, start, 1_250);
+    clip.visual = Some(full_visual());
+    clip.audio = Some(audio_properties(0.7));
+    clip
 }
 
 fn cross_dissolve() -> Transition {
@@ -141,6 +94,10 @@ fn cross_dissolve() -> Transition {
         duration: time(500),
         alignment: TransitionAlignment::Centered,
     }
+}
+
+fn range(start: i64, duration: i64) -> TimeRange {
+    TimeRange::new(time(start), time(duration)).unwrap()
 }
 
 fn assert_tone(samples: &[f64], expected: f64, absent: f64) {

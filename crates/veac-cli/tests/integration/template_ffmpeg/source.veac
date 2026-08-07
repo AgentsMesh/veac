@@ -1,0 +1,109 @@
+fn state() -> TrackState {
+  track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  )
+}
+
+fn fill_style() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(64px, 36px, fit_fill()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(
+          vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none()
+        )
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
+
+fn video_slot(
+  key: identifier, source: Resource, start: time, fill: FillMode, label: text
+) -> Item {
+  item(
+    key, item_enabled(), during(start, 1s),
+    source_media(source), source_timing_mapped(source_mapping(
+      source_time_linear(0s, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    ))
+  ).with_visual(fill_style()).with_template(template_contract(
+    slot_video(), fill, label, source_duration_any(), template_text_locked()
+  ))
+}
+
+fn image_slot(key: identifier, source: Resource, start: time) -> Item {
+  item(
+    key, item_enabled(), during(start, 1s),
+    source_media(source), source_timing_native()
+  ).with_visual(fill_style()).with_template(template_contract(
+    slot_image(), fill_fit_duration(), "静态图片",
+    source_duration_any(), template_text_locked()
+  ))
+}
+
+fn main(context: Context) -> Project {
+  let fit = video_resource(
+    identifier("fit"), resource_file("placeholder-fit.mp4"),
+    sha256("1111111111111111111111111111111111111111111111111111111111111111"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let head = video_resource(
+    identifier("head"), resource_file("placeholder-head.mp4"),
+    sha256("2222222222222222222222222222222222222222222222222222222222222222"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let center = video_resource(
+    identifier("center"), resource_file("placeholder-center.mp4"),
+    sha256("3333333333333333333333333333333333333333333333333333333333333333"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let crop = video_resource(
+    identifier("crop"), resource_file("placeholder-crop.mp4"),
+    sha256("4444444444444444444444444444444444444444444444444444444444444444"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let still = image_resource(
+    identifier("still"), resource_file("placeholder-still.png"),
+    sha256("5555555555555555555555555555555555555555555555555555555555555555")
+  );
+  let picture = video_layer(
+    identifier("picture"), 0, placement_free(), state(), track_routing_default()
+  )
+    .with_item(video_slot(identifier("fit"), fit, 0s, fill_fit_duration(), "完整适配"))
+    .with_item(video_slot(identifier("head"), head, 1s, fill_take_head(), "截取开头"))
+    .with_item(video_slot(identifier("center"), center, 2s, fill_take_center(), "截取中间"))
+    .with_item(video_slot(identifier("crop"), crop, 3s, fill_take_head(), "纵向裁切"))
+    .with_item(image_slot(identifier("still"), still, 4s));
+  let timeline = sequence(
+    identifier("main"), "模板渲染端到端测试",
+    sequence_settings(canvas(64px, 36px), frame_rate(10, 1), 48000)
+  ).with_layer(picture);
+  let video_spec = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(23), gop_auto(), b_frames_auto(), video_profile_auto(), video_level_auto()
+  );
+  let artifact = deliverable_video(
+    identifier("main"), delivery_file("template-render.mp4"),
+    video_delivery(
+      container_mp4(), video_spec, embedded_audio_none(),
+      true, pass_single(), hardware_software()
+    )
+  );
+  let delivery_spec = delivery(
+    identifier("main"), timeline,
+    raster_settings(canvas(64px, 36px), frame_rate(10, 1), caption_discard()),
+    [artifact]
+  );
+  project(identifier("template-render-e2e"), project_settings(600))
+    .with_resource(fit).with_resource(head).with_resource(center)
+    .with_resource(crop).with_resource(still)
+    .with_sequence(timeline).entry(timeline).with_delivery(delivery_spec)
+}

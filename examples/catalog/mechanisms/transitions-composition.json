@@ -38,6 +38,13 @@
     {"id":"matte.luma","title":"亮度轨道遮罩","family":"轨道遮罩","coverage":"preview_required","preview_target":"masks-and-mattes","capability_id":"P1-14"},
     {"id":"matte.invert","title":"反向轨道遮罩","family":"轨道遮罩","coverage":"preview_required","preview_target":"masks-and-mattes","capability_id":"P1-14"},
     {"id":"transform.shear","title":"二维倾斜变换","family":"视觉变换","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-09"},
-    {"id":"transform.pivot","title":"变换枢轴点","family":"视觉变换","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-09"}
+    {"id":"transform.pivot","title":"变换枢轴点","family":"视觉变换","coverage":"preview_required","preview_target":"transforms-and-animation","capability_id":"P1-09"},
+    {"id":"program.transform.identity","title":"可执行恒等变换值","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.transform.translate","title":"可执行像素平移组合","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.transform.scale","title":"可执行二维缩放组合","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.transform.rotate","title":"可执行角度旋转组合","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.transform.anchor","title":"可执行归一化锚点替换","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.transform.flip","title":"可执行轴向翻转切换","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"program.item.with-transform","title":"条目绑定完整变换值","family":"可执行视觉变换","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"}
   ]
 }

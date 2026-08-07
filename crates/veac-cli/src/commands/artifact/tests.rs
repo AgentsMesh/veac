@@ -1,5 +1,8 @@
 use super::*;
-use veac_artifact::{ArtifactDescriptor, ArtifactKind, ContentDigest, ProducerFingerprint};
+use veac_artifact::{
+    ArtifactDescriptor, ArtifactParameters, ContentDigest, ProducerFingerprint,
+    ProviderResultParameters,
+};
 
 #[test]
 fn expired_inspect_is_typed_and_writes_no_output() {
@@ -185,13 +188,12 @@ fn stored(path: &Path) -> ContentDigest {
 
 fn descriptor() -> ArtifactDescriptor {
     ArtifactDescriptor::new(
-        ArtifactKind::Analysis,
         ProducerFingerprint {
             name: "fixture".into(),
             version: "1".into(),
             configuration: ContentDigest::sha256(b"configuration"),
         },
         vec![],
-        serde_json::json!({}),
+        ArtifactParameters::Speech(ProviderResultParameters::new("fixture").unwrap()),
     )
 }

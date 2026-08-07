@@ -4,15 +4,14 @@ use crate::{unit_tests::support::*, *};
 fn export_reports_nonstandard_sequence_track_and_clip_semantics() {
     let mut project = project();
     let sequence = &mut project.project.sequences[0];
-    sequence
-        .metadata
-        .insert("owner".to_owned(), "editor".into());
+    sequence.authorship = Some(veac_ir::SequenceAuthorship::Otio {
+        document_sha256: veac_ir::Sha256Digest::new("a".repeat(64)),
+    });
     let track = &mut sequence.tracks[0];
     track.state.muted = true;
     track.routing = veac_ir::TrackRouting::AudioBus {
         bus_id: veac_ir::BusId::new("bus_mix").unwrap(),
     };
-    track.clips[0].metadata.insert("take".to_owned(), 2.into());
     track.clips[0]
         .source_mapping
         .as_mut()
@@ -35,7 +34,7 @@ fn export_reports_nonstandard_sequence_track_and_clip_semantics() {
         .collect::<Vec<_>>();
     for field in [
         "settings",
-        "metadata",
+        "authorship",
         "kind",
         "state",
         "routing",

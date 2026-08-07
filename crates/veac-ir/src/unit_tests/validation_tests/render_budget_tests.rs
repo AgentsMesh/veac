@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use super::*;
 
 #[path = "render_budget_tests/hls.rs"]
@@ -136,14 +134,15 @@ fn deliverable(id: &str, file_name: &str, kind: DeliverableKind) -> Deliverable 
 fn structural_usage_counts_effect_curves_source_segments_and_text_animation() {
     let mut project = sample_project();
     let video = &mut project.project.sequences[0].tracks[0].clips[0];
-    video.effects[0].parameters = BTreeMap::from([(
-        "brightness".to_owned(),
-        ParameterValue::NumberCurve {
-            value: Animatable::Keyframes {
+    video.effects[0]
+        .effect
+        .set_parameter(
+            EffectParameter::Brightness,
+            EffectParameterValue::Curve(Animatable::Keyframes {
                 keyframes: vec![number_key("kf_budget_effect", 0)],
-            },
-        },
-    )]);
+            }),
+        )
+        .unwrap();
     video.source_mapping.as_mut().unwrap().time_map = SourceTimeMap::Curve {
         segments: vec![SourceTimeSegment {
             record_duration: video.record_range.duration,

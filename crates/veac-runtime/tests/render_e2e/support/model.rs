@@ -40,7 +40,7 @@ pub(crate) fn sequence(id: &str, tracks: Vec<Track>) -> Sequence {
         },
         tracks,
         applies: Vec::new(),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -128,7 +128,7 @@ fn clip(id: &str, start_ms: i64, duration_ms: i64, source: ClipSource) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

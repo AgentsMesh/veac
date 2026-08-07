@@ -34,7 +34,8 @@ assert_waveform_structure() {
 waveform_plan_spec() {
   jq -er '
     .output as $output |
-    first($output.deliverables[] | select(.id == "dlv_video-waveform")) as $scope |
+    first($output.deliverables[] | select(.kind.type == "scope" and
+      .target.name == "video-waveform.png")) as $scope |
     $output.raster.frame_rate as $rate | $scope.kind.settings.at as $at |
     (($at.value * $rate.numerator / ($at.timescale * $rate.denominator)) | floor) as $frame |
     if $scope.kind.settings.width <= 0 or $scope.kind.settings.height <= 0 or
@@ -64,15 +65,17 @@ assert_waveform_provenance() {
 }
 
 check_delivery_waveform() {
-  local dir=$1 canonical="$1/project/project.veac.json" plan
+  local dir=$1 canonical="$1/project/project.veac.json" plan config
   local waveform="$1/rendered/video-waveform.png"
-  plan=$(example_preview_plan "$dir" out_master)
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
-    first($config.deliverables[] | select(.id == "dlv_video-waveform")) as $scope |
+  plan=$(delivery_plan_path "$dir" master)
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
+    first($config.deliverables[] | select(.kind.type == "scope" and
+      .target.name == "video-waveform.png")) as $scope |
     $scope.target == {"type":"file","name":"video-waveform.png"} and
     $scope.kind.type == "scope" and $scope.kind.settings.scope == "waveform" and
-    $scope.kind.settings.at == {"timescale":1000,"value":1000} and
+    $scope.kind.settings.at.value == $scope.kind.settings.at.timescale and
     $scope.kind.settings.format == "png" and $scope.kind.settings.width > 0 and
     $scope.kind.settings.height > 0
   ' "$canonical" >/dev/null || fail "delivery video waveform canonical contract failed"

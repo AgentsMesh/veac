@@ -1,4 +1,3 @@
-use serde_json::json;
 use veac_artifact::*;
 use veac_ir::{Rational, RationalTime, StreamSelection};
 use veac_runtime::workflow::{MediaWorkflow, WorkflowErrorKind};
@@ -12,23 +11,14 @@ fn analysis_source_identity_parameter_changes_and_corruption_fail_closed() {
     let store_root = temp.path().join("store");
     let store = ArtifactStore::new(&store_root);
     let workflow = MediaWorkflow::new("ffmpeg");
-    let analysis = request(
-        &input,
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: "scenes".into(),
-            configuration: json!({"threshold": 0.5}),
-        }),
-    );
-    let first = workflow
-        .store_analysis(&store, &input, &analysis, &json!({"cuts": [0.4]}))
-        .unwrap();
-    assert_eq!(
-        store.get(&first.record.key).unwrap().unwrap().payload,
-        br#"{"cuts":[0.4]}"#
-    );
+    let analysis = analysis(&input);
+    let first = workflow.ingest_analysis(&store, &input, &analysis).unwrap();
+    let payload = store.get(&first.record.key).unwrap().unwrap().payload;
+    let decoded: AnalysisResultEnvelope = serde_json::from_slice(&payload).unwrap();
+    assert_eq!(decoded, analysis.result);
     assert!(
         workflow
-            .store_analysis(&store, &input, &analysis, &json!({"cuts": [0.4]}))
+            .ingest_analysis(&store, &input, &analysis)
             .unwrap()
             .cache_hit
     );
@@ -37,7 +27,7 @@ fn analysis_source_identity_parameter_changes_and_corruption_fail_closed() {
     wrong_source.source_identity = ContentDigest::sha256(b"wrong");
     assert_eq!(
         workflow
-            .store_analysis(&store, &input, &wrong_source, &json!({}))
+            .ingest_analysis(&store, &input, &wrong_source)
             .unwrap_err()
             .kind,
         WorkflowErrorKind::SourceIdentityMismatch
@@ -50,11 +40,34 @@ fn analysis_source_identity_parameter_changes_and_corruption_fail_closed() {
     .unwrap();
     assert_eq!(
         workflow
-            .store_analysis(&store, &input, &analysis, &json!({}))
+            .ingest_analysis(&store, &input, &analysis)
             .unwrap_err()
             .kind,
         WorkflowErrorKind::Artifact
     );
+}
+
+fn analysis(input: &std::path::Path) -> AnalysisIngestionRequest {
+    AnalysisIngestionRequest {
+        source_identity: ContentDigest::sha256(std::fs::read(input).unwrap()),
+        producer: ProducerFingerprint {
+            name: "scene-provider".into(),
+            version: "1".into(),
+            configuration: ContentDigest::sha256(b"scene-provider-configuration"),
+        },
+        result: AnalysisResultEnvelope::new(
+            AnalysisDescriptor::SceneBoundaries(SceneBoundaryAnalysisDescriptor {
+                sensitivity_millionths: 500_000,
+            }),
+            AnalysisResult::SceneBoundaries(SceneBoundaryAnalysisResult {
+                boundaries: vec![SceneBoundary {
+                    at: RationalTime::new(4, 10).unwrap(),
+                    confidence_millionths: 900_000,
+                }],
+            }),
+        )
+        .unwrap(),
+    }
 }
 
 #[test]

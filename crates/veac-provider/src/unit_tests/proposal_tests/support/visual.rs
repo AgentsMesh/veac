@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use crate::*;
@@ -54,16 +52,15 @@ pub(crate) fn retouch_context(result: &RetouchResult) -> ApplicationContext {
             active_range: None,
             effect: EffectInstance {
                 id: EffectId::new("fx_provider_retouch").unwrap(),
-                effect_type: "video.blur".into(),
                 enabled: true,
                 enable_range: None,
-                parameters: BTreeMap::new(),
+                effect: Effect::neutral(EffectKind::VideoBlur),
             },
         }],
         controls: vec![RetouchControlApplication {
             control: result.controls[0].parameter.clone(),
             effect_id: EffectId::new("fx_provider_retouch").unwrap(),
-            effect_parameter: "radius".into(),
+            effect_parameter: EffectParameter::Radius,
             keyframe_id_prefix: "kf_provider_retouch_smoothing".into(),
         }],
         before_apply_id: None,

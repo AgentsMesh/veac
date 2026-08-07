@@ -147,12 +147,12 @@ fn build_track(
                 .transitions
                 .iter()
                 .find(|transition| transition.incoming_clip_id == clip.id)
-                .map(|transition| transition.incoming_handle.duration),
+                .map(|transition| transition.incoming_range.duration),
             fade_out: track
                 .transitions
                 .iter()
                 .find(|transition| transition.outgoing_clip_id == clip.id)
-                .map(|transition| transition.outgoing_handle.duration),
+                .map(|transition| transition.outgoing_range.duration),
         };
         let sidechain = match clip
             .audio

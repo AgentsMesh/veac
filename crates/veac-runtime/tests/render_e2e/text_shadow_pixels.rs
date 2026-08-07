@@ -21,7 +21,7 @@ fn semi_transparent_text_background_is_linear_between_alpha_endpoints() {
         if u8::abs_diff(*clear, *solid) < 60 {
             continue;
         }
-        let expected = (u16::from(*clear) + u16::from(*solid) + 1) / 2;
+        let expected = (u16::from(*clear) + u16::from(*solid)).div_ceil(2);
         error += usize::from(u16::abs_diff(u16::from(*half), expected));
         samples += 1;
     }

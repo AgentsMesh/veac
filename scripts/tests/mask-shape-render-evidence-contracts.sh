@@ -38,8 +38,10 @@ PREVIEW_ROOT=$VALID check_mask_shape_gallery_evidence
 
 video_variant heart_is_rectangle wrong-heart 'mask heart rendered topology is wrong'
 video_variant star_is_circle wrong-star 'mask star rendered topology is wrong'
+video_variant star_is_flower wrong-star-flower 'mask star rendered topology is wrong'
 video_variant linear_is_full_frame wrong-linear 'mask linear rendered half-plane is wrong'
 video_variant mirror_is_one_sided wrong-mirror 'mask mirror rendered center band is wrong'
+video_variant label_only_pixels label-only 'mask heart rendered topology is wrong'
 json_variant wrong_author_window project/project.veac.json \
   '(.. | objects | select(.id? == "itm_star") | .record_range.start.value) = 900' \
   'authoring mask contract failed'
@@ -48,6 +50,17 @@ json_variant wrong_preview_shape project/project.preview.veac.json \
   'preview mask contract failed'
 json_variant wrong_plan_rotation plans/preview/out_preview.json \
   '(.. | objects | select(.id? == "itm_mirror") | .visual.masks[0].rotation_degrees.value) = 12' \
+  'plan mask contract failed'
+json_variant absolute_author_placement project/project.veac.json \
+  '(.. | objects | select(.id? == "itm_heart") | .visual.placement) =
+    {"type":"absolute","position":{"x":{"unit":"pixels","value":0},"y":{"unit":"pixels","value":0}}}' \
+  'authoring mask contract failed'
+json_variant off_center_preview_anchor project/project.preview.veac.json \
+  '(.. | objects | select(.id? == "itm_star") | .visual.transform.anchor) = {"x":0,"y":0}' \
+  'preview mask contract failed'
+json_variant framed_plan_shape plans/preview/out_preview.json \
+  '(.. | objects | select(.id? == "itm_linear") | .visual.frame) =
+    {"width":{"unit":"pixels","value":100},"height":{"unit":"pixels","value":100},"fit":"contain"}' \
   'plan mask contract failed'
 
 echo 'mask-shape render evidence contract tests passed'

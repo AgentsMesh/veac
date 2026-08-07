@@ -1,4 +1,3 @@
-use serde_json::json;
 use veac_ir::{Rational, RationalTime, StreamSelection, TimeRange};
 
 use super::request;
@@ -68,10 +67,6 @@ fn every_media_spec_rejects_its_remaining_boundary_failures() {
             width: 10,
             height: 10,
             color: String::new(),
-        }),
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: String::new(),
-            configuration: json!({}),
         }),
         MediaArtifactSpec::SourceSegment(SourceSegmentSpec {
             video_stream: stream(),

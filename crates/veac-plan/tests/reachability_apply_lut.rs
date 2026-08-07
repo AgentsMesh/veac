@@ -1,6 +1,6 @@
 mod support;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use support::*;
 use veac_plan::canonical::*;
@@ -102,7 +102,7 @@ fn lut(id: &str, hydrated: bool) -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

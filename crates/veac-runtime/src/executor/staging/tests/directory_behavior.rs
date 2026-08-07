@@ -35,6 +35,28 @@ fn descriptor_directory_round_trips_bounded_regular_files() {
 }
 
 #[test]
+fn package_hashing_rejects_directory_and_byte_budget_mismatches() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = Directory::open(temp.path()).unwrap();
+    let regular = root.write_all_sync("payload", b"content").unwrap();
+    let error = root
+        .hash_regular("payload", regular, 6, deadline())
+        .unwrap_err();
+    assert_eq!(error.kind, crate::RuntimeErrorKind::ResourceLimit);
+
+    let child = root.create_child("tree").unwrap();
+    let EntryState::Directory(directory) = root.state("tree").unwrap() else {
+        panic!("directory identity")
+    };
+    let error = root
+        .hash_regular("tree", directory, 64, deadline())
+        .unwrap_err();
+    assert!(error.message.contains("regular file"));
+    assert!(root.remove_if_regular("tree").is_err());
+    drop(child);
+}
+
+#[test]
 fn rename_and_listing_stay_bound_to_descriptor_identities() {
     let temp = tempfile::tempdir().unwrap();
     let root = Directory::open(temp.path()).unwrap();
@@ -102,6 +124,7 @@ fn descriptor_operations_reject_links_and_replaced_identities() {
         .unwrap_err()
         .message
         .contains("regular file"));
+    assert!(root.remove_if_regular("symbolic").is_err());
     std::fs::hard_link(temp.path().join("original"), temp.path().join("hard")).unwrap();
     assert!(root
         .state("hard")

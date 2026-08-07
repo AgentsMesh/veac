@@ -16,6 +16,12 @@ fn schema_and_plan_emit_parseable_contracts_without_local_paths() {
 
     let temp = tempdir().unwrap();
     let project = compile_ir(&temp, GENERATED_SOURCE);
+    let expected = veac_ir::decode_canonical_json(&std::fs::read_to_string(&project).unwrap())
+        .unwrap()
+        .project
+        .render_configs[0]
+        .id
+        .to_string();
     let plan = veac()
         .args(["plan", project.to_str().unwrap(), "--format", "json"])
         .output()
@@ -30,7 +36,7 @@ fn schema_and_plan_emit_parseable_contracts_without_local_paths() {
         plan["header"]["schema_version"],
         veac_plan::CURRENT_RENDER_PLAN_VERSION
     );
-    assert_eq!(plan["output"]["render_config_id"], "out_main");
+    assert_eq!(plan["output"]["render_config_id"], expected);
     assert!(!plan
         .to_string()
         .contains(&temp.path().display().to_string()));
@@ -49,6 +55,7 @@ fn multiple_outputs_require_a_typed_config_selection() {
         name: "second.mp4".into(),
     };
     envelope.project.render_configs.push(second);
+    envelope.project.authorship = None;
     std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
 
     veac()

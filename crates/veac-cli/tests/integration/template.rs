@@ -4,28 +4,7 @@ use serde_json::json;
 
 use super::support::*;
 
-const SOURCE: &str = r#"
-project template-cli-e2e {
-  settings {
-    timebase 1/1000; canvas 1280px by 720px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video unused {
-    locator local { path "clip.mp4"; }
-    streams { video auto; audio disabled; }
-  }
-  sequence main {
-    layer visual titles {
-      item title {
-        source text { content "Before"; }
-        record { at 0s; duration 1s; }
-        template-slot text;
-      }
-    }
-  }
-}
-"#;
+const SOURCE: &str = include_str!("../fixtures/text-template.veac");
 
 #[test]
 fn template_propose_emits_only_an_applicable_edit_batch() {

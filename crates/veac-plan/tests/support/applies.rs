@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 
-use super::range;
+use super::{effect_instance, range};
 
 pub fn apply(id: &str, target: ApplyTarget) -> Apply {
     let suffix = id.strip_prefix("apl_").unwrap_or(id);
@@ -16,16 +14,13 @@ pub fn apply(id: &str, target: ApplyTarget) -> Apply {
             enabled: true,
             active_range: Some(range(30, 120)),
             operation: ApplyOperation::Effect {
-                effect: EffectInstance {
-                    id: EffectId::new(format!("fx_{suffix}")).unwrap(),
-                    effect_type: "video.blur".to_owned(),
-                    enabled: true,
-                    enable_range: None,
-                    parameters: BTreeMap::from([(
-                        "radius".to_owned(),
-                        ParameterValue::Number { value: 8.0 },
-                    )]),
-                },
+                effect: effect_instance(
+                    format!("fx_{suffix}"),
+                    true,
+                    Effect::VideoBlur {
+                        radius: Animatable::constant(8.0),
+                    },
+                ),
             },
         }],
         mix: ApplyMix::default(),

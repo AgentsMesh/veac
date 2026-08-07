@@ -1,7 +1,8 @@
 use serde_json::{json, Value};
 use veac_artifact::{
-    artifact_key, ArtifactDependency, ArtifactDescriptor, ArtifactKind, ContentDigest,
-    ProducerFingerprint,
+    artifact_key, ArtifactDependency, ArtifactDependencyRole, ArtifactDescriptor,
+    ArtifactParameters, ContentDigest, ProducerFingerprint, RenderCheckpointParameters,
+    RenderOutputParameters, RenderTaskParameters,
 };
 use veac_codegen::emitter::{
     BackendAction, BackendCommand, BackendOutput, BackendPreparation, BackendProduct, BackendTask,
@@ -11,6 +12,7 @@ use crate::executor::{output, process, FfmpegFingerprint};
 use crate::RuntimeError;
 
 mod filter;
+mod typed;
 
 pub(in crate::executor) struct TaskIdentity {
     pub descriptor: ArtifactDescriptor,
@@ -25,31 +27,32 @@ pub(super) fn task(
     predecessor: Option<&ContentDigest>,
 ) -> Result<TaskIdentity, RuntimeError> {
     let producer = producer(value, ffmpeg)?;
-    let mut dependencies = vec![ArtifactDependency {
-        role: "plan".to_owned(),
-        identity: plan.clone(),
-    }];
+    let mut dependencies = vec![ArtifactDependency::new(
+        ArtifactDependencyRole::Plan,
+        plan.clone(),
+    )];
     if let Some(identity) = predecessor {
-        dependencies.push(ArtifactDependency {
-            role: "previous_pass".to_owned(),
-            identity: identity.clone(),
-        });
+        dependencies.push(ArtifactDependency::new(
+            ArtifactDependencyRole::PreviousPass,
+            identity.clone(),
+        ));
     }
-    dependencies.push(ArtifactDependency {
-        role: "resources".to_owned(),
-        identity: resources.clone(),
-    });
+    dependencies.push(ArtifactDependency::new(
+        ArtifactDependencyRole::Resources,
+        resources.clone(),
+    ));
     let descriptor = ArtifactDescriptor::new(
-        ArtifactKind::RenderCheckpoint,
         producer,
         dependencies,
-        json!({
-            "contract_version": 2,
-            "deliverable_id": value.deliverable_id.as_str(),
-            "phase": value.phase.as_str(),
-            "product": value.product.as_str(),
-            "task_digest": digest(task_value(value)?)?.value,
-        }),
+        ArtifactParameters::RenderCheckpoint(RenderCheckpointParameters::Task(
+            RenderTaskParameters {
+                contract_version: 2,
+                deliverable_id: value.deliverable_id.clone(),
+                phase: typed::phase(value.phase),
+                product: typed::product(value.product),
+                task_digest: digest(task_value(value)?)?,
+            },
+        )),
     );
     let key = artifact_key(&descriptor).map_err(artifact_error)?;
     Ok(TaskIdentity { descriptor, key })
@@ -61,14 +64,14 @@ pub(super) fn output(
     path: &str,
     index: usize,
 ) -> ArtifactDescriptor {
+    let value = RenderOutputParameters::new(index, path);
     ArtifactDescriptor::new(
-        kind(product),
         task.descriptor.producer.clone(),
-        vec![ArtifactDependency {
-            role: "task".to_owned(),
-            identity: task.key.clone(),
-        }],
-        json!({"index": index, "path": path}),
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Task,
+            task.key.clone(),
+        )],
+        typed::output(product, value),
     )
 }
 
@@ -81,16 +84,12 @@ fn producer(
             let value = ffmpeg.ok_or_else(|| {
                 RuntimeError::new("FFmpeg task is missing its producer fingerprint")
             })?;
-            Ok(ProducerFingerprint {
-                name: "ffmpeg".to_owned(),
-                version: value.version.clone(),
-                configuration: value.configuration.clone(),
-            })
+            crate::workflow::media_artifact_producer(value)
         }
         BackendAction::WriteFile { .. } => Ok(ProducerFingerprint {
             name: "veac-runtime".to_owned(),
             version: env!("CARGO_PKG_VERSION").to_owned(),
-            configuration: ContentDigest::sha256(b"write-file-checkpoint-v1"),
+            configuration: crate::artifact_backend_identity(),
         }),
     }
 }
@@ -153,23 +152,6 @@ fn digest(value: Value) -> Result<ContentDigest, RuntimeError> {
     serde_json_canonicalizer::to_vec(&value)
         .map(ContentDigest::sha256)
         .map_err(|error| RuntimeError::new(format!("cannot hash backend task: {error}")))
-}
-
-fn kind(product: BackendProduct) -> ArtifactKind {
-    match product {
-        BackendProduct::VideoMaster => ArtifactKind::VideoMaster,
-        BackendProduct::RenderPassLog => ArtifactKind::RenderCheckpoint,
-        BackendProduct::ImageSequence => ArtifactKind::ImageSequenceFrame,
-        BackendProduct::CaptionSidecar => ArtifactKind::CaptionSidecar,
-        BackendProduct::AudioStem => ArtifactKind::AudioStem,
-        BackendProduct::AudioFile => ArtifactKind::AudioFile,
-        BackendProduct::AnimatedImage => ArtifactKind::AnimatedImage,
-        BackendProduct::StillImage => ArtifactKind::StillImage,
-        BackendProduct::HlsVod => ArtifactKind::AdaptivePackage,
-        BackendProduct::VideoWaveform => ArtifactKind::VideoWaveform,
-        BackendProduct::Vectorscope => ArtifactKind::Vectorscope,
-        BackendProduct::Histogram => ArtifactKind::Histogram,
-    }
 }
 
 fn artifact_error(error: veac_artifact::ArtifactError) -> RuntimeError {

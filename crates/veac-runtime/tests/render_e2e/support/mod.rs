@@ -9,6 +9,7 @@ mod grid_motion;
 mod inspect;
 mod layout_fixture;
 mod media;
+mod media_av;
 mod model;
 mod pipeline;
 mod raw_video;
@@ -25,6 +26,7 @@ pub(crate) use grid_motion::*;
 pub(crate) use inspect::*;
 pub(crate) use layout_fixture::*;
 pub(crate) use media::*;
+pub(crate) use media_av::*;
 pub(crate) use model::*;
 pub(crate) use pipeline::*;
 #[allow(unused_imports)]

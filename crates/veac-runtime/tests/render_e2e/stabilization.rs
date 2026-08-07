@@ -68,11 +68,7 @@ fn stabilization_project() -> ProjectEnvelope {
     after.visual = Some(full_visual());
     after.effects.push(video_effect(
         "fx_stabilize_e2e",
-        "video.stabilize",
-        BTreeMap::from([(
-            "enabled".to_owned(),
-            ParameterValue::Boolean { value: true },
-        )]),
+        Effect::VideoStabilize { enabled: true },
     ));
     canonical.project.sequences[0].tracks.push(track(
         "trk_stabilize",

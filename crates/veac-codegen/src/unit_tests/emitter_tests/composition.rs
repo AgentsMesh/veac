@@ -55,7 +55,7 @@ fn every_mask_shape_and_inversion_emits_alpha_math() {
         "hypot((",
         "abs((",
         "pow(pow",
-        "cos(5*(atan2",
+        "0.05-0.5",
         "mod(",
         "max(2*(1)",
     ] {

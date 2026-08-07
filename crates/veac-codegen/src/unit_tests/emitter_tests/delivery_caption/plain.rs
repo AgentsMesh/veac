@@ -66,7 +66,10 @@ fn plain_sidecars_normalize_cr_and_reject_unsafe_or_inexact_cues() {
 }
 
 fn first(plan: &mut ResolvedRenderPlan) -> (&mut veac_plan::ResolvedText, &mut Option<String>) {
-    let ResolvedClipSource::Caption { content, speaker } = &mut caption_clip(plan).source else {
+    let ResolvedClipSource::Caption {
+        content, speaker, ..
+    } = &mut caption_clip(plan).source
+    else {
         unreachable!()
     };
     (content, speaker)

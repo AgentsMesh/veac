@@ -34,3 +34,7 @@ impl SourceLoader for MemoryLoader {
             })
     }
 }
+
+#[cfg(test)]
+#[path = "memory/tests.rs"]
+mod tests;

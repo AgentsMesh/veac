@@ -1,19 +1,18 @@
 use super::*;
 
 #[test]
-fn effect_curve_set_noop_and_remove_report_curve_ownership() {
+fn effect_curve_set_noop_and_replace_report_curve_ownership() {
     let mut project = sample_project();
     let effect = &mut project.project.sequences[0].tracks[0].clips[0].effects[0];
-    effect.parameters.insert(
-        "brightness".to_owned(),
-        ParameterValue::NumberCurve {
-            value: curve("kf_effect_old", 0.1, 0.2),
-        },
-    );
+    effect
+        .effect
+        .set_parameter(
+            EffectParameter::Brightness,
+            EffectParameterValue::Curve(curve("kf_effect_old", 0.1, 0.2)),
+        )
+        .unwrap();
     validate(&project).unwrap();
-    let replacement = ParameterValue::NumberCurve {
-        value: curve("kf_effect_new", 0.3, 0.4),
-    };
+    let replacement = curve("kf_effect_new", 0.3, 0.4);
     let set = parameter_set(replacement.clone());
     let (updated, changed) = applied_with_changes(apply_edit_batch(
         &project,
@@ -38,16 +37,10 @@ fn effect_curve_set_noop_and_remove_report_curve_ownership() {
         &batch("op_effect_curve_noop", &updated, vec![set]),
     );
     assert!(matches!(noop, EditOutcome::NoChange { .. }));
-    let remove = EditOperation::EditEffectParameter {
-        edit: EffectParameterEdit::Remove {
-            clip_id: ItemId::new("itm_video").unwrap(),
-            effect_id: EffectId::new("fx_color").unwrap(),
-            name: "brightness".to_owned(),
-        },
-    };
+    let replace = parameter_set(Animatable::constant(0.0));
     let (_, removed) = applied_with_changes(apply_edit_batch(
         &updated,
-        &batch("op_effect_curve_remove", &updated, vec![remove]),
+        &batch("op_effect_curve_replace", &updated, vec![replace]),
     ));
     for id in ["kf_effect_new_a", "kf_effect_new_b"] {
         assert!(removed.contains(&ChangedObjectId::Keyframe {
@@ -95,8 +88,8 @@ fn mask_property_marks_all_curves_and_missing_components_fail_precisely() {
             edit: EffectParameterEdit::Set {
                 clip_id: ItemId::new("itm_video").unwrap(),
                 effect_id: EffectId::new("fx_missing").unwrap(),
-                name: "brightness".to_owned(),
-                value: ParameterValue::Number { value: 0.3 },
+                parameter: EffectParameter::Brightness,
+                value: EffectParameterValue::Curve(Animatable::constant(0.3)),
             },
         },
         EditOperation::SetTextProperty {
@@ -117,13 +110,13 @@ fn mask_property_marks_all_curves_and_missing_components_fail_precisely() {
     }
 }
 
-fn parameter_set(value: ParameterValue) -> EditOperation {
+fn parameter_set(value: Animatable<f64>) -> EditOperation {
     EditOperation::EditEffectParameter {
         edit: EffectParameterEdit::Set {
             clip_id: ItemId::new("itm_video").unwrap(),
             effect_id: EffectId::new("fx_color").unwrap(),
-            name: "brightness".to_owned(),
-            value,
+            parameter: EffectParameter::Brightness,
+            value: EffectParameterValue::Curve(value),
         },
     }
 }

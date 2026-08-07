@@ -78,7 +78,9 @@ impl SegmentFixture {
         let source = GENERATED_SOURCE.replace("200ms", "1s");
         let project = canonical_project(&temp, &source);
         let environment = FakeEnvironment::success();
-        let prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+        let prepared =
+            crate::planning::prepare_with_material_root(&project, None, None, &environment)
+                .unwrap();
         let contract = super::substitution_command_tests::segment_contract(&prepared, &environment);
         let payload = temp.path().join("segment.mp4");
         std::fs::write(&payload, b"rendered").unwrap();

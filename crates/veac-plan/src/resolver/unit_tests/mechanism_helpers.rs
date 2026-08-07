@@ -40,6 +40,7 @@ pub(super) fn text_clip(caption: bool) -> Clip {
         ClipSource::Caption {
             text: "caption".into(),
             speaker: None,
+            cue: Box::default(),
             style,
         }
     } else {

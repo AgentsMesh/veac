@@ -125,3 +125,7 @@ fn unsafe_path(label: &Path, error: rustix::io::Errno) -> String {
         label.display()
     )
 }
+
+#[cfg(test)]
+#[path = "filesystem/tests.rs"]
+mod tests;

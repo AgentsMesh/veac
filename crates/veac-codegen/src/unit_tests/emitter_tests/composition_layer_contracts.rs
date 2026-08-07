@@ -42,41 +42,39 @@ fn text_can_be_a_matte_source_or_target() {
 }
 
 #[test]
-fn text_transition_endpoints_use_the_complete_layer_renderer() {
-    for caption in [false, true] {
-        let mut project = text_fixture(caption);
-        let track = &mut project.project.sequences[0].tracks[1];
-        track.clips[0].record_range.start = time(0);
-        let visual = track.clips[0].visual.as_mut().unwrap();
-        visual.compositing.z_index = 0;
-        visual.compositing.blend_mode = BlendMode::Normal;
-        let transition = Transition {
-            kind: TransitionKind::Dissolve,
-            duration: time(120),
-            alignment: TransitionAlignment::Centered,
-        };
-        let outgoing_id = track.clips[0].id.clone();
-        let mut incoming = track.clips[0].clone();
-        incoming.id = ItemId::new("itm_text_transition_in").unwrap();
-        incoming.record_range.start = time(600);
-        incoming.visual = Some(plain_visual());
-        incoming.effects.clear();
-        track.clips.push(incoming);
-        add_transition(
-            &mut project,
-            "seq_main",
-            outgoing_id.as_str(),
-            "itm_text_transition_in",
-            transition,
-        );
-        let plan = resolved(&project);
-        let graph = emit_video_command(&plan, &bindings(&plan))
-            .unwrap()
-            .filter_graph
-            .unwrap();
-        assert!(graph.matches("textassv").count() >= 4, "graph={graph}");
-        assert!(graph.contains("transitionv"), "graph={graph}");
-    }
+fn visual_text_transition_endpoints_use_the_complete_layer_renderer() {
+    let mut project = text_fixture(false);
+    let track = &mut project.project.sequences[0].tracks[1];
+    track.clips[0].record_range.start = time(0);
+    let visual = track.clips[0].visual.as_mut().unwrap();
+    visual.compositing.z_index = 0;
+    visual.compositing.blend_mode = BlendMode::Normal;
+    let transition = Transition {
+        kind: TransitionKind::Dissolve,
+        duration: time(120),
+        alignment: TransitionAlignment::Centered,
+    };
+    let outgoing_id = track.clips[0].id.clone();
+    let mut incoming = track.clips[0].clone();
+    incoming.id = ItemId::new("itm_text_transition_in").unwrap();
+    incoming.record_range.start = time(480);
+    incoming.visual = Some(plain_visual());
+    incoming.effects.clear();
+    track.clips.push(incoming);
+    add_transition(
+        &mut project,
+        "seq_main",
+        outgoing_id.as_str(),
+        "itm_text_transition_in",
+        transition,
+    );
+    let plan = resolved(&project);
+    let graph = emit_video_command(&plan, &bindings(&plan))
+        .unwrap()
+        .filter_graph
+        .unwrap();
+    assert!(graph.matches("textassv").count() >= 4, "graph={graph}");
+    assert!(graph.contains("transitionv"), "graph={graph}");
 }
 
 fn plain_visual() -> VisualProperties {

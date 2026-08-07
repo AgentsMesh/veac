@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::authoring::Span;
@@ -6,26 +5,9 @@ use crate::authoring::Span;
 use super::super::diagnostic::Diagnostic;
 use super::super::model::Scope;
 use super::retained;
+use crate::program::MethodRegistryBuilder;
 
-pub(super) fn insert<K: Ord, V>(
-    path: &str,
-    kind: &str,
-    display_name: &str,
-    target: &mut BTreeMap<K, V>,
-    key: K,
-    value: V,
-    span: Span,
-) -> Result<(), Diagnostic> {
-    if target.insert(key, value).is_some() {
-        return Err(Diagnostic::new(
-            "PROGRAM_DUPLICATE_SYMBOL",
-            path,
-            format!("{kind} `{display_name}` is declared more than once"),
-            span,
-        ));
-    }
-    Ok(())
-}
+mod type_names;
 
 pub(super) fn namespace(
     path: &str,
@@ -35,6 +17,16 @@ pub(super) fn namespace(
     span: Span,
     retained: &mut retained::Budget,
 ) -> Result<(), Diagnostic> {
+    type_names::namespace(path, alias, imported, target, span, retained)?;
+    let mut methods = MethodRegistryBuilder::new();
+    methods
+        .merge(&target.methods, &target.types)
+        .and_then(|_| methods.merge(&imported.methods, &target.types))
+        .map_err(|error| Diagnostic::new(error.code(), path, error.message(), span))?;
+    target.methods = Arc::new(methods.finish());
+    let functions = Arc::make_mut(&mut target.functions);
+    functions.register_namespace(alias);
+    functions.merge_registry_from(&imported.functions);
     for (name, value) in imported.values.iter() {
         let qualified = format!("{alias}.{name}");
         ensure_available(
@@ -47,38 +39,17 @@ pub(super) fn namespace(
         retained.alias(path, &qualified, span)?;
         Arc::make_mut(&mut target.values).insert(qualified, Arc::clone(value));
     }
-    for ((name, kind), value) in imported.presets.iter() {
-        let qualified = format!("{alias}.{name}");
-        let key = (qualified.clone(), *kind);
-        ensure_available(
-            path,
-            "imported preset",
-            &qualified,
-            target.presets.contains_key(&key),
-            span,
-        )?;
-        retained.alias(path, &qualified, span)?;
-        Arc::make_mut(&mut target.presets).insert(key, Arc::clone(value));
-    }
-    for (name, key) in &imported.components {
+    for (name, _) in imported.functions.iter() {
         let qualified = format!("{alias}.{name}");
         ensure_available(
             path,
-            "imported component",
+            "imported function",
             &qualified,
-            target.components.contains_key(&qualified),
+            target.functions.lookup(&qualified).is_some(),
             span,
         )?;
         retained.alias(path, &qualified, span)?;
-        insert(
-            path,
-            "imported component",
-            &qualified,
-            &mut target.components,
-            qualified.clone(),
-            key.clone(),
-            span,
-        )?;
+        Arc::make_mut(&mut target.functions).bind_from(qualified, &imported.functions, name);
     }
     Ok(())
 }

@@ -8,10 +8,16 @@ pub(crate) fn run(
     project: &Path,
     config: Option<&str>,
     bindings: Option<&Path>,
+    material_root: Option<&Path>,
     format: PlanFormat,
     environment: &dyn Environment,
 ) -> CliResult {
-    let prepared = crate::planning::prepare_with_bindings(project, config, bindings, environment)?;
+    let prepared = crate::planning::prepare_with_input_resolution(
+        project,
+        config,
+        crate::planning::InputResolution::new(material_root, bindings),
+        environment,
+    )?;
     let rendered = match format {
         PlanFormat::Json => veac_plan::canonical_plan_json(&prepared.plan),
     };

@@ -3,7 +3,7 @@ use crate::*;
 use super::Validator;
 
 impl Validator {
-    pub(super) fn animatable<T: SpringSample>(
+    pub(super) fn animatable<T: CurveSample>(
         &mut self,
         value: &Animatable<T>,
         duration: RationalTime,
@@ -13,6 +13,7 @@ impl Validator {
         valid_value: impl Fn(&T) -> bool,
     ) {
         match value {
+            Animatable::Binding { .. } => {}
             Animatable::Constant { value } => {
                 if !valid_value(value) {
                     self.value_error("ANIMATION_VALUE", path, item_id);
@@ -27,7 +28,7 @@ impl Validator {
                 }
                 self.keyframe_order(keyframes, duration, path, item_id);
                 for pair in keyframes.windows(2) {
-                    let Some(amounts) = pair[0].interpolation.spring_extrema() else {
+                    let Some(amounts) = pair[0].interpolation.intermediate_extrema() else {
                         continue;
                     };
                     for amount in amounts {
@@ -75,9 +76,7 @@ impl Validator {
                     && x2.is_finite()
                     && y2.is_finite()
                     && (0.0..=1.0).contains(x1)
-                    && (0.0..=1.0).contains(y1)
-                    && (0.0..=1.0).contains(x2)
-                    && (0.0..=1.0).contains(y2);
+                    && (0.0..=1.0).contains(x2);
                 if !valid {
                     self.value_error("BEZIER", path, item_id);
                 }
@@ -108,17 +107,17 @@ impl Validator {
     }
 }
 
-pub(super) trait SpringSample: Sized {
+pub(super) trait CurveSample: Sized {
     fn spring_sample(&self, next: &Self, amount: f64) -> Option<Self>;
 }
 
-impl SpringSample for f64 {
+impl CurveSample for f64 {
     fn spring_sample(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(self + (next - self) * amount)
     }
 }
 
-impl SpringSample for Vec2 {
+impl CurveSample for Vec2 {
     fn spring_sample(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(Self {
             x: self.x + (next.x - self.x) * amount,
@@ -127,7 +126,7 @@ impl SpringSample for Vec2 {
     }
 }
 
-impl SpringSample for Point {
+impl CurveSample for Point {
     fn spring_sample(&self, next: &Self, amount: f64) -> Option<Self> {
         if self.x.unit != next.x.unit || self.y.unit != next.y.unit {
             return None;
@@ -145,7 +144,7 @@ impl SpringSample for Point {
     }
 }
 
-impl SpringSample for Rect {
+impl CurveSample for Rect {
     fn spring_sample(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(Self {
             x: self.x + (next.x - self.x) * amount,

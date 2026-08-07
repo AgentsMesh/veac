@@ -1,64 +1,69 @@
-project speed-demo {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video source {
-    locator local { path "assets/source.mp4"; }
-    streams { video auto; audio disabled; }
-  }
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer video speed {
-      item fast {
-        source media resource source;
-        record { at 0s; duration 2s; }
-        mapping linear { from 0s; to 4s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-      item slow {
-        source media resource source;
-        record { at 2s; duration 4s; }
-        mapping linear { from 4s; to 6s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-    }
-  }
+fn fit() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(1280px, 720px, fit_contain()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn speed_item(
+  key: identifier, start: time, duration: time,
+  source: Resource, source_start: time, rate: scalar
+) -> Item {
+  item(
+    key, item_enabled(), during(start, duration), source_media(source),
+    source_timing_mapped(source_mapping(
+      source_time_linear(source_start, rate, 1, playback_forward()),
+      frame_motion_compensated(), out_of_range_strict()
+    ))
+  ).with_visual(fit())
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let source = video_resource(
+    identifier("source"), resource_file("assets/source.mp4"),
+    sha256("9f8cf7a52504cfaf9003bf4dbc850136d3ab320dd09a45fe78a1fbc3dc789fb7"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let speed = video_layer(
+    identifier("speed"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(speed_item(identifier("fast"), 0s, 2s, source, 0s, 2.0))
+    .with_item(speed_item(identifier("slow"), 2s, 4s, source, 4s, 0.5));
+  let labels = visual_layer(
+    identifier("labels"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("fast-label"), item_enabled(), during(0s, 2s),
+    source_text("二倍速：两秒播放四秒素材", showcase.caption_style(font, 38px, 760px)),
+    source_timing_native()
+  )).with_item(item(
+    identifier("slow-label"), item_enabled(), during(2s, 4s),
+    source_text("半速：四秒播放两秒素材", showcase.caption_style(font, 38px, 760px)),
+    source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "恒速快放与慢放",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(speed).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("speed-demo"), project_settings(600))
+    .with_resource(font).with_resource(source)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

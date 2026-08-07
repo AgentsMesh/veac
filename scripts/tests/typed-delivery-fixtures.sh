@@ -41,9 +41,9 @@ make_typed_delivery_artifacts() {
 write_typed_delivery_project() {
   local file=$1
   cat >"$file" <<'JSON'
-{"project":{"sequences":[{"id":"seq_main","tracks":[{"clips":[
-{"id":"itm_burned-label","source":{"type":"caption","text":"类型化交付输出"}},
-{"id":"itm_traceable-label","source":{"type":"caption","text":"可追踪的字幕伴随文件"}}]}]}],
+{"project":{"authorship":{"entity":{"logical_path":["delivery-formats"],"events":[]},"multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":"out_master","entity":{"logical_path":["delivery-formats","master"],"events":[]}}]},"sequences":[{"id":"seq_main","tracks":[{"clips":[
+{"id":"itm_burned-label","authorship":{"logical_path":["delivery-formats","main","subtitles","burned-label"],"events":[]},"source":{"type":"caption","text":"类型化交付输出"}},
+{"id":"itm_traceable-label","authorship":{"logical_path":["delivery-formats","main","subtitles","traceable-label"],"events":[]},"source":{"type":"caption","text":"可追踪的字幕伴随文件"}}]}]}],
 "render_configs":[{"id":"out_master","sequence_id":"seq_main",
 "raster":{"width":480,"height":270,"frame_rate":{"numerator":12,"denominator":1},"captions":"burn_in"},
 "deliverables":[
@@ -54,8 +54,8 @@ write_typed_delivery_project() {
 {"id":"dlv_master-audio","target":{"type":"file","name":"master.wav"},"kind":{"type":"audio_stem","settings":{"source":{"type":"master"},"format":"wav","audio":{"codec":"pcm_s24_le","sample_rate":48000,"channels":2}}}},
 {"id":"dlv_podcast","target":{"type":"file","name":"podcast.mp3"},"kind":{"type":"audio_file","settings":{"source":{"type":"master"},"encoding":{"type":"mp3","settings":{"bitrate_bps":192000,"sample_rate_hz":48000,"channel_layout":"stereo"}}}}},
 {"id":"dlv_stream","target":{"type":"package","name":"stream"},"kind":{"type":"adaptive_package","settings":{"type":"hls","settings":{"segment_duration":{"timescale":1000,"value":1000},"audio":{"source":{"type":"master"},"encoding":{"type":"aac","settings":{"bitrate_bps":128000,"sample_rate_hz":48000,"channel_layout":"stereo"}}},"renditions":[
-{"id":"rnd_hd","raster":{"width":1280,"height":720},"encoding":{"type":"h264","settings":{"rate_control":{"target_bps":3000000,"max_bps":3210000,"buffer_size_bits":6000000},"b_frames":null,"profile":null,"level":null,"color_space":null}}},
-{"id":"rnd_mobile","raster":{"width":640,"height":360},"encoding":{"type":"h264","settings":{"rate_control":{"target_bps":1000000,"max_bps":1100000,"buffer_size_bits":2000000},"b_frames":null,"profile":null,"level":null,"color_space":null}}}]}}}},
+{"id":"rnd_hd","raster":{"width":1280,"height":720},"encoding":{"type":"h264","settings":{"rate_control":{"target_bps":3000000,"max_bps":3210000,"buffer_size_bits":6000000},"b_frames":null,"profile":"high","level":null,"color_space":null}}},
+{"id":"rnd_mobile","raster":{"width":640,"height":360},"encoding":{"type":"h264","settings":{"rate_control":{"target_bps":1000000,"max_bps":1100000,"buffer_size_bits":2000000},"b_frames":null,"profile":"main","level":null,"color_space":null}}}]}}}},
 {"id":"dlv_transcript","target":{"type":"file","name":"captions.vtt"},"kind":{"type":"caption_sidecar","settings":{"format":"web_vtt","track_ids":["trk_subtitles"]}}},
 {"id":"dlv_video-waveform","target":{"type":"file","name":"video-waveform.png"},"kind":{"type":"scope","settings":{"scope":"waveform","at":{"timescale":1000,"value":1000},"width":1280,"height":720,"format":"png"}}}
 ]}]}}

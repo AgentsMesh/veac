@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use veac_ir::{
     Animatable, AudioFadeCurve, AudioProcessorKind, Interpolation, PitchPolicy, PlaybackDirection,
     ProjectEnvelope, Rational, RelationKind, SequenceId, SourceMapping, SourceOutOfRangePolicy,
-    SourceTimeMap, TrackRouting,
+    SourceTimeMap, TemporalNodeKind, TrackRouting,
 };
 
 use crate::support::{assert_preview_evidence, clips, entry_sequence, lower_example};
@@ -72,6 +72,14 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
     {
         found.insert("audio.sidechain-ducking".to_owned());
     }
+    if envelope.temporal.programs.iter().any(|program| {
+        program
+            .nodes
+            .iter()
+            .any(|node| matches!(node.kind, TemporalNodeKind::CurveSample { .. }))
+    }) {
+        found.insert("animation.temporal-curve-sample".to_owned());
+    }
     found
 }
 
@@ -134,10 +142,12 @@ fn audio_evidence(audio: &veac_ir::AudioProperties, found: &mut BTreeSet<String>
     for processor in &audio.processors {
         let id = match processor.kind {
             AudioProcessorKind::ParametricEq { .. } => Some("audio.equalizer"),
+            AudioProcessorKind::HighPass { .. } => Some("audio.high-pass"),
+            AudioProcessorKind::LowPass { .. } => Some("audio.low-pass"),
             AudioProcessorKind::Compressor(_) => Some("audio.compressor"),
             AudioProcessorKind::Limiter(_) => Some("audio.limiter"),
             AudioProcessorKind::Gate(_) => Some("audio.noise-gate"),
-            _ => None,
+            AudioProcessorKind::Loudness(_) => Some("audio.loudness-target"),
         };
         found.extend(id.map(str::to_owned));
     }

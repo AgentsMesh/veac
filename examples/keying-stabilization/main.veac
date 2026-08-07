@@ -1,0 +1,80 @@
+import "./showcase.veac" as showcase;
+
+fn fit() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(640px, 360px, fit_fill()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let plate = image_resource(
+    identifier("plate"), resource_file("assets/effects-plate.png"),
+    sha256("4e4866394130df1cee6199fe09bba307d98ec70c13cad29b03f185a50d74e621")
+  );
+  let shaky = video_resource(
+    identifier("shaky"), resource_file("assets/shaky.mp4"),
+    sha256("405b5d61599bfc48e9c132f794d7a0b1364fc66bfc39df3c8ba7daa4f4094f14"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let chroma = item(
+    identifier("chroma"), item_enabled(), during(0s, 1s), source_media(plate), source_timing_native()
+  ).with_visual(fit()).with_effect(video_chroma_key_effect(
+    identifier("chroma-key"), effect_enabled(effect_window_full()),
+    #2dc264ff, percent_constant(18%), percent_constant(8%)
+  )).with_effect(video_chroma_spill_effect(
+    identifier("spill"), effect_enabled(effect_window_full()),
+    #2dc264ff, percent_constant(100%), percent_constant(20%)
+  ));
+  let luma = item(
+    identifier("luma"), item_enabled(), during(1s, 1s), source_media(plate), source_timing_native()
+  ).with_visual(fit()).with_effect(video_luma_key_effect(
+    identifier("luma-key"), effect_enabled(effect_window_full()),
+    percent_constant(12%), percent_constant(8%), percent_constant(8%), false
+  ));
+  let stable = item(
+    identifier("stable"), item_enabled(), during(2s, 2s), source_media(shaky), source_timing_native()
+  ).with_visual(fit()).with_effect(video_stabilize_effect(
+    identifier("stabilize"), effect_enabled(effect_window_full()), true
+  ));
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("reveal"), #d1495bff, 0s, 4s));
+  let visuals = visual_layer(
+    identifier("visuals"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(chroma).with_item(luma).with_item(stable);
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("key-label"), item_enabled(), during(0s, 2s),
+    source_text("色度键、溢色抑制与亮度键", showcase.caption_style(font, 32px, 560px)),
+    source_timing_native()
+  )).with_item(item(
+    identifier("stable-label"), item_enabled(), during(2s, 2s),
+    source_text("确定性抖动素材：防抖后", showcase.caption_style(font, 32px, 560px)),
+    source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "抠像与防抖工作流",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(visuals).with_layer(labels);
+  let output = showcase.video(timeline, canvas(640px, 360px), frame_rate(30, 1), false, false);
+  project(identifier("keying-stabilization"), project_settings(600))
+    .with_resource(font).with_resource(plate).with_resource(shaky)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
+}

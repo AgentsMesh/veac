@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 use std::fmt::Write;
 
 use veac_artifact::ExecutionBindings;
+use veac_plan::canonical::{AssCueSettings, CaptionNativeCue};
 
 use super::{failure::Failure, format::ass_timestamp, Cue};
 use crate::emitter::time;
@@ -16,11 +17,14 @@ use position::Position;
 use style::{ass_alpha, ass_rgb, Style};
 
 struct Event {
-    layer: usize,
+    kind: &'static str,
+    layer: u32,
     start: veac_plan::canonical::RationalTime,
     end: veac_plan::canonical::RationalTime,
     style: String,
     speaker: String,
+    margins: (u32, u32, u32),
+    effect: String,
     prefix: String,
     text: String,
 }
@@ -59,12 +63,24 @@ pub(super) fn render(
             .iter()
             .position(|value| value == &cue.layer_key)
             .expect("cue layer key was collected");
+        let native = ass_settings(cue);
         events.push(Event {
-            layer,
+            kind: if native.comment {
+                "Comment"
+            } else {
+                "Dialogue"
+            },
+            layer: native.layer.unwrap_or(layer as u32),
             start: cue.start,
             end: cue.end,
             style: style_name,
             speaker,
+            margins: (
+                native.margin_left.unwrap_or(0),
+                native.margin_right.unwrap_or(0),
+                native.margin_vertical.unwrap_or(0),
+            ),
+            effect: native.effect.clone().unwrap_or_default(),
             prefix: prefix(position, &style),
             text: rendered,
         });
@@ -77,18 +93,39 @@ pub(super) fn render(
     for event in events {
         let _ = writeln!(
             output,
-            "Dialogue: {},{},{},{},{},0,0,0,,{{{}}}{}",
+            "{}: {},{},{},{},{},{},{},{},{},{{{}}}{}",
+            event.kind,
             event.layer,
             ass_timestamp(event.start),
             ass_timestamp(event.end),
             event.style,
             event.speaker,
+            event.margins.0,
+            event.margins.1,
+            event.margins.2,
+            event.effect,
             event.prefix,
             event.text,
         );
     }
     Ok(output)
 }
+
+fn ass_settings<'a>(cue: &'a Cue<'a>) -> &'a AssCueSettings {
+    match &cue.semantics.native {
+        Some(CaptionNativeCue::Ass { settings }) => settings,
+        _ => &EMPTY_ASS_SETTINGS,
+    }
+}
+
+const EMPTY_ASS_SETTINGS: AssCueSettings = AssCueSettings {
+    comment: false,
+    layer: None,
+    margin_left: None,
+    margin_right: None,
+    margin_vertical: None,
+    effect: None,
+};
 
 fn register(styles: &mut Vec<(String, Style)>, value: &Style) -> String {
     if let Some((name, _)) = styles.iter().find(|(_, style)| style == value) {

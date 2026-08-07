@@ -128,7 +128,7 @@ fn changed_descriptor_and_missing_outputs_invalidate_cached_entries() {
         .unwrap()
         .is_none());
     assert_eq!(
-        identity.descriptor.kind,
+        identity.descriptor.kind(),
         veac_artifact::ArtifactKind::RenderCheckpoint
     );
     assert_eq!(task.product, BackendProduct::CaptionSidecar);
@@ -163,7 +163,11 @@ fn cached_output_path_and_descriptor_tampering_fail_closed() {
     let CheckpointOutput::File { descriptor, .. } = &mut wrong_descriptor else {
         panic!("fixture is a file checkpoint");
     };
-    descriptor.parameters = serde_json::json!({"index": 1, "path": path});
+    let veac_artifact::ArtifactParameters::CaptionSidecar(parameters) = &mut descriptor.parameters
+    else {
+        panic!("fixture is a caption descriptor");
+    };
+    parameters.index = 1;
     let payload = manifest::encode(&CheckpointManifest {
         schema_version: 2,
         outputs: vec![wrong_descriptor],

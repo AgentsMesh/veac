@@ -6,8 +6,13 @@ use super::support::{canonical_project, FakeEnvironment, GENERATED_SOURCE, MEDIA
 fn render_output_defaults_and_explicit_paths_are_bound() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     let plan_hash = veac_plan::plan_hash(&prepared.plan).unwrap();
     let default = crate::output::bind_render_outputs(&mut prepared, None).unwrap();
     let base = std::fs::canonicalize(temp.path()).unwrap();
@@ -28,8 +33,13 @@ fn outputs_cannot_alias_projects_or_materials() {
     let source = canonical_project(&temp, GENERATED_SOURCE);
     let project = temp.path().join("render.mp4");
     std::fs::rename(&source, &project).unwrap();
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     assert!(crate::output::bind_render_outputs(&mut prepared, None)
         .unwrap_err()
         .to_string()
@@ -42,8 +52,13 @@ fn outputs_cannot_alias_projects_or_materials() {
         name: "clip.mp4".to_owned(),
     };
     std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     assert!(crate::output::bind_render_outputs(&mut prepared, None)
         .unwrap_err()
         .to_string()
@@ -108,8 +123,13 @@ fn protected_input_normalization_preserves_unresolvable_paths() {
 fn render_destination_must_be_an_existing_directory() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     let error = crate::output::bind_render_outputs(
         &mut prepared,
         Some(&temp.path().join("missing-directory")),

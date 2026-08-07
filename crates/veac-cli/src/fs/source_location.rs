@@ -32,6 +32,15 @@ impl SourceLocation {
             return Err(invalid(source, "source parent is not a directory"));
         }
         let path = root.join(&module);
+        let metadata = fs::symlink_metadata(&path).map_err(|error| {
+            CliError::new(
+                "PATH_UNAVAILABLE",
+                format!("cannot inspect source {}: {error}", path.display()),
+            )
+        })?;
+        if !metadata.file_type().is_file() {
+            return Err(invalid(source, "source is not a regular file"));
+        }
         Ok(Self { root, module, path })
     }
 

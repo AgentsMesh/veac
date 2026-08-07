@@ -98,17 +98,22 @@ impl<'a> Walker<'a> {
             self.tracks.insert((id.clone(), track.id.clone()), state);
             for clip in track.clips.iter().filter(|clip| clip.enabled) {
                 let clip_has_audio = activity.audio_live(track, clip);
-                let control_windows = audio_track
-                    .then(|| demand.control_windows(&track.id, clip.record_range))
-                    .unwrap_or_default();
+                let control_windows = if audio_track {
+                    demand.control_windows(&track.id, clip.record_range)
+                } else {
+                    Vec::new()
+                };
+                let audio_control_ranges = if clip_has_audio {
+                    control_windows
+                } else {
+                    Vec::new()
+                };
                 self.clip(
                     sequence,
                     clip,
                     main_visual || burn_caption,
                     output_audio && clip_has_audio,
-                    clip_has_audio
-                        .then_some(control_windows)
-                        .unwrap_or_default(),
+                    audio_control_ranges,
                     sidecar,
                 );
             }

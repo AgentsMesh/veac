@@ -1,24 +1,29 @@
 # VEAC Semantic Kernel
 
-The semantic kernel is the closed model shared by authoring, canonical IR,
+The semantic kernel is the closed model shared by executable source, canonical IR,
 planning, and execution:
 
 ```text
-.veac source graph -> resolve/evaluate/expand -> typed Document
-  -> lowering -> canonical JSON IR -> planner -> backend artifact -> runtime
+.veac source graph -> typed HIR -> verified Core v10
+  -> graph execution/freeze + temporal residualization
+  -> canonical JSON IR -> planner -> backend artifact -> runtime
 
 SourceEditBatch + source graph -> atomic edit -> recompile
 EditBatch + canonical JSON IR  -> atomic edit -> canonical JSON IR
 ```
 
-Compile-time modules, constants, presets, and components generate kernel facts;
-they are not kernel facts and never enter canonical IR. Neither edit path
+root absolute animation 与 component owner-relative attachment 共用同一个 Temporal kernel。attachment
+在 Build graph 中只携带 typed handle、closed selector 和 Pure closure；graph freeze 后才解析 absolute
+sink，Temporal 只驱动已批准的 dynamic leaf，绝不决定 entity 数量、owner、顺序或 collection shape。
+
+Compile-time modules, constants, functions and nominal values generate kernel facts;
+declarations themselves never enter canonical IR. Neither edit path
 decompiles canonical JSON into `.veac`.
 
-## Authoring And Canonical Ownership
+## Domain And Canonical Ownership
 
 ```text
-Authoring project                 Canonical Project
+Executable Domain graph          Canonical Project
 |- settings/resources            |- settings/materials
 |- multicam groups               |- multicam_groups
 |- annotations                   |- annotations and relations
@@ -30,12 +35,11 @@ Authoring project                 Canonical Project
 `- deliveries                   `- render_configs/deliverables
 ```
 
-Layer/item are authoring names for canonical Track/Clip. Relations are authored
-inside a sequence and normalized into the project relation collection.
-Multicam, annotation, and delivery declarations are project members. A delivery
+Layer/Item are Domain names for canonical Track/Clip. Relations attach to a Sequence and normalize into
+the project relation collection. Multicam, annotation, and delivery values attach to Project. A delivery
 or multicam group is never owned by a sequence.
 
-## Closed Authoring Sources
+## Closed Sources
 
 An item owns exactly one source from this six-variant union:
 
@@ -46,9 +50,9 @@ An item owns exactly one source from this six-variant union:
 5. Nested sequence reference.
 6. Multicam group reference with item-local angle switches.
 
-Unknown tags fail parsing. Solid color is generated media, not `source color`.
-Caption sidecars are artifacts, not sources. Canonical `ClipSource` additionally
-contains `FreezeFrame`, produced only by lowering media plus `mapping freeze`.
+Unknown constructors fail resolution. Solid color is generated media, not an Item property.
+Caption sidecars are artifacts, not sources. `source_freeze_frame` constructs the closed canonical
+`FreezeFrame` variant.
 
 ## Timeline Kernel
 
@@ -59,10 +63,8 @@ Every item separates its sequence placement from its source sampling:
 - an optional mapping determines source time.
 - typed visual/audio/text properties determine presentation.
 
-Only media and sequence sources accept mappings. Authoring mappings are linear,
-freeze, or curve. Lowering maps linear to a linear time map and curve keys to
-ordered segments. Media freeze becomes `ClipSource::FreezeFrame` with no source
-mapping; sequence freeze becomes one hold segment. Curve interpolation is only
+Only media and sequence sources accept mappings. Source maps are linear or segmented curves; freeze is a
+distinct source constructor. Curve interpolation is only
 `linear` or `hold`. Linear and curve use `strict`, `hold-first`, `hold-last`, or
 `hold-both`; freeze has no outside policy.
 
@@ -74,7 +76,11 @@ key order, illegal endpoint coverage, overflow, and mismatched durations.
 Composition is explicit:
 
 - Layers establish deterministic stacking and timing.
-- Transitions consume an exact cut with typed overlap/alignment.
+- Schema-v9 transitions are centered-only true overlaps between adjacent visual items.
+- Their exact record intersection is the transition duration; both real endpoint streams
+  cover the full window, so codegen never completes an endpoint with held-frame `tpad`.
+- Disabled items still belong to canonical topology, so a disabled third item cannot cross
+  the overlap. Duration is an authored assertion; edits atomically update it with both ranges.
 - Relations express typed constraints across items.
 - Apply targets a composite band, a layer, or an exact item set.
 
@@ -108,9 +114,9 @@ text is not a language primitive.
 
 ## Media And Streams Kernel
 
-Authoring resources are closed to video, audio, image, font, LUT1D, and LUT3D.
+Resource constructors are closed to video, audio, image, font, LUT1D, and LUT3D.
 Locations are `local` paths or pinned `remote` URIs. Video and audio selection
-are independently `auto` or `disabled` and lower to canonical stream intent.
+are independently `auto`, `disabled`, or an explicit index and lower to canonical stream intent.
 Probe normalization records exact stream selections and media facts separately.
 Planning does not rerun authoring selection heuristics.
 
@@ -141,10 +147,10 @@ non-empty artifact collection. Artifacts form a closed union: video, image
 sequence, caption sidecar, audio stem, scope, audio file, animated image, still
 image, and adaptive package.
 
-Artifact bodies are typed recipes, not anonymous settings. `mux` owns container
-and stream recipes; `encode` owns codec settings; `source`, `frame`, `canvas`,
-`numbering`, `analyze`, and `package` remain separate domain primitives. Lowering
-creates one schema-v5 `RenderConfig` and one canonical `Deliverable` per artifact.
+Artifact values are typed recipes, not anonymous settings. Closed constructors separately own container,
+codec, source, frame, canvas, numbering, analysis, and package choices. Lowering
+creates one schema-v9 `RenderConfig` and one canonical `Deliverable` per artifact;
+the canonical project requires minimum reader 9.
 Canonical settings use tagged enums and reject unknown fields.
 
 ## Edit Kernel
@@ -165,6 +171,6 @@ entire batch. It never applies a valid prefix of an invalid batch.
 - Time is exact under the project timebase.
 - Unknown variants and fields fail closed.
 - Formatter output is idempotent.
-- Lowering emits only canonical schema version 5 constructs.
-- Planning consumes canonical IR, never authoring syntax.
-- Backend artifacts contain no unresolved authoring choices.
+- Lowering emits only canonical schema version 9 constructs.
+- Planning consumes canonical IR, never executable Surface syntax.
+- Backend artifacts contain no unresolved source-language choices.

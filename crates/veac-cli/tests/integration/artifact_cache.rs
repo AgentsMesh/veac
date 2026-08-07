@@ -1,7 +1,8 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use veac_artifact::{
-    ArtifactDescriptor, ArtifactKind, ArtifactStore, ContentDigest, ProducerFingerprint,
+    ArtifactDescriptor, ArtifactParameters, ArtifactStore, ContentDigest, ProducerFingerprint,
+    ProviderResultParameters,
 };
 
 #[test]
@@ -9,14 +10,13 @@ fn artifact_cli_inspects_verified_metadata_and_removes_by_key() {
     let temp = tempfile::tempdir().unwrap();
     let store = ArtifactStore::new(temp.path().join("store"));
     let descriptor = ArtifactDescriptor::new(
-        ArtifactKind::Analysis,
         ProducerFingerprint {
             name: "test-analysis".to_owned(),
             version: "1".to_owned(),
             configuration: ContentDigest::sha256(b"config"),
         },
         vec![],
-        serde_json::json!({"kind": "scene"}),
+        ArtifactParameters::Speech(ProviderResultParameters::new("speech").unwrap()),
     );
     let payload = br#"{"scenes":[]}"#;
     let record = store.put(&descriptor, payload).unwrap();

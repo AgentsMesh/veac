@@ -1,0 +1,70 @@
+fn state() -> TrackState {
+  track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  )
+}
+
+fn make_delivery(key: identifier, timeline: Sequence, target: text) -> Delivery {
+  let video_spec = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(23), gop_auto(), b_frames_auto(), video_profile_auto(), video_level_auto()
+  );
+  let artifact = deliverable_video(
+    key, delivery_file(target),
+    video_delivery(
+      container_mp4(), video_spec, embedded_audio_none(),
+      false, pass_single(), hardware_software()
+    )
+  );
+  delivery(
+    key, timeline,
+    raster_settings(canvas(32px, 24px), frame_rate(10, 1), caption_discard()),
+    [artifact]
+  )
+}
+
+fn offline_item(source: Resource) -> Item {
+  item(
+    identifier("offline"), item_enabled(), during(0s, 200ms),
+    source_media(source), source_timing_mapped(source_mapping(
+      source_time_linear(0s, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    ))
+  )
+}
+
+fn main(context: Context) -> Project {
+  let offline = video_resource(
+    identifier("offline"), resource_file("missing.mp4"),
+    sha256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let background = item(
+    identifier("background"), item_enabled(), during(0s, 200ms),
+    source_generated(generator_solid(#000000ff)), source_timing_native()
+  );
+  let chosen = visual_layer(
+    identifier("chosen"), 0, placement_free(), state(), track_routing_default()
+  ).with_item(background);
+  let suppressed = video_layer(
+    identifier("suppressed"), 1, placement_free(), state(), track_routing_default()
+  ).with_item(offline_item(offline));
+  let main_timeline = sequence(
+    identifier("main"), "主时间线",
+    sequence_settings(canvas(32px, 24px), frame_rate(10, 1), 48000)
+  ).with_layer(chosen).with_layer(suppressed);
+  let offline_layer = video_layer(
+    identifier("offline"), 0, placement_free(), state(), track_routing_default()
+  ).with_item(offline_item(offline));
+  let offline_timeline = sequence(
+    identifier("offline-sequence"), "离线时间线",
+    sequence_settings(canvas(32px, 24px), frame_rate(10, 1), 48000)
+  ).with_layer(offline_layer);
+  let main_output = make_delivery(identifier("main"), main_timeline, "main.mp4");
+  let offline_output = make_delivery(identifier("offline"), offline_timeline, "offline.mp4");
+  project(identifier("reachability"), project_settings(600))
+    .with_resource(offline)
+    .with_sequence(main_timeline).with_sequence(offline_timeline).entry(main_timeline)
+    .with_delivery(main_output).with_delivery(offline_output)
+}

@@ -28,18 +28,17 @@ impl Validator {
         uses: &BTreeMap<String, usize>,
         path: &str,
     ) {
-        if clip.template_editable_text && !matches!(clip.source, ClipSource::Text { .. }) {
-            self.value_error("TEMPLATE_EDITABLE_TEXT", path, clip.id.as_str());
-        }
         let Some(slot) = &clip.replaceable else {
+            if clip.template_editable_text {
+                self.value_error("TEMPLATE_EDITABLE_TEXT", path, clip.id.as_str());
+            }
             return;
         };
         let slot_path = format!("{path}/replaceable");
-        if !matches!(track_kind, TrackKind::Video | TrackKind::Visual) {
-            self.value_error("TEMPLATE_SLOT_TRACK", &slot_path, clip.id.as_str());
-        }
-        if clip.visual.is_none() {
-            self.value_error("TEMPLATE_SLOT_VISUAL", &slot_path, clip.id.as_str());
+        if clip.template_editable_text
+            && (slot.kind != SlotKind::Text || !matches!(clip.source, ClipSource::Text { .. }))
+        {
+            self.value_error("TEMPLATE_EDITABLE_TEXT", path, clip.id.as_str());
         }
         if slot.label.trim().is_empty() || slot.label.len() > SLOT_LABEL_MAX_BYTES {
             self.value_error("TEMPLATE_SLOT_LABEL", &slot_path, clip.id.as_str());
@@ -57,8 +56,50 @@ impl Validator {
                 clip.id.as_str(),
             );
         }
+        if slot.kind == SlotKind::Text {
+            self.text_template_slot(clip, track_kind, slot, &slot_path);
+            return;
+        }
+        self.media_template_slot(clip, track_kind, slot, uses, &slot_path);
+    }
+
+    fn text_template_slot(
+        &mut self,
+        clip: &Clip,
+        track_kind: TrackKind,
+        slot: &SlotConstraint,
+        path: &str,
+    ) {
+        if track_kind != TrackKind::Visual {
+            self.value_error("TEMPLATE_SLOT_TRACK", path, clip.id.as_str());
+        }
+        if slot.fill != FillMode::FitDuration {
+            self.value_error("TEMPLATE_SLOT_TEXT_FILL", path, clip.id.as_str());
+        }
+        if !matches!(clip.source, ClipSource::Text { .. }) {
+            self.value_error("TEMPLATE_SLOT_SOURCE", path, clip.id.as_str());
+        }
+    }
+
+    fn media_template_slot(
+        &mut self,
+        clip: &Clip,
+        track_kind: TrackKind,
+        slot: &SlotConstraint,
+        uses: &BTreeMap<String, usize>,
+        path: &str,
+    ) {
+        if clip.template_editable_text {
+            self.value_error("TEMPLATE_SLOT_TEXT_POLICY", path, clip.id.as_str());
+        }
+        if !matches!(track_kind, TrackKind::Video | TrackKind::Visual) {
+            self.value_error("TEMPLATE_SLOT_TRACK", path, clip.id.as_str());
+        }
+        if clip.visual.is_none() {
+            self.value_error("TEMPLATE_SLOT_VISUAL", path, clip.id.as_str());
+        }
         let ClipSource::Media { material_id } = &clip.source else {
-            self.value_error("TEMPLATE_SLOT_SOURCE", &slot_path, clip.id.as_str());
+            self.value_error("TEMPLATE_SLOT_SOURCE", path, clip.id.as_str());
             return;
         };
         if self
@@ -66,10 +107,10 @@ impl Validator {
             .get(material_id.as_str())
             .is_some_and(|kind| !slot.kind.accepts(*kind))
         {
-            self.value_error("TEMPLATE_SLOT_KIND", &slot_path, clip.id.as_str());
+            self.value_error("TEMPLATE_SLOT_KIND", path, clip.id.as_str());
         }
         if uses.get(material_id.as_str()).copied() != Some(1) {
-            self.value_error("TEMPLATE_SLOT_OWNERSHIP", &slot_path, clip.id.as_str());
+            self.value_error("TEMPLATE_SLOT_OWNERSHIP", path, clip.id.as_str());
         }
     }
 }

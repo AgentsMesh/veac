@@ -1,8 +1,8 @@
 use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedSequence};
 
 use super::{
-    generated, geometry, layer, layer_placement, shadow, time, visual_extent, visual_pipeline,
-    EmitContext,
+    generated, geometry, layer, layer_placement, process_owner::ProcessOwner, shadow, time,
+    visual_extent, visual_pipeline, EmitContext,
 };
 
 pub(super) fn place(
@@ -22,6 +22,8 @@ pub(super) fn place(
         .as_ref()
         .map_or_else(|| layer.clone(), |streams| streams.foreground.clone());
     let (x, y) = geometry::canvas_position(
+        context.plan,
+        ProcessOwner::clip(clip),
         visual,
         "t",
         prepared.pivot_x,
@@ -60,6 +62,8 @@ fn place_animated(
     split: Option<shadow::Streams>,
 ) -> layer::RenderedLayer {
     let (x, y) = geometry::canvas_overlay_position(
+        context.plan,
+        ProcessOwner::clip(clip),
         visual,
         "t",
         prepared.pivot_x,

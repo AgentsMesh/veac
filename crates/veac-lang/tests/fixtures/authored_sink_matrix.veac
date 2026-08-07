@@ -1,0 +1,116 @@
+animate mask-position on clip-mask(@sink-matrix, @main, @visual, @picture, 0) {
+  vector(0.25 + progress * 0.5, 0.5)
+}
+animate mask-scale on clip-mask(@sink-matrix, @main, @visual, @picture, 0) {
+  vector(0.5 + progress * 0.5, 1.0)
+}
+animate mask-rotation on clip-mask(@sink-matrix, @main, @visual, @picture, 0) {
+  progress * 90deg
+}
+animate mask-feather on clip-mask(@sink-matrix, @main, @visual, @picture, 0) {
+  progress * 12.0
+}
+animate mask-expansion on clip-mask(@sink-matrix, @main, @visual, @picture, 0) {
+  progress * 4.0
+}
+animate effect-parameter on clip-effect(
+  @sink-matrix, @main, @visual, @picture, @blur, @radius
+) { progress * 8.0 }
+animate text-position on text(@sink-matrix, @main, @text, @title) {
+  point(progress * 20px, 0px)
+}
+animate text-scale on text(@sink-matrix, @main, @text, @title) {
+  vector(0.8 + progress * 0.2, 0.8 + progress * 0.2)
+}
+animate text-rotation on text(@sink-matrix, @main, @text, @title) {
+  progress * 10deg
+}
+animate text-reveal on text(@sink-matrix, @main, @text, @title) { progress }
+animate text-highlight-progress on text(@sink-matrix, @main, @text, @title) { progress }
+animate text-opacity on text(@sink-matrix, @main, @text, @title) { progress }
+animate apply-opacity on apply(@sink-matrix, @main, @grade) {
+  clamp(sequence_time / 3s, 0.0, 1.0)
+}
+animate mask-position on apply-mask(@sink-matrix, @main, @grade, 0) {
+  vector(0.5, clamp(sequence_time / 3s, 0.0, 1.0))
+}
+animate mask-scale on apply-mask(@sink-matrix, @main, @grade, 0) {
+  vector(1.0, 0.5 + clamp(sequence_time / 6s, 0.0, 0.5))
+}
+animate mask-rotation on apply-mask(@sink-matrix, @main, @grade, 0) {
+  clamp(sequence_time / 3s, 0.0, 1.0) * 45deg
+}
+animate mask-feather on apply-mask(@sink-matrix, @main, @grade, 0) {
+  clamp(sequence_time / 1s, 0.0, 12.0)
+}
+animate mask-expansion on apply-mask(@sink-matrix, @main, @grade, 0) {
+  clamp(sequence_time / 1s, 0.0, 4.0)
+}
+animate effect-parameter on apply-effect(
+  @sink-matrix, @main, @grade, @soften, @blur, @radius
+) { clamp(sequence_time / 1s, 0.0, 8.0) }
+
+fn window() -> Mask {
+  mask(mask_circle(), mask_motion(
+    vector_constant(vector(0.5, 0.5)), vector_constant(vector(1.0, 1.0)),
+    angle_constant(0deg)
+  ), mask_edge(length_constant(0px), length_constant(0px)), false)
+}
+
+fn visual() -> VisualStyle {
+  visual_style(visual_layout(
+    placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+    transform_2d(transform_motion(
+      point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+      angle_constant(0deg)
+    ), transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none()))
+  ), visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+  [window()], color_pipeline_none())
+}
+
+fn text_style_value(font: Resource) -> TextStyle {
+  text_style(text_metrics(font_stack(font_resource_ref(font), []), weight_bold(),
+    font_style_normal(), 32px, 0px, 1.0, #ffffffff), text_layout(
+      text_box_width(300px), text_wrap_none(), text_overflow_visible(),
+      text_align_center(), text_align_middle(), writing_horizontal_tb(), orientation_mixed()
+    ), text_path_none(), text_decoration(
+      text_background_none(), text_outline_none(), shadow_none()
+    ), [], text_animation_present(text_animation(
+      text_word(), text_unit_transform(
+        point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+        angle_constant(0deg)
+      ), percent_constant(100%), text_highlight_present(#ffcc00ff, percent_constant(0%)),
+      percent_constant(100%), 0ms
+    )))
+}
+
+fn adjustment(layer: Layer) -> Apply {
+  apply(identifier("grade"), apply_enabled(), during(0s, 3s), apply_target_layer(layer), [
+    apply_effect_stage(identifier("soften"), apply_stage_enabled(apply_stage_window_full()),
+      video_blur_effect(identifier("blur"), effect_enabled(effect_window_full()),
+        length_constant(2px)))
+  ], apply_mix(percent_constant(100%), blend_normal(), [window()]))
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(identifier("font"), resource_file("assets/font.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774"));
+  let picture = item(identifier("picture"), item_enabled(), during(0s, 3s),
+    source_generated(generator_solid(#336699ff)), source_timing_native())
+    .with_visual(visual()).with_effect(video_blur_effect(
+      identifier("blur"), effect_enabled(effect_window_full()), length_constant(2px)));
+  let title = item(identifier("title"), item_enabled(), during(0s, 3s),
+    source_text("动态文字", text_style_value(font)), source_timing_native());
+  let state = track_state(track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked());
+  let visual_layer_value = visual_layer(identifier("visual"), 0, placement_free(), state,
+    track_routing_default()).with_item(picture);
+  let text_layer_value = visual_layer(identifier("text"), 1, placement_free(), state,
+    track_routing_default()).with_item(title);
+  let timeline = sequence(identifier("main"), "动态叶闭合矩阵",
+    sequence_settings(canvas(320px, 180px), frame_rate(30, 1), 48000))
+    .with_layer(visual_layer_value).with_layer(text_layer_value)
+    .with_apply(adjustment(visual_layer_value));
+  project(identifier("sink-matrix"), project_settings(600)).with_resource(font)
+    .with_sequence(timeline).entry(timeline)
+}

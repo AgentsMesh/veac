@@ -105,6 +105,7 @@ fn pan_nonzero(value: &Animatable<f64>) -> bool {
     match value {
         Animatable::Constant { value } => *value != 0.0,
         Animatable::Keyframes { keyframes } => keyframes.iter().any(|key| key.value != 0.0),
+        Animatable::Binding { .. } => true,
     }
 }
 

@@ -8,15 +8,25 @@ use crate::*;
 pub enum NumberCurveTarget {
     VisualOpacity,
     VisualRotationDegrees,
-    MaskRotationDegrees { mask_index: u32 },
-    MaskFeatherPixels { mask_index: u32 },
-    MaskExpansionPixels { mask_index: u32 },
+    MaskRotationDegrees {
+        mask_index: u32,
+    },
+    MaskFeatherPixels {
+        mask_index: u32,
+    },
+    MaskExpansionPixels {
+        mask_index: u32,
+    },
     AudioGain,
     AudioPan,
     TextReveal,
+    TextHighlightProgress,
     TextOpacity,
     TextRotationDegrees,
-    EffectParameter { effect_id: EffectId, name: String },
+    EffectParameter {
+        effect_id: EffectId,
+        parameter: EffectParameter,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::test_support::range;
 
 use super::*;
@@ -74,11 +72,11 @@ fn nested_sequence_depth_is_bounded_without_recursive_validation() {
                         effects: vec![],
                         replaceable: None,
                         template_editable_text: false,
-                        metadata: BTreeMap::new(),
+                        authorship: None,
                     }],
                 }],
                 applies: vec![],
-                metadata: BTreeMap::new(),
+                authorship: None,
             }
         })
         .collect();
@@ -103,7 +101,7 @@ fn generated_and_audio_sources_validate_on_compatible_tracks() {
             audio: StreamChoice::Auto,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     });
     let mut audio = project.project.sequences[0].tracks[0].clips[0].clone();
     audio.id = ItemId::new("itm_audio").unwrap();

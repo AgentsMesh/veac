@@ -1,4 +1,5 @@
 mod evaluate;
+mod masks;
 mod slice;
 mod text;
 
@@ -61,6 +62,7 @@ pub(super) fn crop_clip(
             reidentify,
             changed,
         )?;
+        masks::crop(visual, start, end, owner, reidentify, changed)?;
     }
     if let Some(audio) = &mut clip.audio {
         crop_animatable(
@@ -102,14 +104,14 @@ fn crop_effects(
             changed.effect(old_id);
             continue;
         }
-        for (name, parameter) in &mut effect.parameters {
-            if let ParameterValue::NumberCurve { value } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(value) = effect.effect.curve_mut(parameter) {
                 crop_animatable(
                     value,
                     start,
                     end,
                     owner,
-                    &format!("effect_{}_{}", old_id, name),
+                    &format!("effect_{}_{}", old_id, parameter.name()),
                     reidentify,
                     changed,
                 )?;

@@ -11,6 +11,7 @@ mod input_streams;
 mod inputs;
 mod multicam;
 mod output;
+mod plan_contract;
 mod references;
 mod resource;
 mod source_time;
@@ -31,6 +32,7 @@ use super::CodegenErrors;
 
 pub(super) fn validate(plan: &ResolvedRenderPlan) -> Result<(), CodegenErrors> {
     let mut check = Check::default();
+    plan_contract::validate(&mut check, plan);
     check.header(plan);
     budget::validate_structural(&mut check, plan);
     inputs::validate(&mut check, plan);
@@ -86,8 +88,8 @@ impl Check {
             || !digest_valid(&source.snapshot_hash)
             || resolver.resolver_version.trim().is_empty()
             || resolver.stream_selection_policy.trim().is_empty()
-            || resolver.effect_registry_version != "veac-ir-effects-v1"
-            || resolver.capability_profile != "backend-neutral-v1"
+            || resolver.effect_registry_version != veac_plan::EFFECT_REGISTRY_VERSION
+            || resolver.capability_profile != veac_plan::CAPABILITY_PROFILE
         {
             self.push(
                 "PLAN_HEADER_INVALID",
@@ -146,6 +148,24 @@ impl Check {
             CodegenErrorKind::InvalidPlan,
             code,
             object_id,
+            message,
+        ));
+    }
+
+    pub(super) fn temporal_backend(&mut self, error: super::temporal::TemporalBackendError) {
+        self.diagnostics.push(diagnostic(
+            CodegenErrorKind::UnsupportedTemporal,
+            error.code,
+            Some(error.binding_id.to_string()),
+            error.message,
+        ));
+    }
+
+    pub(super) fn plan_contract(&mut self, message: String) {
+        self.diagnostics.push(diagnostic(
+            CodegenErrorKind::InvalidPlan,
+            "PLAN_CONTRACT_INVALID",
+            None,
             message,
         ));
     }

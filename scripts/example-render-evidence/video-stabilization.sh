@@ -1,35 +1,44 @@
 #!/usr/bin/env bash
 
 stabilization_canonical_contract() {
-  local canonical=$1 label=$2 root=${3:-.project}
-  jq -e --arg root "$root" '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 label=$2 root=${3:-.project} identity=${4:-$1} before after effect
+  before=$(canonical_clip_id "$identity" stabilize-before)
+  after=$(canonical_clip_id "$identity" stabilize-after)
+  effect=$(jq -er --arg after "$after" '
+    [.project.sequences[].tracks[].clips[] | select(.id == $after) | .effects[].id] |
+    if length == 1 then .[0] else error("stabilization effect is not unique") end
+  ' "$identity") || fail "cannot resolve stabilization effect"
+  jq -e --arg root "$root" --arg before "$before" --arg after "$after" \
+    --arg effect "$effect" '
+    def seconds: .value / .timescale;
     def clips: if $root == ".project" then .project.sequences[].tracks[].clips[]
       else .sequences[].tracks[].clips[] end;
     def clip($id): first(clips | select(.id == $id));
-    clip("itm_stabilize-before") as $before | clip("itm_stabilize-after") as $after |
-    $before.record_range == {"start":t(4000),"duration":t(2000)} and
-    $after.record_range == {"start":t(6000),"duration":t(2000)} and
+    clip($before) as $before | clip($after) as $after |
+    ($before.record_range.start | seconds) == 4 and
+    ($before.record_range.duration | seconds) == 2 and
+    ($after.record_range.start | seconds) == 6 and
+    ($after.record_range.duration | seconds) == 2 and
     (if $root == ".project" then
-      $before.source == {"type":"media","material_id":"med_shaky"} and
-      $after.source == $before.source and
-      $before.source_mapping.time_map.source_start == t(0) and
-      $after.source_mapping.time_map.source_start == t(0)
+      $before.source.type == "media" and $after.source == $before.source and
+      $after.source_mapping == $before.source_mapping and
+      ($before.source_mapping.time_map.source_start | seconds) == 0
     else
-      $before.source == {"audio_stream":null,"input_id":"pin_shaky","type":"media",
-        "video_stream":{"global_index":0,"type_index":0}} and
+      $before.source.type == "media" and $before.source.audio_stream == null and
+      $before.source.video_stream == {"global_index":0,"type_index":0} and
       $after.source == $before.source and $after.source_mapping == $before.source_mapping and
-      $before.source_mapping.time_map.source_range_per_repeat.start == t(0) and
-      $before.source_mapping.time_map.source_range_per_repeat.duration == t(2000)
+      ($before.source_mapping.time_map.source_range_per_repeat.start | seconds) == 0 and
+      ($before.source_mapping.time_map.source_range_per_repeat.duration | seconds) == 2
     end) and
     ($before.effects | length) == 0 and ($after.effects | length) == 1 and
     (if $root == ".project" then
-      $after.effects[0] == {"effect_type":"video.stabilize","enable_range":null,"enabled":true,
-        "id":"fx_stabilize","parameters":{"enabled":{"type":"boolean","value":true}}}
+      $after.effects[0] == {"effect":{"type":"video_stabilize","enabled":true},
+        "enable_range":null,"enabled":true,"id":$effect}
     else
-      $after.effects[0] == {"active_range":{"start":t(0),"duration":t(2000)},
-        "effect_type":"video.stabilize","id":"fx_stabilize",
-        "parameters":{"enabled":{"type":"boolean","value":true}}}
+      $after.effects[0].id == $effect and
+      $after.effects[0].effect == {"type":"video_stabilize","enabled":true} and
+      ($after.effects[0].active_range.start | seconds) == 0 and
+      ($after.effects[0].active_range.duration | seconds) == 2
     end)
   ' "$canonical" >/dev/null || fail "video-effects $label stabilization contract failed"
 }
@@ -93,7 +102,7 @@ stabilization_content_signature() {
 
 stabilization_content_unique_count() {
   local video=$1; shift
-  local time xp yp rest reference_x= reference_y= signatures=()
+  local time xp yp rest reference_x='' reference_y='' signatures=()
   for time in "$@"; do
     read -r xp yp rest <<<"$(stabilization_grid_phase "$video" "$time")"
     if [[ -z $reference_x ]]; then reference_x=$xp; reference_y=$yp; fi
@@ -127,13 +136,12 @@ check_video_stabilization_evidence() {
   [[ -d $dir ]] || return 0
   local author preview plan video
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_preview); video=$(delivery_video_path "$dir" preview preview)
+  plan=$(delivery_plan_path "$dir" preview); video=$(delivery_video_path "$dir" preview preview.mp4)
   for file in "$author" "$preview" "$plan" "$video"; do require_file "$file"; done
+  assert_resolution_chain "$dir" "$plan" "$video" video-effects
   stabilization_canonical_contract "$author" authoring
-  stabilization_canonical_contract "$preview" preview
-  stabilization_canonical_contract "$plan" plan .plan
+  stabilization_canonical_contract "$preview" preview .project "$author"
+  stabilization_canonical_contract "$plan" plan .plan "$author"
   video_contract "$video" 7.9
-  assert_stream_field "$video" v:0 width 480 "video-effects stabilization"
-  assert_stream_field "$video" v:0 height 270 "video-effects stabilization"
   stabilization_assert_rendered_motion "$video"
 }

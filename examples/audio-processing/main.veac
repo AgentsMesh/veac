@@ -1,196 +1,79 @@
-project audio-processing {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource audio voice {
-    locator local { path "assets/voice.wav"; }
-    streams { video disabled; audio auto; }
-  }
-  resource audio music {
-    locator local { path "assets/music.wav"; }
-    streams { video disabled; audio auto; }
-  }
-  resource audio key {
-    locator local { path "assets/key.wav"; }
-    streams { video disabled; audio auto; }
-  }
+import "./showcase.veac" as showcase;
+import "./styles.veac" as styles;
 
-  sequence main {
-    layer visual monitor {
-      item monitor-background {
-        source generated solid { color #111318ff; }
-        record { at 0s; duration 8s; }
-      }
-      item processing-phases {
-        source generated gradient linear {
-          from 0% 50%; to 100% 50%;
-          stop 0% #13b8a6ff; stop 24% #13b8a6ff;
-          stop 26% #f4c95dff; stop 49% #f4c95dff;
-          stop 51% #e968a1ff; stop 74% #e968a1ff;
-          stop 76% #5c8df6ff; stop 100% #5c8df6ff;
-        }
-        record { at 0s; duration 8s; }
-        modifiers {
-          layout phase-strip {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 960px; height 120px; fit fill; }
-          }
-        }
-      }
-      item processing-playhead {
-        source generated solid { color #ffffffff; }
-        record { at 0s; duration 8s; }
-        modifiers {
-          layout playhead-frame {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 12px; height 176px; fit fill; }
-          }
-          transform playhead-motion {
-            position curve {
-              key start { at 0s; value { x -474px; y 0px; } interpolation linear; }
-              key finish { at 8s; value { x 474px; y 0px; } interpolation linear; }
-            }
-          }
-        }
-      }
-    }
+fn audio_item(
+  key: identifier, source: Resource, start: time, style: AudioStyle
+) -> Item {
+  item(
+    key, item_enabled(), during(start, 2s),
+    source_media(source), source_timing_native()
+  ).with_audio(style)
+}
 
-    layer audio dialogue {
-      route bus dialogue-bus;
-      item voiceover {
-        source media resource voice;
-        record { at 0s; duration 2s; }
-        mapping linear { from 0s; to 2s; }
-        modifiers {
-          audio voice-chain {
-            gain curve {
-              key intro { at 0s; value -12db; interpolation linear; }
-              key full { at 1s; value -2db; interpolation linear; }
-            }
-            pan -0.65;
-            muted false;
-            normalize true;
-            pitch preserve;
-            crossfade { fade-in 80ms; fade-out 120ms; curve equal-power; }
-            processor high-pass dialogue-hpf { frequency 80hz; q 0.707; poles 2; }
-            processor eq dialogue-eq {
-              band presence { frequency 2800hz; gain 2db; q 1; }
-            }
-            processor limiter dialogue-limiter { ceiling -1db; attack 1ms; release 80ms; }
-          }
-        }
-      }
-    }
-    layer audio music {
-      route bus music-bus;
-      item music-bed {
-        source media resource music;
-        record { at 0s; duration 2s; }
-        mapping linear { from 0s; to 2s; }
-        modifiers {
-          audio compressed-bed {
-            gain 0.7;
-            pan 0.25;
-            pitch preserve;
-            processor compressor music-compressor {
-              threshold -18db; ratio 3; attack 10ms; release 120ms;
-              knee 6db; makeup-gain 2db; mix 100%;
-            }
-          }
-        }
-      }
-    }
-    layer audio key {
-      route bus key-bus;
-      item key-pulse {
-        source media resource key;
-        record { at 0s; duration 2s; }
-        mapping linear { from 0s; to 2s; }
-        modifiers {
-          audio sidechain-key { gain 0.8; pan 0.7; pitch preserve; }
-        }
-      }
-    }
-    relation sidechain duck {
-      endpoints { key bus key-bus; target item music-bed; }
-      dynamics { threshold -30db; ratio 8; attack 10ms; release 100ms; }
-    }
-    layer audio gated {
-      item gated-tone {
-        source media resource voice;
-        record { at 2s; duration 2s; }
-        mapping linear { from 0s; to 4s; }
-        modifiers {
-          audio gate-demo {
-            pitch follow-speed;
-            crossfade { fade-in 90ms; fade-out 90ms; curve linear; }
-            processor gate noise-gate {
-              threshold -38db; ratio 4; attack 5ms; release 80ms; range -48db;
-            }
-          }
-        }
-      }
-    }
-    layer audio normalized {
-      item normalized-tone {
-        source media resource music;
-        record { at 4s; duration 2s; }
-        mapping linear { from 4s; to 6s; }
-        modifiers {
-          audio loudness-demo {
-            pitch preserve;
-            crossfade { fade-in 110ms; fade-out 110ms; curve exponential; }
-            processor loudness target-loudness {
-              integrated -16lufs; true-peak -1dbtp; range 7lu;
-            }
-          }
-        }
-      }
-    }
-    layer audio normalized-effect {
-      item normalized-effect-tone {
-        source media resource voice;
-        record { at 6s; duration 2s; }
-        mapping linear { from 6s; to 8s; }
-        modifiers {
-          effect normalize-effect {
-            type audio.normalize;
-            enabled true;
-            parameter target_lufs -18;
-          }
-        }
-      }
-    }
-  }
+fn label_item(
+  key: identifier, content: text, start: time, font: Resource
+) -> Item {
+  item(
+    key, item_enabled(), during(start, 2s),
+    source_text(content, showcase.caption_style(font, 28px, 560px)),
+    source_timing_native()
+  ).with_visual(styles.label_visual())
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio aac {
-          sample-rate 48khz;
-          channel-layout stereo;
-        }
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let tone = audio_resource(
+    identifier("tone"), resource_file("assets/tone.wav"),
+    sha256("5c3aaa006e4c341feddf589f9eb0ba3b215c60353e491abf8f06f4bee4478cfc"),
+    stream_auto()
+  );
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let voice = audio_item(identifier("voice"), tone, 0s, styles.voice());
+  let music = audio_item(identifier("music"), tone, 2s, styles.music())
+    .with_effect(audio_normalize_effect(
+      identifier("normalize"), effect_enabled(effect_window_full()), -14.0
+    ));
+  let key = audio_item(identifier("key"), tone, 2s, styles.key());
+  let bus = audio_bus(identifier("music-bus"));
+  let voice_track = audio_layer(
+    identifier("voice"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(voice);
+  let music_track = audio_layer(
+    identifier("music"), 1, placement_free(),
+    showcase.state(), track_routing_bus(bus)
+  ).with_item(music);
+  let key_track = audio_layer(
+    identifier("key"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(key);
+  let background = visual_layer(
+    identifier("background"), 3, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("plate"), #3f3f46ff, 0s, 4s));
+  let label = visual_layer(
+    identifier("label"), 4, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(label_item(
+    identifier("voice-label"), "自动化、均衡与动态处理", 0s, font
+  )).with_item(label_item(
+    identifier("route-label"), "三种淡变、总线路由与侧链压低", 2s, font
+  ));
+  let ducking = relation_sidechain_track(
+    identifier("ducking"), key_track, music,
+    sidechain_settings(-24.0, 4.0, 10.0, 120.0, sidechain_window_full())
+  );
+  let timeline = sequence(
+    identifier("main"), "音频处理链",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(voice_track).with_layer(music_track).with_layer(key_track)
+    .with_layer(background).with_layer(label).with_relation(ducking);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), true, false
+  );
+  project(identifier("audio-processing"), project_settings(600))
+    .with_resource(tone).with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

@@ -1,4 +1,3 @@
-use serde_json::json;
 use std::collections::BTreeMap;
 use std::path::Path;
 use veac_ir::*;
@@ -40,13 +39,24 @@ pub fn original_bindings(plan: &ResolvedRenderPlan, path: &Path) -> ExecutionBin
 
 pub fn descriptor() -> ArtifactDescriptor {
     ArtifactDescriptor::new(
-        ArtifactKind::ProxyVideo,
         producer(),
-        vec![ArtifactDependency {
-            role: "source".to_owned(),
-            identity: ContentDigest::sha256(b"source"),
-        }],
-        json!({"height": 720, "codec": "h264"}),
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Source,
+            ContentDigest::sha256(b"source"),
+        )],
+        ArtifactParameters::ProxyVideo(ProxyVideoSpec {
+            source_stream: StreamSelection {
+                global_index: 0,
+                type_index: 0,
+            },
+            source_clock: SourceClockSpec::Identity {
+                duration: RationalTime::new(6_000, 600).unwrap(),
+            },
+            width: 1280,
+            height: 720,
+            frame_rate: Rational::new(30, 1).unwrap(),
+            crf: 24,
+        }),
     )
 }
 

@@ -26,10 +26,6 @@ fn envelope_and_project_guards_are_structured() {
             request_hash: "XYZ".to_owned(),
         },
     ];
-    project
-        .project
-        .metadata
-        .insert("unsafe".to_owned(), serde_json::Value::from(u64::MAX));
 
     let errors = validate(&project).unwrap_err();
     assert!(errors.to_string().contains("diagnostic(s); first is"));
@@ -50,7 +46,6 @@ fn envelope_and_project_guards_are_structured() {
         "ENTRY_SEQUENCE_NOT_FOUND",
         "DUPLICATE_OPERATION_ID",
         "OPERATION_HASH",
-        "METADATA_NUMBER",
     ] {
         assert_code(&codes, code);
     }

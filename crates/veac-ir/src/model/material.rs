@@ -1,12 +1,8 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub const MEDIA_PROBE_SCHEMA_VERSION: u32 = 3;
-use serde_json::Value;
-
-use crate::{MaterialId, Rational, RationalTime};
+use crate::{EntityAuthorship, MaterialId, Rational, RationalTime};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -18,7 +14,7 @@ pub struct Material {
     pub stream_intent: StreamIntent,
     /// Probe output is a reproducibility fact, not part of semantic content hashing.
     pub probe: Option<MediaProbeSnapshot>,
-    pub metadata: BTreeMap<String, Value>,
+    pub authorship: Option<EntityAuthorship>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

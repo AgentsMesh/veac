@@ -1,13 +1,13 @@
 use super::support::*;
 use veac_lang::source_edit::{
-    ExpressionSite, ExpressionSource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
-    SourceRevision,
+    BodySite, BodySource, ExpressionSite, ExpressionSource, SourceEditBatch, SourceEditOperation,
+    SourceNodeRef, SourcePrecondition, SourceRevision,
 };
 
 fn program_source() -> String {
     format!(
         "const time duration = 200ms;\n{}",
-        GENERATED_SOURCE.replace("duration 200ms", "duration ${duration}")
+        GENERATED_SOURCE.replace("during(0s, 200ms)", "during(0s, duration)")
     )
 }
 
@@ -63,7 +63,7 @@ fn source_revision_and_source_edit_form_a_validated_source_of_truth_loop() {
         .success()
         .stdout(predicate::str::contains("\"dry_run\": true"));
     assert!(std::fs::read_to_string(&source).unwrap().contains("200ms"));
-    assert!(!temp.path().join(".veac-source.lock").exists());
+    assert!(temp.path().join(".veac-source.lock").is_file());
 
     veac()
         .args([
@@ -73,10 +73,11 @@ fn source_revision_and_source_edit_form_a_validated_source_of_truth_loop() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"module\": \"main.veac\""));
+        .stdout(predicate::str::contains("\"modules\": ["))
+        .stdout(predicate::str::contains("\"main.veac\""));
     let edited = std::fs::read_to_string(&source).unwrap();
     assert!(edited.starts_with("const time duration = 400ms;"));
-    assert!(edited.contains("duration ${duration}"));
+    assert!(edited.contains("during(0s, duration)"));
     assert_ne!(revision(&source), base);
 
     veac()
@@ -118,7 +119,7 @@ fn source_edit_output_copy_preserves_the_original_source() {
         .success();
     assert!(std::fs::read_to_string(source).unwrap().contains("200ms"));
     assert!(std::fs::read_to_string(output).unwrap().contains("500ms"));
-    assert!(!temp.path().join(".veac-source.lock").exists());
+    assert!(temp.path().join(".veac-source.lock").is_file());
 }
 
 #[test]
@@ -166,29 +167,31 @@ fn rejected_source_edit_never_changes_source_or_overwrites_its_batch() {
     assert_eq!(std::fs::read_to_string(source).unwrap(), original);
 }
 
-#[test]
-fn formatter_recognizes_program_syntax_without_line_prefix_heuristics() {
-    let temp = tempdir().unwrap();
-    let source = source_file(
-        &temp,
-        &program_source().replacen("const time", "/* typed declaration */ const\ntime", 1),
-    );
-    let original = std::fs::read_to_string(&source).unwrap();
-
-    veac()
-        .args(["fmt", source.to_str().unwrap(), "--check"])
-        .assert()
-        .success();
-    assert_eq!(std::fs::read_to_string(source).unwrap(), original);
-}
-
+#[path = "source_program/closures.rs"]
+mod closures;
+#[path = "source_program/collections.rs"]
+mod collections;
 #[path = "source_program/compile_output.rs"]
 mod compile_output;
 #[path = "source_program/errors.rs"]
 mod errors;
+#[path = "source_program/format.rs"]
+mod format;
+#[path = "source_program/function_body.rs"]
+mod function_body;
+#[path = "source_program/functions.rs"]
+mod functions;
 #[path = "source_program/module_edit.rs"]
 mod module_edit;
+#[path = "source_program/nominal.rs"]
+mod nominal;
+#[path = "source_program/range_values.rs"]
+mod range_values;
 #[path = "source_program/read_only.rs"]
 mod read_only;
 #[path = "source_program/security.rs"]
 mod security;
+#[path = "source_program/structural_batch.rs"]
+mod structural_batch;
+#[path = "source_program/structural_values.rs"]
+mod structural_values;

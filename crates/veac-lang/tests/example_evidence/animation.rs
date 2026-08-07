@@ -1,21 +1,44 @@
-use crate::support::{clips, lower_example};
+use crate::support::{clip_by_key, clips, lower_example};
 use veac_ir::{
-    Anchor, Animatable, ClipSource, Generator, Interpolation, Placement, ProjectEnvelope,
-    Transform2D, Vec2, VectorGeometry,
+    evaluate_temporal_program, Anchor, Animatable, Clip, ClipSource, Generator, Interpolation,
+    Placement, ProjectEnvelope, TemporalClock, TemporalEvaluationInput, TemporalEvaluationLimits,
+    TemporalNodeKind, TemporalValue, Vec2, VectorGeometry,
 };
 
-fn transform(project: &ProjectEnvelope) -> &Transform2D {
+fn animated_clip(project: &ProjectEnvelope) -> &Clip {
     clips(project)
-        .find(|clip| clip.id.as_str() == "itm_badge")
-        .and_then(|clip| clip.visual.as_ref())
-        .map(|visual| &visual.transform)
-        .expect("badge visual transform")
+        .find(|clip| {
+            clip.visual
+                .as_ref()
+                .and_then(|visual| visual.transform.position.keyframes())
+                .is_some_and(has_all_interpolations)
+        })
+        .expect("visual item with every interpolation primitive")
+}
+
+fn has_all_interpolations(keyframes: &[veac_ir::Keyframe<veac_ir::Point>]) -> bool {
+    let has = |expected: fn(&Interpolation) -> bool| {
+        keyframes
+            .iter()
+            .any(|keyframe| expected(&keyframe.interpolation))
+    };
+    has(|value| matches!(value, Interpolation::Hold))
+        && has(|value| matches!(value, Interpolation::Linear))
+        && has(|value| matches!(value, Interpolation::EaseIn))
+        && has(|value| matches!(value, Interpolation::EaseOut))
+        && has(|value| matches!(value, Interpolation::EaseInOut))
+        && has(|value| matches!(value, Interpolation::CubicBezier { .. }))
+        && has(|value| matches!(value, Interpolation::Spring { .. }))
 }
 
 #[test]
 fn transform_example_lowers_all_interpolation_primitives() {
     let project = lower_example("transforms-and-animation/main.veac");
-    let keyframes = transform(&project)
+    let keyframes = animated_clip(&project)
+        .visual
+        .as_ref()
+        .unwrap()
+        .transform
         .position
         .keyframes()
         .expect("animated badge position");
@@ -52,9 +75,7 @@ fn transform_example_lowers_all_interpolation_primitives() {
 #[test]
 fn transform_example_uses_non_uniform_scale() {
     let project = lower_example("transforms-and-animation/main.veac");
-    let badge = clips(&project)
-        .find(|clip| clip.id.as_str() == "itm_badge")
-        .expect("transform badge");
+    let badge = animated_clip(&project);
     let visual = badge.visual.as_ref().expect("transform badge visual");
     let transform = &visual.transform;
     let Animatable::Constant { value } = &transform.scale else {
@@ -93,4 +114,46 @@ fn transform_example_uses_non_uniform_scale() {
     assert_eq!(points[2], Vec2 { x: 0.96, y: 0.5 });
     assert_eq!(points[5], Vec2 { x: 0.2, y: 0.5 });
     assert!(shape.stroke.is_some());
+}
+
+#[test]
+fn transform_opacity_is_driven_by_the_authored_progress_program() {
+    let project = lower_example("transforms-and-animation/main.veac");
+    let badge = clip_by_key(&project, "badge");
+    let Animatable::Binding { binding_id } = &badge.visual.as_ref().unwrap().opacity else {
+        panic!("badge opacity must retain the authored temporal binding");
+    };
+    let binding = project
+        .temporal
+        .bindings
+        .iter()
+        .find(|value| &value.id == binding_id)
+        .expect("authored opacity binding");
+    assert_eq!(binding.clocks.len(), 1);
+    assert_eq!(binding.clocks[0].clock, TemporalClock::Progress);
+    let program = project
+        .temporal
+        .programs
+        .iter()
+        .find(|value| value.id == binding.program_id)
+        .expect("authored opacity program");
+    assert!(program.nodes.iter().any(
+        |node| matches!(node.kind, TemporalNodeKind::CurveSample { ref keys, .. }
+            if keys.len() == 4)
+    ));
+    for (progress, expected) in [(0.025, 0.5), (0.5, 1.0), (0.975, 0.5)] {
+        let value = evaluate_temporal_program(
+            program,
+            &[TemporalEvaluationInput {
+                input_id: binding.clocks[0].input_id,
+                value: TemporalValue::Scalar { value: progress },
+            }],
+            TemporalEvaluationLimits::default(),
+        )
+        .expect("authored opacity evaluates");
+        let TemporalValue::Scalar { value } = value else {
+            panic!("authored opacity must evaluate to a scalar");
+        };
+        assert!((value - expected).abs() < 1e-12, "{value} != {expected}");
+    }
 }

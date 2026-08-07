@@ -18,6 +18,7 @@ fn apply_lut_hydration_tracks_the_target_activity_window() {
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
     let base = envelope.project.materials[0].clone();
+    let base_id = base.id.to_string();
     envelope.project.materials.extend([
         lut(&base, "med_lut_active", "active.cube"),
         lut(
@@ -56,13 +57,19 @@ fn apply_lut_hydration_tracks_the_target_activity_window() {
     assert_project_inputs(
         &project,
         &envelope,
-        &["med_footage", "med_lut_active"],
+        &[base_id.as_str(), "med_lut_active"],
         &["active.cube"],
         &["clip.mp4"],
     );
     envelope.project.sequences[0].applies[0].stages[1].active_range = Some(range(200, 100));
     write_project(&project, &envelope);
-    let error = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap_err();
+    let error = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap_err();
     assert!(error.to_string().contains("PATH_UNAVAILABLE"));
 }
 

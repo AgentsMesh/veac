@@ -46,13 +46,22 @@ fn exports_srt_deterministically_with_explicit_losses() {
 #[test]
 fn exports_webvtt_with_settings_and_speaker() {
     let mut value = rich_value();
-    value
-        .document
-        .settings
-        .insert("webvtt.header".to_owned(), "WEBVTT VEAC".to_owned());
-    value.document.cues[0]
-        .settings
-        .insert("webvtt.settings".to_owned(), "line:80%".to_owned());
+    value.document.native = Some(CaptionDocumentNative::WebVtt {
+        header: WebVttHeader {
+            description: Some("VEAC".to_owned()),
+        },
+    });
+    value.document.cues[0].native = Some(CaptionNativeCue::WebVtt {
+        identifier: Some(CaptionNativeId("cue-a".to_owned())),
+        settings: Some(WebVttCueSettings {
+            line: Some("80%".to_owned()),
+            position: None,
+            size: None,
+            align: None,
+            vertical: None,
+            region: None,
+        }),
+    });
     let output = export_caption(&value, CaptionFormat::WebVtt).unwrap();
     assert!(output.content.starts_with("WEBVTT VEAC"));
     assert!(output.content.contains("line:80%"));
@@ -68,9 +77,12 @@ fn exports_webvtt_with_settings_and_speaker() {
 #[test]
 fn exports_ass_styles_actor_comment_and_multiline() {
     let mut value = rich_value();
-    value.document.cues[0]
-        .settings
-        .insert("ass.comment".to_owned(), "true".to_owned());
+    value.document.cues[0].native = Some(CaptionNativeCue::Ass {
+        settings: AssCueSettings {
+            comment: true,
+            ..AssCueSettings::default()
+        },
+    });
     let output = export_caption(&value, CaptionFormat::Ass).unwrap();
     assert!(output.content.contains("Style: Default,Inter,42"));
     assert!(output
@@ -86,30 +98,35 @@ fn exports_ass_styles_actor_comment_and_multiline() {
 }
 
 #[test]
-fn reports_unsupported_settings_per_format() {
+fn reports_closed_native_semantics_across_formats() {
     let mut value = envelope();
-    value
-        .document
-        .settings
-        .insert("custom".to_owned(), "x".to_owned());
-    value.document.cues[0]
-        .settings
-        .insert("srt.index".to_owned(), "1".to_owned());
-    value.document.cues[0]
-        .settings
-        .insert("ass.layer".to_owned(), "2".to_owned());
-    for format in [
-        CaptionFormat::Srt,
-        CaptionFormat::WebVtt,
-        CaptionFormat::Ass,
-    ] {
-        let report = export_caption(&value, format).unwrap().loss_report;
-        assert!(!report.is_empty());
-        assert!(report
-            .losses
-            .iter()
-            .any(|loss| loss.field == "settings.custom"));
-    }
+    value.document.native = Some(CaptionDocumentNative::WebVtt {
+        header: WebVttHeader {
+            description: Some("VEAC".to_owned()),
+        },
+    });
+    value.document.cues[0].native = Some(CaptionNativeCue::WebVtt {
+        identifier: Some(CaptionNativeId("cue-a".to_owned())),
+        settings: Some(WebVttCueSettings {
+            line: Some("80%".to_owned()),
+            position: None,
+            size: None,
+            align: None,
+            vertical: None,
+            region: None,
+        }),
+    });
+    let report = export_caption(&value, CaptionFormat::Srt)
+        .unwrap()
+        .loss_report;
+    let fields: Vec<_> = report
+        .losses
+        .iter()
+        .map(|loss| loss.field.as_str())
+        .collect();
+    assert!(fields.contains(&"native.webvtt.header.description"));
+    assert!(fields.contains(&"native.webvtt.identifier"));
+    assert!(fields.contains(&"native.webvtt.settings"));
 }
 
 #[test]

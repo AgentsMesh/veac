@@ -1,144 +1,49 @@
-project text-animation {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./animations.veac" as animations;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual background {
-      item navy {
-        source generated solid { color #101827ff; }
-        record { at 0s; duration 12s; }
-      }
-    }
-    layer visual animation-showcase {
-      item whole {
-        source text {
-          content "整段动画\n淡入、滑入与缩放";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 52px;
-            weight bold;
-            fill #f7f7f2ff;
-          }
-          animation {
-            unit whole;
-            stagger 0ms;
-            opacity curve {
-              key transparent { at 0s; value 0%; interpolation linear; }
-              key opaque { at 700ms; value 100%; interpolation hold; }
-            }
-            transform {
-              position curve {
-                key left { at 700ms; value { x -120px; y 0px; } interpolation ease-out; }
-                key centered { at 1.5s; value { x 0px; y 0px; } interpolation hold; }
-              }
-              scale curve {
-                key small { at 1.5s; value { x 75%; y 75%; } interpolation ease-out; }
-                key full { at 2.4s; value { x 100%; y 100%; } interpolation hold; }
-              }
-            }
-          }
-        }
-        record { at 0s; duration 3s; }
-      }
-      item highlight {
-        source text {
-          content "高亮 进度\n逐词 向前 推进";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 52px;
-            weight bold;
-            fill #f7f7f2ff;
-          }
-          animation {
-            unit word;
-            stagger 0ms;
-            highlight {
-              fill #ffd166ff;
-              progress curve {
-                key plain { at 0s; value 0%; interpolation linear; }
-                key colored { at 1.6s; value 100%; interpolation hold; }
-              }
-            }
-          }
-        }
-        record { at 3s; duration 2s; }
-      }
-      item line {
-        source text {
-          content "按行依次揭示\n第二行随后出现";
-          style { font family "Arial Unicode MS"; size 50px; weight bold; fill #2dd4bfff; }
-          animation {
-            unit line;
-            stagger 400ms;
-            opacity curve {
-              key line-transparent { at 0s; value 0%; interpolation linear; }
-              key line-opaque { at 200ms; value 100%; interpolation hold; }
-            }
-          }
-        }
-        record { at 5s; duration 2s; }
-      }
-      item word {
-        source text {
-          content "按 词语 依次 揭示";
-          style { font family "Arial Unicode MS"; size 50px; weight bold; fill #ff8a5bff; }
-          animation {
-            unit word;
-            stagger 300ms;
-            opacity curve {
-              key word-transparent { at 0s; value 0%; interpolation linear; }
-              key word-opaque { at 150ms; value 100%; interpolation hold; }
-            }
-          }
-        }
-        record { at 7s; duration 2s; }
-      }
-      item grapheme {
-        source text {
-          content "字素依次出现";
-          style { font family "Arial Unicode MS"; size 50px; weight bold; fill #f7f7f2ff; }
-          animation {
-            unit grapheme;
-            stagger 0ms;
-            reveal curve {
-              key grapheme-hidden { at 0s; value 0%; interpolation linear; }
-              key grapheme-shown { at 1.5s; value 100%; interpolation hold; }
-            }
-          }
-        }
-        record { at 9s; duration 3s; }
-      }
-    }
-  }
+fn animated(
+  key: identifier, content: text, start: time,
+  granularity: TextGranularity, progressive: bool, font: Resource
+) -> Item {
+  item(
+    key, item_enabled(), during(start, 1500ms),
+    source_text(content, animations.style(font, granularity, progressive)),
+    source_timing_native()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("plate"), #312e81ff, 0s, 6s));
+  let copy = visual_layer(
+    identifier("copy"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(animated(identifier("whole"), "整块动画", 0s, text_whole(), false, font))
+    .with_item(animated(
+      identifier("line"), "第一行动画\n第二行动画", 1500ms, text_line(), true, font
+    ))
+    .with_item(animated(
+      identifier("word"), "逐词 动画 类型化 关键帧", 3s, text_word(), true, font
+    ))
+    .with_item(animated(
+      identifier("grapheme"), "逐字动画：打字机揭示", 4500ms,
+      text_grapheme(), true, font
+    ));
+  let timeline = sequence(
+    identifier("main"), "文本动画原语",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(copy);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("text-animation"), project_settings(600))
+    .with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

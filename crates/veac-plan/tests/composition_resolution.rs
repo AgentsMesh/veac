@@ -86,9 +86,14 @@ fn apply_targets_materialize_exact_nodes_and_absolute_stage_ranges() {
     }
     let stage = &resolved.applies[0].stages[0];
     assert_eq!(stage.active_range.start, time(90));
+    let ResolvedApplyOperation::Effect { effect } = &stage.operation else {
+        panic!("expected typed effect operation")
+    };
     assert!(matches!(
-        stage.operation,
-        ResolvedApplyOperation::Effect { .. }
+        effect,
+        Effect::VideoBlur {
+            radius: Animatable::Constant { value: 8.0 }
+        }
     ));
 }
 

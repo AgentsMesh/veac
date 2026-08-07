@@ -25,7 +25,7 @@ pub enum BindingProvenanceKind {
 /// use veac_ir::MediaIdentity;
 ///
 /// fn forge(path: PathBuf, identity: MediaIdentity) -> BoundResource {
-///     BoundResource { path, identity, provenance: todo!() }
+///     BoundResource { path, identity, provenance: panic!("private proof") }
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,7 +78,7 @@ impl BoundResource {
             path,
             identity,
             provenance: BindingProvenance::Artifact(ArtifactBindingProof {
-                kind: descriptor.kind,
+                kind: descriptor.kind(),
                 key: record.key.clone(),
                 content: record.content.clone(),
                 size_bytes: record.size_bytes,

@@ -57,6 +57,7 @@ fn partial_authority_executes_track_stem_and_plain_caption_end_to_end() {
     cue.source = ClipSource::Caption {
         text,
         speaker: None,
+        cue: Box::default(),
         style,
     };
     cue.visual = Some(full_visual());

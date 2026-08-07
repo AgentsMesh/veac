@@ -11,7 +11,9 @@ use veac_plan::ResolvedAudioStream;
 
 use super::*;
 use crate::environment::Environment;
-use crate::unit_tests::support::{canonical_project, FakeEnvironment, MEDIA_SOURCE};
+use crate::unit_tests::support::{
+    canonical_project, pin_first_material, FakeEnvironment, MEDIA_SOURCE,
+};
 
 #[test]
 fn expired_prefer_proxy_selection_never_falls_through_to_ffmpeg() {
@@ -19,7 +21,8 @@ fn expired_prefer_proxy_selection_never_falls_through_to_ffmpeg() {
     std::fs::write(temp.path().join("clip.mp4"), b"source").unwrap();
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let error = apply(
         &mut prepared,
@@ -42,7 +45,9 @@ fn audio_only_inputs_build_an_exact_proxy_request() {
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut environment = FakeEnvironment::success();
     environment.observed = veac_runtime::asset::sha256_identity(&media).unwrap();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    pin_first_material(&project, environment.observed.clone());
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     prepared.plan.output.raster = None;
     prepared.plan.output.deliverables = vec![audio_stem()];
     add_audio(&mut prepared.plan);
@@ -67,7 +72,8 @@ fn caption_only_delivery_is_a_proxy_noop_before_deadline_and_identity_checks() {
     std::fs::write(temp.path().join("clip.mp4"), b"source").unwrap();
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     prepared.plan.output.raster = None;
     prepared.plan.output.deliverables = vec![caption_sidecar()];
     prepared.plan.inputs[0].observed_identity.algorithm = HashAlgorithm::Blake3;
@@ -94,7 +100,9 @@ fn proxy_selection_rejects_non_sha_sources_and_maps_artifact_errors() {
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut environment = FakeEnvironment::success();
     environment.observed = veac_runtime::asset::sha256_identity(&media).unwrap();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    pin_first_material(&project, environment.observed.clone());
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     prepared.plan.inputs[0].observed_identity.algorithm = HashAlgorithm::Blake3;
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let error = apply(

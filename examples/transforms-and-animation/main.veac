@@ -1,98 +1,84 @@
-project transforms-and-animation {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual background {
-      order 0;
-      item field {
-        source generated solid { color #123a34ff; }
-        record { at 0s; duration 4s; }
-      }
-    }
+animate visual-opacity on clip(
+  @transforms-and-animation, @main, @graphics, @badge
+) {
+  sample_curve_ease_in_out(
+    progress, [(0.0, 0.0), (0.05, 1.0), (0.95, 1.0), (1.0, 0.0)]
+  )
+}
 
-    layer visual graphics {
-      order 1;
-      item badge {
-        source generated shape {
-          geometry polygon {
-            point 4% 8%;
-            point 78% 8%;
-            point 96% 50%;
-            point 78% 92%;
-            point 4% 92%;
-            point 20% 50%;
-          }
-          fill solid #f2483dff;
-          stroke 10px solid #fff4e8ff;
-        }
-        record { at 0s; duration 4s; }
-        modifiers {
-          layout badge-layout {
-            placement anchor { at bottom-right; inset { x 80px; y 80px; } }
-            frame { width 360px; height 200px; fit contain; }
-          }
-          transform motion {
-            position curve {
-              key hold { at 0ms; value { x 240px; y 0px; } interpolation hold; }
-              key linear { at 120ms; value { x 200px; y -20px; } interpolation linear; }
-              key ease-in { at 240ms; value { x 160px; y 0px; } interpolation ease-in; }
-              key ease-out { at 360ms; value { x 120px; y 20px; } interpolation ease-out; }
-              key ease-in-out {
-                at 480ms; value { x 80px; y 0px; } interpolation ease-in-out;
-              }
-              key bezier {
-                at 600ms; value { x 40px; y -20px; }
-                interpolation cubic-bezier {
-                  x1 0.42; y1 0; x2 0.58; y2 1;
-                }
-              }
-              key settle {
-                at 800ms; value { x -120px; y -80px; }
-                interpolation spring { frequency 1.5; decay 6; initial-velocity 0; }
-              }
-              key rest { at 4s; value { x 0px; y 0px; } interpolation linear; }
-            }
-            scale { x 1.12; y 0.92; }
-            shear { x 0.22; y -0.08; }
-            rotation 5deg;
-            anchor { x 1; y 1; }
-            crop { x 0.14; y 0.04; width 0.84; height 0.92; }
-            flip-horizontal true;
-            flip-vertical false;
-          }
-          composite top { opacity 1; z-index 20; blend normal; }
-        }
-      }
-    }
-  }
+fn animated_style() -> VisualStyle {
+  let path = point_keyframes([
+    point_keyframe(identifier("hold"), 0ms, point(240px, 0px), interpolation_hold()),
+    point_keyframe(identifier("linear"), 450ms, point(180px, -18px), interpolation_linear()),
+    point_keyframe(identifier("ease-in"), 900ms, point(120px, 0px), interpolation_ease_in()),
+    point_keyframe(identifier("ease-out"), 1350ms, point(60px, 18px), interpolation_ease_out()),
+    point_keyframe(identifier("ease-in-out"), 1800ms, point(0px, 0px), interpolation_ease_in_out()),
+    point_keyframe(
+      identifier("bezier"), 2250ms, point(-60px, -18px),
+      interpolation_cubic_bezier(0.42, 0.0, 0.58, 1.0)
+    ),
+    point_keyframe(
+      identifier("spring"), 2700ms, point(-120px, -80px),
+      interpolation_spring(1.5, 6.0, 0.0)
+    ),
+    point_keyframe(identifier("rest"), 4s, point(0px, 0px), interpolation_linear())
+  ]);
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_bottom_right(), vector(80.0, 80.0)),
+      frame_sized(360px, 200px, fit_contain()),
+      transform_2d(
+        transform_motion(path, vector_constant(vector(1.12, 0.92)), angle_constant(5deg)),
+        transform_geometry(
+          vector(0.22, -0.08), flip_horizontal(), vector(1.0, 1.0),
+          crop_animated(rect_constant(rect(0.14, 0.04, 0.84, 0.92)))
+        )
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(20, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("field"), #123a34ff, 0s, 4s));
+  let badge = item(
+    identifier("badge"), item_enabled(), during(0s, 4s),
+    source_generated(vector_shape(
+      geometry_polygon([
+        vector(0.04, 0.08), vector(0.78, 0.08), vector(0.96, 0.5),
+        vector(0.78, 0.92), vector(0.04, 0.92), vector(0.2, 0.5)
+      ]),
+      paint_present(paint_solid(#f2483dff)),
+      stroke_present(paint_solid(#fff4e8ff), 10px)
+    )), source_timing_native()
+  ).with_visual(animated_style());
+  let foreground = visual_layer(
+    identifier("graphics"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(badge).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 4s),
+    source_text(
+      "曲线程序控制变换",
+      showcase.caption_style(font, 28px, 760px)
+    ), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "变换与动画插值",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(foreground);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("transforms-and-animation"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

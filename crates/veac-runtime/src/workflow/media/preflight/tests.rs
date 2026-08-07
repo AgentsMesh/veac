@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use veac_artifact::{AnalysisSpec, MediaArtifactLimits, MediaArtifactSpec, SourceClockSpec};
+use veac_artifact::{MediaArtifactLimits, SourceClockSpec};
 use veac_ir::{ProbedStreamType, RationalTime};
 
 use super::test_support::*;
@@ -25,19 +25,6 @@ fn every_ffmpeg_artifact_spec_passes_source_preflight() {
             panic!("{error}");
         }
     }
-    let analysis = MediaArtifactSpec::Analysis(AnalysisSpec {
-        analysis_type: "scene".into(),
-        configuration: serde_json::json!({}),
-    });
-    let error = validate(
-        &tool,
-        &source,
-        &request(bytes, analysis),
-        MediaArtifactLimits::default(),
-        deadline(),
-    )
-    .unwrap_err();
-    assert_eq!(error.kind, WorkflowErrorKind::InvalidContract);
 }
 
 #[test]

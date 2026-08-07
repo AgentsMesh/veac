@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_artifact::ArtifactKind;
 use veac_ir::{
     Clip, ClipSource, EditOperation, ItemId, MaterialKind, MatteRelationParameters,
@@ -113,7 +111,7 @@ pub(super) fn append_matte(
             effects: Vec::new(),
             replaceable: None,
             template_editable_text: false,
-            metadata: BTreeMap::new(),
+            authorship: None,
         }),
         before_id: insertion.before_id.clone(),
         after_id: insertion.after_id.clone(),
@@ -122,7 +120,7 @@ pub(super) fn append_matte(
     built.evidence.push(ProposalEvidence::ArtifactVisualClip {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         material_id: insertion.material.material.id.clone(),
     });
     built.operations.push(operation);
@@ -157,7 +155,7 @@ pub(super) fn append_track_matte(
     built.evidence.push(ProposalEvidence::AppliedTrackMatte {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         matte_clip_id: matte_clip_id.clone(),
     });
     built.operations.push(operation);

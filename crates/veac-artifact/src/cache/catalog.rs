@@ -19,10 +19,7 @@ impl ArtifactCatalogQuery {
             return invalid("artifact catalog queries require at least one exact dependency");
         }
         for dependency in &dependencies {
-            if dependency.role.is_empty() {
-                return invalid("artifact catalog dependency roles cannot be empty");
-            }
-            dependency.identity.validate()?;
+            dependency.validate()?;
         }
         dependencies.sort_by(|left, right| {
             (&left.role, &left.identity.value).cmp(&(&right.role, &right.identity.value))
@@ -69,7 +66,7 @@ fn catalog_with_budgets(
         })?;
         metadata_budget -= inspected.metadata_bytes();
         let descriptor = &inspected.descriptor;
-        if descriptor.kind == query.kind
+        if descriptor.kind() == query.kind
             && query
                 .dependencies
                 .iter()

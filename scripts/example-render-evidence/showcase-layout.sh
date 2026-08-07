@@ -8,7 +8,9 @@ check_card_overlay_evidence() {
   local shadow shadow_left shadow_right clear clear_left clear_right
   video_contract "$video" 3.5
   jq -e '
-    first(.project.sequences[].tracks[].clips[] | select(.id == "itm_panel")) as $card |
+    def clip($key): first(.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
+    clip("panel") as $card |
     $card.visual.frame == {"fit":"fill","height":{"unit":"pixels","value":380},
       "width":{"unit":"pixels","value":720}} and
     $card.visual.placement == {"anchor":"center","inset":{"x":0,"y":0},"type":"anchor"} and
@@ -58,11 +60,16 @@ check_template_fill_evidence() {
   local time white yspread uspread vspread
   video_contract "$video" 3.5
   jq -e '
-    def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_hero").replaceable == {"fill":"fit_duration","kind":"video",
-      "label":"主视觉媒体","min_source_duration":{"timescale":1000,"value":2000}} and
-    clip("itm_title").template_editable_text == true and
-    clip("itm_title").source.text == "可替换标题"
+    def clip($key): first(.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
+    clip("hero").replaceable as $hero |
+    $hero.fill == "fit_duration" and $hero.kind == "video" and
+    $hero.label == "主视觉媒体" and
+    ($hero.min_source_duration | .timescale > 0 and .value / .timescale == 2) and
+    clip("title").replaceable == {"fill":"fit_duration","kind":"text",
+      "label":"主标题文本","min_source_duration":null} and
+    clip("title").template_editable_text == true and
+    clip("title").source.text == "可替换标题"
   ' "$canonical" >/dev/null || fail "template-fill canonical slot contract failed"
   assert_unique_frames "$video" 4 0.5 1.5 2.5 3.5
   for time in 0.5 2.0 3.5; do
@@ -78,12 +85,13 @@ check_all_features_evidence() {
   local dir="$PREVIEW_ROOT/all-features"
   [[ -d $dir ]] || return 0
   local canonical="$dir/project/project.veac.json" video caption edge_navy panel_navy
-  video=$(delivery_video_path "$dir" master master)
+  video=$(delivery_video_path "$dir" master all-features.mp4)
   video_contract "$video" 3.5
   jq -e '
-    def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_cue").source.text == "一种语言，一份类型化中间表示，一套渲染计划。" and
-    clip("itm_lower-third").visual.frame.height == {"unit":"pixels","value":180} and
+    def clip($key): first(.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
+    clip("cue").source.text == "一种语言，一份类型化中间表示，一套渲染计划。" and
+    clip("lower-third").visual.frame.height == {"unit":"pixels","value":180} and
     any(.project.relations[]; .kind.type == "group") and
     any(.project.relations[]; .kind.type == "av_link")
   ' "$canonical" >/dev/null || fail "all-features canonical integration contract failed"

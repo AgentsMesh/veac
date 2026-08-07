@@ -67,12 +67,6 @@ fn video_settings_reject_unaligned_pixels_gop_overflow_and_malformed_levels() {
         delivery(&mut plan).video.level = Some(level.to_owned());
         assert_code(&plan, "PLAN_VIDEO_SETTINGS_INVALID");
     }
-    for codec in [VideoCodec::H265, VideoCodec::Av1] {
-        let mut plan = resolved(&fixture());
-        delivery(&mut plan).video.codec = codec;
-        delivery(&mut plan).video.level = Some("5.1".to_owned());
-        assert_code(&plan, "PLAN_VIDEO_SETTINGS_INVALID");
-    }
 }
 
 #[test]

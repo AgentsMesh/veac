@@ -1,0 +1,51 @@
+fn title_style() -> TextStyle {
+  let fonts = font_stack(font_family("Inter"), []);
+  let metrics = text_metrics(
+    fonts, weight_normal(), font_style_normal(), 32px, 0px, 1.0, #ffffffff
+  );
+  let layout = text_layout(
+    text_box_width(300px), text_wrap_word(), text_overflow_clip(),
+    text_align_center(), text_align_middle(),
+    writing_horizontal_tb(), orientation_mixed()
+  );
+  text_style(
+    metrics, layout, text_path_none(),
+    text_decoration(text_background_none(), text_outline_none(), shadow_none()),
+    [], text_animation_none()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let backdrop = item(
+    identifier("backdrop"), item_enabled(), during(0s, 1s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.0), vector(1.0, 1.0),
+      [gradient_stop(0%, #112233ff), gradient_stop(100%, #aabbccff)]
+    ))), source_timing_native()
+  );
+  let mark = item(
+    identifier("mark"), item_enabled(), during(1s, 1s),
+    source_generated(vector_shape(
+      geometry_rounded_rectangle(rect(0.0, 0.0, 1.0, 1.0), 0.2),
+      paint_present(paint_solid(#00ff00ff)),
+      stroke_present(paint_solid(#ffffffff), 2px)
+    )), source_timing_native()
+  );
+  let words = item(
+    identifier("words"), item_enabled(), during(2s, 1s),
+    source_text("中文图文能力", title_style()), source_timing_native()
+  );
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let layers = visual_layer(
+    identifier("layers"), 0, placement_free(), state, track_routing_default()
+  ).with_item(backdrop).with_item(mark).with_item(words);
+  let timeline = sequence(
+    identifier("main"), "生成图形与文字",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(layers);
+  project(identifier("agent-graphics"), project_settings(1000))
+    .with_sequence(timeline).entry(timeline)
+}

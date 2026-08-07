@@ -4,6 +4,12 @@ pub(crate) fn full_visual() -> VisualProperties {
     framed_visual(Anchor::Center, None)
 }
 
+pub(crate) fn visual_solid_clip(id: &str, color: Color, start_ms: i64, duration_ms: i64) -> Clip {
+    let mut clip = solid_clip(id, color, start_ms, duration_ms);
+    clip.visual = Some(full_visual());
+    clip
+}
+
 pub(crate) fn framed_visual(anchor: Anchor, size: Option<(f64, f64)>) -> VisualProperties {
     VisualProperties {
         placement: Placement::Anchor {
@@ -51,17 +57,12 @@ pub(crate) fn default_mask(shape: MaskShape) -> Mask {
     }
 }
 
-pub(crate) fn video_effect(
-    id: &str,
-    effect_type: &str,
-    parameters: BTreeMap<String, ParameterValue>,
-) -> EffectInstance {
+pub(crate) fn video_effect(id: &str, effect: Effect) -> EffectInstance {
     EffectInstance {
         id: EffectId::new(id).unwrap(),
-        effect_type: effect_type.to_owned(),
         enabled: true,
         enable_range: None,
-        parameters,
+        effect,
     }
 }
 

@@ -1,185 +1,97 @@
-# Deliveries And Artifacts
+# Delivery 与 Deliverable
 
-A project-owned `delivery` selects one sequence and owns one or more typed
-artifacts. Visual artifacts share its raster contract. Artifact IDs are stable;
-the artifact kind selects a closed recipe grammar.
+Project-owned `Delivery` 选择一个 Sequence handle、optional raster contract 和一组 typed
+`Deliverable`。每种 artifact 是不同 constructor，不是 `kind` 字符串加 property map。
 
-```text
-video | image-sequence | caption-sidecar | audio-stem | scope
-audio-file | animated-image | still-image | adaptive-package
+## Video
+
+```veac,fragment
+let picture = video_output(
+  video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+  video_crf(20), gop_auto(), b_frames_auto(),
+  video_profile_present(profile_h264_high()), video_level_auto()
+);
+let master = deliverable_video(
+  identifier("master"), delivery_file("master.mp4"),
+  video_delivery(
+    container_mp4(), picture,
+    embedded_audio_present(audio_output(audio_aac(), 48000, 2)),
+    true, pass_single(), hardware_software()
+  )
+);
+delivery(
+  identifier("release"), timeline,
+  raster_settings(canvas(1920px, 1080px), frame_rate(30, 1), caption_burn_in()),
+  [master]
+)
 ```
 
-Targets are paired with artifact kinds:
+Container、video/audio codec、pixel/alpha/color、rate control、GOP、B-frame、profile、level、pass 与
+hardware policy 都是闭合 value。显式 hardware backend 在 device/upload binding 未建模时 fail closed。
 
-- `target file "name.ext";` for single-file artifacts.
-- `target pattern "frame-%04d.png";` for image sequences.
-- `target package "stream";` for adaptive packages.
+## Typed Artifact Set
 
-File and package targets are safe leaf names. An image pattern contains exactly
-one `%d` or `%0Nd` frame placeholder.
+公开 artifact family 及 constructor：
 
-## Video File
+| artifact | constructor |
+| --- | --- |
+| video | `deliverable_video` |
+| image sequence | `deliverable_image_frames` |
+| caption sidecar | `deliverable_caption_sidecar` |
+| audio stem | `deliverable_audio_stem` |
+| scope | `deliverable_scope` |
+| audio file | `deliverable_mp3` |
+| animated image | `deliverable_gif` |
+| still image | `deliverable_still` |
+| adaptive package | `deliverable_hls` |
 
-`mux` owns the container, streams, layout, pass mode, and accelerator. Each
-stream names its closed codec before codec-specific settings.
-
-```veac
-delivery release {
-  sequence main;
-  raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
-  artifact video master {
-    target file "master.mp4";
-    mux mp4 {
-      layout fast-start;
-      video h264 {
-        pixel-format yuv420p;
-        alpha opaque;
-        color-space source;
-        rate-control crf { value 18; }
-        gop automatic;
-        b-frames automatic;
-        profile h264-high;
-        level "4.1";
-      }
-      audio aac {
-        sample-rate 48khz;
-        channel-layout stereo;
-      }
-      passes single;
-      accelerator auto;
-    }
-  }
-}
+```veac,fragment
+deliverable_image_frames(
+  identifier("frames"), delivery_image_sequence("frame-%04d.png"), image_png(), 1
+)
+deliverable_caption_sidecar(
+  identifier("transcript"), delivery_file("captions.vtt"),
+  caption_webvtt(), [captions]
+)
+deliverable_audio_stem(
+  identifier("master-audio"), delivery_file("master.wav"), stem_wav(),
+  audio_output(audio_pcm_s24le(), 48000, 2), mix_master()
+)
+deliverable_scope(
+  identifier("waveform"), delivery_file("waveform.png"),
+  scope_waveform(), 1s, canvas(1280px, 720px), image_png()
+)
 ```
 
-Containers are `mp4`, `mov`, `mkv`, `webm`, and `mxf`. Video codecs are `h264`,
-`h265`, `vp9`, `av1`, `prores`, and `dnxhr`; audio may be `none` or a compatible
-AAC, Opus, FLAC, or PCM recipe. Rate control is `crf`, `average`, `capped`, or
-`lossless`. `color-space source`, `gop automatic`, `b-frames automatic`,
-`profile automatic`, and `level automatic` preserve explicit backend choices.
+Image format 是 PNG/JPEG/TIFF/EXR；caption 是 SRT/WebVTT/ASS；stem 是 WAV/FLAC 并选择 master、
+Layer 或 bus mix。Scope 是 waveform/vectorscope/histogram。Target path 经过 leaf/package/pattern
+validation，image sequence pattern 只能有一个 frame placeholder。
 
-## Sequence, Captions, Stem, And Scope
+## MP3、GIF、Still 与 HLS
 
-These recipes keep naming, source selection, analysis, and codec choice separate:
-
-```veac
-artifact image-sequence frames {
-  target pattern "frame-%04d.png";
-  numbering from 1;
-  encode png;
-}
-
-artifact caption-sidecar transcript {
-  target file "captions.vtt";
-  source caption-tracks { track subtitles; }
-  encode web-vtt;
-}
-
-artifact audio-stem dialogue {
-  target file "dialogue.wav";
-  source bus dialogue;
-  encode wav {
-    sample-format pcm-s24le;
-    sample-rate 48khz;
-    channel-layout stereo;
-  }
-}
-
-artifact scope waveform {
-  target file "waveform.png";
-  analyze waveform;
-  frame containing 1s;
-  canvas 1280px by 720px;
-  encode png;
-}
+```veac,fragment
+deliverable_mp3(
+  identifier("podcast"), delivery_file("podcast.mp3"),
+  mix_master(), 192000, 48000, channel_stereo()
+)
+deliverable_gif(
+  identifier("preview"), delivery_file("preview.gif"),
+  gif_forever(), gif_dither_sierra2()
+)
+deliverable_still(
+  identifier("cover"), delivery_file("cover.png"), 2s, image_png()
+)
+deliverable_hls(
+  identifier("stream"), delivery_package("stream"), 2s,
+  hls_audio_aac(mix_master(), 128000, 48000, channel_stereo()),
+  [mobile, hd]
+)
 ```
 
-Image encoders are PNG, JPEG, TIFF, and EXR. Caption encoders are SRT, WebVTT,
-and ASS. A stem selects `master`, `track <id>`, or `bus <id>` and encodes WAV or
-FLAC. Analyses are waveform, vectorscope, or histogram.
+HLS rendition 使用 `hls_rendition` 指定 canvas、target/max/buffer bitrate、profile、level、color 和
+B-frame policy。segment duration 是 1s..60s；rendition ID/canvas 唯一，canonical output 按 ID 排序。
 
-## MP3, GIF, And Still Images
-
-```veac
-artifact audio-file podcast {
-  target file "podcast.mp3";
-  source master;
-  encode mp3 {
-    bitrate 192kbps;
-    sample-rate 48khz;
-    channel-layout stereo;
-  }
-}
-
-artifact animated-image preview {
-  target file "preview.gif";
-  encode gif { playback forever; dither sierra2; }
-}
-
-artifact still-image cover {
-  target file "cover.png";
-  frame containing 1s;
-  encode png;
-}
-```
-
-GIF playback is `once`, `forever`, or an integer such as `3times`. Dither is
-`bayer`, `floyd-steinberg`, `sierra2`, or `none`. `frame containing` selects the
-timeline frame whose interval contains the authored time.
-
-## HLS Package
-
-`segment-duration` 必须在 1 秒到 60 秒之间；下限保证 FFmpeg 能生成有效的整数
-`EXT-X-TARGETDURATION` 和非空 master playlist。
-
-```veac
-artifact adaptive-package stream {
-  target package "stream";
-  package hls {
-    segment-duration 2s;
-    audio {
-      source master;
-      encode aac {
-        bitrate 192kbps;
-        sample-rate 48khz;
-        channel-layout stereo;
-      }
-    }
-    rendition mobile {
-      canvas 640px by 360px;
-      encode h264 {
-        rate-control capped {
-          target 900kbps; max 963kbps; buffer 1800kbit;
-        }
-        profile main;
-        level "3.1";
-        color-space source;
-        b-frames automatic;
-      }
-    }
-    rendition hd {
-      canvas 1280px by 720px;
-      encode h264 {
-        rate-control capped {
-          target 3mbps; max 3210kbps; buffer 6mbit;
-        }
-        profile high;
-        level "4.0";
-        color-space source;
-        b-frames automatic;
-      }
-    }
-  }
-}
-```
-
-HLS audio is an explicit recipe or `audio none;`. Renditions require unique IDs
-and canvases; lowering gives IDs the `rnd_` prefix and canonical IR orders them
-by ID. Segment duration and frame selection use `s`, `ms`, or `us`.
-
-## Units And Canonical Boundary
-
-Bitrates use `bps`, `kbps`, or `mbps`; rate-control buffers use `bit`, `kbit`, or
-`mbit`; sample rates use `hz` or `khz`; dimensions use `px`. Unitless values in
-these positions are errors. Authoring recipes lower to tagged, unknown-field-
-rejecting canonical IR schema version 5 with minimum reader version 5.
+完整九类交付示例见
+[`examples/delivery-formats/main.veac`](../../examples/delivery-formats/main.veac) 与
+[`outputs.veac`](../../examples/delivery-formats/outputs.veac)。canonical envelope schema v9 使用 strict
+tagged variants；planner/backend 只消费验证后的 delivery model。

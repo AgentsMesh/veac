@@ -1,4 +1,3 @@
-use serde_json::json;
 use veac_ir::{HashAlgorithm, RationalTime};
 
 use crate::{
@@ -96,8 +95,10 @@ fn selection_rejects_another_source_and_non_sha_input_identity() {
 fn verified_proxy_rejects_invalid_parameters_role_stream_and_clock() {
     let plan = test_support::plan(b"source");
     let input = &plan.inputs[0];
+    let mut wrong_dependency = proxy_descriptor(input, MediaRole::Video, video_spec(input));
+    wrong_dependency.dependencies[0].role = ArtifactDependencyRole::Source;
     let cases = [
-        descriptor(input, ArtifactKind::ProxyVideo, json!({})),
+        wrong_dependency,
         proxy_descriptor(
             input,
             MediaRole::Video,
@@ -110,19 +111,6 @@ fn verified_proxy_rejects_invalid_parameters_role_stream_and_clock() {
                 stream(9, 9),
                 SourceClockSpec::Identity {
                     duration: RationalTime::new(600, 600).unwrap(),
-                },
-            ),
-        ),
-        proxy_descriptor(
-            input,
-            MediaRole::Video,
-            video_spec_for_stream(
-                input.video.as_ref().unwrap().selection,
-                SourceClockSpec::Identity {
-                    duration: RationalTime {
-                        value: 1,
-                        timescale: 0,
-                    },
                 },
             ),
         ),
@@ -140,6 +128,20 @@ fn verified_proxy_rejects_invalid_parameters_role_stream_and_clock() {
             &artifact,
         ));
     }
+    let invalid_clock = proxy_descriptor(
+        input,
+        MediaRole::Video,
+        video_spec_for_stream(
+            input.video.as_ref().unwrap().selection,
+            SourceClockSpec::Identity {
+                duration: RationalTime {
+                    value: 1,
+                    timescale: 0,
+                },
+            },
+        ),
+    );
+    assert_invalid(invalid_clock.validate());
 }
 
 #[test]

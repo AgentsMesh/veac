@@ -1,45 +1,90 @@
 {
   "schema": "https://veac.dev/schemas/source-edit",
-  "schema_version": 1,
-  "operation_id": "op_programming_language_duration",
+  "schema_version": 6,
+  "operation_id": "op_programming_language_statement_structural_batch",
   "base_revision": {
-    "source_graph_sha256": "b468160b8a643e90abb37fd89196ff681aa11b1f665492370ec39988a4c27ced"
+    "source_graph_sha256": "0a6de945927fa224e3766dd5793a3dc6cd2e66e4995a661a8ba7fdf2e8a1f62b"
   },
   "atomic": true,
   "preconditions": [
     {
-      "type": "expression_equals",
+      "type": "import_exists",
+      "target": {"module": "main.veac", "alias": "showcase"}
+    },
+    {
+      "type": "node_exists",
+      "target": {
+        "module": "brand.veac",
+        "path": {"kind": "function", "function": "add_padding"}
+      }
+    },
+    {
+      "type": "statement_equals",
       "target": {
         "module": "main.veac",
-        "path": {
-          "kind": "constant",
-          "constant": "section_duration"
-        }
+        "path": {"kind": "function", "function": "timeline_span"}
       },
       "site": {
-        "type": "constant_value"
+        "type": "body_statement",
+        "path": {
+          "steps": [
+            {"step": "local_value", "operation": "let", "binding": "span", "ordinal": 0}
+          ]
+        }
       },
-      "expression": {
-        "source": "brand.card_duration"
-      }
+      "statement": {"source": "let span = brand.card_span(base, 500ms);"}
     }
   ],
   "operations": [
     {
-      "type": "set_expression",
-      "target": {
-        "module": "main.veac",
-        "path": {
-          "kind": "constant",
-          "constant": "section_duration"
+      "type": "insert_import",
+      "module": "main.veac",
+      "anchor": {
+        "type": "after_import",
+        "target": {"module": "main.veac", "alias": "brand"}
+      },
+      "import": {"path": "./showcase.veac", "alias": "showcase"}
+    },
+    {
+      "type": "remove_import",
+      "target": {"module": "main.veac", "alias": "showcase"}
+    },
+    {
+      "type": "insert_declaration",
+      "module": "brand.veac",
+      "anchor": {
+        "type": "after_declaration",
+        "target": {
+          "module": "brand.veac",
+          "path": {"kind": "function", "function": "card_span"}
         }
       },
-      "site": {
-        "type": "constant_value"
-      },
-      "expression": {
-        "source": "6s"
+      "declaration": {
+        "source": "fn add_padding(base: time, padding: time) -> time { base + padding }"
       }
+    },
+    {
+      "type": "remove_declaration",
+      "target": {
+        "module": "brand.veac",
+        "path": {"kind": "function", "function": "add_padding"}
+      }
+    },
+    {
+      "type": "set_statement",
+      "target": {
+        "module": "main.veac",
+        "path": {"kind": "function", "function": "timeline_span"}
+      },
+      "site": {
+        "type": "body_statement",
+        "path": {
+          "steps": [
+            {"step": "local_value", "operation": "let", "binding": "span", "ordinal": 0}
+          ]
+        }
+      },
+      "statement": {"source": "let span = brand.card_span(base, 600ms);"}
     }
   ]
 }

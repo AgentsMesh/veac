@@ -1,199 +1,82 @@
-project video-effects {
-  entry sequence main;
+import "./effects.veac" as effects;
+import "./showcase.veac" as showcase;
 
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-
-  resource image plate {
-    locator local {
-      path "assets/effects-plate.png";
-    }
-  }
-
-  resource video shaky {
-    locator local {
-      path "assets/shaky.mp4";
-    }
-    streams {
-      video auto;
-      audio disabled;
-    }
-  }
-
-  sequence main {
-    layer visual background {
-      item reveal {
-        source generated solid {
-          color #d1495bff;
-        }
-        record {
-          at 0s;
-          duration 8s;
-        }
-      }
-    }
-
-    layer visual effects {
-      item focus {
-        source media resource plate;
-        record {
-          at 0s;
-          duration 1s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-          effect animated-blur {
-            type video.blur;
-            record {
-              at 0s;
-              duration 1s;
-            }
-            parameter radius curve {
-              key soft {
-                at 0s;
-                value 16;
-                interpolation ease-out;
-              }
-              key sharp {
-                at 1s;
-                value 0;
-                interpolation linear;
-              }
-            }
-          }
-        }
-      }
-
-      item finish {
-        source media resource plate;
-        record {
-          at 1s;
-          duration 1s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-          effect sharpen {
-            type video.sharpen;
-            parameter amount 8;
-          }
-          effect color-adjust {
-            type video.color_adjust;
-            parameter brightness 0.08;
-            parameter contrast 1.25;
-            parameter saturation 0.35;
-          }
-          effect vignette {
-            type video.vignette;
-            parameter amount 0.65;
-          }
-          effect grain {
-            type video.grain;
-            parameter amount 0.28;
-          }
-        }
-      }
-
-      item chroma {
-        source media resource plate;
-        record {
-          at 2s;
-          duration 1s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-          effect chroma-key {
-            type video.chroma_key;
-            parameter blend 0.08;
-            parameter color #2dc264;
-            parameter similarity 0.18;
-          }
-          effect chroma-spill {
-            type video.chroma_spill;
-            parameter amount 1;
-            parameter color #2dc264;
-            parameter range 0.2;
-          }
-        }
-      }
-
-      item luma {
-        source media resource plate;
-        record {
-          at 3s;
-          duration 1s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-          effect luma-key {
-            type video.luma_key;
-            parameter invert false;
-            parameter softness 0.08;
-            parameter threshold 0.12;
-            parameter tolerance 0.08;
-          }
-        }
-      }
-
-      item stabilize-before {
-        source media resource shaky;
-        record {
-          at 4s;
-          duration 2s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-        }
-      }
-
-      item stabilize-after {
-        source media resource shaky;
-        record {
-          at 6s;
-          duration 2s;
-        }
-        modifiers {
-          layout canvas-fill { placement anchor { at center; inset { x 0px; y 0px; } } frame { width 1280px; height 720px; fit fill; } }
-          effect stabilize {
-            type video.stabilize;
-            parameter enabled true;
-          }
-        }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster {
-      canvas 1280px by 720px;
-      frame-rate 30fps;
-      captions discard;
-    }
-
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf {
-            value 23;
-          }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let plate = image_resource(
+    identifier("plate"), resource_file("assets/effects-plate.png"),
+    sha256("4e4866394130df1cee6199fe09bba307d98ec70c13cad29b03f185a50d74e621")
+  );
+  let shaky = video_resource(
+    identifier("shaky"), resource_file("assets/shaky.mp4"),
+    sha256("405b5d61599bfc48e9c132f794d7a0b1364fc66bfc39df3c8ba7daa4f4094f14"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let focus = effects.media(identifier("focus"), 0s, 1s, plate).with_effect(
+    video_blur_effect(
+      identifier("animated-blur"), effect_enabled(effect_window_full()),
+      length_keyframes([
+        length_keyframe(identifier("soft"), 0s, 16px, interpolation_ease_out()),
+        length_keyframe(identifier("sharp"), 1s, 0px, interpolation_linear())
+      ])
+    )
+  );
+  let finish = effects.media(identifier("finish"), 1s, 1s, plate)
+    .with_effect(video_sharpen_effect(
+      identifier("sharpen"), effect_enabled(effect_window_full()), scalar_constant(8.0)
+    ))
+    .with_effect(video_color_adjust_effect(
+      identifier("color-adjust"), effect_enabled(effect_window_full()),
+      scalar_constant(0.08), scalar_constant(1.25), scalar_constant(0.35)
+    ))
+    .with_effect(video_vignette_effect(
+      identifier("vignette"), effect_enabled(effect_window_full()), percent_constant(65%)
+    ))
+    .with_effect(video_grain_effect(
+      identifier("grain"), effect_enabled(effect_window_full()), percent_constant(28%)
+    ));
+  let chroma = effects.media(identifier("chroma"), 2s, 1s, plate)
+    .with_effect(video_chroma_key_effect(
+      identifier("chroma-key"), effect_enabled(effect_window_full()),
+      #2dc264ff, percent_constant(18%), percent_constant(8%)
+    ))
+    .with_effect(video_chroma_spill_effect(
+      identifier("chroma-spill"), effect_enabled(effect_window_full()),
+      #2dc264ff, percent_constant(100%), percent_constant(20%)
+    ));
+  let luma = effects.media(identifier("luma"), 3s, 1s, plate).with_effect(
+    video_luma_key_effect(
+      identifier("luma-key"), effect_enabled(effect_window_full()),
+      percent_constant(12%), percent_constant(8%), percent_constant(8%), false
+    )
+  );
+  let before = effects.media(identifier("stabilize-before"), 4s, 2s, shaky);
+  let after = effects.media(identifier("stabilize-after"), 6s, 2s, shaky).with_effect(
+    video_stabilize_effect(
+      identifier("stabilize"), effect_enabled(effect_window_full()), true
+    )
+  );
+  let plugin_before = effects.media(identifier("plugin-before"), 8s, 1s, plate);
+  let plugin_after = effects.media(identifier("plugin-after"), 9s, 1s, plate).with_effect(
+    video_plugin_scalar_effect(
+      identifier("monochrome-v1"), effect_enabled(effect_window_full()),
+      plugin_reference_monochrome_v1(), scalar_constant(1.0)
+    )
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("reveal"), #d1495bff, 0s, 10s));
+  let visuals = visual_layer(
+    identifier("effects"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(focus).with_item(finish).with_item(chroma).with_item(luma)
+    .with_item(before).with_item(after).with_item(plugin_before).with_item(plugin_after);
+  let timeline = sequence(
+    identifier("main"), "视频效果与防抖",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(visuals);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("video-effects"), project_settings(600))
+    .with_resource(plate).with_resource(shaky)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

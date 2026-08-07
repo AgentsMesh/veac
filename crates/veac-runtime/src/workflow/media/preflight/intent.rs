@@ -15,7 +15,6 @@ pub(super) fn for_spec(spec: &MediaArtifactSpec) -> StreamIntent {
                 .audio
                 .map_or(disabled, |audio| choice(audio.source_stream)),
         ),
-        MediaArtifactSpec::Analysis(_) => (disabled, disabled),
     };
     StreamIntent { video, audio }
 }

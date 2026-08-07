@@ -9,14 +9,12 @@ use super::support::{
 fn canonical_load_reports_json_and_semantic_errors() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    assert_eq!(
-        crate::canonical::load(&project)
-            .unwrap()
-            .project
-            .id
-            .to_string(),
-        "prj_cli-test"
-    );
+    assert!(crate::canonical::load(&project)
+        .unwrap()
+        .project
+        .id
+        .as_str()
+        .starts_with("prj_"));
 
     std::fs::write(&project, "{bad").unwrap();
     assert!(crate::canonical::load(&project)
@@ -25,8 +23,13 @@ fn canonical_load_reports_json_and_semantic_errors() {
         .contains("CANONICAL_JSON"));
 
     let valid = canonical_project(&temp, GENERATED_SOURCE);
+    let envelope = crate::canonical::load(&valid).unwrap();
+    let current = format!(
+        "\"entry_sequence_id\":\"{}\"",
+        envelope.project.entry_sequence_id
+    );
     let text = std::fs::read_to_string(&valid).unwrap().replacen(
-        "\"entry_sequence_id\":\"seq_main\"",
+        &current,
         "\"entry_sequence_id\":\"seq_absent\"",
         1,
     );
@@ -170,5 +173,5 @@ fn hydrate_all(
         .iter()
         .map(|material| material.id.clone())
         .collect();
-    crate::canonical::hydrate(loaded, &required, environment)
+    crate::canonical::hydrate_with_material_root(loaded, &required, None, environment)
 }

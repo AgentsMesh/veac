@@ -1,0 +1,28 @@
+module {
+  fn fill_style() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)),
+        frame_sized(640px, 360px, fit_fill()),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+
+  export fn media(
+    key: identifier, start: time, duration: time, resource: Resource
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, duration),
+      source_media(resource), source_timing_native()
+    ).with_visual(fill_style())
+  }
+}

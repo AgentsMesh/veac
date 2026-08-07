@@ -1,7 +1,9 @@
+mod window;
+
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
-use veac_plan::canonical::{BlendMode, TrackKind};
+use veac_plan::canonical::{BlendMode, TimeRange, TrackKind};
 use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedSequence, ResolvedTrack};
 
 use super::{apply_stack::ApplyStack, blend, layer, time, transition, CodegenErrors, EmitContext};
@@ -72,7 +74,9 @@ pub(super) fn compose_layer(
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
 ) -> Result<String, CodegenErrors> {
-    base = overlay(context, sequence, &base, clip, visual)?;
+    if let Some(normal_window) = window::normal(track, clip) {
+        base = overlay(context, sequence, &base, clip, visual, normal_window)?;
+    }
     for effect in track
         .transitions
         .iter()
@@ -89,17 +93,20 @@ fn overlay(
     base: &str,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
+    window: TimeRange,
 ) -> Result<String, CodegenErrors> {
     let rendered = layer::render_with_shadow(context, sequence, clip, visual)?;
+    let foreground = window::slice(context, &rendered.foreground, clip, window, "normalclipv");
     let layer = context.graph.filter(
-        &[&rendered.foreground],
-        format!("setpts=PTS+{}/TB", time::seconds(clip.record_range.start)),
+        &[&foreground],
+        format!("setpts=PTS+{}/TB", time::seconds(window.start)),
         "offsetv",
     );
-    let start = time::seconds(clip.record_range.start);
-    let end = time::end(clip.record_range);
+    let start = time::seconds(window.start);
+    let end = time::end(window);
     let base = match rendered.shadow {
         Some(shadow) => {
+            let shadow = window::slice(context, &shadow, clip, window, "normalshadowv");
             let shadow = context.graph.filter(
                 &[&shadow],
                 format!("setpts=PTS+{start}/TB"),

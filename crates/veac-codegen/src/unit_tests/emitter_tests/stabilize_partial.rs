@@ -11,11 +11,8 @@ fn partial_stabilization_splices_only_the_active_interval() {
     let mut plan = resolved(&fixture());
     plan.sequences[0].tracks[0].clips[0].effects = vec![ResolvedEffect {
         id: EffectId::new("fx_partial_stabilize").unwrap(),
-        effect_type: "video.stabilize".into(),
         active_range: TimeRange::new(time(100), time(300)).unwrap(),
-        parameters: [("enabled".into(), ParameterValue::Boolean { value: true })]
-            .into_iter()
-            .collect(),
+        effect: Effect::VideoStabilize { enabled: true },
     }];
     let command = emit_video_command(&plan, &bindings(&plan)).unwrap();
     let graph = command.filter_graph.as_deref().unwrap();
@@ -68,11 +65,8 @@ fn sequential_stabilizers_form_an_ordered_internal_artifact_chain() {
         .into_iter()
         .map(|name| ResolvedEffect {
             id: EffectId::new(format!("fx_{name}")).unwrap(),
-            effect_type: "video.stabilize".into(),
             active_range: TimeRange::new(time(0), time(600)).unwrap(),
-            parameters: [("enabled".into(), ParameterValue::Boolean { value: true })]
-                .into_iter()
-                .collect(),
+            effect: Effect::VideoStabilize { enabled: true },
         })
         .collect();
     let command = emit_video_command(&plan, &bindings(&plan)).unwrap();

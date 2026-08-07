@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use veac_ir::{Clip, ClipSource, ProjectEnvelope, Sequence, TextStyle};
-use veac_lang::authoring::{lower_document, parse};
+use veac_lang::program::build_path;
 
 #[derive(Debug)]
 pub struct Claim {
@@ -53,6 +53,34 @@ pub fn clips(envelope: &ProjectEnvelope) -> impl Iterator<Item = &Clip> {
         .tracks
         .iter()
         .flat_map(|track| &track.clips)
+}
+
+pub fn authored_key(value: &Option<veac_ir::EntityAuthorship>) -> Option<&str> {
+    value
+        .as_ref()?
+        .logical_path
+        .last()
+        .map(|part| part.as_str())
+}
+
+pub fn clip_by_key<'a>(envelope: &'a ProjectEnvelope, key: &str) -> &'a Clip {
+    clips(envelope)
+        .find(|clip| authored_key(&clip.authorship) == Some(key))
+        .unwrap_or_else(|| panic!("missing authored clip {key}"))
+}
+
+pub fn sequence_by_key<'a>(envelope: &'a ProjectEnvelope, key: &str) -> &'a Sequence {
+    envelope
+        .project
+        .sequences
+        .iter()
+        .find(|sequence| match &sequence.authorship {
+            Some(veac_ir::SequenceAuthorship::Veac { entity, .. }) => {
+                entity.logical_path.last().map(|part| part.as_str()) == Some(key)
+            }
+            _ => false,
+        })
+        .unwrap_or_else(|| panic!("missing authored sequence {key}"))
 }
 
 pub fn text_styles(envelope: &ProjectEnvelope) -> impl Iterator<Item = &TextStyle> {
@@ -122,14 +150,10 @@ fn lower_target(target_id: &str) -> ProjectEnvelope {
 
 pub fn lower_example(relative: &str) -> ProjectEnvelope {
     let path = examples_root().join(relative);
-    let source = fs::read_to_string(&path).unwrap();
-    let document =
-        parse(&source).unwrap_or_else(|diagnostics| panic!("{}: {diagnostics:?}", path.display()));
-    let envelope = lower_document(&document)
-        .unwrap_or_else(|diagnostics| panic!("{}: {diagnostics:?}", path.display()));
-    veac_ir::validate(&envelope)
-        .unwrap_or_else(|diagnostics| panic!("{}: {diagnostics:?}", path.display()));
-    envelope
+    build_path(&path)
+        .unwrap_or_else(|diagnostics| panic!("{}: {diagnostics:?}", path.display()))
+        .envelope()
+        .clone()
 }
 
 fn required_array<'a>(value: &'a Value, field: &str) -> &'a [Value] {

@@ -1,5 +1,5 @@
 use super::{mechanism_helpers::text_clip, support::*};
-use crate::{canonical::*, plan_hash, resolve, ResolvedClipSource};
+use crate::{canonical::*, plan_hash, resolve, ResolvedClipSource, ResolvedTextPresentation};
 
 #[test]
 fn text_fonts_layout_spans_and_animation_resolve_as_owned_plan_data() {
@@ -76,6 +76,29 @@ fn text_fonts_layout_spans_and_animation_resolve_as_owned_plan_data() {
         serde_json::from_str::<crate::ResolvedRenderPlan>(&json).unwrap(),
         plan
     );
+}
+
+#[test]
+fn resolved_text_style_mutation_preserves_the_presentation_variant() {
+    let mut value = project();
+    value.project.materials.push(font_material("med_font"));
+    value.project.sequences[0].tracks.push(track(
+        "trk_text_mutation",
+        TrackKind::Visual,
+        10,
+        vec![text_clip(false)],
+    ));
+
+    let mut plan = resolve(&value, None).unwrap().remove(0);
+    let ResolvedClipSource::Text { content } = &mut plan.sequences[0].tracks[1].clips[0].source
+    else {
+        panic!("resolved text")
+    };
+    content.styled_mut().unwrap().size_pixels = 64.0;
+    assert_eq!(content.styled().unwrap().size_pixels, 64.0);
+
+    content.presentation = ResolvedTextPresentation::Plain { has_spans: false };
+    assert!(content.styled_mut().is_none());
 }
 
 #[test]

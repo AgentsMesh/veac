@@ -119,18 +119,6 @@ fn backend_time_rejects_precision_loss_instead_of_rounding() {
     );
 }
 
-#[test]
-fn analysis_has_no_implicit_ffmpeg_command() {
-    let spec = MediaArtifactSpec::Analysis(AnalysisSpec {
-        analysis_type: "scenes".into(),
-        configuration: serde_json::json!({}),
-    });
-    assert_eq!(
-        args(&spec).unwrap_err().kind,
-        WorkflowErrorKind::UnsupportedOperation
-    );
-}
-
 fn args(spec: &MediaArtifactSpec) -> WorkflowResult<Vec<String>> {
     arguments(
         Path::new("input name.mp4"),

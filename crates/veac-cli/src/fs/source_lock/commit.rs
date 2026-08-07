@@ -5,7 +5,32 @@ use super::stage::Staged;
 use super::SourceGraphLock;
 use crate::error::{CliError, CliResult};
 
+mod batch;
+mod guard;
+
+#[derive(Clone, Copy)]
+pub(crate) struct SourceModuleReplacement<'a> {
+    pub(crate) module: &'a str,
+    pub(crate) expected: &'a str,
+    pub(crate) replacement: &'a str,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct SourceModuleGuard<'a> {
+    pub(crate) module: &'a str,
+    pub(crate) expected: &'a str,
+}
+
 impl SourceGraphLock {
+    pub(crate) fn commit_modules(
+        &self,
+        root: &Path,
+        replacements: &[SourceModuleReplacement<'_>],
+        guards: &[SourceModuleGuard<'_>],
+    ) -> CliResult {
+        batch::commit(self, root, replacements, guards)
+    }
+
     pub(crate) fn commit_module(
         &self,
         root: &Path,

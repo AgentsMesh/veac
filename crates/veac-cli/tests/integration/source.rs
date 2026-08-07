@@ -1,17 +1,18 @@
 use super::support::*;
 
 #[test]
-fn help_and_source_commands_expose_the_authoring_pipeline() {
+fn help_and_source_commands_expose_only_the_executable_pipeline() {
     veac()
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("compile"))
+        .stdout(predicate::str::contains("build"))
+        .stdout(predicate::str::contains("compile").not())
         .stdout(predicate::str::contains("check-ir"))
         .stdout(predicate::str::contains("render"));
 
     let temp = tempdir().unwrap();
-    let source = source_file(&temp, GENERATED_SOURCE);
+    let source = source_file(&temp, EXECUTABLE_SOURCE);
     veac()
         .args(["check", source.to_str().unwrap(), "--revision", "12"])
         .assert()
@@ -19,19 +20,25 @@ fn help_and_source_commands_expose_the_authoring_pipeline() {
         .stdout(predicate::str::contains("revision 12"));
 
     let output = veac()
-        .args(["compile", source.to_str().unwrap()])
+        .args(["build", source.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["schema_version"], veac_ir::CURRENT_SCHEMA_VERSION);
-    assert_eq!(value["project"]["id"], "prj_cli-e2e");
+    assert!(value["project"]["id"].as_str().unwrap().starts_with("prj_"));
 }
 
 #[test]
-fn compile_and_check_ir_form_a_strict_disk_round_trip() {
+fn build_and_check_ir_form_a_strict_disk_round_trip() {
     let temp = tempdir().unwrap();
-    let project = compile_ir(&temp, GENERATED_SOURCE);
+    let source = source_file(&temp, EXECUTABLE_SOURCE);
+    let project = temp.path().join("project.json");
+    veac()
+        .args(["build", source.to_str().unwrap(), "--emit-ir"])
+        .arg(&project)
+        .assert()
+        .success();
     veac()
         .args(["check-ir", project.to_str().unwrap()])
         .assert()
@@ -53,8 +60,9 @@ fn compile_and_check_ir_form_a_strict_disk_round_trip() {
 #[test]
 fn formatter_supports_check_stdout_and_in_place_modes() {
     let temp = tempdir().unwrap();
-    let compact = GENERATED_SOURCE.replace("  ", " ");
-    let source = source_file(&temp, &compact);
+    let messy = EXECUTABLE_SOURCE.replacen("fn main", "fn  main", 1);
+    let source = source_file(&temp, &messy);
+    let expected = veac_lang::program::format_path(&source).unwrap();
     veac()
         .args(["fmt", source.to_str().unwrap(), "--check"])
         .assert()
@@ -64,7 +72,8 @@ fn formatter_supports_check_stdout_and_in_place_modes() {
         .args(["fmt", source.to_str().unwrap(), "--stdout"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("project cli-e2e {"));
+        .stdout(predicate::str::contains("fn main(context: Context)"));
+    assert_eq!(std::fs::read_to_string(&source).unwrap(), messy);
     veac()
         .args(["fmt", source.to_str().unwrap()])
         .assert()
@@ -73,18 +82,19 @@ fn formatter_supports_check_stdout_and_in_place_modes() {
         .args(["fmt", source.to_str().unwrap(), "--check"])
         .assert()
         .success();
+    assert_eq!(std::fs::read_to_string(source).unwrap(), expected);
 }
 
 #[test]
-fn authoring_diagnostics_are_stable_located_and_json_serializable() {
+fn executable_diagnostics_are_stable_located_and_json_serializable() {
     let temp = tempdir().unwrap();
-    let source = source_file(&temp, "project broken {\n  unsupported value;\n}");
+    let source = source_file(&temp, "fn helper(value: int) -> int { value }\n");
     veac()
         .args(["check", source.to_str().unwrap()])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("error[AUTHORING_"))
-        .stderr(predicate::str::contains("main.veac:2:"));
+        .stderr(predicate::str::contains("PROGRAM_EXECUTABLE_MAIN_MISSING"))
+        .stderr(predicate::str::contains("main.veac:"));
 
     let output = veac()
         .args([
@@ -97,11 +107,10 @@ fn authoring_diagnostics_are_stable_located_and_json_serializable() {
         .unwrap();
     assert!(!output.status.success());
     let envelope: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
-    assert!(envelope["diagnostics"][0]["code"]
-        .as_str()
-        .unwrap()
-        .starts_with("AUTHORING_"));
-    assert_eq!(envelope["diagnostics"][0]["source_span"]["line"], 2);
+    assert_eq!(
+        envelope["diagnostics"][0]["code"],
+        "PROGRAM_EXECUTABLE_MAIN_MISSING"
+    );
 }
 
 #[test]
@@ -121,7 +130,8 @@ fn canonical_diagnostics_preserve_agent_repair_context() {
         .unwrap();
     assert!(!output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
+    let material_id = envelope.project.materials[0].id.to_string();
     assert!(stderr.contains("error[DUPLICATE_MATERIAL_ID]"));
-    assert!(stderr.contains("object: med_footage"));
-    assert!(stderr.contains("/project/materials/med_footage"));
+    assert!(stderr.contains(&format!("object: {material_id}")));
+    assert!(stderr.contains(&format!("/project/materials/{material_id}")));
 }

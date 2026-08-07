@@ -1,0 +1,70 @@
+module {
+  fn circle(scale: Vector, feather: length) -> Mask {
+    mask(
+      mask_circle(),
+      mask_motion(
+        vector_constant(vector(0.5, 0.5)), vector_constant(scale), angle_constant(0deg)
+      ),
+      mask_edge(length_constant(feather), length_constant(0px)), false
+    )
+  }
+
+  fn stage_state() -> ApplyStageState {
+    apply_stage_enabled(apply_stage_window_full())
+  }
+
+  fn effect_state() -> EffectState { effect_enabled(effect_window_full()) }
+
+  export fn accent_style() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(87%), compositing(1, blend_normal()), card_none()),
+      [circle(vector(0.42, 0.72), 0px)], color_pipeline_none()
+    )
+  }
+
+  export fn composite_band(base: Layer, overlay: Layer) -> Apply {
+    apply(
+      identifier("band-stack"), apply_enabled(), during(0s, 2s),
+      apply_target_composite_band(base, overlay), [
+        apply_effect_stage(identifier("band-contrast"), stage_state(),
+          video_color_adjust_effect(identifier("contrast"), effect_state(),
+            scalar_constant(0.0), scalar_constant(1.3), scalar_constant(1.0))),
+        apply_effect_stage(identifier("band-soften"), stage_state(),
+          video_blur_effect(identifier("blur"), effect_state(), length_constant(14px)))
+      ],
+      apply_mix(percent_constant(88%), blend_screen(), [circle(vector(0.6, 0.78), 24px)])
+    )
+  }
+
+  export fn layer(target: Layer) -> Apply {
+    apply(
+      identifier("overlay-layer"), apply_enabled(), during(2s, 2s),
+      apply_target_layer(target), [apply_effect_stage(
+        identifier("brightness"), stage_state(),
+        video_color_adjust_effect(identifier("brighten"), effect_state(),
+          scalar_constant(0.35), scalar_constant(1.0), scalar_constant(1.0))
+      )], apply_mix(percent_constant(100%), blend_normal(), [])
+    )
+  }
+
+  export fn items(first: Item, second: Item) -> Apply {
+    apply(
+      identifier("selected-item-set"), apply_enabled(), during(4s, 2s),
+      apply_target_items([first, second]), [apply_effect_stage(
+        identifier("selection-contrast"), stage_state(),
+        video_color_adjust_effect(identifier("selected"), effect_state(),
+          scalar_constant(0.0), scalar_constant(1.55), scalar_constant(1.0))
+      )], apply_mix(percent_constant(70%), blend_multiply(), [])
+    )
+  }
+}

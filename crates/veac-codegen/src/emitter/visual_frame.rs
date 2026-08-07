@@ -88,7 +88,7 @@ fn fit_surface(
     let filter = match fit {
         FitMode::Fill => format!("scale={width}:{height}"),
         FitMode::Contain => format!(
-            "scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black@0,format=rgba"
+            "format=gbrap16le,scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black@0"
         ),
         FitMode::Cover => format!(
             "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"

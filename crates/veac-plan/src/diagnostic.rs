@@ -21,6 +21,7 @@ pub enum ResolutionErrorKind {
     NestedSequenceComponentUnavailable,
     SourceRangeOutOfBounds,
     TimeArithmetic,
+    RenderPlanContract,
     InternalInvariant,
 }
 

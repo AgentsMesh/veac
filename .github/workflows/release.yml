@@ -28,16 +28,16 @@ jobs:
             archive: tar.gz
             cross: true
           - target: x86_64-apple-darwin
-            runner: macos-14
+            runner: macos-15-intel
             archive: tar.gz
           - target: aarch64-apple-darwin
-            runner: macos-latest
+            runner: macos-15
             archive: tar.gz
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: ${{ matrix.target }}
 
@@ -48,16 +48,16 @@ jobs:
       # Install cross for Linux ARM64
       - name: Install cross
         if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: cargo install cross --version 0.2.5 --locked
 
       # Build
       - name: Build (cross)
         if: matrix.cross
-        run: cross build --release --bin ${{ env.BIN_NAME }} --target ${{ matrix.target }}
+        run: cross build --locked --release --bin ${{ env.BIN_NAME }} --target ${{ matrix.target }}
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
-        run: cargo build --release --bin ${{ env.BIN_NAME }} --target ${{ matrix.target }}
+        run: cargo build --locked --release --bin ${{ env.BIN_NAME }} --target ${{ matrix.target }}
 
       # Determine version from tag
       - name: Set archive name
@@ -76,7 +76,7 @@ jobs:
           STAGING="${{ steps.archive.outputs.name }}"
           mkdir -p "$STAGING"
           cp "target/${{ matrix.target }}/release/${{ env.BIN_NAME }}" "$STAGING/"
-          cp README.md LICENSE "$STAGING/" 2>/dev/null || true
+          cp README.md LICENSE "$STAGING/"
           tar czf "$STAGING.tar.gz" "$STAGING"
           echo "ASSET=$STAGING.tar.gz" >> "$GITHUB_ENV"
 
@@ -87,9 +87,42 @@ jobs:
           path: ${{ env.ASSET }}
           retention-days: 1
 
+  smoke:
+    name: Smoke packaged ${{ matrix.target }}
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-apple-darwin
+            runner: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download packaged archive
+        uses: actions/download-artifact@v4
+        with:
+          name: veac-${{ github.ref_name }}-${{ matrix.target }}
+          path: packaged
+
+      - name: Smoke extracted packaged binary on its native architecture
+        shell: bash
+        run: >-
+          bash .github/scripts/smoke-release-archive.sh
+          "packaged/veac-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz"
+          "${{ matrix.target }}" "$GITHUB_REF_NAME"
+
   release:
     name: Create Release
-    needs: build
+    needs: smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,7 +138,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: artifacts
-        run: sha256sum *.tar.gz > checksums-sha256.txt
+        run: sha256sum -- *.tar.gz > checksums-sha256.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

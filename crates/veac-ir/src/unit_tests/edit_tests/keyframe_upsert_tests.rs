@@ -47,7 +47,7 @@ fn upsert_supports_every_typed_curve_target_and_reports_children() {
             clip_id: clip_id.clone(),
             target: NumberCurveTarget::EffectParameter {
                 effect_id: EffectId::new("fx_color").unwrap(),
-                name: "brightness".to_owned(),
+                parameter: EffectParameter::Brightness,
             },
             keyframe: keys[4].clone(),
         }),
@@ -134,7 +134,7 @@ fn upsert_rejects_foreign_ids_duplicate_times_missing_targets_and_locks() {
             clip_id: id.clone(),
             target: NumberCurveTarget::EffectParameter {
                 effect_id: EffectId::new("fx_color").unwrap(),
-                name: "missing".to_owned(),
+                parameter: EffectParameter::TargetLufs,
             },
             keyframe: number_key("kf_missing_parameter", 0, 0.5),
         },

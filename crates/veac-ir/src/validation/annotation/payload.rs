@@ -35,7 +35,7 @@ pub(super) fn valid(payload: &AnnotationPayload, span: AnnotationSpan) -> bool {
             score,
             rationale,
             evidence,
-        } => range(span) && probability(*score) && text(rationale) && sorted_text(evidence),
+        } => range(span) && probability(*score) && text(rationale) && evidence_valid(evidence),
         AnnotationPayload::Review {
             action,
             rationale,
@@ -74,8 +74,6 @@ fn language(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
-fn sorted_text(values: &[String]) -> bool {
-    values.len() <= 256
-        && values.iter().all(|value| text(value))
-        && values.windows(2).all(|pair| pair[0] < pair[1])
+fn evidence_valid(values: &[String]) -> bool {
+    values.len() <= 256 && values.iter().all(|value| text(value))
 }

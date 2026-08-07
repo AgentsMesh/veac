@@ -1,4 +1,3 @@
-use serde_json::json;
 use veac_ir::{Rational, RationalTime, StreamSelection};
 
 use super::request;
@@ -50,10 +49,6 @@ fn invalid_media_specs_fail_before_key_generation() {
             height: 10,
             frame_rate: Rational::new(0, 1).unwrap(),
             method: OpticalFlowMethod::BlockMatching,
-        }),
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: "analysis".into(),
-            configuration: json!([]),
         }),
         MediaArtifactSpec::SourceSegment(SourceSegmentSpec {
             video_stream: stream(),

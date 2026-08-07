@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::*;
 
 use super::Validator;
@@ -77,17 +75,6 @@ impl Validator {
             || (nonnegative && (value.x < 0.0 || value.y < 0.0))
         {
             self.value_error(code, path, object_id);
-        }
-    }
-
-    pub(super) fn metadata(
-        &mut self,
-        metadata: &BTreeMap<String, serde_json::Value>,
-        path: &str,
-        object_id: &str,
-    ) {
-        if !metadata.values().all(json_value_is_ijson) {
-            self.value_error("METADATA_NUMBER", path, object_id);
         }
     }
 }

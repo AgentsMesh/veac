@@ -36,29 +36,61 @@ verify_example_source_edit_evidence() {
     (.source_graph_sha256 | test("^[0-9a-f]{64}$"))
   ' "$revision" >/dev/null ||
     source_edit_evidence_error "invalid source revision contract" || return 1
-  jq -e --slurpfile revision "$revision" '
+  jq -e '
     .schema == "https://veac.dev/schemas/source-index" and
-    .schema_version == 1 and .revision == $revision[0] and
+    .schema_version == 8 and
+    (.build_inputs | type == "array") and
+    (.modules | type == "array" and length > 0) and
     (.nodes | type == "array" and length > 0)
   ' "$index" >/dev/null ||
+    source_edit_evidence_error "invalid source index v8 contract" || return 1
+  jq -e --slurpfile revision "$revision" '.revision == $revision[0]' \
+    "$index" >/dev/null ||
     source_edit_evidence_error "source index does not match the revision" || return 1
   jq -e --slurpfile revision "$revision" --slurpfile index "$index" '
+    def module_exists($name): any($index[0].modules[]; .module == $name);
+    def node_site($operation; $field): any($index[0].nodes[];
+      .target == $operation.target and
+      any((if $field == "expressions" then .expressions
+        elif $field == "statements" then .statements
+        elif $field == "bodies" then .bodies else .declarations end)[];
+        .site == $operation.site));
+    def declaration_exists($target): any($index[0].modules[].declarations[];
+      .target == $target);
+    def import_exists($target): any($index[0].modules[].imports[];
+      .target == $target);
+    def anchor_exists($module; $anchor):
+      module_exists($module) and
+      if $anchor.type == "module_start" or $anchor.type == "module_end" then true
+      elif $anchor.type == "before_declaration" or $anchor.type == "after_declaration"
+        then $anchor.target.module == $module and declaration_exists($anchor.target)
+      elif $anchor.type == "before_import" or $anchor.type == "after_import"
+        then $anchor.target.module == $module and import_exists($anchor.target)
+      else false end;
+    def addressable($operation):
+      if $operation.type == "set_expression" then
+        node_site($operation; "expressions")
+      elif $operation.type == "set_statement" then node_site($operation; "statements")
+      elif $operation.type == "set_body" then node_site($operation; "bodies")
+      elif $operation.type == "set_declaration" then node_site($operation; "declarations")
+      elif $operation.type == "set_top_level_declaration" or
+        $operation.type == "remove_declaration" then declaration_exists($operation.target)
+      elif $operation.type == "insert_declaration" or $operation.type == "insert_import"
+        then anchor_exists($operation.module; $operation.anchor)
+      elif $operation.type == "remove_import" then import_exists($operation.target)
+      else false end;
     .schema == "https://veac.dev/schemas/source-edit" and
-    .schema_version == 1 and .atomic == true and
+    .schema_version == 6 and .atomic == true and
     .base_revision == $revision[0] and
     (.operations | type == "array" and length > 0) and
-    all(.operations[]; . as $operation |
-      any($index[0].nodes[];
-        .target == $operation.target and
-        any(.expressions[]; .site == $operation.site)))
+    all(.operations[]; addressable(.))
   ' "$batch" >/dev/null ||
     source_edit_evidence_error "source edit batch is not addressable in the index" || return 1
   jq -e --slurpfile revision "$revision" --slurpfile batch "$batch" '
-    .module as $module |
-    ($module | type == "string" and length > 0) and
-    all($batch[0].operations[]; .target.module == $module) and
+    ([$batch[0].operations[] | (.module // .target.module)] | unique | sort) as $modules |
+    (.modules | type == "array" and sort == $modules) and
     .previous_revision == $revision[0] and .new_revision != .previous_revision and
-    .destination == null and .dry_run == true
+    .destinations == [] and .dry_run == true
   ' "$outcome" >/dev/null ||
     source_edit_evidence_error "source edit dry-run outcome is inconsistent"
 }
@@ -79,8 +111,8 @@ verify_declared_source_edit_evidence() {
 }
 
 build_example_source_edit_evidence() {
-  local target=$1 source_root=$2 entry=$3 source=$4 veac=$5
-  local declared="$source_root/source-edit.json" batch
+  local target=$1 source_root=$2 entry=$3 source=$4 veac=$5 inputs=${6:-}
+  local declared="$source_root/source-edit.json" batch lock
   if ! source_edit_evidence_requested "$target"; then
     [[ ! -e $declared && ! -L $declared ]] ||
       source_edit_evidence_error "undeclared source edit batch: $declared"
@@ -92,9 +124,15 @@ build_example_source_edit_evidence() {
   cp "$declared" "$batch" || return 1
   "$veac" source-revision "$source" >"$(example_source_revision "$entry")" || return 1
   "$veac" source-index "$source" >"$(example_source_index "$entry")" || return 1
-  "$veac" source-edit "$source" "$batch" --dry-run \
-    >"$(example_source_edit_outcome "$entry")" || return 1
-  [[ ! -e "$(dirname "$source")/.veac-source.lock" ]] ||
-    source_edit_evidence_error "source edit dry-run left a source lock" || return 1
+  if [[ -n $inputs ]]; then
+    "$veac" source-edit --inputs "$inputs" "$source" "$batch" --dry-run \
+      >"$(example_source_edit_outcome "$entry")" || return 1
+  else
+    "$veac" source-edit "$source" "$batch" --dry-run \
+      >"$(example_source_edit_outcome "$entry")" || return 1
+  fi
+  lock="$(dirname "$source")/.veac-source.lock"
+  [[ -f $lock && ! -L $lock ]] ||
+    source_edit_evidence_error "source edit dry-run did not retain a regular source lock" || return 1
   verify_declared_source_edit_evidence "$source_root" "$entry"
 }

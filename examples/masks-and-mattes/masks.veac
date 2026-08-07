@@ -1,0 +1,59 @@
+module {
+  fn window(shape: MaskShape, scale: Vector, feather: length, expansion: length) -> Mask {
+    mask(
+      shape,
+      mask_motion(
+        vector_constant(vector(0.5, 0.5)), vector_constant(scale), angle_constant(0deg)
+      ),
+      mask_edge(length_constant(feather), length_constant(expansion)), false
+    )
+  }
+
+  fn style(values: list<Mask>) -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      values, color_pipeline_none()
+    )
+  }
+
+  export fn sample(
+    key: identifier, start: time, fill: color, shape: MaskShape, scale: Vector
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, 1s),
+      source_generated(generator_solid(fill)), source_timing_native()
+    ).with_visual(style([window(shape, scale, 8px, 0px)]))
+  }
+
+  export fn combined(key: identifier, start: time, fill: color) -> Item {
+    let polygon = mask_polygon([
+      vector(0.16, 0.22), vector(0.84, 0.22), vector(0.92, 0.78),
+      vector(0.5, 0.92), vector(0.08, 0.78)
+    ]);
+    let path = mask_path([
+      vector(0.1, 0.5), vector(0.28, 0.16), vector(0.72, 0.16),
+      vector(0.9, 0.5), vector(0.72, 0.84), vector(0.28, 0.84)
+    ]);
+    item(
+      key, item_enabled(), during(start, 2s),
+      source_generated(generator_solid(fill)), source_timing_native()
+    ).with_visual(style([
+      window(mask_circle(), vector(0.76, 0.76), 18px, 4px),
+      window(mask_rectangle(), vector(0.74, 0.58), 0px, 0px),
+      window(mask_ellipse(), vector(0.72, 0.48), 0px, 0px),
+      window(mask_rounded_rectangle(0.12), vector(0.7, 0.52), 0px, 0px),
+      window(polygon, vector(1.0, 1.0), 0px, 0px),
+      window(path, vector(1.0, 1.0), 10px, -2px)
+    ]))
+  }
+}

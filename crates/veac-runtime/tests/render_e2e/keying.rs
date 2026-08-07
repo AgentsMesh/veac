@@ -14,17 +14,11 @@ fn luma_key_inversion_and_spill_suppression_change_real_frames() {
     let mut suppressed = solid_clip("itm_spill_after", color(30, 210, 35), 3_000, 1_000);
     suppressed.effects.push(video_effect(
         "fx_spill_e2e",
-        "video.chroma_spill",
-        BTreeMap::from([
-            (
-                "color".to_owned(),
-                ParameterValue::Color {
-                    value: color(0, 255, 0),
-                },
-            ),
-            ("amount".to_owned(), ParameterValue::Number { value: 1.0 }),
-            ("range".to_owned(), ParameterValue::Number { value: 0.2 }),
-        ]),
+        Effect::VideoChromaSpill {
+            color: color(0, 255, 0),
+            amount: Animatable::constant(1.0),
+            range: Animatable::constant(0.2),
+        },
     ));
     project.project.sequences[0].tracks.extend([
         track("trk_key_bg", TrackKind::Video, 0, vec![background]),
@@ -62,36 +56,26 @@ fn animated_chroma_similarity_changes_real_alpha_composition() {
     foreground.visual = Some(full_visual());
     foreground.effects.push(video_effect(
         "fx_chroma_curve",
-        "video.chroma_key",
-        BTreeMap::from([
-            (
-                "color".to_owned(),
-                ParameterValue::Color {
-                    value: color(0, 255, 0),
-                },
-            ),
-            (
-                "similarity".to_owned(),
-                ParameterValue::NumberCurve {
-                    value: Animatable::Keyframes {
-                        keyframes: vec![
-                            Keyframe {
-                                id: KeyframeId::new("kf_chroma_start").unwrap(),
-                                time: time(0),
-                                value: 0.00001,
-                                interpolation: Interpolation::Linear,
-                            },
-                            Keyframe {
-                                id: KeyframeId::new("kf_chroma_end").unwrap(),
-                                time: time(2_000),
-                                value: 0.6,
-                                interpolation: Interpolation::Linear,
-                            },
-                        ],
+        Effect::VideoChromaKey {
+            color: color(0, 255, 0),
+            similarity: Animatable::Keyframes {
+                keyframes: vec![
+                    Keyframe {
+                        id: KeyframeId::new("kf_chroma_start").unwrap(),
+                        time: time(0),
+                        value: 0.00001,
+                        interpolation: Interpolation::Linear,
                     },
-                },
-            ),
-        ]),
+                    Keyframe {
+                        id: KeyframeId::new("kf_chroma_end").unwrap(),
+                        time: time(2_000),
+                        value: 0.6,
+                        interpolation: Interpolation::Linear,
+                    },
+                ],
+            },
+            blend: Animatable::constant(0.0),
+        },
     ));
     project.project.sequences[0].tracks.extend([
         track("trk_chroma_bg", TrackKind::Video, 0, vec![background]),
@@ -109,22 +93,12 @@ fn luma_clip(id: &str, start: i64, invert: bool) -> Clip {
     clip.visual = Some(full_visual());
     clip.effects.push(video_effect(
         &format!("fx_{id}"),
-        "video.luma_key",
-        BTreeMap::from([
-            (
-                "threshold".to_owned(),
-                ParameterValue::Number { value: 0.0 },
-            ),
-            (
-                "tolerance".to_owned(),
-                ParameterValue::Number { value: 0.12 },
-            ),
-            ("softness".to_owned(), ParameterValue::Number { value: 0.0 }),
-            (
-                "invert".to_owned(),
-                ParameterValue::Boolean { value: invert },
-            ),
-        ]),
+        Effect::VideoLumaKey {
+            threshold: Animatable::constant(0.0),
+            tolerance: Animatable::constant(0.12),
+            softness: Animatable::constant(0.0),
+            invert,
+        },
     ));
     clip
 }

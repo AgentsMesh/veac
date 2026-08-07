@@ -1,0 +1,69 @@
+module {
+  export fn voice() -> AudioStyle {
+    audio_style(
+      scalar_keyframes([
+        scalar_keyframe(identifier("gain-start"), 0s, 0.35, interpolation_linear()),
+        scalar_keyframe(identifier("gain-end"), 1s, 0.9, interpolation_ease_out())
+      ]),
+      scalar_keyframes([
+        scalar_keyframe(identifier("pan-start"), 0s, -0.4, interpolation_linear()),
+        scalar_keyframe(identifier("pan-end"), 1s, 0.4, interpolation_ease_in_out())
+      ]),
+      audio_playback(false, false, pitch_preserve()),
+      [
+        audio_parametric_eq(identifier("eq"), [
+          parametric_eq_band(identifier("presence"), 3000.0, 2.0, 1.2)
+        ]),
+        audio_high_pass(identifier("rumble"), 80.0, 0.7, 2),
+        audio_low_pass(identifier("air"), 18000.0, 0.7, 2),
+        audio_compressor(
+          identifier("compressor"),
+          compressor_settings(-18.0, 3.0, 10.0, 120.0, 4.0, 2.0, 75%)
+        ),
+        audio_limiter(identifier("limiter"), limiter_settings(-1.0, 5.0, 100.0)),
+        audio_gate(
+          identifier("gate"), gate_settings(-50.0, 2.0, 5.0, 80.0, -30.0)
+        ),
+        audio_loudness(
+          identifier("loudness"), loudness_target(-16.0, -1.0, 8.0)
+        )
+      ],
+      audio_crossfade_present(200ms, 200ms, audio_fade_equal_power())
+    )
+  }
+
+  export fn music() -> AudioStyle {
+    audio_style(
+      scalar_constant(0.65), scalar_constant(-0.2),
+      audio_playback(false, false, pitch_follow_speed()), [],
+      audio_crossfade_present(250ms, 250ms, audio_fade_linear())
+    )
+  }
+
+  export fn key() -> AudioStyle {
+    audio_style(
+      scalar_constant(0.5), scalar_constant(0.2),
+      audio_playback(false, false, pitch_preserve()), [],
+      audio_crossfade_present(150ms, 150ms, audio_fade_exponential())
+    )
+  }
+
+  export fn label_visual() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_bottom(), vector(0.0, 48.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(
+            vector(0.0, 0.0), flip_none(), vector(0.5, 1.0), crop_none()
+          )
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+}

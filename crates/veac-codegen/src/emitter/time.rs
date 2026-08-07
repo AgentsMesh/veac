@@ -46,37 +46,6 @@ pub(crate) fn seconds_delta(left: RationalTime, right: RationalTime) -> String {
     decimal_ratio(numerator, denominator)
 }
 
-pub(crate) fn frame_window_start(end: RationalTime, frame_rate: Rational) -> String {
-    let rate = i128::from(frame_rate.numerator);
-    let scale = i128::from(end.timescale);
-    let frames = 2 * i128::from(frame_rate.denominator) * scale;
-    let numerator = (i128::from(end.value) * rate - frames).max(0);
-    decimal_ratio(numerator, u128::try_from(scale * rate).unwrap_or(0))
-}
-
-pub(crate) fn frame_interval_has_sample(
-    start: RationalTime,
-    duration: RationalTime,
-    frame_rate: Rational,
-) -> bool {
-    if start.value < 0
-        || duration.value <= 0
-        || start.timescale == 0
-        || start.timescale != duration.timescale
-        || !frame_rate.is_positive()
-    {
-        return false;
-    }
-    let rate = i128::from(frame_rate.numerator);
-    let tick = i128::from(start.timescale) * i128::from(frame_rate.denominator);
-    let scaled_start = i128::from(start.value) * rate;
-    let first_frame = (scaled_start + tick - 1) / tick;
-    let Some(end) = start.value.checked_add(duration.value) else {
-        return false;
-    };
-    first_frame * tick < i128::from(end) * rate
-}
-
 pub(crate) fn seconds_at_least_one_frame(time: RationalTime, frame_rate: Rational) -> String {
     if time.timescale == 0 || !frame_rate.is_positive() {
         return seconds(time);

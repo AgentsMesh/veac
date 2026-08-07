@@ -3,8 +3,8 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use veac_artifact::{
-    ArtifactError, ArtifactErrorKind, ArtifactRecord, ArtifactStore, MediaArtifactLimits,
-    MediaArtifactRequest, MediaArtifactSpec,
+    AnalysisIngestionRequest, ArtifactError, ArtifactErrorKind, ArtifactRecord, ArtifactStore,
+    MediaArtifactLimits, MediaArtifactSpec,
 };
 use veac_ir::MediaProbeSnapshot;
 
@@ -89,16 +89,15 @@ impl MediaWorkflow {
         self
     }
 
-    pub fn store_analysis(
+    pub fn ingest_analysis(
         &self,
         store: &ArtifactStore,
         input: &Path,
-        request: &MediaArtifactRequest,
-        value: &serde_json::Value,
+        request: &AnalysisIngestionRequest,
     ) -> WorkflowResult<GeneratedArtifact> {
         let deadline =
             Instant::now() + Duration::from_secs(self.limits.max_derivation_wall_seconds);
-        analysis::store(store, input, request, value, self.limits, deadline)
+        analysis::store(store, input, request, self.limits, deadline)
     }
 }
 
@@ -122,13 +121,6 @@ pub(super) fn launch_error(error: crate::RuntimeError) -> WorkflowError {
         WorkflowErrorKind::ToolFailure
     };
     WorkflowError::with_source(kind, "failed to prepare FFmpeg artifact derivation", error)
-}
-
-pub(super) fn unsupported<T>(message: &str) -> WorkflowResult<T> {
-    Err(WorkflowError::new(
-        WorkflowErrorKind::UnsupportedOperation,
-        message,
-    ))
 }
 
 fn artifact_error(error: ArtifactError) -> WorkflowError {

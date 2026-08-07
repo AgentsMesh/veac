@@ -2,7 +2,10 @@ use veac_plan::canonical::{Animatable, PitchPolicy};
 use veac_plan::ResolvedClip;
 
 use super::audio::AudioRenderSpec;
-use super::{animation, audio_filters, audio_source::invalid, time, CodegenErrors, EmitContext};
+use super::{
+    animation, audio_filters, audio_source::invalid, process_owner::ProcessOwner, time,
+    CodegenErrors, EmitContext,
+};
 
 pub(super) fn speed(
     context: &mut EmitContext<'_>,
@@ -62,7 +65,8 @@ pub(super) fn properties(
         .audio
         .as_ref()
         .ok_or_else(|| invalid(clip, "audio properties missing"))?;
-    let gain = animation::number(&properties.gain, "t");
+    let owner = ProcessOwner::clip(clip);
+    let gain = animation::number(context.plan, owner, &properties.gain, "t");
     label = context
         .graph
         .filter(&[&label], format!("volume='{gain}':eval=frame"), "gaina");
@@ -102,7 +106,7 @@ fn pan(
             _ => Err(invalid(clip, "pan automation requires stereo output")),
         };
     }
-    let expression = animation::number(value, "t");
+    let expression = animation::number(context.plan, ProcessOwner::clip(clip), value, "t");
     let formatted = context
         .graph
         .filter(&[&input], "aformat=channel_layouts=stereo", "stereoa");

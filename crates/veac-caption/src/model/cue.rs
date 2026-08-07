@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use veac_ir::TimeRange;
+use veac_ir::{CaptionNativeCue, TimeRange};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
@@ -58,7 +56,7 @@ pub struct CaptionCue {
     pub text: CaptionText,
     pub speaker: Option<String>,
     pub style: Option<String>,
-    pub settings: BTreeMap<String, String>,
+    pub native: Option<CaptionNativeCue>,
     pub words: Vec<CaptionWord>,
 }
 

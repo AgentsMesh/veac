@@ -1,17 +1,22 @@
-mod component;
 mod declaration;
 mod file;
-mod instance;
+mod function;
+mod input;
 pub(crate) mod kind;
+mod method;
 mod name;
+mod temporal;
+mod type_declaration;
 
 use crate::authoring::Span;
+use crate::vocabulary::ControlUse;
 
 use super::diagnostic::Diagnostic;
 use super::model::RawBlock;
 use super::token::{Token, TokenKind};
 
-pub(crate) use file::parse;
+pub(crate) use file::{parse, parse_declaration_fragment, parse_executable};
+pub(crate) use type_declaration::{validate_fragment, TypeDeclarationFragmentKind};
 
 pub(super) struct Parser<'a> {
     path: &'a str,
@@ -30,8 +35,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(super) fn at_word(&self, expected: &str) -> bool {
-        self.current().word() == Some(expected)
+    pub(super) fn at_control(&self, expected: ControlUse) -> bool {
+        self.current()
+            .word()
+            .is_some_and(|word| expected.matches(word))
     }
 
     pub(super) fn at(&self, kind: &TokenKind) -> bool {
@@ -95,13 +102,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(super) fn expect_word(&mut self, expected: &str) -> Result<Span, Diagnostic> {
-        if self.at_word(expected) {
+    pub(super) fn expect_control(&mut self, expected: ControlUse) -> Result<Span, Diagnostic> {
+        if self.at_control(expected) {
             Ok(self.advance().span)
         } else {
             Err(self.error(
                 "PROGRAM_EXPECTED_WORD",
-                format!("expected `{expected}`"),
+                format!("expected `{}`", expected.as_str()),
                 self.current().span,
             ))
         }
@@ -119,20 +126,25 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(super) fn expression_until_semicolon(&mut self) -> Result<(String, Span), Diagnostic> {
+    pub(super) fn expression_until_semicolon(
+        &mut self,
+    ) -> Result<(String, Span, Span), Diagnostic> {
         let start = self.current().span.start;
         let mut parentheses = 0usize;
+        let mut braces = 0usize;
         while !self.at_eof() {
             match self.current().kind {
                 TokenKind::LeftParen => parentheses += 1,
                 TokenKind::RightParen if parentheses > 0 => parentheses -= 1,
-                TokenKind::Semicolon if parentheses == 0 => break,
+                TokenKind::LeftBrace | TokenKind::DollarLeftBrace => braces += 1,
+                TokenKind::RightBrace if braces > 0 => braces -= 1,
+                TokenKind::Semicolon if parentheses == 0 && braces == 0 => break,
                 _ => {}
             }
             self.advance();
         }
         let end = self.current().span.start;
-        self.expect(TokenKind::Semicolon, "`;`")?;
+        let terminator = self.expect(TokenKind::Semicolon, "`;`")?;
         let raw = &self.source[start..end];
         let leading = raw.len() - raw.trim_start().len();
         let value = raw.trim().to_owned();
@@ -147,7 +159,7 @@ impl<'a> Parser<'a> {
                 Span { start, end },
             ));
         }
-        Ok((value, span))
+        Ok((value, span, terminator))
     }
 
     pub(super) fn raw_block(&mut self) -> Result<RawBlock, Diagnostic> {
@@ -162,10 +174,6 @@ impl<'a> Parser<'a> {
             }
             if depth == 0 {
                 return Ok(RawBlock {
-                    content_span: Span {
-                        start: left.end,
-                        end: token.span.start,
-                    },
                     span: left.join(token.span),
                 });
             }

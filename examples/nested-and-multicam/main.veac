@@ -1,80 +1,94 @@
-project nested-and-multicam {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video host {
-    locator local { path "assets/clip-a.mp4"; }
-    streams { video auto; audio auto; }
-  }
-  resource video guest {
-    locator local { path "assets/clip-b.mp4"; }
-    streams { video auto; audio auto; }
-  }
+import "./showcase.veac" as showcase;
 
-  multicam interview {
-    sync audio { reference angle host-angle; }
-    angle host-angle { source resource host; source-offset 0s; }
-    angle guest-angle { source resource guest; source-offset 120ms; }
-  }
+fn fit() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(1280px, 720px, fit_contain()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
 
-  sequence intro {
-    layer visual card {
-      item slate {
-        source generated solid { color #118ab2ff; }
-        record { at 0s; duration 2s; }
-      }
-    }
-  }
-
-  sequence main {
-    layer video program {
-      item interview-cut {
-        source multicam multicam interview {
-          switch angle host-angle { at 0s; duration 2s; }
-          switch angle guest-angle { at 2s; duration 2s; }
-        }
-        record { at 2s; duration 4s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-    }
-    layer visual opener {
-      item nested-intro {
-        source sequence sequence intro;
-        record { at 0s; duration 2s; }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let host = video_resource(
+    identifier("host"), resource_file("assets/clip-a.mp4"),
+    sha256("4bc83693a77f35a3eac4d4feb8cfe807816b1879e8bd513860e9ec3b4a9f6f36"),
+    stream_intent(stream_auto(), stream_auto())
+  );
+  let guest = video_resource(
+    identifier("guest"), resource_file("assets/clip-b.mp4"),
+    sha256("ba752c9201f145053b287fc715bd714c66b66b32948bfd8a9419b665c9ab02ec"),
+    stream_intent(stream_auto(), stream_auto())
+  );
+  let host_angle = multicam_angle(identifier("host-angle"), host, 0s);
+  let guest_angle = multicam_angle(identifier("guest-angle"), guest, 120ms);
+  let interview = multicam_group(
+    identifier("interview"), multicam_sync(multicam_sync_audio(), host_angle),
+    [host_angle, guest_angle]
+  );
+  let intro_card = visual_layer(
+    identifier("intro-card"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("slate"), #118ab2ff, 0s, 2s));
+  let intro_text = visual_layer(
+    identifier("intro-text"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("title"), item_enabled(), during(0s, 2s),
+    source_text("嵌套序列片头", showcase.caption_style(font, 52px, 720px)),
+    source_timing_native()
+  ));
+  let intro = sequence(
+    identifier("intro"), "可复用嵌套片头",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(intro_card).with_layer(intro_text);
+  let cut = item(
+    identifier("interview-cut"), item_enabled(), during(2s, 4s),
+    source_multicam(interview, [
+      multicam_switch(host_angle, during(0s, 2s)),
+      multicam_switch(guest_angle, during(2s, 2s))
+    ]), source_timing_native()
+  ).with_visual(fit());
+  let program = video_layer(
+    identifier("program"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(cut);
+  let opener = visual_layer(
+    identifier("opener"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("nested-intro"), item_enabled(), during(0s, 2s),
+    source_nested_sequence(intro), source_timing_native()
+  ));
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("host-label"), item_enabled(), during(2s, 2s),
+    source_text("多机位切换：主持人机位", showcase.caption_style(font, 38px, 700px)),
+    source_timing_native()
+  )).with_item(item(
+    identifier("guest-label"), item_enabled(), during(4s, 2s),
+    source_text("多机位切换：嘉宾机位（偏移一百二十毫秒）", showcase.caption_style(font, 38px, 900px)),
+    source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "嵌套序列与多机位",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(program).with_layer(opener).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("nested-and-multicam"), project_settings(600))
+    .with_resource(font).with_resource(host).with_resource(guest)
+    .with_multicam_group(interview).with_sequence(intro).with_sequence(timeline)
+    .entry(timeline).with_delivery(output)
 }

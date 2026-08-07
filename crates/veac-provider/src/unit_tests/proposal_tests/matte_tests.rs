@@ -1,4 +1,4 @@
-use veac_artifact::{artifact_key, ArtifactKind, ContentDigest};
+use veac_artifact::{artifact_key, ArtifactParameters, ContentDigest, ProviderResultParameters};
 use veac_ir::{
     ClipSource, EditOperation, EditOutcome, ItemId, RelationKind, StructureEdit, TrackMatteMode,
 };
@@ -117,7 +117,8 @@ fn matte_application_rejects_wrong_artifacts_and_tampering_atomically() {
     let (request, mut response) = exchange(Capability::Segmentation);
     let artifact = match &mut response.output {
         ProviderOutput::Segmentation(result) => {
-            result.matte.descriptor.kind = ArtifactKind::RenderSegment;
+            result.matte.descriptor.parameters =
+                ArtifactParameters::Speech(ProviderResultParameters::new("wrong-speech").unwrap());
             result.matte.record.key = artifact_key(&result.matte.descriptor).unwrap();
             result.matte.clone()
         }

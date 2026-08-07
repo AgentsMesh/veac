@@ -1,8 +1,9 @@
-use veac_artifact::{artifact_key, ArtifactDependency, ContentDigest};
+use veac_artifact::{artifact_key, ArtifactDependency, ArtifactDependencyRole, ContentDigest};
 
 use crate::{ProviderResponseEnvelope, ProviderResult, Validate};
 
-pub const PROVIDER_EXECUTABLE_DEPENDENCY_ROLE: &str = "provider_executable";
+pub const PROVIDER_EXECUTABLE_DEPENDENCY_ROLE: ArtifactDependencyRole =
+    ArtifactDependencyRole::ProviderExecutable;
 
 pub fn bind_provider_executable(
     response: &ProviderResponseEnvelope,
@@ -22,10 +23,13 @@ pub fn bind_provider_executable(
                 "provider artifact declares the reserved provider_executable dependency",
             );
         }
-        artifact.descriptor.dependencies.push(ArtifactDependency {
-            role: PROVIDER_EXECUTABLE_DEPENDENCY_ROLE.to_owned(),
-            identity: executable.clone(),
-        });
+        artifact
+            .descriptor
+            .dependencies
+            .push(ArtifactDependency::new(
+                PROVIDER_EXECUTABLE_DEPENDENCY_ROLE,
+                executable.clone(),
+            ));
         artifact.descriptor.dependencies.sort_by(|left, right| {
             (&left.role, &left.identity.value).cmp(&(&right.role, &right.identity.value))
         });

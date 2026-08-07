@@ -7,7 +7,7 @@ use veac_ir::{RationalTime, TimeRange};
 
 use crate::{CaptionCue, CaptionDocument, OverlapPolicy, ValidationIssue};
 
-use super::{duplicates, issue, optional_text, settings};
+use super::{duplicates, issue, native, optional_text};
 
 pub(super) fn validate_cues(document: &CaptionDocument, issues: &mut Vec<ValidationIssue>) {
     if duplicates(document.cues.iter().map(|cue| cue.id.as_str())) {
@@ -79,7 +79,15 @@ fn validate_cue(
             "style reference does not exist",
         );
     }
-    settings(issues, &format!("{path}.settings"), &cue.settings);
+    native::cue(cue.native.as_ref(), &format!("{path}.native"), issues);
+    if !native::compatible(document.native.as_ref(), cue.native.as_ref()) {
+        issue(
+            issues,
+            &format!("{path}.native"),
+            "NATIVE_FORMAT",
+            "cue native semantics conflict with the document native format",
+        );
+    }
     text::validate(cue, path, issues);
     words::validate(document.timescale, cue, path, issues);
 }

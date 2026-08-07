@@ -8,16 +8,28 @@ mask_json() {
       rotation_degrees:{type:"constant",value:$rotation},feather_pixels:{type:"constant",value:8},invert:false}'
 }
 
+mask_visual() {
+  local mask=$1
+  jq -nc --argjson mask "$mask" '{placement:{type:"anchor",anchor:"center",inset:{x:0,y:0}},
+    frame:null,transform:{anchor:{x:.5,y:.5}},masks:[$mask]}'
+}
+
 write_mask_shape_canonical() {
   local file=$1 heart star linear mirror
-  heart=$(mask_json heart .5 .47 .65 .65 0); star=$(mask_json star .5 .48 .65 .65 8)
-  linear=$(mask_json linear .5 .5 .6 .6 20); mirror=$(mask_json mirror .5 .5 .6 .6 -12)
+  heart=$(mask_json heart .5 .5 .65 .65 0); star=$(mask_json star .5 .5 .65 .65 8)
+  linear=$(mask_json linear .5 .5 .6 .6 20); mirror=$(mask_json mirror .5 .5 .6 .6 0)
+  heart=$(mask_visual "$heart"); star=$(mask_visual "$star")
+  linear=$(mask_visual "$linear"); mirror=$(mask_visual "$mirror")
   jq -nc --argjson heart "$heart" --argjson star "$star" --argjson linear "$linear" \
-    --argjson mirror "$mirror" '{project:{sequences:[{id:"seq_main",tracks:[{clips:[
-      {id:"itm_heart",record_range:{start:{timescale:1000,value:0},duration:{timescale:1000,value:1000}},visual:{masks:[$heart]}},
-      {id:"itm_star",record_range:{start:{timescale:1000,value:1000},duration:{timescale:1000,value:1000}},visual:{masks:[$star]}},
-      {id:"itm_linear",record_range:{start:{timescale:1000,value:2000},duration:{timescale:1000,value:1000}},visual:{masks:[$linear]}},
-      {id:"itm_mirror",record_range:{start:{timescale:1000,value:3000},duration:{timescale:1000,value:1000}},visual:{masks:[$mirror]}}
+    --argjson mirror "$mirror" '{project:{authorship:{entity:{logical_path:["mask-shape-gallery"],events:[]},
+      multicam_groups:[],annotations:[],deliveries:[{render_config_id:"out_preview",
+      entity:{logical_path:["mask-shape-gallery","preview"],events:[]}}]},
+      sequences:[{id:"seq_main",authorship:{type:"veac",entity:{logical_path:["mask-shape-gallery","main"],events:[]},
+        tracks:[],relations:[],applies:[]},tracks:[{clips:[
+      {id:"itm_heart",authorship:{logical_path:["mask-shape-gallery","main","visual","heart"],events:[]},record_range:{start:{timescale:1000,value:0},duration:{timescale:1000,value:1000}},visual:$heart},
+      {id:"itm_star",authorship:{logical_path:["mask-shape-gallery","main","visual","star"],events:[]},record_range:{start:{timescale:1000,value:1000},duration:{timescale:1000,value:1000}},visual:$star},
+      {id:"itm_linear",authorship:{logical_path:["mask-shape-gallery","main","visual","linear"],events:[]},record_range:{start:{timescale:1000,value:2000},duration:{timescale:1000,value:1000}},visual:$linear},
+      {id:"itm_mirror",authorship:{logical_path:["mask-shape-gallery","main","visual","mirror"],events:[]},record_range:{start:{timescale:1000,value:3000},duration:{timescale:1000,value:1000}},visual:$mirror}
     ]}]}],render_configs:[{id:"out_preview",sequence_id:"seq_main",deliverables:[{id:"dlv_preview",
       target:{type:"file",name:"preview.mp4"},kind:{type:"video",settings:{video:{codec:"h264"}}}}]}]}}' >"$file"
 }
@@ -33,14 +45,18 @@ make_mask_shape_video() {
   local dir=$1 mode=${2:-valid} tmp
   tmp="$dir/rendered/parts"
   local heart='lte(pow(pow((X-240)/100,2)+pow((135-Y)/100,2)-1,3)-pow((X-240)/100,2)*pow((135-Y)/100,3),0)'
-  local star='lte(hypot((cos(.1396)*(X-240)+sin(.1396)*(Y-130))/312,(-sin(.1396)*(X-240)+cos(.1396)*(Y-130))/175.5),0.28+0.12*cos(5*atan2((-sin(.1396)*(X-240)+cos(.1396)*(Y-130))/175.5,(cos(.1396)*(X-240)+sin(.1396)*(Y-130))/312)))'
+  local star='lte(hypot((cos(.1396)*(X-240)+sin(.1396)*(Y-135))/312,(-sin(.1396)*(X-240)+cos(.1396)*(Y-135))/175.5),0.18+0.27*(1-2*abs(mod((atan2((-sin(.1396)*(X-240)+cos(.1396)*(Y-135))/175.5,(cos(.1396)*(X-240)+sin(.1396)*(Y-135))/312)+PI/2)/(2*PI/5)+0.5,1)-0.5)))'
   local linear='gte(cos(0.349)*(X-240)+sin(0.349)*(Y-135),0)'
-  local mirror='lte(abs(cos(-0.209)*(X-240)+sin(-0.209)*(Y-135)),144)'
+  local mirror='lte(abs(X-240),144)'
   case $mode in
     wrong-heart) heart='lt(abs(X-240),100)*lt(abs(Y-135),75)' ;;
-    wrong-star) star='lte(hypot((X-240)/312,(Y-130)/175.5),0.32)' ;;
+    wrong-star) star='lte(hypot((X-240)/312,(Y-135)/175.5),0.32)' ;;
+    wrong-star-flower) star='lte(hypot((cos(.1396)*(X-240)+sin(.1396)*(Y-135))/312,(-sin(.1396)*(X-240)+cos(.1396)*(Y-135))/175.5),0.28+0.12*cos(5*atan2((-sin(.1396)*(X-240)+cos(.1396)*(Y-135))/175.5,(cos(.1396)*(X-240)+sin(.1396)*(Y-135))/312)))' ;;
     wrong-linear) linear=1 ;;
     wrong-mirror) mirror="$linear" ;;
+    label-only)
+      heart='lt(abs(X-240),55)*lt(abs(Y-135),12)'
+      star="$heart"; linear="$heart"; mirror="$heart" ;;
   esac
   mkdir -p "$tmp"
   make_mask_segment "$tmp/heart.mp4" "$heart" 255 71 126

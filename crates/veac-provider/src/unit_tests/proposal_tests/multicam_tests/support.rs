@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_artifact::ContentDigest;
 use veac_ir::*;
 
@@ -123,5 +121,5 @@ fn attach_audio(material: &mut Material) {
         global_index: 1,
         type_index: 0,
     });
-    material.metadata = BTreeMap::new();
+    material.authorship = None;
 }

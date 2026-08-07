@@ -3,8 +3,7 @@ use std::path::Path;
 use crate::error::{CliError, CliResult};
 
 pub(crate) fn run(source: &Path) -> CliResult {
-    let program = veac_lang::program::compile_path(source)
-        .map_err(|errors| crate::diagnostic::program(source, errors))?;
+    let program = crate::frontend::prepare_source_graph(source)?;
     let index = program
         .source_index()
         .map_err(|errors| crate::diagnostic::program(source, errors))?;

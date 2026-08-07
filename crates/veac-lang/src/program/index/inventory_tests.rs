@@ -1,59 +1,37 @@
-use crate::program::{compile_source, source_index_json_schema, SourceIndexInventory};
-use crate::source_edit::{ExpressionSite, SourceNodeRef};
+use crate::program::{prepare_source, source_index_json_schema, SourceIndexInventory};
+use crate::source_edit::{BodySite, ExpressionSite, SourceNodeRef};
+use std::collections::BTreeMap;
 
-const SOURCE: &str = r#"const text title = "inventory";
-component sequence card {
-  param time duration default 1s + 500ms;
-  body {}
-}
-instance sequence opener from card { bind duration 2s; }
-project inventory {
-  settings {
-    timebase 1/1000; canvas 640px by 360px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  sequence main {
-    layer visual content {
-      item title {
-        source text { content ${title}; }
-        record { at 0s; duration 2s; }
-      }
-    }
-  }
+const SOURCE: &str = r#"fn passthrough(value: time) -> time { value }
+const text title = "inventory";
+fn main(context: Context) -> Project {
+  let timeline = sequence(identifier("main"), "索引测试",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000));
+  project(identifier("inventory"), project_settings(1000))
+    .with_sequence(timeline).entry(timeline)
 }"#;
 
 #[test]
 fn inventory_is_stable_complete_and_json_round_trippable() {
-    let index = compile_source(SOURCE).unwrap().source_index().unwrap();
+    let index = prepare_source(SOURCE).unwrap().source_index().unwrap();
     let inventory = index.inventory();
     assert_eq!(inventory.schema, super::SOURCE_INDEX_SCHEMA);
     assert_eq!(inventory.schema_version, super::SOURCE_INDEX_SCHEMA_VERSION);
+    assert!(inventory.build_inputs.is_empty());
     assert!(inventory
         .nodes
         .windows(2)
         .all(|pair| pair[0].target < pair[1].target));
-    assert!(
-        node(&inventory, SourceNodeRef::project("main.veac", "inventory"))
-            .expressions
-            .is_empty()
-    );
-    assert_source(
+    let body = node(
         &inventory,
-        SourceNodeRef::component("main.veac", "card"),
-        ExpressionSite::ComponentParameterDefault {
-            parameter: "duration".into(),
-        },
-        "1s + 500ms",
-    );
-    assert_source(
-        &inventory,
-        SourceNodeRef::component_instance("main.veac", "opener"),
-        ExpressionSite::ComponentInstanceArgument {
-            parameter: "duration".into(),
-        },
-        "2s",
-    );
+        SourceNodeRef::function("main.veac", "passthrough"),
+    )
+    .bodies
+    .iter()
+    .find(|value| value.site == BodySite::FunctionBody)
+    .unwrap();
+    assert_eq!(body.source, "{ value }");
+    assert_eq!(&SOURCE[body.range.start..body.range.end], body.source);
     let json = serde_json::to_string(&inventory).unwrap();
     assert_eq!(
         serde_json::from_str::<SourceIndexInventory>(&json).unwrap(),
@@ -61,38 +39,123 @@ fn inventory_is_stable_complete_and_json_round_trippable() {
     );
     let schema = source_index_json_schema().unwrap().to_string();
     for value in [
-        "preset_audio_processor",
-        "preset_audio_eq_band",
-        "preset_audio_processor_field",
-        "preset_audio_eq_band_field",
-        "frequency",
-        "gain",
-        "q",
+        "constant_value",
+        "body_statement",
+        "statements",
+        "function_body",
+        "method_body",
+        "temporal_animation",
+        "item",
+        "method",
+        "declarations",
+        "struct_declaration",
+        "struct_field_declaration",
+        "enum_declaration",
+        "enum_variant_declaration",
+        "enum_variant_field_declaration",
     ] {
         assert!(
             schema.contains(value),
             "source-index schema omitted {value}"
         );
     }
+    assert!(schema.contains(r#""const":"https://veac.dev/schemas/source-index""#));
+    assert!(schema.contains(r#""const":8"#));
+    assert!(schema.contains("build_inputs"));
 }
 
 #[test]
-fn inventory_preserves_current_project_expression_and_range() {
-    let inventory = compile_source(SOURCE)
+fn inventory_preserves_function_body_source_and_range() {
+    let inventory = prepare_source(SOURCE)
         .unwrap()
         .source_index()
         .unwrap()
         .inventory();
-    let target = SourceNodeRef::item("main.veac", "inventory", "main", "content", "title");
-    let expression = node(&inventory, target)
+    let body = node(&inventory, SourceNodeRef::function("main.veac", "main"))
+        .bodies
+        .iter()
+        .find(|value| value.site == BodySite::FunctionBody)
+        .unwrap();
+    assert!(body.source.contains("project(identifier(\"inventory\")"));
+    assert_eq!(&SOURCE[body.range.start..body.range.end], body.source);
+}
+
+#[test]
+fn direct_index_build_rejects_invalid_graphs_and_ambiguous_targets() {
+    let invalid = BTreeMap::from([(".veac-source.lock".to_owned(), "module {}".to_owned())]);
+    assert_eq!(
+        super::SourceIndex::build(&invalid).unwrap_err().as_slice()[0].code,
+        "SOURCE_GRAPH_REVISION"
+    );
+
+    let duplicate = BTreeMap::from([(
+        "main.veac".to_owned(),
+        "const int same = 1; const int same = 2;".to_owned(),
+    )]);
+    assert_eq!(
+        super::SourceIndex::build(&duplicate)
+            .unwrap_err()
+            .as_slice()[0]
+            .code,
+        "SOURCE_INDEX_AMBIGUOUS_TARGET"
+    );
+}
+
+#[test]
+fn constant_ranges_separate_complete_declarations_from_expressions() {
+    let entry = "const time base =   1s + 2s   ;";
+    let module = "module {\n  export const time public = 3s ;\n}";
+    let sources = BTreeMap::from([
+        ("main.veac".to_owned(), entry.to_owned()),
+        ("timing.veac".to_owned(), module.to_owned()),
+    ]);
+    let inventory = super::SourceIndex::build(&sources).unwrap().inventory();
+
+    assert_constant_ranges(&inventory, "main.veac", "base", entry, entry, "1s + 2s");
+    assert_constant_ranges(
+        &inventory,
+        "timing.veac",
+        "public",
+        module,
+        "export const time public = 3s ;",
+        "3s",
+    );
+}
+
+fn assert_constant_ranges(
+    inventory: &SourceIndexInventory,
+    module: &str,
+    name: &str,
+    authored: &str,
+    declaration: &str,
+    expression: &str,
+) {
+    let target = SourceNodeRef::constant(module, name);
+    let module = inventory
+        .modules
+        .iter()
+        .find(|value| value.module == module)
+        .unwrap();
+    let declaration_site = module
+        .declarations
+        .iter()
+        .find(|value| value.target == target)
+        .unwrap();
+    assert_eq!(declaration_site.source, declaration);
+    assert_eq!(
+        &authored[declaration_site.range.start..declaration_site.range.end],
+        declaration
+    );
+    assert_eq!(declaration_site.source.matches(';').count(), 1);
+    let expression_site = node(inventory, target)
         .expressions
         .iter()
-        .find(|value| value.site == ExpressionSite::TextContent)
+        .find(|value| value.site == ExpressionSite::ConstantValue)
         .unwrap();
-    assert_eq!(expression.source, "${title}");
+    assert_eq!(expression_site.source, expression);
     assert_eq!(
-        &SOURCE[expression.range.start..expression.range.end],
-        "${title}"
+        &authored[expression_site.range.start..expression_site.range.end],
+        expression
     );
 }
 
@@ -102,18 +165,4 @@ fn node(inventory: &SourceIndexInventory, target: SourceNodeRef) -> &super::Sour
         .iter()
         .find(|value| value.target == target)
         .unwrap()
-}
-
-fn assert_source(
-    inventory: &SourceIndexInventory,
-    target: SourceNodeRef,
-    site: ExpressionSite,
-    expected: &str,
-) {
-    let expression = node(inventory, target)
-        .expressions
-        .iter()
-        .find(|value| value.site == site)
-        .unwrap();
-    assert_eq!(expression.source, expected);
 }

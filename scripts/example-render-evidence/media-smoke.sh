@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-SMOKE_CONFIG_ID_PATTERN='^out_[a-z0-9][a-z0-9_-]{0,123}$'
+SMOKE_OBJECT_ID_PATTERN='^[a-z][a-z0-9_-]{0,127}$'
 
 smoke_video_rows() {
-  jq -er --arg config_pattern "$SMOKE_CONFIG_ID_PATTERN" '
+  jq -er --arg config_pattern "$SMOKE_OBJECT_ID_PATTERN" '
     [.project.render_configs[] |
       .id as $config | .raster as $raster |
       .deliverables[] | select(.kind.type == "video") |
@@ -79,7 +79,7 @@ check_example_media_smoke() {
   rows=$(smoke_video_rows "$canonical") || fail "$id has no valid file video deliverable"
   while IFS=$'\t' read -r config name width height rate container video_codec \
       pixel alpha audio_codec sample channels; do
-    [[ $config =~ $SMOKE_CONFIG_ID_PATTERN ]] || fail "$id has an unsafe config ID: $config"
+    [[ $config =~ $SMOKE_OBJECT_ID_PATTERN ]] || fail "$id has an unsafe config ID: $config"
     [[ $name =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ && $name != *..* ]] ||
       fail "$id has an unsafe video target: $name"
     expected=$(smoke_plan_duration "$dir" "$config") ||

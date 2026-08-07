@@ -1,10 +1,8 @@
-use std::collections::BTreeMap;
-
 use super::*;
 
 #[test]
 fn every_parameterized_transition_kind_is_a_typed_atomic_edit() {
-    let project = magnetic_project();
+    let project = transition_ready_project(60);
     let kinds = [
         TransitionKind::Dissolve,
         TransitionKind::Fade {
@@ -76,13 +74,13 @@ fn luma_key_and_spill_parameters_edit_with_registry_type_and_range_guards() {
     let edits = vec![
         parameter(
             "fx_luma_edit",
-            "threshold",
-            ParameterValue::Number { value: 0.4 },
+            EffectParameter::Threshold,
+            EffectParameterValue::Curve(Animatable::constant(0.4)),
         ),
         parameter(
             "fx_spill_edit",
-            "amount",
-            ParameterValue::Number { value: 0.9 },
+            EffectParameter::Amount,
+            EffectParameterValue::Curve(Animatable::constant(0.9)),
         ),
     ];
     let updated = applied(apply_edit_batch(
@@ -91,24 +89,24 @@ fn luma_key_and_spill_parameters_edit_with_registry_type_and_range_guards() {
     ));
     let effects = &updated.project.sequences[0].tracks[0].clips[0].effects;
     assert_eq!(
-        effects[0].parameters["threshold"],
-        ParameterValue::Number { value: 0.4 }
+        effects[0].effect.curve(EffectParameter::Threshold),
+        Some(&Animatable::constant(0.4))
     );
     assert_eq!(
-        effects[1].parameters["amount"],
-        ParameterValue::Number { value: 0.9 }
+        effects[1].effect.curve(EffectParameter::Amount),
+        Some(&Animatable::constant(0.9))
     );
 
     for (index, edit) in [
         parameter(
             "fx_luma_edit",
-            "threshold",
-            ParameterValue::Boolean { value: true },
+            EffectParameter::Threshold,
+            EffectParameterValue::Boolean(true),
         ),
         parameter(
             "fx_spill_edit",
-            "amount",
-            ParameterValue::Number { value: 2.0 },
+            EffectParameter::Amount,
+            EffectParameterValue::Curve(Animatable::constant(2.0)),
         ),
     ]
     .into_iter()
@@ -117,17 +115,25 @@ fn luma_key_and_spill_parameters_edit_with_registry_type_and_range_guards() {
         let invalid = batch(&format!("op_bad_keying_{index}"), &project, vec![edit]);
         assert_rejected(
             apply_edit_batch(&project, &invalid),
-            "EFFECT_PARAMETER_TYPE",
+            if index == 0 {
+                "EDIT_REJECTED"
+            } else {
+                "EFFECT_PARAMETER_RANGE"
+            },
         );
     }
 }
 
-fn parameter(effect: &str, name: &str, value: ParameterValue) -> EditOperation {
+fn parameter(
+    effect: &str,
+    parameter: EffectParameter,
+    value: EffectParameterValue,
+) -> EditOperation {
     EditOperation::EditEffectParameter {
         edit: EffectParameterEdit::Set {
             clip_id: ItemId::new("itm_video").unwrap(),
             effect_id: EffectId::new(effect).unwrap(),
-            name: name.to_owned(),
+            parameter,
             value,
         },
     }
@@ -136,51 +142,36 @@ fn parameter(effect: &str, name: &str, value: ParameterValue) -> EditOperation {
 fn luma_effect() -> EffectInstance {
     effect(
         "fx_luma_edit",
-        "video.luma_key",
-        BTreeMap::from([
-            (
-                "threshold".to_owned(),
-                ParameterValue::Number { value: 0.2 },
-            ),
-            (
-                "invert".to_owned(),
-                ParameterValue::Boolean { value: false },
-            ),
-        ]),
+        Effect::VideoLumaKey {
+            threshold: Animatable::constant(0.2),
+            tolerance: Animatable::constant(0.1),
+            softness: Animatable::constant(0.1),
+            invert: false,
+        },
     )
 }
 
 fn spill_effect() -> EffectInstance {
     effect(
         "fx_spill_edit",
-        "video.chroma_spill",
-        BTreeMap::from([
-            (
-                "color".to_owned(),
-                ParameterValue::Color {
-                    value: Color {
-                        red: 0,
-                        green: 255,
-                        blue: 0,
-                        alpha: 255,
-                    },
-                },
-            ),
-            ("amount".to_owned(), ParameterValue::Number { value: 0.5 }),
-        ]),
+        Effect::VideoChromaSpill {
+            color: Color {
+                red: 0,
+                green: 255,
+                blue: 0,
+                alpha: 255,
+            },
+            amount: Animatable::constant(0.5),
+            range: Animatable::constant(0.2),
+        },
     )
 }
 
-fn effect(
-    id: &str,
-    effect_type: &str,
-    parameters: BTreeMap<String, ParameterValue>,
-) -> EffectInstance {
+fn effect(id: &str, effect: Effect) -> EffectInstance {
     EffectInstance {
         id: EffectId::new(id).unwrap(),
-        effect_type: effect_type.to_owned(),
         enabled: true,
         enable_range: None,
-        parameters,
+        effect,
     }
 }

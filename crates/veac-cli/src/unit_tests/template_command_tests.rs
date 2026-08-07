@@ -5,29 +5,6 @@ use tempfile::{tempdir, TempDir};
 
 use crate::arguments::TemplateCommand;
 
-const SOURCE: &str = r#"
-project template-cli {
-  settings {
-    timebase 1/1000; canvas 1280px by 720px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video unused {
-    locator local { path "clip.mp4"; }
-    streams { video auto; audio disabled; }
-  }
-  sequence main {
-    layer visual titles {
-      item title {
-        source text { content "Before"; }
-        record { at 0s; duration 1s; }
-        template-slot text;
-      }
-    }
-  }
-}
-"#;
-
 #[test]
 fn template_command_emits_an_applicable_edit_batch() {
     let temp = tempdir().unwrap();
@@ -88,7 +65,7 @@ fn replacement_local_materials_are_protected_relative_to_the_project() {
 }
 
 fn fixture(temp: &TempDir) -> (PathBuf, PathBuf) {
-    let project = super::support::canonical_project(temp, SOURCE);
+    let project = super::support::canonical_project(temp, super::support::TEXT_TEMPLATE_SOURCE);
     let envelope = crate::canonical::load(&project).unwrap();
     let clip_id = envelope.project.sequences[0].tracks[0].clips[0]
         .id

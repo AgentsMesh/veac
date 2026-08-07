@@ -14,8 +14,11 @@ cat > "$GALLERY" <<'JSON'
     {"id":"zeta","expected_artifacts":[
       {"kind":"source_revision"},{"kind":"source_index"},
       {"kind":"source_edit_batch"},{"kind":"source_edit_outcome"},
-      {"kind":"authoring_delivery","id":"preview"}]},
-    {"id":"alpha","expected_artifacts":[{"kind":"authoring_delivery","id":"preview"}]}
+      {"kind":"edit_batch"},{"kind":"edit_outcome"},
+      {"kind":"edit_replay_outcome"},{"kind":"probe_snapshot"},
+      {"kind":"delivery","logical_key":"preview","artifacts":[]}]},
+    {"id":"alpha","expected_artifacts":[
+      {"kind":"delivery","logical_key":"preview","artifacts":[]}]}
   ],
   "examples": [
     {
@@ -39,12 +42,15 @@ make_example() {
   prepare_preview_fixture_dirs "$entry"
   : > "$entry/rendered/$artifact"
   cat >"$entry/project/project.veac.json" <<JSON
-{"project":{"id":"prj_$name","render_configs":[{"id":"out_preview",
-"deliverables":[{"id":"dlv_preview","target":{"type":"file","name":"$artifact"}}]}]}}
+{"project":{"id":"prj_$name","authorship":{"entity":{"logical_path":["$name"],"events":[]},
+"multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":"out_4a4f4ce03f87",
+"entity":{"logical_path":["$name","preview"],"events":[]}}]},
+"render_configs":[{"id":"out_4a4f4ce03f87",
+"deliverables":[{"id":"dlv_92f3","target":{"type":"file","name":"$artifact"}}]}]}}
 JSON
   mirror_fixture_preview_canonical "$entry"
-  printf '{"output":{"render_config_id":"out_preview"}}\n' \
-    >"$entry/plans/preview/out_preview.json"
+  printf '{"output":{"render_config_id":"out_4a4f4ce03f87"}}\n' \
+    >"$entry/plans/preview/out_4a4f4ce03f87.json"
   printf 'fixture build\n' >"$entry/build.log"
 }
 
@@ -55,6 +61,11 @@ make_example "$FULL" zeta output.txt
 printf 'module {}\n' >"$FULL/alpha/project/brand.veac"
 for evidence in source.revision.json source.index.json source-edit.json \
     source-edit.outcome.json; do
+  printf '{}\n' >"$FULL/zeta/project/$evidence"
+  printf '{}\n' >"$FULL/alpha/project/$evidence"
+done
+for evidence in edit.batch.json edit.outcome.json edit.replay.outcome.json \
+    probe.snapshot.json; do
   printf '{}\n' >"$FULL/zeta/project/$evidence"
   printf '{}\n' >"$FULL/alpha/project/$evidence"
 done
@@ -78,10 +89,22 @@ rg -F 'href="zeta/project/source.index.json">源码索引</a>' "$FULL/index.html
 rg -F 'href="zeta/project/source-edit.json">源码编辑批次</a>' "$FULL/index.html" >/dev/null
 rg -F 'href="zeta/project/source-edit.outcome.json">源码编辑预演结果</a>' \
   "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/edit.batch.json">规范编辑批次</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/edit.outcome.json">规范编辑结果</a>' "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/edit.replay.outcome.json">幂等重放结果</a>' \
+  "$FULL/index.html" >/dev/null
+rg -F 'href="zeta/project/probe.snapshot.json">素材探测快照</a>' "$FULL/index.html" >/dev/null
 for evidence in source.revision.json source.index.json source-edit.json \
     source-edit.outcome.json; do
   if rg -F "href=\"alpha/project/$evidence\"" "$FULL/index.html" >/dev/null; then
     echo "example index exposed undeclared source edit evidence: $evidence" >&2
+    exit 1
+  fi
+done
+for evidence in edit.batch.json edit.outcome.json edit.replay.outcome.json \
+    probe.snapshot.json; do
+  if rg -F "href=\"alpha/project/$evidence\"" "$FULL/index.html" >/dev/null; then
+    echo "example index exposed undeclared workflow evidence: $evidence" >&2
     exit 1
   fi
 done
@@ -91,7 +114,7 @@ if rg -F '>预览适配源码</a>' "$FULL/index.html" >/dev/null; then
 fi
 rg -F '>创作 canonical IR</a>' "$FULL/index.html" >/dev/null
 rg -F '>预览派生 IR</a>' "$FULL/index.html" >/dev/null
-rg -F '>预览计划 out_preview</a>' "$FULL/index.html" >/dev/null
+rg -F '>预览计划 out_4a4f4ce03f87</a>' "$FULL/index.html" >/dev/null
 if rg -F '/plan.json' "$FULL/index.html" >/dev/null; then
   echo "example index linked a legacy ambiguous plan" >&2
   exit 1
@@ -104,6 +127,18 @@ if rg -F '<script>alert' "$FULL/index.html" >/dev/null; then
   echo "example index emitted unescaped presentation HTML" >&2
   exit 1
 fi
+
+REAL="$TMP/real"
+mkdir -p "$REAL"
+make_example "$REAL" agentsmesh-intro-15s preview.mp4
+make_example "$REAL" executable-local-image preview.mp4
+bash "$WRITER" "$REAL" 2 "$ROOT/examples/catalog/gallery.json"
+rg -F '<h2>智能体协作网片头</h2>' "$REAL/index.html" >/dev/null
+rg -F '0-1.17 秒 - 品牌逐字入场' "$REAL/index.html" >/dev/null
+rg -F '白色“智能体协作网”' "$REAL/index.html" >/dev/null
+rg -F '64×36 创作画布' "$REAL/index.html" >/dev/null
+rg -F '低分辨率是本示例验证原生图片资源和类型化变换机制的有意设计' \
+  "$REAL/index.html" >/dev/null
 
 SUBSET="$TMP/subset"
 mkdir -p "$SUBSET"

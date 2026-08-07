@@ -1,153 +1,42 @@
-project delivery-formats {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource audio delivery-tone {
-    locator local { path "assets/delivery-tone.m4a"; }
-    streams { video disabled; audio auto; }
-  }
+import "./outputs.veac" as outputs;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual picture {
-      item opening-stage {
-        source generated solid { color #0d1b2aff; }
-        record { at 0s; duration 1.5s; }
-      }
-      item closing-stage {
-        source generated solid { color #c43a69ff; }
-        record { at 1.5s; duration 1.5s; }
-      }
-    }
-    layer audio mix {
-      item reference-tone { source media resource delivery-tone; record { at 0s; duration 3s; } }
-    }
-    layer caption subtitles {
-      item burned-label {
-        source caption {
-          content "类型化交付输出";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 44px; fill #ffffffff;
-          }
-        }
-        record { at 0s; duration 1.5s; }
-      }
-      item traceable-label {
-        source caption {
-          content "可追踪的字幕伴随文件";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 44px; fill #ffffffff;
-          }
-        }
-        record { at 1.5s; duration 1.5s; }
-      }
-    }
-  }
-
-  delivery master {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions burn-in; }
-    artifact video master {
-      target file "master.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio aac {
-          sample-rate 48khz;
-          channel-layout stereo;
-        }
-        passes single;
-        accelerator auto;
-      }
-    }
-    artifact image-sequence frames {
-      target pattern "frame-%04d.png";
-      numbering from 1;
-      encode png;
-    }
-    artifact caption-sidecar transcript {
-      target file "captions.vtt";
-      source caption-tracks { track subtitles; }
-      encode web-vtt;
-    }
-    artifact audio-stem master-audio {
-      target file "master.wav";
-      source master;
-      encode wav {
-        sample-format pcm-s24le;
-        sample-rate 48khz;
-        channel-layout stereo;
-      }
-    }
-    artifact scope video-waveform {
-      target file "video-waveform.png";
-      analyze waveform;
-      frame containing 1s;
-      canvas 1280px by 720px;
-      encode png;
-    }
-    artifact audio-file podcast {
-      target file "podcast.mp3";
-      source master;
-      encode mp3 {
-        bitrate 192kbps;
-        sample-rate 48khz;
-        channel-layout stereo;
-      }
-    }
-    artifact animated-image loop-preview {
-      target file "loop-preview.gif";
-      encode gif {
-        playback forever;
-        dither sierra2;
-      }
-    }
-    artifact still-image cover {
-      target file "cover.png";
-      frame containing 2s;
-      encode png;
-    }
-    artifact adaptive-package stream {
-      target package "stream";
-      package hls {
-        segment-duration 1s;
-        audio {
-          source master;
-          encode aac {
-            bitrate 128kbps;
-            sample-rate 48khz;
-            channel-layout stereo;
-          }
-        }
-        rendition hd {
-          canvas 1280px by 720px;
-          encode h264 {
-            rate-control capped { target 3mbps; max 3210kbps; buffer 6mbit; }
-          }
-        }
-        rendition mobile {
-          canvas 640px by 360px;
-          encode h264 {
-            rate-control capped { target 1mbps; max 1100kbps; buffer 2mbit; }
-          }
-        }
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let tone = audio_resource(
+    identifier("delivery-tone"), resource_file("assets/delivery-tone.wav"),
+    sha256("0829e8486d33569bfca7e5c9b781ffe2e2e13aafb1f5b7723dc230e61d93cf6d"),
+    stream_auto()
+  );
+  let picture = visual_layer(
+    identifier("picture"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("opening"), #0d1b2aff, 0s, 1500ms))
+    .with_item(showcase.solid(identifier("closing"), #c43a69ff, 1500ms, 1500ms));
+  let audio = audio_layer(
+    identifier("mix"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("reference-tone"), item_enabled(), during(0s, 3s),
+    source_media(tone), source_timing_native()
+  ));
+  let caption_style = showcase.caption_style(font, 44px, 900px);
+  let captions = caption_layer(
+    identifier("subtitles"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("burned-label"), item_enabled(), during(0s, 1500ms),
+    source_caption("类型化交付输出", caption_style), source_timing_native()
+  )).with_item(item(
+    identifier("traceable-label"), item_enabled(), during(1500ms, 1500ms),
+    source_caption("可追踪的字幕伴随文件", caption_style), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "交付格式全集",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(picture).with_layer(audio).with_layer(captions);
+  let output = outputs.all(timeline, captions);
+  project(identifier("delivery-formats"), project_settings(600))
+    .with_resource(font).with_resource(tone)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

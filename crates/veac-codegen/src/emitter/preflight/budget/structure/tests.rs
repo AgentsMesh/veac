@@ -10,6 +10,10 @@ fn all_mutated_plan_structure_dimensions_have_stable_codes() {
         keyframes: MAX_TOTAL_KEYFRAMES + 1,
         source_curve_segments: MAX_TOTAL_SOURCE_CURVE_SEGMENTS + 1,
         caption_cues: MAX_TOTAL_CAPTION_CUES + 1,
+        temporal_programs: MAX_TOTAL_TEMPORAL_PROGRAMS + 1,
+        temporal_bindings: MAX_TOTAL_TEMPORAL_BINDINGS + 1,
+        temporal_nodes: MAX_TOTAL_TEMPORAL_NODES + 1,
+        temporal_provenance: MAX_TOTAL_TEMPORAL_PROVENANCE + 1,
     };
     let mut check = Check::default();
 
@@ -26,6 +30,10 @@ fn all_mutated_plan_structure_dimensions_have_stable_codes() {
             "PLAN_BUDGET_KEYFRAMES",
             "PLAN_BUDGET_SOURCE_CURVE_SEGMENTS",
             "PLAN_BUDGET_CAPTION_CUES",
+            "PLAN_BUDGET_TEMPORAL_PROGRAMS",
+            "PLAN_BUDGET_TEMPORAL_BINDINGS",
+            "PLAN_BUDGET_TEMPORAL_NODES",
+            "PLAN_BUDGET_TEMPORAL_PROVENANCE",
         ]
     );
 }
@@ -42,4 +50,8 @@ fn resolved_fixture_usage_counts_clip_owned_work() {
     assert_eq!(actual.masks, 0);
     assert_eq!(actual.keyframes, 0);
     assert_eq!(actual.caption_cues, 0);
+    assert_eq!(actual.temporal_programs, 0);
+    assert_eq!(actual.temporal_bindings, 0);
+    assert_eq!(actual.temporal_nodes, 0);
+    assert_eq!(actual.temporal_provenance, 0);
 }

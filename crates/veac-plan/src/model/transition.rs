@@ -10,19 +10,12 @@ pub struct ResolvedTransition {
     pub outgoing_clip_id: ItemId,
     pub incoming_clip_id: ItemId,
     pub alignment: TransitionAlignment,
-    /// Exact record-timeline cut shared by the outgoing and incoming clips.
+    /// Conceptual centered cut: floor(duration / 2) ticks after the overlap starts.
     pub cut_time: RationalTime,
-    /// Exact record-timeline interval in which the transition is active.
+    /// Exact intersection of the endpoint record ranges.
     pub record_window: TimeRange,
-    pub outgoing_handle: TransitionHandle,
-    pub incoming_handle: TransitionHandle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct TransitionHandle {
-    /// Clip-local record-time offset at which this side of the transition begins.
-    pub offset: RationalTime,
-    /// Clip-local record-time duration; zero is valid for before/after-cut alignment.
-    pub duration: RationalTime,
+    /// Full overlap expressed in outgoing clip-local record time.
+    pub outgoing_range: TimeRange,
+    /// Full overlap expressed in incoming clip-local record time.
+    pub incoming_range: TimeRange,
 }

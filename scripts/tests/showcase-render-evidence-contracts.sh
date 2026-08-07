@@ -31,7 +31,7 @@ make_card() {
   make_video "$dir/rendered/preview.mp4" 4 \
     "drawbox=x=0:y=0:w=iw:h=ih:color=0x10182a:t=fill,drawbox=x=95:y=207:w=290:h=18:color=black@0.35:t=fill,drawbox=x=105:y=64:w=270:h=143:color=0x5bc0be:t=fill,drawbox=x=107:y=66:w=266:h=139:color=0xe5e6e5:t=fill,drawbox=x=105:y=64:w=9:h=9:color=0x10182a:t=fill,drawbox=x=366:y=64:w=9:h=9:color=0x10182a:t=fill,drawbox=x=105:y=198:w=9:h=9:color=0x10182a:t=fill,drawbox=x=366:y=198:w=9:h=9:color=0x10182a:t=fill"
   cat >"$dir/project/project.veac.json" <<'JSON'
-{"project":{"sequences":[{"tracks":[{"clips":[{"id":"itm_panel","source":{"generator":{"shape":{"geometry":{"type":"rectangle"},"stroke":{"width_pixels":14}}}},"visual":{"card":{"corner_radius_pixels":36,"shadow":{"blur_pixels":28,"color":{"alpha":255,"blue":0,"green":0,"red":0},"offset":{"x":0,"y":16},"opacity":0.38}},"frame":{"fit":"fill","height":{"unit":"pixels","value":380},"width":{"unit":"pixels","value":720}},"placement":{"anchor":"center","inset":{"x":0,"y":0},"type":"anchor"},"opacity":{"type":"constant","value":0.92}}}]}]}]}}
+{"project":{"sequences":[{"tracks":[{"clips":[{"id":"generated-card","authorship":{"logical_path":["card-overlay","main","card","panel"],"events":[]},"source":{"generator":{"shape":{"geometry":{"type":"rectangle"},"stroke":{"width_pixels":14}}}},"visual":{"card":{"corner_radius_pixels":36,"shadow":{"blur_pixels":28,"color":{"alpha":255,"blue":0,"green":0,"red":0},"offset":{"x":0,"y":16},"opacity":0.38}},"frame":{"fit":"fill","height":{"unit":"pixels","value":380},"width":{"unit":"pixels","value":720}},"placement":{"anchor":"center","inset":{"x":0,"y":0},"type":"anchor"},"opacity":{"type":"constant","value":0.92}}}]}]}]}}
 JSON
   mirror_fixture_preview_canonical "$dir"
 }
@@ -43,7 +43,7 @@ make_template() {
     -vf 'drawbox=x=150:y=115:w=180:h=40:color=white:t=fill' \
     -c:v libx264 -pix_fmt yuv420p "$dir/rendered/preview.mp4"
   cat >"$dir/project/project.veac.json" <<'JSON'
-{"project":{"sequences":[{"tracks":[{"clips":[{"id":"itm_hero","replaceable":{"fill":"fit_duration","kind":"video","label":"主视觉媒体","min_source_duration":{"timescale":1000,"value":2000}}},{"id":"itm_title","template_editable_text":true,"source":{"text":"可替换标题"}}]}]}]}}
+{"project":{"sequences":[{"tracks":[{"clips":[{"id":"generated-hero","authorship":{"logical_path":["template-fill","main","media-slots","hero"],"events":[]},"replaceable":{"fill":"fit_duration","kind":"video","label":"主视觉媒体","min_source_duration":{"timescale":1000,"value":2000}}},{"id":"generated-title","authorship":{"logical_path":["template-fill","main","text-slots","title"],"events":[]},"replaceable":{"fill":"fit_duration","kind":"text","label":"主标题文本","min_source_duration":null},"template_editable_text":true,"source":{"text":"可替换标题"}}]}]}]}}
 JSON
   mirror_fixture_preview_canonical "$dir"
 }
@@ -56,7 +56,7 @@ make_all_features() {
     -vf "drawbox=$panel:color=0x03045e:t=fill:enable='gte(t,1)',drawbox=x=130:y=205:w=220:h=15:color=white:t=fill" \
     -c:v libx264 -pix_fmt yuv420p "$dir/rendered/all-features.mp4"
   cat >"$dir/project/project.veac.json" <<'JSON'
-{"project":{"sequences":[{"tracks":[{"clips":[{"id":"itm_cue","source":{"text":"一种语言，一份类型化中间表示，一套渲染计划。"}},{"id":"itm_lower-third","visual":{"frame":{"height":{"unit":"pixels","value":180}}}}]}]}],"relations":[{"kind":{"type":"group"}},{"kind":{"type":"av_link"}}],"render_configs":[{"id":"out_master","raster":{"width":480,"height":270,"frame_rate":{"numerator":12,"denominator":1},"captions":"burn_in"},"deliverables":[{"id":"dlv_master","target":{"type":"file","name":"all-features.mp4"},"kind":{"type":"video"}}]}]}}
+{"project":{"authorship":{"entity":{"logical_path":["all-features"],"events":[]},"multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":"generated-master","entity":{"logical_path":["all-features","master"],"events":[]}}]},"sequences":[{"tracks":[{"clips":[{"id":"generated-cue","authorship":{"logical_path":["all-features","main","subtitles","cue"],"events":[]},"source":{"text":"一种语言，一份类型化中间表示，一套渲染计划。"}},{"id":"generated-lower-third","authorship":{"logical_path":["all-features","main","graphics","lower-third"],"events":[]},"visual":{"frame":{"height":{"unit":"pixels","value":180}}}}]}]}],"relations":[{"kind":{"type":"group"}},{"kind":{"type":"av_link"}}],"render_configs":[{"id":"generated-master","raster":{"width":480,"height":270,"frame_rate":{"numerator":12,"denominator":1},"captions":"burn_in"},"deliverables":[{"id":"generated-video","target":{"type":"file","name":"all-features.mp4"},"kind":{"type":"video"}}]}]}}
 JSON
   mirror_fixture_preview_canonical "$dir"
 }
@@ -103,6 +103,16 @@ cp -R "$VALID/template-fill" "$BAD_TEMPLATE/template-fill"
 make_video "$BAD_TEMPLATE/template-fill/rendered/preview.mp4" 4 \
   'drawbox=x=150:y=115:w=180:h=40:color=white:t=fill'
 expect_failure static_template check_template_fill_evidence "$BAD_TEMPLATE"
+
+BAD_TEMPLATE_DURATION="$TMP_DIR/bad-template-duration"
+mkdir -p "$BAD_TEMPLATE_DURATION"
+cp -R "$VALID/template-fill" "$BAD_TEMPLATE_DURATION/template-fill"
+jq '(.project.sequences[].tracks[].clips[] |
+  select(.authorship.logical_path[-1] == "hero").replaceable.min_source_duration.value) = 1000' \
+  "$BAD_TEMPLATE_DURATION/template-fill/project/project.veac.json" >"$BAD_TEMPLATE_DURATION/edit.json"
+mv "$BAD_TEMPLATE_DURATION/edit.json" \
+  "$BAD_TEMPLATE_DURATION/template-fill/project/project.veac.json"
+expect_failure wrong_template_duration check_template_fill_evidence "$BAD_TEMPLATE_DURATION"
 
 UNTITLED_TEMPLATE="$TMP_DIR/untitled-template"
 mkdir -p "$UNTITLED_TEMPLATE"

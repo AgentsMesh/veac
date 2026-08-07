@@ -3,6 +3,9 @@ pub mod executor;
 pub mod progress;
 pub mod workflow;
 
+mod identity;
+pub use identity::{artifact_backend_identity, runtime_backend_identity};
+
 mod input_policy;
 mod process_group;
 mod tool;

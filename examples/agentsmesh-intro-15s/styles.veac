@@ -1,0 +1,83 @@
+module {
+  fn metrics(font: Resource, size: length, fill: color) -> TextMetrics {
+    text_metrics(
+      font_stack(font_resource_ref(font), []),
+      weight_bold(), font_style_normal(), size, 0px, 1.2, fill
+    )
+  }
+
+  fn layout(width: length, height: length, vertical: VerticalTextAlignment) -> TextLayout {
+    text_layout(
+      text_box_fixed(width, height), text_wrap_word(), text_overflow_visible(),
+      text_align_center(), vertical, writing_horizontal_tb(), orientation_mixed()
+    )
+  }
+
+  export fn title(font: Resource) -> TextStyle {
+    let progress = percent_keyframes([
+      percent_keyframe(identifier("visible"), 0s, 10%, interpolation_ease_out()),
+      percent_keyframe(identifier("revealed"), 900ms, 100%, interpolation_linear())
+    ]);
+    let motion = text_unit_transform(
+      point_keyframes([
+        point_keyframe(identifier("low"), 0s, point(0px, 48px), interpolation_ease_out()),
+        point_keyframe(identifier("centered"), 900ms, point(0px, 0px), interpolation_linear())
+      ]),
+      vector_keyframes([
+        vector_keyframe(identifier("small"), 0s, vector(0.5, 0.5), interpolation_ease_out()),
+        vector_keyframe(identifier("full"), 900ms, vector(1.0, 1.0), interpolation_linear())
+      ]), angle_constant(0deg)
+    );
+    text_style(
+      metrics(font, 112px, #f7fbffff), layout(1600px, 300px, text_align_middle()),
+      text_path_none(), text_decoration(
+        text_background_none(), text_outline_none(),
+        shadow_present(18px, 80%, vector(0.0, 10.0), #001f2dff)
+      ), [], text_animation_present(text_animation(
+        text_grapheme(), motion, progress, text_highlight_none(),
+        percent_keyframes([
+          percent_keyframe(identifier("soft"), 0s, 75%, interpolation_ease_out()),
+          percent_keyframe(identifier("opaque"), 700ms, 100%, interpolation_linear())
+        ]), 45ms
+      ))
+    )
+  }
+
+  export fn promise(font: Resource) -> TextStyle {
+    text_style(
+      metrics(font, 64px, #d8f3efff), layout(1600px, 260px, text_align_middle()),
+      text_path_none(), text_decoration(
+        text_background_none(), text_outline_none(),
+        shadow_present(10px, 67%, vector(0.0, 6.0), #001f2dff)
+      ), [], text_animation_none()
+    )
+  }
+
+  export fn caption(font: Resource) -> TextStyle {
+    text_style(
+      metrics(font, 44px, #ffffffff), layout(1600px, 160px, text_align_bottom()),
+      text_path_none(), text_decoration(
+        text_background_present(#001f2dcc, 18px), text_outline_none(), shadow_none()
+      ), [], text_animation_none()
+    )
+  }
+
+  export fn caption_visual() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_bottom(), vector(0.0, 48.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(
+            vector(0.0, 0.0), flip_none(), vector(0.5, 1.0), crop_none()
+          )
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+}

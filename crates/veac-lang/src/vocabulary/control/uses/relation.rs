@@ -1,0 +1,46 @@
+use super::super::use_macro::define_control_uses;
+
+define_control_uses! {
+    TRANSITION_ENDPOINTS_FIELD => "endpoints" @ TransitionRelationMember : FieldIntroducer;
+    TRANSITION_TIMING_FIELD => "timing" @ TransitionRelationMember : FieldIntroducer;
+    TRANSITION_STYLE_FIELD => "style" @ TransitionRelationMember : FieldIntroducer;
+    TRANSITION_FROM_FIELD => "from" @ TransitionEndpointsMember : FieldIntroducer;
+    TRANSITION_TO_FIELD => "to" @ TransitionEndpointsMember : FieldIntroducer;
+    RELATION_ITEM_REFERENCE => "item" @ RelationItemEndpointReferenceKind : ReferenceKind;
+    TRANSITION_DURATION_FIELD => "duration" @ TransitionTimingMember : FieldIntroducer;
+    TRANSITION_ALIGNMENT_FIELD => "alignment" @ TransitionTimingMember : FieldIntroducer;
+    FADE_COLOR_FIELD => "color" @ FadeStyleMember : FieldIntroducer;
+    WIPE_DIRECTION_FIELD => "direction" @ WipeStyleMember : FieldIntroducer;
+    WIPE_ANGLE_FIELD => "angle" @ WipeStyleMember : FieldIntroducer;
+    WIPE_SOFTNESS_FIELD => "softness" @ WipeStyleMember : FieldIntroducer;
+    SLIDE_DIRECTION_FIELD => "direction" @ SlideStyleMember : FieldIntroducer;
+    SLIDE_AMOUNT_FIELD => "amount" @ SlideStyleMember : FieldIntroducer;
+    ZOOM_DIRECTION_FIELD => "direction" @ ZoomStyleMember : FieldIntroducer;
+    ZOOM_AMOUNT_FIELD => "amount" @ ZoomStyleMember : FieldIntroducer;
+    CIRCLE_DIRECTION_FIELD => "direction" @ CircleStyleMember : FieldIntroducer;
+    CIRCLE_SOFTNESS_FIELD => "softness" @ CircleStyleMember : FieldIntroducer;
+    PIXELIZE_AMOUNT_FIELD => "amount" @ PixelizeStyleMember : FieldIntroducer;
+    MATTE_ENDPOINTS_FIELD => "endpoints" @ MatteRelationMember : FieldIntroducer;
+    MATTE_STYLE_FIELD => "style" @ MatteRelationMember : FieldIntroducer;
+    MATTE_PRODUCER_FIELD => "producer" @ MatteEndpointsMember : FieldIntroducer;
+    MATTE_CONSUMER_FIELD => "consumer" @ MatteEndpointsMember : FieldIntroducer;
+    MATTE_INVERT_FIELD => "invert" @ MatteStyleMember : FieldIntroducer;
+    SIDECHAIN_ENDPOINTS_FIELD => "endpoints" @ SidechainRelationMember : FieldIntroducer;
+    SIDECHAIN_DYNAMICS_FIELD => "dynamics" @ SidechainRelationMember : FieldIntroducer;
+    SIDECHAIN_TIMING_FIELD => "timing" @ SidechainRelationMember : FieldIntroducer;
+    SIDECHAIN_KEY_FIELD => "key" @ SidechainEndpointsMember : FieldIntroducer;
+    SIDECHAIN_TARGET_FIELD => "target" @ SidechainEndpointsMember : FieldIntroducer;
+    RELATION_TRACK_REFERENCE => "track" @ RelationSignalEndpointReferenceKind : ReferenceKind;
+    RELATION_BUS_REFERENCE => "bus" @ RelationSignalEndpointReferenceKind : ReferenceKind;
+    SIDECHAIN_THRESHOLD_FIELD => "threshold" @ SidechainDynamicsMember : FieldIntroducer;
+    SIDECHAIN_RATIO_FIELD => "ratio" @ SidechainDynamicsMember : FieldIntroducer;
+    SIDECHAIN_ATTACK_FIELD => "attack" @ SidechainDynamicsMember : FieldIntroducer;
+    SIDECHAIN_RELEASE_FIELD => "release" @ SidechainDynamicsMember : FieldIntroducer;
+    SIDECHAIN_ACTIVE_FIELD => "active" @ SidechainTimingMember : FieldIntroducer;
+    GROUP_MEMBERS_FIELD => "members" @ GroupRelationMember : FieldIntroducer;
+    GROUP_ITEM_MEMBER => "item" @ GroupMemberReferenceKind : ReferenceKind;
+    AV_LINK_ENDPOINTS_FIELD => "endpoints" @ AvLinkRelationMember : FieldIntroducer;
+    AV_LINK_VIDEO_FIELD => "video" @ AvLinkEndpointsMember : FieldIntroducer;
+    AV_LINK_AUDIO_FIELD => "audio" @ AvLinkEndpointsMember : FieldIntroducer;
+    AV_LINK_AUDIO_ITEM_MEMBER => "item" @ AvLinkAudioMemberReferenceKind : ReferenceKind;
+}

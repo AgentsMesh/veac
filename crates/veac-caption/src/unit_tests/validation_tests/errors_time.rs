@@ -67,9 +67,7 @@ fn native_extension_scanners_cover_ignored_blocks_and_defaults() {
     assert_eq!(native::vtt_ids(input), vec![None]);
     assert!(!native::has_unsupported_vtt_markup(input));
     assert!(!native::has_unsupported_ass_override("{\\b1}x{\\r}"));
-    let extras = native::ass_extras(
-        "Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,x\nDialogue: malformed",
-    );
-    assert_eq!(extras.len(), 2);
-    assert!(extras.iter().all(std::collections::BTreeMap::is_empty));
+    let extras = native::ass_extras("Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,x").unwrap();
+    assert_eq!(extras, vec![AssCueSettings::default()]);
+    assert!(native::ass_extras("Dialogue: malformed").is_err());
 }

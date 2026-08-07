@@ -133,8 +133,8 @@ pub(super) fn proxy(
                 .unwrap_or_else(|| RationalTime::new(600, clock.timescale()).unwrap()),
         },
     };
-    let spec = match kind {
-        ArtifactKind::ProxyVideo => MediaArtifactSpec::ProxyVideo(ProxyVideoSpec {
+    let parameters = match kind {
+        ArtifactKind::ProxyVideo => ArtifactParameters::ProxyVideo(ProxyVideoSpec {
             source_stream,
             source_clock,
             width: 640,
@@ -142,7 +142,7 @@ pub(super) fn proxy(
             frame_rate: Rational::new(30, 1).unwrap(),
             crf: 24,
         }),
-        ArtifactKind::ProxyAudio => MediaArtifactSpec::ProxyAudio(ProxyAudioSpec {
+        ArtifactKind::ProxyAudio => ArtifactParameters::ProxyAudio(ProxyAudioSpec {
             source_stream,
             source_clock,
             sample_rate: 48_000,
@@ -151,20 +151,19 @@ pub(super) fn proxy(
         _ => unreachable!(),
     };
     let descriptor = ArtifactDescriptor::new(
-        kind,
         ProducerFingerprint {
             name: "proxy-test".into(),
             version: "1".into(),
             configuration: ContentDigest::sha256(b"proxy-test-config"),
         },
-        vec![ArtifactDependency {
-            role: "input".into(),
-            identity: ContentDigest {
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Input,
+            ContentDigest {
                 algorithm: DigestAlgorithm::Sha256,
                 value: input.observed_identity.digest.clone(),
             },
-        }],
-        serde_json::to_value(spec).unwrap(),
+        )],
+        parameters,
     );
     let record = store.put(&descriptor, payload).unwrap();
     store

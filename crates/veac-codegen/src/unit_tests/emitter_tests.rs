@@ -86,6 +86,7 @@ mod text_geometry;
 mod text_limits;
 mod text_resource_limits;
 mod text_shadow;
+mod transition_composition;
 mod transition_preflight_contracts;
 mod transition_subframe;
 pub(crate) mod transitions;

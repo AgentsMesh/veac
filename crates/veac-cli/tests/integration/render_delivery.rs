@@ -1,35 +1,6 @@
 use super::support::*;
 
-const MULTI_DELIVERY_SOURCE: &str = r#"
-project multi-delivery {
-  settings { timebase 1/600; canvas 32px by 24px; frame-rate 10fps; sample-rate 48000hz; }
-  entry sequence main;
-  sequence main {
-    layer visual base {
-      item background {
-        source generated solid { color #24a148ff; }
-        record { at 0s; duration 200ms; }
-      }
-    }
-  }
-  delivery main {
-    sequence main;
-    raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
-    artifact video master {
-      target file "authored-master.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; }
-        audio none; passes single; accelerator auto;
-      }
-    }
-    artifact image-sequence frames {
-      target pattern "authored-frame-%04d.png";
-      numbering from 1; encode png;
-    }
-  }
-}
-"#;
+const MULTI_DELIVERY_SOURCE: &str = include_str!("../fixtures/render-delivery.veac");
 
 #[test]
 fn real_render_emits_and_resumes_every_authored_deliverable() {
@@ -41,8 +12,6 @@ fn real_render_emits_and_resumes_every_authored_deliverable() {
         .args([
             "render",
             project.to_str().unwrap(),
-            "--config",
-            "out_main",
             "--destination",
             destination.to_str().unwrap(),
         ])
@@ -68,8 +37,6 @@ fn real_render_emits_and_resumes_every_authored_deliverable() {
         .args([
             "render",
             project.to_str().unwrap(),
-            "--config",
-            "out_main",
             "--destination",
             destination.to_str().unwrap(),
         ])

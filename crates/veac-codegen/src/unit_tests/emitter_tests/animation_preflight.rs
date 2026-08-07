@@ -154,9 +154,8 @@ fn effect_plan(active_range: TimeRange) -> ResolvedRenderPlan {
     let mut plan = resolved(&fixture());
     clip(&mut plan).effects.push(ResolvedEffect {
         id: EffectId::new("fx_preflight").unwrap(),
-        effect_type: "video.color_adjust".to_owned(),
         active_range,
-        parameters: Default::default(),
+        effect: Effect::neutral(EffectKind::VideoColorAdjust),
     });
     plan
 }

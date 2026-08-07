@@ -1,0 +1,42 @@
+use super::super::use_macro::define_control_uses;
+
+define_control_uses! {
+    TARGET_FIELD => "target" @ AnnotationMember : FieldIntroducer;
+    SPAN_FIELD => "span" @ AnnotationMember : FieldIntroducer;
+    PAYLOAD_FIELD => "payload" @ AnnotationMember : FieldIntroducer;
+    PROVENANCE_FIELD => "provenance" @ AnnotationMember : FieldIntroducer;
+    TARGET_PROJECT_KIND => "project" @ AnnotationTargetReferenceKind : ReferenceKind;
+    TARGET_SEQUENCE_KIND => "sequence" @ AnnotationTargetReferenceKind : ReferenceKind;
+    TARGET_LAYER_KIND => "layer" @ AnnotationTargetReferenceKind : ReferenceKind;
+    TARGET_ITEM_KIND => "item" @ AnnotationTargetReferenceKind : ReferenceKind;
+    TARGET_RESOURCE_KIND => "resource" @ AnnotationTargetReferenceKind : ReferenceKind;
+    TARGET_MULTICAM_KIND => "multicam" @ AnnotationTargetReferenceKind : ReferenceKind;
+    POINT_AT_FIELD => "at" @ AnnotationPointSpanMember : FieldIntroducer;
+    RANGE_AT_FIELD => "at" @ AnnotationRangeSpanMember : FieldIntroducer;
+    RANGE_DURATION_FIELD => "duration" @ AnnotationRangeSpanMember : FieldIntroducer;
+    PROVENANCE_PRODUCER_FIELD => "producer" @ AnnotationProvenanceMember : FieldIntroducer;
+    PROVENANCE_REQUEST_SHA256_FIELD => "request-sha256" @ AnnotationProvenanceMember : FieldIntroducer;
+    PROVENANCE_RESPONSE_SHA256_FIELD => "response-sha256" @ AnnotationProvenanceMember : FieldIntroducer;
+    MARKER_LABEL_FIELD => "label" @ MarkerPayloadMember : FieldIntroducer;
+    MARKER_COLOR_FIELD => "color" @ MarkerPayloadMember : FieldIntroducer;
+    LANGUAGE_CANDIDATE_MEMBER => "candidate" @ LanguagePayloadMember : DeclarationIntroducer;
+    LANGUAGE_CONFIDENCE_FIELD => "confidence" @ LanguageCandidateMember : FieldIntroducer;
+    SCENE_BOUNDARY_CONFIDENCE_FIELD => "confidence" @ SceneBoundaryPayloadMember : FieldIntroducer;
+    SCENE_BOUNDARY_HARD_CUT_FIELD => "hard-cut" @ SceneBoundaryPayloadMember : FieldIntroducer;
+    BEAT_CONFIDENCE_FIELD => "confidence" @ BeatPayloadMember : FieldIntroducer;
+    BEAT_BAR_FIELD => "bar" @ BeatPayloadMember : FieldIntroducer;
+    BEAT_IN_BAR_FIELD => "beat-in-bar" @ BeatPayloadMember : FieldIntroducer;
+    BEAT_TEMPO_BPM_FIELD => "tempo-bpm" @ BeatPayloadMember : FieldIntroducer;
+    BEAT_METER_FIELD => "meter" @ BeatPayloadMember : FieldIntroducer;
+    SILENCE_MEAN_DB_FIELD => "mean-db" @ SilencePayloadMember : FieldIntroducer;
+    SILENCE_CONFIDENCE_FIELD => "confidence" @ SilencePayloadMember : FieldIntroducer;
+    FILLER_TOKEN_FIELD => "token" @ FillerPayloadMember : FieldIntroducer;
+    FILLER_CONFIDENCE_FIELD => "confidence" @ FillerPayloadMember : FieldIntroducer;
+    FILLER_SUGGESTION_FIELD => "suggestion" @ FillerPayloadMember : FieldIntroducer;
+    HIGHLIGHT_SCORE_FIELD => "score" @ HighlightPayloadMember : FieldIntroducer;
+    HIGHLIGHT_RATIONALE_FIELD => "rationale" @ HighlightPayloadMember : FieldIntroducer;
+    HIGHLIGHT_EVIDENCE_FIELD => "evidence" @ HighlightPayloadMember : FieldIntroducer;
+    REVIEW_ACTION_FIELD => "action" @ ReviewPayloadMember : FieldIntroducer;
+    REVIEW_RATIONALE_FIELD => "rationale" @ ReviewPayloadMember : FieldIntroducer;
+    REVIEW_CONFIDENCE_FIELD => "confidence" @ ReviewPayloadMember : FieldIntroducer;
+}

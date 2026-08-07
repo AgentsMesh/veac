@@ -76,6 +76,29 @@ pub fn visual() -> VisualProperties {
     }
 }
 
+pub fn transition_visual() -> VisualProperties {
+    let mut value = visual();
+    value.frame = None;
+    value.transform.position = Animatable::constant(Point {
+        x: Length {
+            value: 0.0,
+            unit: LengthUnit::Pixels,
+        },
+        y: Length {
+            value: 0.0,
+            unit: LengthUnit::Pixels,
+        },
+    });
+    value.opacity = Animatable::constant(1.0);
+    value.compositing = Compositing {
+        z_index: 0,
+        blend_mode: BlendMode::Normal,
+    };
+    value.masks.clear();
+    value.card = None;
+    value
+}
+
 pub fn point_keyframe(id: &str, value: i64, x: f64) -> Keyframe<Point> {
     Keyframe {
         id: KeyframeId::new(id).unwrap(),

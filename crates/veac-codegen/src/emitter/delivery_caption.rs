@@ -3,6 +3,7 @@ mod ass;
 mod failure;
 mod format;
 mod plain;
+mod semantics;
 
 use veac_artifact::ExecutionBindings;
 use veac_plan::canonical::{CaptionSidecarFormat, CaptionSidecarOutput, Deliverable, RationalTime};
@@ -19,6 +20,7 @@ pub(super) struct Cue<'a> {
     pub(super) clip: &'a ResolvedClip,
     pub(super) content: &'a ResolvedText,
     pub(super) speaker: Option<&'a str>,
+    pub(super) semantics: &'a veac_plan::canonical::CaptionCueSemantics,
     pub(super) layer_key: (i32, i32, u32, i64, u32, String),
     pub(super) order: (i32, u32, u32, String, String),
 }
@@ -63,7 +65,12 @@ fn render(
             .find(|track| track.id == *track_id)
             .ok_or_else(|| missing_track(track_id.as_str()))?;
         for clip in &track.clips {
-            let ResolvedClipSource::Caption { content, speaker } = &clip.source else {
+            let ResolvedClipSource::Caption {
+                content,
+                speaker,
+                cue,
+            } = &clip.source
+            else {
                 continue;
             };
             let end = clip
@@ -81,6 +88,7 @@ fn render(
                 clip,
                 content,
                 speaker: speaker.as_deref(),
+                semantics: cue,
                 layer_key: (
                     track.order,
                     clip.visual

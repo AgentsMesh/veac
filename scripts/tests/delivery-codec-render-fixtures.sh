@@ -3,7 +3,12 @@
 write_codec_canonical() {
   local file=$1 width=$2 height=$3 fps=$4
   jq -nc --argjson width "$width" --argjson height "$height" --argjson fps "$fps" '{project:{
-    sequences:[{id:"seq_main",tracks:[]}],render_configs:[{id:"out_codec-matrix",sequence_id:"seq_main",
+    authorship:{entity:{logical_path:["delivery-codec-matrix"],events:[]},multicam_groups:[],
+      annotations:[],deliveries:[{render_config_id:"out_codec-matrix",
+      entity:{logical_path:["delivery-codec-matrix","codec-matrix"],events:[]}}]},
+    sequences:[{id:"seq_main",authorship:{type:"veac",entity:{
+      logical_path:["delivery-codec-matrix","main"],events:[]},tracks:[],relations:[],applies:[]},
+      tracks:[]}],render_configs:[{id:"out_codec-matrix",sequence_id:"seq_main",
     raster:{width:$width,height:$height,frame_rate:{numerator:$fps,denominator:1},captions:"burn_in"},deliverables:[
     {id:"dlv_hevc-main10",target:{type:"file",name:"hevc.mov"},kind:{type:"video",settings:{container:"mov",
       video:{codec:"h265",pixel_format:"yuv420p10le",alpha:"opaque",color_space:{primaries:"bt2020",

@@ -5,9 +5,12 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/coverage-policy.sh"
 
 "$SCRIPT_DIR/check-file-size.sh"
+"$SCRIPT_DIR/tests/stdlib-codegen-contracts.sh"
 "$SCRIPT_DIR/check-capability-evidence.sh"
 "$SCRIPT_DIR/check-make-entrypoints.sh"
 "$SCRIPT_DIR/tests/ci-workflow-contracts.sh"
+"$SCRIPT_DIR/tests/install-script-contracts.sh"
+"$SCRIPT_DIR/tests/release-smoke-contracts.sh"
 
 status=0
 

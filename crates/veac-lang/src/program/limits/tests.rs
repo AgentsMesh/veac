@@ -49,3 +49,16 @@ fn source_budget_limits_graph_width_and_total_bytes() {
         "PROGRAM_SOURCE_GRAPH_LIMIT"
     );
 }
+
+#[test]
+fn source_budget_byte_accumulation_overflow_fails_closed() {
+    let mut budget = SourceBudget {
+        bytes: usize::MAX,
+        modules: 0,
+    };
+    let error = budget
+        .add("overflow.veac", "x", Span::default())
+        .unwrap_err();
+    assert_eq!(error.code, "PROGRAM_SOURCE_GRAPH_LIMIT");
+    assert!(error.message.contains("overflowed"));
+}

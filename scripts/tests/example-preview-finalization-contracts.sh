@@ -9,7 +9,7 @@ SOURCE="$TMP/source"
 ENTRY="$TMP/entry"
 BASELINE="$TMP/baseline"
 BUILD="$ROOT/scripts/build-examples.sh"
-TARGET='{"expected_artifacts":[{"kind":"source_revision"},{"kind":"source_index"},{"kind":"source_edit_batch"},{"kind":"source_edit_outcome"}]}'
+TARGET='{"expected_artifacts":[{"kind":"source_revision"},{"kind":"source_index"},{"kind":"source_edit_batch"},{"kind":"source_edit_outcome"},{"kind":"edit_batch"},{"kind":"edit_outcome"},{"kind":"edit_replay_outcome"},{"kind":"probe_snapshot"}]}'
 PLAIN_TARGET='{"expected_artifacts":[{"kind":"canonical_project"}]}'
 
 fail() {
@@ -34,13 +34,15 @@ mkdir -p "$SOURCE" "$ENTRY/project"
 cat >"$SOURCE/main.veac" <<'VEAC'
 import "./brand.veac" as brand;
 const time duration = brand.duration;
-project demo { entry sequence main; sequence main {} }
+fn main(context: Context) -> Project {
+  project(identifier("demo"), project_settings(600))
+}
 VEAC
 cat >"$SOURCE/brand.veac" <<'VEAC'
 module { export const time duration = 1s; }
 VEAC
 cat >"$SOURCE/source-edit.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-edit","schema_version":1,
+{"schema":"https://veac.dev/schemas/source-edit","schema_version":6,
 "operation_id":"op_finalization","base_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 "atomic":true,"preconditions":[],"operations":[{"type":"set_expression",
 "target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
@@ -52,18 +54,25 @@ cat >"$ENTRY/project/source.revision.json" <<'JSON'
 {"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 JSON
 cat >"$ENTRY/project/source.index.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-index","schema_version":1,
+{"schema":"https://veac.dev/schemas/source-index","schema_version":8,"build_inputs":[],
 "revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+"modules":[{"module":"main.veac","range":{"start":0,"end":1},"imports":[],
+"declarations":[{"target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
+"source":"const time duration = brand.duration;","range":{"start":0,"end":1}}]}],
 "nodes":[{"target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
 "range":{"start":0,"end":1},"expressions":[{"site":{"type":"constant_value"},
-"source":"brand.duration","range":{"start":0,"end":1}}]}]}
+"source":"brand.duration","range":{"start":0,"end":1}}],"statements":[],"bodies":[],"declarations":[]}]}
 JSON
 cat >"$ENTRY/project/source-edit.outcome.json" <<'JSON'
-{"module":"main.veac",
+{"modules":["main.veac"],
 "previous_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 "new_revision":{"source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
-"destination":null,"dry_run":true}
+"destinations":[],"dry_run":true}
 JSON
+for evidence in edit.batch.json edit.outcome.json edit.replay.outcome.json \
+    probe.snapshot.json; do
+  printf '{}\n' >"$ENTRY/project/$evidence"
+done
 
 GUARD=$(capture_example_publication_guard "$SOURCE" "$ENTRY" "$TARGET") ||
   fail "valid publication evidence was rejected"
@@ -73,6 +82,22 @@ cp -R "$ENTRY" "$BASELINE"
 
 rm "$ENTRY/project/source.index.json"
 expect_guard_failure "missing source index"
+restore_entry
+jq '.schema_version = 7' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
+mv "$TMP/source.index.json" "$ENTRY/project/source.index.json"
+expect_guard_failure "legacy source index"
+restore_entry
+jq 'del(.build_inputs)' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
+mv "$TMP/source.index.json" "$ENTRY/project/source.index.json"
+expect_guard_failure "source index without Build input inventory"
+restore_entry
+rm "$ENTRY/project/probe.snapshot.json"
+expect_guard_failure "missing probe snapshot"
+restore_entry
+printf ' \n' >>"$ENTRY/project/edit.outcome.json"
+capture_example_publication_guard "$SOURCE" "$ENTRY" "$TARGET" >/dev/null ||
+  fail "valid workflow evidence mutation was rejected before digest comparison"
+expect_guard_failure "changed workflow evidence digest"
 restore_entry
 printf ' \n' >>"$ENTRY/project/source-edit.outcome.json"
 capture_example_publication_guard "$SOURCE" "$ENTRY" "$TARGET" >/dev/null ||
@@ -97,6 +122,12 @@ printf '{}\n' >"$PLAIN_ENTRY/project/source.revision.json"
 if verify_example_publication_guard "$SOURCE" "$PLAIN_ENTRY" "$PLAIN_TARGET" \
     "$PLAIN_GUARD" >/dev/null 2>&1; then
   fail "undeclared source edit evidence was accepted"
+fi
+rm "$PLAIN_ENTRY/project/source.revision.json"
+printf '{}\n' >"$PLAIN_ENTRY/project/edit.batch.json"
+if verify_example_publication_guard "$SOURCE" "$PLAIN_ENTRY" "$PLAIN_TARGET" \
+    "$PLAIN_GUARD" >/dev/null 2>&1; then
+  fail "undeclared workflow evidence was accepted"
 fi
 
 index_line=$(rg -n '^bash .*write-examples-index[.]sh' "$BUILD" | cut -d: -f1)

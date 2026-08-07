@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use super::video;
@@ -15,7 +13,7 @@ pub fn project(fill: FillMode, editable_text: bool) -> ProjectEnvelope {
     if editable_text {
         tracks.push(track("trk_text", TrackKind::Visual, 10, vec![text_clip()]));
     }
-    let project = ProjectEnvelope::new(Project {
+    let project = envelope(Project {
         id: ProjectId::new("prj_template").unwrap(),
         revision: 4,
         timebase: 600,
@@ -52,13 +50,35 @@ pub fn project(fill: FillMode, editable_text: bool) -> ProjectEnvelope {
             },
             tracks,
             applies: vec![],
-            metadata: BTreeMap::new(),
+            authorship: None,
         }],
         applied_operations: vec![],
-        metadata: BTreeMap::new(),
+        authorship: None,
     });
     validate(&project).unwrap();
     project
+}
+
+fn envelope(project: Project) -> ProjectEnvelope {
+    ProjectEnvelope::new(
+        project,
+        ExecutableManifest::current(
+            env!("CARGO_PKG_VERSION"),
+            ExecutableDigests {
+                domain_registry_sha256: "a".repeat(64),
+                main_core_sha256: "b".repeat(64),
+                source_graph_sha256: "c".repeat(64),
+                declared_inputs_sha256: "d".repeat(64),
+                compiler_sha256: "e".repeat(64),
+            },
+        ),
+        TemporalProgramLibrary {
+            opset_version: TEMPORAL_OPSET_VERSION,
+            programs: vec![],
+            bindings: vec![],
+            provenance: vec![],
+        },
+    )
 }
 
 pub fn time(value: i64) -> RationalTime {
@@ -84,7 +104,7 @@ fn slot_clip(fill: FillMode) -> Clip {
             min_source_duration: None,
         }),
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -101,9 +121,14 @@ fn text_clip() -> Clip {
         visual: Some(visual()),
         audio: None,
         effects: vec![],
-        replaceable: None,
+        replaceable: Some(SlotConstraint {
+            kind: SlotKind::Text,
+            fill: FillMode::FitDuration,
+            label: "Title".to_owned(),
+            min_source_duration: None,
+        }),
         template_editable_text: true,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

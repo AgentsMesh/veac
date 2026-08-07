@@ -130,8 +130,13 @@ fn process(
     let Some(original) = original else {
         return Ok(processed);
     };
-    let processed =
-        visual_pipeline::apply_alpha(context, &processed, &apply.mix.masks, &apply.mix.opacity);
+    let processed = visual_pipeline::apply_alpha(
+        context,
+        ProcessOwner::apply(apply),
+        &processed,
+        &apply.mix.masks,
+        &apply.mix.opacity,
+    );
     Ok(blend::composite(
         context,
         original,

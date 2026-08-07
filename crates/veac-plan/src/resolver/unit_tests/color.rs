@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use super::support::*;
 use crate::{canonical::*, resolve, ResolvedColorStage, ResolvedInputKind, ResolvedLutKind};
 
@@ -147,7 +145,7 @@ fn lut(id: &str, kind: MaterialKind) -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

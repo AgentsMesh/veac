@@ -1,7 +1,8 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use veac_plan::canonical::{
-    built_in_effect, effect_domain, parameter_matches, EffectDomain, EffectId, ParameterValue,
+    parameter_matches_effect, plugin_effect, registered_effect, Effect, EffectDomain, EffectId,
+    EffectKind, PluginBackend,
 };
 use veac_plan::ResolvedRenderPlan;
 
@@ -31,67 +32,61 @@ pub(super) fn validate(check: &mut Check, plan: &ResolvedRenderPlan) {
                     "effect IDs must be unique across the render plan",
                 );
             }
-            let Some(specification) = built_in_effect(&effect.effect_type) else {
-                check.push(
-                    "PLAN_EFFECT_UNKNOWN",
-                    owner,
-                    "effect type is absent from the canonical registry",
-                );
-                continue;
-            };
-            let domain_valid = match effect_domain(&effect.effect_type) {
-                Some(EffectDomain::Video) => clip.visual.is_some(),
-                Some(EffectDomain::Audio) => clip.audio.is_some(),
-                None => false,
+            validate_contract(check, &effect.effect, owner.clone());
+            let domain_valid = match effect.effect.domain() {
+                EffectDomain::Video => clip.visual.is_some(),
+                EffectDomain::Audio => clip.audio.is_some(),
             };
             if !domain_valid {
                 check.push(
                     "PLAN_EFFECT_DOMAIN_INVALID",
-                    Some(effect.id.to_string()),
+                    owner,
                     "effect domain has no corresponding resolved clip stream",
                 );
-            }
-            for (name, value) in &effect.parameters {
-                let valid = super::super::effects::supports_parameter(value)
-                    && specification
-                        .parameters
-                        .iter()
-                        .find(|parameter| parameter.name == name)
-                        .is_some_and(|parameter| parameter_matches(*parameter, value));
-                if !valid {
-                    check.push(
-                        "PLAN_EFFECT_PARAMETER_INVALID",
-                        Some(effect.id.to_string()),
-                        "effect parameter name, type, curve mode, or value is invalid",
-                    );
-                }
             }
         }
     }
 }
 
-pub(super) fn validate_apply_effect(
-    check: &mut Check,
-    apply_id: &str,
-    effect_type: &str,
-    parameters: &BTreeMap<String, ParameterValue>,
-) {
-    let valid = effect_domain(effect_type) == Some(EffectDomain::Video)
-        && built_in_effect(effect_type).is_some_and(|specification| {
-            parameters.iter().all(|(name, value)| {
-                super::super::effects::supports_parameter(value)
-                    && specification
-                        .parameters
-                        .iter()
-                        .find(|parameter| parameter.name == name)
-                        .is_some_and(|parameter| parameter_matches(*parameter, value))
-            })
-        });
-    if !valid || effect_type == "video.stabilize" {
+pub(super) fn validate_apply_effect(check: &mut Check, apply_id: &str, effect: &Effect) {
+    validate_contract(check, effect, Some(apply_id.to_owned()));
+    if effect.domain() != EffectDomain::Video || effect.kind() == EffectKind::VideoStabilize {
         check.push(
             "PLAN_APPLY_EFFECT_INVALID",
             Some(apply_id.to_owned()),
-            "apply effect is unknown, source-dependent, or has invalid parameters",
+            "apply effect is source-dependent or has a non-video domain",
+        );
+    }
+}
+
+fn validate_contract(check: &mut Check, effect: &Effect, owner: Option<String>) {
+    let specification = registered_effect(effect.kind()).expect("closed canonical effect registry");
+    if specification
+        .parameters
+        .iter()
+        .any(|parameter| !parameter_matches_effect(*parameter, effect))
+    {
+        check.push(
+            "PLAN_EFFECT_PARAMETER_INVALID",
+            owner.clone(),
+            "effect parameter value or animation exceeds its typed contract",
+        );
+    }
+    let Effect::VideoPluginReferenceMonochromeV1 {
+        descriptor_digest, ..
+    } = effect
+    else {
+        return;
+    };
+    let descriptor = plugin_effect(effect.kind()).expect("closed plugin registry");
+    if descriptor_digest.as_str() != descriptor.digest
+        || !descriptor.digest_matches()
+        || !descriptor.supports(PluginBackend::Ffmpeg8)
+    {
+        check.push(
+            "PLAN_PLUGIN_EFFECT_DESCRIPTOR_INVALID",
+            owner,
+            "plugin descriptor digest or FFmpeg 8 adapter is not pinned",
         );
     }
 }

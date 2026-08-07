@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::Path;
 
 pub(super) fn replacement(
@@ -19,6 +18,6 @@ pub(super) fn replacement(
             audio: veac_ir::StreamChoice::Disabled,
         },
         probe: Some(probe),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }

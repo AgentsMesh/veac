@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use super::mechanism_helpers::*;
 use super::support::*;
 use crate::{canonical::*, *};
@@ -18,26 +16,23 @@ fn nested_transitions_disabled_clips_and_solo_are_explicit() {
     );
     value.project.sequences.push(nested);
     let main = &mut value.project.sequences[0];
+    main.tracks[0].clips[0].visual = Some(visual_properties());
     main.tracks[0].clips[0].effects = vec![
         EffectInstance {
             id: EffectId::new("fx_blur").unwrap(),
-            effect_type: "video.blur".to_owned(),
             enabled: true,
             enable_range: None,
-            parameters: BTreeMap::from([(
-                "radius".to_owned(),
-                ParameterValue::Number { value: 4.0 },
-            )]),
+            effect: Effect::VideoBlur {
+                radius: Animatable::constant(4.0),
+            },
         },
         EffectInstance {
             id: EffectId::new("fx_off").unwrap(),
-            effect_type: "video.grain".to_owned(),
             enabled: false,
             enable_range: None,
-            parameters: BTreeMap::from([(
-                "amount".to_owned(),
-                ParameterValue::Number { value: 0.2 },
-            )]),
+            effect: Effect::VideoGrain {
+                amount: Animatable::constant(0.2),
+            },
         },
     ];
     let transition = Transition {
@@ -45,9 +40,9 @@ fn nested_transitions_disabled_clips_and_solo_are_explicit() {
         duration: time(120),
         alignment: TransitionAlignment::Centered,
     };
-    main.tracks[0]
-        .clips
-        .push(media_clip("itm_second", "med_video", 600));
+    let mut second = media_clip("itm_second", "med_video", 480);
+    second.visual = Some(visual_properties());
+    main.tracks[0].clips.push(second);
     let mut disabled = generated_clip("itm_disabled", Generator::Transparent, 0);
     disabled.enabled = false;
     main.tracks.push(track(

@@ -1,171 +1,49 @@
-project agentsmesh-intro-15s {
-  settings {
-    timebase 1/1000;
-    canvas 1920px by 1080px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./styles.veac" as styles;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual background {
-      item backdrop {
-        source generated gradient linear {
-          from 0% 0%; to 100% 100%;
-          stop 0% #102a43ff;
-          stop 55% #0f766eff;
-          stop 100% #22c55eff;
-        }
-        record { at 0s; duration 15s; }
-      }
-    }
-
-    layer visual brand {
-      item title {
-        source text {
-          content "AgentsMesh";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            weight bold;
-            size 112px;
-            fill #f7fbffff;
-            shadow {
-              color #001f2dff; opacity 80%; blur 18px;
-              offset { x 0px; y 10px; }
-            }
-          }
-          layout {
-            box-width 1600px;
-            box-height 300px;
-            wrap none;
-            overflow visible;
-            horizontal-align center;
-            vertical-align middle;
-          }
-          animation {
-            unit grapheme;
-            stagger 45ms;
-            reveal curve {
-              key brand-visible { at 0s; value 10%; interpolation ease-out; }
-              key brand-revealed { at 900ms; value 100%; interpolation linear; }
-            }
-            opacity curve {
-              key brand-soft { at 0s; value 75%; interpolation ease-out; }
-              key brand-opaque { at 700ms; value 100%; interpolation linear; }
-            }
-            transform {
-              position curve {
-                key brand-low {
-                  at 0s; value { x 0px; y 48px; } interpolation ease-out;
-                }
-                key brand-centered {
-                  at 900ms; value { x 0px; y 0px; } interpolation linear;
-                }
-              }
-              scale curve {
-                key brand-small {
-                  at 0s; value { x 50%; y 50%; } interpolation ease-out;
-                }
-                key brand-full {
-                  at 900ms; value { x 100%; y 100%; } interpolation linear;
-                }
-              }
-              rotation 0deg;
-            }
-          }
-        }
-        record { at 0s; duration 5s; }
-      }
-    }
-
-    layer visual promise {
-      item promise {
-        source text {
-          content "一次构建系统，持续交付类型化产品。";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            weight bold;
-            size 64px;
-            fill #d8f3efff;
-            shadow {
-              color #001f2dff; opacity 67%; blur 10px;
-              offset { x 0px; y 6px; }
-            }
-          }
-          layout {
-            box-width 1600px;
-            box-height 260px;
-            wrap word;
-            overflow visible;
-            horizontal-align center;
-            vertical-align middle;
-          }
-        }
-        record { at 5s; duration 10s; }
-        modifiers {
-          layout promise-placement {
-            placement absolute { position { x 960px; y 490px; } }
-            frame { width 1600px; height 260px; fit contain; }
-          }
-        }
-      }
-    }
-
-    layer caption captions {
-      item caption {
-        source caption {
-          content "视频编辑成为类型化、可审查的代码。";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            weight bold;
-            size 44px;
-            fill #ffffffff;
-            background { color #001f2dcc; padding 18px; }
-          }
-          layout {
-            box-width 1600px;
-            box-height 160px;
-            wrap word;
-            overflow visible;
-            horizontal-align center;
-            vertical-align bottom;
-          }
-        }
-        record { at 2s; duration 10s; }
-        modifiers {
-          layout caption-placement {
-            placement absolute { position { x 960px; y 914px; } }
-            frame { width 1600px; height 160px; fit contain; }
-          }
-        }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("backdrop"), item_enabled(), during(0s, 15s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.0), vector(1.0, 1.0), [
+        gradient_stop(0%, #102a43ff), gradient_stop(55%, #0f766eff),
+        gradient_stop(100%, #22c55eff)
+      ]
+    ))), source_timing_native()
+  ));
+  let brand = visual_layer(
+    identifier("brand"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("title"), item_enabled(), during(0s, 5s),
+    source_text("智能体协作网", styles.title(font)), source_timing_native()
+  ));
+  let promise = visual_layer(
+    identifier("promise"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("promise"), item_enabled(), during(5s, 10s),
+    source_text("一次构建系统，持续交付类型化产品。", styles.promise(font)),
+    source_timing_native()
+  ));
+  let captions = caption_layer(
+    identifier("captions"), 3, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("caption"), item_enabled(), during(2s, 10s),
+    source_caption("视频编辑成为类型化、可审查的代码。", styles.caption(font)),
+    source_timing_native()
+  ).with_visual(styles.caption_visual()));
+  let timeline = sequence(
+    identifier("main"), "智能体协作网十五秒片头",
+    sequence_settings(canvas(1920px, 1080px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(brand).with_layer(promise).with_layer(captions);
+  let output = showcase.video(
+    timeline, canvas(1920px, 1080px), frame_rate(30, 1), false, true
+  );
+  project(identifier("agentsmesh-intro-15s"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

@@ -11,7 +11,8 @@ pub struct TextAnimation {
     /// Visible fraction of units in logical reading order.
     pub reveal: Animatable<f64>,
     /// Optional active fill moving through logical reading order.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "explicit_option")]
+    #[schemars(with = "Option<TextHighlightAnimation>", required)]
     pub highlight: Option<TextHighlightAnimation>,
     /// Per-unit opacity curve. Unit N evaluates it N * stagger later.
     pub opacity: Animatable<f64>,
@@ -59,4 +60,12 @@ pub enum TextGranularity {
     Line,
     Word,
     Grapheme,
+}
+
+fn explicit_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::deserialize(deserializer)
 }

@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 
 codec_matrix_canonical_contract() {
-  local canonical=$1 label=$2 width=$3 height=$4 fps=$5
-  jq -e --argjson width "$width" --argjson height "$height" --argjson fps "$fps" '
-    first(.project.render_configs[] | select(.id == "out_codec-matrix")) as $out |
-    $out.sequence_id == "seq_main" and
+  local canonical=$1 label=$2 width=$3 height=$4 fps=$5 config sequence
+  config=$(delivery_config_id "$canonical" codec-matrix)
+  sequence=$(canonical_sequence_id "$canonical" main)
+  jq -e --arg config "$config" --arg sequence "$sequence" \
+    --argjson width "$width" --argjson height "$height" --argjson fps "$fps" '
+    first(.project.render_configs[] | select(.id == $config)) as $out |
+    $out.sequence_id == $sequence and
     $out.raster == {"captions":"burn_in","frame_rate":{"denominator":1,"numerator":$fps},
       "height":$height,"width":$width} and
     ($out.deliverables | length) == 2 and
-    first($out.deliverables[] | select(.id == "dlv_hevc-main10")) as $hevc |
+    first($out.deliverables[] | select(.kind.type == "video" and
+      .target.name == "hevc.mov")) as $hevc |
     $hevc.target == {"name":"hevc.mov","type":"file"} and $hevc.kind.type == "video" and
     $hevc.kind.settings == {"audio":null,"container":"mov","hardware":{"type":"software"},
       "optimize_for_streaming":false,"pass_mode":"single","video":{"alpha":"opaque",
       "b_frames":null,"codec":"h265","color_space":{"matrix":"bt2020_ncl","primaries":"bt2020",
       "range":"limited","transfer":"smpte2084"},"gop_size":null,"level":null,
       "pixel_format":"yuv420p10le","profile":"h265_main10","rate_control":{"type":"crf","value":28}}} and
-    first($out.deliverables[] | select(.id == "dlv_vp9-opus")) as $vp9 |
+    first($out.deliverables[] | select(.kind.type == "video" and
+      .target.name == "vp9.webm")) as $vp9 |
     $vp9.target == {"name":"vp9.webm","type":"file"} and $vp9.kind.type == "video" and
     $vp9.kind.settings == {"audio":{"channels":2,"codec":"opus","sample_rate":48000},
       "container":"webm","hardware":{"type":"software"},"optimize_for_streaming":false,
@@ -26,13 +31,16 @@ codec_matrix_canonical_contract() {
 }
 
 codec_matrix_plan_contract() {
-  local preview=$1 plan=$2
-  jq -e --slurpfile preview "$preview" '
-    first($preview[0].project.render_configs[] | select(.id == "out_codec-matrix")) as $config |
-    .output.id == "pout_codec-matrix" and .output.render_config_id == $config.id and
+  local preview=$1 plan=$2 config sequence
+  config=$(delivery_config_id "$preview" codec-matrix)
+  sequence=$(canonical_sequence_id "$preview" main)
+  jq -e --arg config "$config" --arg sequence "$sequence" --slurpfile preview "$preview" '
+    first($preview[0].project.render_configs[] | select(.id == $config)) as $config |
+    .output.render_config_id == $config.id and
     .output.sequence_id == $config.sequence_id and .output.raster == $config.raster and
     .output.deliverables == $config.deliverables and
-    first(.sequences[] | select(.id == "seq_main")).duration == {"timescale":1000,"value":1000}
+    first(.sequences[] | select(.id == $sequence)).duration as $duration |
+    $duration.value == $duration.timescale
   ' "$plan" >/dev/null || fail "delivery-codec-matrix preview plan contract failed"
 }
 
@@ -120,9 +128,9 @@ check_delivery_codec_matrix_evidence() {
   [[ -d $dir ]] || return 0
   local author preview plan hevc vp9 width height rate duration
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_codec-matrix)
-  hevc=$(delivery_video_path "$dir" codec-matrix hevc-main10)
-  vp9=$(delivery_video_path "$dir" codec-matrix vp9-opus)
+  plan=$(delivery_plan_path "$dir" codec-matrix)
+  hevc=$(delivery_video_path "$dir" codec-matrix hevc.mov)
+  vp9=$(delivery_video_path "$dir" codec-matrix vp9.webm)
   for file in "$author" "$preview" "$plan" "$hevc" "$vp9"; do require_file "$file"; done
   codec_matrix_canonical_contract "$author" authoring 640 360 24
   codec_matrix_canonical_contract "$preview" preview 480 270 12

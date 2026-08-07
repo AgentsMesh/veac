@@ -9,7 +9,7 @@ fn canonical_json_is_jcs_deterministic_and_round_trips() {
     let second = String::from_utf8(canonical_bytes(&project).unwrap()).unwrap();
     assert_eq!(first, second);
     assert!(!first.contains('\n'));
-    assert!(first.starts_with("{\"min_reader_version\":"));
+    assert!(first.starts_with("{\"executable\":"));
     assert_eq!(decode_canonical_json(&first).unwrap(), project);
 }
 

@@ -1,10 +1,9 @@
 use crate::authoring::Span;
 use crate::program::diagnostic::Diagnostic;
-use crate::program::expression::Value;
-use crate::program::model::{ComponentKey, SurfaceFile};
-use std::collections::BTreeMap;
+use crate::program::expression::{FunctionDefinition, FunctionMap, Value};
+use crate::program::model::SurfaceFile;
 
-mod component;
+mod methods;
 
 const MAX_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const ENTRY_BYTES: usize = 64;
@@ -15,6 +14,16 @@ pub(super) struct Budget {
 }
 
 impl Budget {
+    pub(super) fn function_payload_limit(&self, definitions: &[FunctionDefinition]) -> usize {
+        let overhead = definitions.iter().try_fold(0usize, |bytes, definition| {
+            bytes
+                .checked_add(ENTRY_BYTES)?
+                .checked_add(definition.name.len())
+        });
+        let available = self.limit.saturating_sub(self.bytes);
+        overhead.map_or(0, |bytes| available.saturating_sub(bytes))
+    }
+
     pub(super) fn value(
         &mut self,
         path: &str,
@@ -25,14 +34,30 @@ impl Budget {
         self.entry(path, name, value.retained_bytes(), span)
     }
 
-    pub(super) fn preset(
+    pub(super) fn functions(
         &mut self,
-        path: &str,
-        name: &str,
-        body: &str,
-        span: Span,
+        file: &SurfaceFile,
+        functions: &FunctionMap,
+        methods: &crate::program::MethodRegistry,
     ) -> Result<(), Diagnostic> {
-        self.entry(path, name, body.len(), span)
+        let mut next = self.bytes;
+        for declaration in &file.functions {
+            let function = functions
+                .lookup(&declaration.name)
+                .expect("compiled local function must exist");
+            let payload = function
+                .retained_bytes()
+                .ok_or_else(|| error(&file.path, declaration.span))?;
+            let added = entry_bytes(&declaration.name, payload)
+                .ok_or_else(|| error(&file.path, declaration.span))?;
+            next = next
+                .checked_add(added)
+                .filter(|next| *next <= self.limit)
+                .ok_or_else(|| error(&file.path, declaration.span))?;
+        }
+        next = methods::compiled(file, functions, methods, next, self.limit)?;
+        self.bytes = next;
+        Ok(())
     }
 
     pub(super) fn alias(
@@ -44,17 +69,35 @@ impl Budget {
         self.entry(path, qualified, 0, span)
     }
 
-    pub(super) fn components(
+    pub(super) fn type_definition(
         &mut self,
         file: &SurfaceFile,
-        captured: &BTreeMap<String, ComponentKey>,
+        value: &crate::program::TypeDefinition,
     ) -> Result<(), Diagnostic> {
-        let Some(first) = file.components.first() else {
-            return Ok(());
-        };
-        let added = component::logical_bytes(file, captured)
-            .ok_or_else(|| error(&file.path, first.span))?;
-        self.charge(&file.path, added, first.span)
+        let payload = value
+            .retained_bytes()
+            .ok_or_else(|| error(&file.path, value_span(file, value.declared_name())))?;
+        self.entry(
+            &file.path,
+            value.declared_name(),
+            payload,
+            value_span(file, value.declared_name()),
+        )
+    }
+
+    pub(super) fn method_definition(
+        &mut self,
+        file: &SurfaceFile,
+        value: &crate::program::MethodDefinition,
+        span: Span,
+    ) -> Result<(), Diagnostic> {
+        self.entry(
+            &file.path,
+            value.signature().name(),
+            crate::program::method_system::retained_bytes(value)
+                .ok_or_else(|| error(&file.path, span))?,
+            span,
+        )
     }
 
     fn entry(
@@ -64,10 +107,7 @@ impl Budget {
         payload: usize,
         span: Span,
     ) -> Result<(), Diagnostic> {
-        let added = ENTRY_BYTES
-            .checked_add(name.len())
-            .and_then(|bytes| bytes.checked_add(payload))
-            .ok_or_else(|| error(path, span))?;
+        let added = entry_bytes(name, payload).ok_or_else(|| error(path, span))?;
         self.charge(path, added, span)
     }
 
@@ -84,6 +124,10 @@ impl Budget {
     }
 }
 
+fn entry_bytes(name: &str, payload: usize) -> Option<usize> {
+    ENTRY_BYTES.checked_add(name.len())?.checked_add(payload)
+}
+
 impl Default for Budget {
     fn default() -> Self {
         Self {
@@ -93,13 +137,21 @@ impl Default for Budget {
     }
 }
 
-fn error(path: &str, span: Span) -> Diagnostic {
+pub(super) fn error(path: &str, span: Span) -> Diagnostic {
     Diagnostic::new(
         "PROGRAM_RETAINED_SCOPE_BUDGET",
         path,
-        "resolved constants, presets, components, and aliases exceed 64 MiB of retained symbol storage",
+        "resolved functions, constants, types, methods, and aliases exceed 64 MiB of retained symbol storage",
         span,
     )
+}
+
+fn value_span(file: &SurfaceFile, name: &str) -> Span {
+    file.types
+        .iter()
+        .find(|value| value.name == name)
+        .map(|value| value.span)
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

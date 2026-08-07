@@ -1,3 +1,4 @@
+use veac_plan::canonical::EffectParameter;
 use veac_plan::{ResolvedClip, ResolvedEffect};
 
 use super::super::{time, CodegenErrors, EmitContext};
@@ -8,7 +9,7 @@ pub(super) fn apply(
     effect: &ResolvedEffect,
     input: &str,
 ) -> Result<String, CodegenErrors> {
-    let target = super::number(effect, "target_lufs", -16.0, clip)?;
+    let target = super::number(effect, EffectParameter::TargetLufs, -16.0, clip)?;
     if effect.active_range.start.value == 0
         && effect.active_range.duration == clip.record_range.duration
     {

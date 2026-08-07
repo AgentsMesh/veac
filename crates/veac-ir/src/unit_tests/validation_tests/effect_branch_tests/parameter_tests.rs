@@ -2,108 +2,58 @@ use super::*;
 use crate::test_support::time;
 
 #[test]
-fn registered_and_unregistered_effects_keep_distinct_parameter_contracts() {
-    let mut registered = sample_project();
-    let effect = effect_mut(&mut registered);
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "brightness".to_owned(),
-        ParameterValue::Number { value: -1.0 },
-    );
-    validate(&registered).unwrap();
-
-    let mut unregistered = sample_project();
-    let effect = effect_mut(&mut unregistered);
-    effect.effect_type = "vendor.private".to_owned();
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "arbitrary".to_owned(),
-        ParameterValue::Boolean { value: true },
-    );
-    let codes = effect_codes(&unregistered);
-    assert_code(&codes, "UNKNOWN_EFFECT");
-    assert!(!codes.iter().any(|code| code == "UNKNOWN_EFFECT_PARAMETER"));
-    assert!(!codes.iter().any(|code| code == "EFFECT_PARAMETER_TYPE"));
-}
-
-#[test]
-fn generic_number_parameter_rejects_non_finite_values() {
-    let mut project = sample_project();
-    let effect = effect_mut(&mut project);
-    effect.effect_type = "vendor.private".to_owned();
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "invalid".to_owned(),
-        ParameterValue::Number { value: f64::NAN },
-    );
-    assert_effect_code(&project, "EFFECT_PARAMETER");
-}
-
-#[test]
-fn number_curve_parameters_validate_curve_shape_after_schema_matching() {
+fn number_curve_parameters_validate_shape_and_range() {
     let mut empty = sample_project();
-    let effect = effect_mut(&mut empty);
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "brightness".to_owned(),
-        ParameterValue::NumberCurve {
-            value: Animatable::Keyframes { keyframes: vec![] },
-        },
-    );
+    set_curve(&mut empty, Animatable::Keyframes { keyframes: vec![] });
     assert_effect_code(&empty, "EMPTY_KEYFRAMES");
 
     let mut invalid = sample_project();
-    let effect = effect_mut(&mut invalid);
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "brightness".to_owned(),
-        ParameterValue::NumberCurve {
-            value: Animatable::Keyframes {
-                keyframes: vec![Keyframe {
-                    id: KeyframeId::new("kf_effect_invalid").unwrap(),
-                    time: time(601),
-                    value: f64::NAN,
-                    interpolation: Interpolation::Hold,
-                }],
-            },
+    set_curve(
+        &mut invalid,
+        Animatable::Keyframes {
+            keyframes: vec![Keyframe {
+                id: KeyframeId::new("kf_effect_invalid").unwrap(),
+                time: time(601),
+                value: f64::NAN,
+                interpolation: Interpolation::Hold,
+            }],
         },
     );
     let codes = effect_codes(&invalid);
-    assert_code(&codes, "EFFECT_PARAMETER_TYPE");
+    assert_code(&codes, "EFFECT_PARAMETER_RANGE");
     assert_code(&codes, "KEYFRAME_ORDER");
     assert_code(&codes, "ANIMATION_VALUE");
 }
 
 #[test]
-fn every_registered_video_curve_parameter_accepts_keyframes() {
+fn every_built_in_video_curve_parameter_accepts_keyframes() {
     let mut covered = 0;
-    for effect in built_in_effects()
+    for specification in built_in_effects()
         .iter()
-        .filter(|effect| effect.effect_type.starts_with("video."))
+        .filter(|effect| effect.kind != EffectKind::AudioNormalize)
     {
-        for parameter in effect
+        for parameter in specification
             .parameters
             .iter()
             .filter(|parameter| parameter.supports_curve)
         {
-            assert_eq!(parameter.value_type, ParameterType::Number);
             let mut project = sample_project();
-            let instance = effect_mut(&mut project);
-            instance.effect_type = effect.effect_type.to_owned();
-            instance.parameters.clear();
-            instance.parameters.insert(
-                parameter.name.to_owned(),
-                curve_parameter(
-                    parameter.minimum.unwrap(),
-                    parameter.maximum.unwrap(),
-                    covered,
-                ),
+            let mut effect = Effect::neutral(specification.kind);
+            let curve = bounded_curve(
+                parameter.minimum.unwrap(),
+                parameter.maximum.unwrap(),
+                covered,
             );
+            assert_eq!(
+                effect.set_parameter(parameter.parameter, EffectParameterValue::Curve(curve)),
+                Some(true)
+            );
+            effect_mut(&mut project).effect = effect;
             validate(&project).unwrap_or_else(|errors| {
                 panic!(
-                    "{}.{}, diagnostics={:?}",
-                    effect.effect_type,
-                    parameter.name,
+                    "{}.{} diagnostics={:?}",
+                    specification.effect_type,
+                    parameter.parameter.name(),
                     errors.into_diagnostics()
                 )
             });
@@ -114,51 +64,76 @@ fn every_registered_video_curve_parameter_accepts_keyframes() {
 }
 
 #[test]
-fn audio_normalize_requires_a_static_target_and_allows_partial_range() {
+fn audio_normalize_requires_a_finite_bounded_static_target() {
     let mut project = sample_project();
     let effect = effect_mut(&mut project);
-    effect.effect_type = "audio.normalize".to_owned();
+    effect.effect = Effect::AudioNormalize { target_lufs: -18.0 };
     effect.enable_range = Some(crate::test_support::range(100, 300));
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "target_lufs".to_owned(),
-        ParameterValue::Number { value: -18.0 },
-    );
     validate(&project).unwrap();
 
-    effect_mut(&mut project)
-        .parameters
-        .insert("target_lufs".to_owned(), curve_parameter(-18.0, -16.0, 99));
-    let json = serde_json::to_string(&project).unwrap();
-    let CanonicalError::Validation(errors) = decode_canonical_json(&json).unwrap_err() else {
-        panic!("normalize curve must fail canonical semantic validation")
+    effect_mut(&mut project).effect = Effect::AudioNormalize {
+        target_lufs: f64::NAN,
     };
-    let codes: Vec<_> = errors
-        .into_diagnostics()
-        .into_iter()
-        .map(|diagnostic| diagnostic.code)
-        .collect();
-    assert_code(&codes, "EFFECT_PARAMETER_TYPE");
-    assert!(!codes.iter().any(|code| code == "EFFECT_RANGE"));
+    assert_effect_code(&project, "EFFECT_PARAMETER_RANGE");
+    effect_mut(&mut project).effect = Effect::AudioNormalize { target_lufs: -4.0 };
+    assert_effect_code(&project, "EFFECT_PARAMETER_RANGE");
 }
 
-fn curve_parameter(start: f64, end: f64, index: usize) -> ParameterValue {
-    ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
+#[test]
+fn spring_extrema_must_stay_inside_effect_bounds() {
+    let mut project = sample_project();
+    effect_mut(&mut project).effect = Effect::VideoLumaKey {
+        threshold: Animatable::Keyframes {
             keyframes: vec![
-                Keyframe {
-                    id: KeyframeId::new(format!("kf_effect_{index}_start")).unwrap(),
-                    time: time(0),
-                    value: start,
-                    interpolation: Interpolation::Linear,
-                },
-                Keyframe {
-                    id: KeyframeId::new(format!("kf_effect_{index}_end")).unwrap(),
-                    time: time(300),
-                    value: end,
-                    interpolation: Interpolation::Linear,
-                },
+                spring_key("kf_threshold_start", 0, 0.1),
+                spring_key("kf_threshold_end", 600, 0.9),
             ],
+        },
+        tolerance: Animatable::constant(0.1),
+        softness: Animatable::constant(0.1),
+        invert: false,
+    };
+    assert_effect_code(&project, "EFFECT_PARAMETER_RANGE");
+}
+
+fn set_curve(project: &mut ProjectEnvelope, value: Animatable<f64>) {
+    effect_mut(project)
+        .effect
+        .set_parameter(
+            EffectParameter::Brightness,
+            EffectParameterValue::Curve(value),
+        )
+        .unwrap();
+}
+
+fn bounded_curve(start: f64, end: f64, index: usize) -> Animatable<f64> {
+    Animatable::Keyframes {
+        keyframes: vec![
+            Keyframe {
+                id: KeyframeId::new(format!("kf_effect_{index}_start")).unwrap(),
+                time: time(0),
+                value: start,
+                interpolation: Interpolation::Linear,
+            },
+            Keyframe {
+                id: KeyframeId::new(format!("kf_effect_{index}_end")).unwrap(),
+                time: time(300),
+                value: end,
+                interpolation: Interpolation::Linear,
+            },
+        ],
+    }
+}
+
+fn spring_key(id: &str, at: i64, value: f64) -> Keyframe<f64> {
+    Keyframe {
+        id: KeyframeId::new(id).unwrap(),
+        time: time(at),
+        value,
+        interpolation: Interpolation::Spring {
+            frequency: 1.5,
+            decay: 6.0,
+            initial_velocity: 0.0,
         },
     }
 }

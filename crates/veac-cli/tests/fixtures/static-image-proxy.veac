@@ -1,0 +1,39 @@
+fn main(context: Context) -> Project {
+  let still = image_resource(
+    identifier("still"), resource_file("still.png"),
+    sha256("544b7ca8893bfac33917a1113a50dcf9dea9129e9858d5f1ce45b23a2a21e8c8")
+  );
+  let scene_item = item(
+    identifier("still"), item_enabled(), during(0s, 200ms),
+    source_media(still), source_timing_native()
+  );
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(), state, track_routing_default()
+  ).with_item(scene_item);
+  let timeline = sequence(
+    identifier("main"), "静态图片代理测试",
+    sequence_settings(canvas(32px, 24px), frame_rate(10, 1), 48000)
+  ).with_layer(base);
+  let video_spec = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(23), gop_auto(), b_frames_auto(), video_profile_auto(), video_level_auto()
+  );
+  let artifact = deliverable_video(
+    identifier("main"), delivery_file("render.mp4"),
+    video_delivery(
+      container_mp4(), video_spec, embedded_audio_none(),
+      true, pass_single(), hardware_software()
+    )
+  );
+  let delivery_spec = delivery(
+    identifier("main"), timeline,
+    raster_settings(canvas(32px, 24px), frame_rate(10, 1), caption_discard()),
+    [artifact]
+  );
+  project(identifier("image-proxy-test"), project_settings(600))
+    .with_resource(still).with_sequence(timeline).entry(timeline).with_delivery(delivery_spec)
+}

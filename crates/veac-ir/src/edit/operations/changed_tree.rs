@@ -23,6 +23,9 @@ pub(super) fn clip(clip: &Clip, changed: &mut ChangeSet) {
     if let ClipSource::Text { style, .. } | ClipSource::Caption { style, .. } = &clip.source {
         if let Some(animation) = &style.animation {
             curve(&animation.reveal, changed);
+            if let Some(highlight) = &animation.highlight {
+                curve(&highlight.progress, changed);
+            }
             curve(&animation.opacity, changed);
             curve(&animation.transform.position_offset, changed);
             curve(&animation.transform.scale, changed);
@@ -66,8 +69,8 @@ pub(super) fn apply(value: &Apply, changed: &mut ChangeSet) {
 
 pub(super) fn effect(effect: &EffectInstance, changed: &mut ChangeSet) {
     changed.effect(effect.id.clone());
-    for value in effect.parameters.values() {
-        if let ParameterValue::NumberCurve { value } = value {
+    for parameter in EffectParameter::ALL {
+        if let Some(value) = effect.effect.curve(parameter) {
             curve(value, changed);
         }
     }

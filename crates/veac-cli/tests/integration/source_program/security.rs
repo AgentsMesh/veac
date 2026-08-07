@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "security/locks.rs"]
+mod locks;
+
 #[test]
 fn source_edit_rejects_structural_injection_without_writing() {
     let temp = tempdir().unwrap();
@@ -53,7 +56,7 @@ fn source_edit_cannot_overwrite_its_source_graph_lock() {
         .failure()
         .stderr(predicate::str::contains("OUTPUT_OVERWRITES_INPUT"));
     assert_eq!(std::fs::read_to_string(source).unwrap(), original);
-    assert!(!lock.exists());
+    assert!(lock.is_file());
 }
 
 #[test]
@@ -140,7 +143,7 @@ fn source_commands_reject_a_final_symlink_without_touching_its_target() {
     symlink(&target, &source).unwrap();
     let original = std::fs::read_to_string(&target).unwrap();
 
-    for command in ["check", "compile", "source-revision", "fmt"] {
+    for command in ["check", "build", "source-revision", "fmt"] {
         veac()
             .args([command, source.to_str().unwrap()])
             .assert()

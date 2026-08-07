@@ -9,7 +9,7 @@ use crate::error::CliResult;
 
 pub(crate) fn canonical_project(temp: &TempDir, source: &str) -> PathBuf {
     let source = source_file(temp, source);
-    let envelope = crate::frontend::compile(&source, 0).unwrap();
+    let envelope = crate::frontend::check(&source, None, &[], 0).unwrap();
     let path = temp.path().join("project.json");
     std::fs::write(&path, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
     path
@@ -26,6 +26,12 @@ pub(crate) fn add_second_video(project: &Path) {
     std::fs::write(project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
 }
 
+pub(crate) fn pin_first_material(project: &Path, identity: veac_ir::MediaIdentity) {
+    let mut envelope = crate::canonical::load(project).unwrap();
+    envelope.project.materials[0].identity = Some(identity);
+    std::fs::write(project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
+}
+
 pub(crate) fn render(
     project: &Path,
     destination: Option<&Path>,
@@ -34,7 +40,7 @@ pub(crate) fn render(
     crate::commands::render(
         project,
         None,
-        None,
+        crate::planning::InputResolution::default(),
         destination,
         crate::arguments::SubstitutionPolicy::Original,
         crate::arguments::SubstitutionPolicy::Original,

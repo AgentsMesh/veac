@@ -1,0 +1,63 @@
+module {
+  export fn state() -> TrackState {
+    track_state(
+      track_playback_enabled(), track_audio_audible(),
+      track_isolation_normal(), track_editing_unlocked()
+    )
+  }
+
+  export fn solid(
+    key: identifier, fill: color, start: time, duration: time
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, duration),
+      source_generated(generator_solid(fill)), source_timing_native()
+    )
+  }
+
+  export fn caption_style(font: Resource, size: length, width: length) -> TextStyle {
+    text_style(
+      text_metrics(
+        font_stack(font_resource_ref(font), []),
+        weight_bold(), font_style_normal(), size, 0px, 1.2, #ffffffff
+      ),
+      text_layout(
+        text_box_width(width), text_wrap_word(), text_overflow_visible(),
+        text_align_center(), text_align_middle(),
+        writing_horizontal_tb(), orientation_mixed()
+      ),
+      text_path_none(),
+      text_decoration(
+        text_background_present(#00000099, 14px),
+        text_outline_present(#00b4d8ff, 2px),
+        shadow_present(8px, 80%, vector(24.0, 28.0), #ff477eff)
+      ),
+      [], text_animation_none()
+    )
+  }
+
+  export fn video(
+    timeline: Sequence, size: Canvas, rate: FrameRate,
+    audio: bool, captions: bool
+  ) -> Delivery {
+    let sound = if audio {
+      embedded_audio_present(audio_output(audio_aac(), 48000, 2))
+    } else { embedded_audio_none() };
+    let caption_mode = if captions { caption_burn_in() } else { caption_discard() };
+    let picture = video_output(
+      video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+      video_crf(20), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_h264_high()), video_level_auto()
+    );
+    let artifact = deliverable_video(
+      identifier("preview"), delivery_file("preview.mp4"),
+      video_delivery(
+        container_mp4(), picture, sound, true, pass_single(), hardware_software()
+      )
+    );
+    delivery(
+      identifier("preview"), timeline,
+      raster_settings(size, rate, caption_mode), [artifact]
+    )
+  }
+}

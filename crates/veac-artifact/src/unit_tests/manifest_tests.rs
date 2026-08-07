@@ -80,7 +80,10 @@ fn manifest_rejects_unsorted_or_mismatched_artifacts() {
         descriptor: first_descriptor,
     };
     let mut second_descriptor = descriptor();
-    second_descriptor.parameters = serde_json::json!({"height": 360});
+    let ArtifactParameters::ProxyVideo(parameters) = &mut second_descriptor.parameters else {
+        unreachable!()
+    };
+    parameters.height = 360;
     let second = ArtifactDeclaration {
         key: artifact_key(&second_descriptor).unwrap(),
         descriptor: second_descriptor,

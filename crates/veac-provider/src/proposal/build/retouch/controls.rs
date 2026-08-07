@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use veac_ir::{
-    Animatable, ApplyOperation, ApplyStage, EffectInstance, Interpolation, Keyframe, KeyframeId,
-    ParameterValue,
+    Animatable, ApplyOperation, ApplyStage, EffectDomain, EffectInstance, EffectParameter,
+    EffectParameterRef, EffectParameterValue, Interpolation, Keyframe, KeyframeId,
 };
 
 use crate::{
@@ -74,9 +74,10 @@ fn validate_shape(
         }
     }
     let mut targets = BTreeSet::new();
-    if bindings.iter().any(|binding| {
-        !targets.insert((binding.effect_id.clone(), binding.effect_parameter.clone()))
-    }) {
+    if bindings
+        .iter()
+        .any(|binding| !targets.insert((binding.effect_id.clone(), binding.effect_parameter)))
+    {
         return invalid("retouch controls must target unique effect parameters");
     }
     Ok(())
@@ -93,27 +94,29 @@ fn compile_binding(
         .iter_mut()
         .find(|application| application.effect.id == binding.effect_id)
         .ok_or_else(|| invalid_error("retouch control references an unknown effect"))?;
-    let parameter = parameter_spec(&application.effect, &binding.effect_parameter)?;
-    if application
+    let parameter = parameter_spec(&application.effect, binding.effect_parameter)?;
+    let current = application
         .effect
-        .parameters
-        .contains_key(&binding.effect_parameter)
-    {
-        return invalid("retouch control target must not be pre-populated");
+        .effect
+        .curve(binding.effect_parameter)
+        .ok_or_else(|| unsupported_error("retouch target is not an animatable effect leaf"))?;
+    if !matches!(current, Animatable::Constant { .. }) {
+        return invalid("retouch control target must be a static placeholder");
     }
     let (value, sample_indices) = curve_value(curve, binding, time, timebase)?;
-    if !veac_ir::parameter_matches(parameter, &value) {
+    if !veac_ir::parameter_matches(parameter, EffectParameterRef::Curve(&value)) {
         return unsupported("retouch control values exceed the effect contract");
     }
     application
         .effect
-        .parameters
-        .insert(binding.effect_parameter.clone(), value);
+        .effect
+        .set_parameter(binding.effect_parameter, EffectParameterValue::Curve(value))
+        .expect("parameter compatibility checked above");
     Ok(RetouchControlEvidence {
         control: binding.control.clone(),
         apply_stage_id: application.stage_id.clone(),
         effect_id: binding.effect_id.clone(),
-        effect_parameter: binding.effect_parameter.clone(),
+        effect_parameter: binding.effect_parameter,
         keyframe_id_prefix: binding.keyframe_id_prefix.clone(),
         sample_indices,
     })
@@ -121,16 +124,16 @@ fn compile_binding(
 
 fn parameter_spec(
     effect: &EffectInstance,
-    parameter: &str,
+    parameter: EffectParameter,
 ) -> ProviderResult<veac_ir::ParameterSpec> {
-    let specification = veac_ir::built_in_effect(&effect.effect_type)
-        .filter(|_| effect.effect_type.starts_with("video."))
+    let specification = veac_ir::built_in_effect(effect.kind())
+        .filter(|_| effect.domain() == EffectDomain::Video)
         .ok_or_else(|| unsupported_error("retouch requires a canonical video effect"))?;
     specification
         .parameters
         .iter()
         .copied()
-        .find(|value| value.name == parameter && value.supports_curve)
+        .find(|value| value.parameter == parameter && value.supports_curve)
         .ok_or_else(|| unsupported_error("retouch parameter does not support numeric curves"))
 }
 
@@ -139,7 +142,7 @@ fn curve_value(
     binding: &RetouchControlApplication,
     time: ClipTimeBinding,
     timebase: u32,
-) -> ProviderResult<(ParameterValue, Vec<u32>)> {
+) -> ProviderResult<(Animatable<f64>, Vec<u32>)> {
     let mut keyframes = Vec::with_capacity(curve.samples.len());
     let mut indices = Vec::with_capacity(curve.samples.len());
     for (index, sample) in curve.samples.iter().enumerate() {
@@ -157,12 +160,7 @@ fn curve_value(
         });
         indices.push(ordinal - 1);
     }
-    Ok((
-        ParameterValue::NumberCurve {
-            value: Animatable::Keyframes { keyframes },
-        },
-        indices,
-    ))
+    Ok((Animatable::Keyframes { keyframes }, indices))
 }
 
 fn invalid<T>(message: &str) -> ProviderResult<T> {

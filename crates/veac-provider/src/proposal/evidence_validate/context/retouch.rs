@@ -1,5 +1,6 @@
 use veac_ir::{
-    Apply, ApplyOperation, ApplyStage, ApplyStageId, ApplyTarget, EditOperation, StructureEdit,
+    Apply, ApplyOperation, ApplyStage, ApplyStageId, ApplyTarget, EditOperation,
+    EffectParameterValue, StructureEdit,
 };
 
 use crate::{
@@ -107,7 +108,7 @@ fn stage_matches(
         || stage.id != template.stage_id
         || stage.active_range != template.active_range
         || effect.id != template.effect.id
-        || effect.effect_type != template.effect.effect_type
+        || effect.effect.kind() != template.effect.effect.kind()
         || effect.enabled != template.effect.enabled
         || effect.enable_range != template.effect.enable_range
     {
@@ -116,17 +117,19 @@ fn stage_matches(
     let mapped = controls
         .iter()
         .filter(|value| value.effect_id == effect.id)
-        .map(|value| value.effect_parameter.as_str())
+        .map(|value| value.effect_parameter)
         .collect::<Vec<_>>();
-    if mapped
-        .iter()
-        .any(|name| !effect.parameters.contains_key(*name))
-    {
-        return false;
+    let mut base = effect.effect.clone();
+    for parameter in mapped {
+        let Some(value) = template.effect.effect.curve(parameter).cloned() else {
+            return false;
+        };
+        if base
+            .set_parameter(parameter, EffectParameterValue::Curve(value))
+            .is_none()
+        {
+            return false;
+        }
     }
-    let mut base = effect.parameters.clone();
-    for name in mapped {
-        base.remove(name);
-    }
-    base == template.effect.parameters
+    base == template.effect.effect
 }

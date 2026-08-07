@@ -4,7 +4,7 @@ use veac_plan::{ResolvedEffect, ResolvedTextSpan, ResolvedTextStyle};
 
 mod cases;
 mod geometry;
-mod support;
+pub(super) mod support;
 
 use cases::*;
 use support::*;
@@ -117,12 +117,10 @@ fn ass_rejects_unsafe_speaker_font_span_visual_and_inexact_time() {
             }
             5 => caption_clip(&mut plan).effects.push(ResolvedEffect {
                 id: EffectId::new("fx_caption_blur").unwrap(),
-                effect_type: "video.blur".to_owned(),
                 active_range: TimeRange::new(time(0), time(600)).unwrap(),
-                parameters: BTreeMap::from([(
-                    "radius".to_owned(),
-                    ParameterValue::Number { value: 2.0 },
-                )]),
+                effect: Effect::VideoBlur {
+                    radius: Animatable::constant(2.0),
+                },
             }),
             6 => {
                 caption_clip(&mut plan)
@@ -155,4 +153,3 @@ fn ass_rejects_unsafe_speaker_font_span_visual_and_inexact_time() {
         "PLAN_CAPTION_SIDECAR_INVALID"
     );
 }
-use std::collections::BTreeMap;

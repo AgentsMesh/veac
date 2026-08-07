@@ -26,7 +26,7 @@ fn fractional_custom_wipe_reaches_midpoint_on_exact_cut_at_twelve_fps() {
 }
 
 #[test]
-fn subframe_transition_keeps_an_outgoing_seed_until_the_cut_frame() {
+fn subframe_transition_uses_real_endpoint_windows_without_a_frozen_tail() {
     let temp = tempfile::tempdir().unwrap();
     let output = temp.path().join("subframe-transition.mp4");
     let rendered = render(
@@ -36,10 +36,16 @@ fn subframe_transition_keeps_an_outgoing_seed_until_the_cut_frame() {
     );
     let graph = rendered.command.filter_graph.unwrap();
 
-    assert!(graph.contains("reverse,trim=end_frame=1"), "graph={graph}");
-    let cut = rgb_at(&output, 2.0, WIDTH / 2, HEIGHT / 2);
-    assert!(cut[0] > 220 && cut[2] < 20, "cut={cut:?} graph={graph}");
-    let completed = rgb_at(&output, 2.08, WIDTH / 2, HEIGHT / 2);
+    assert!(
+        graph.contains("trim=start=1.96:duration=0.04,setpts=PTS-STARTPTS")
+            && graph.contains("trim=start=0:duration=0.04,setpts=PTS-STARTPTS")
+            && graph.contains("xfade=transition=fade:duration=0.083333333333:offset=0")
+            && !graph.contains("reverse"),
+        "graph={graph}"
+    );
+    let outgoing = rgb_at(&output, 1.9, WIDTH / 2, HEIGHT / 2);
+    assert!(outgoing[0] > 220 && outgoing[2] < 20, "{outgoing:?}");
+    let completed = rgb_at(&output, 2.0, WIDTH / 2, HEIGHT / 2);
     assert!(
         completed[2] > 220 && completed[0] < 20,
         "completed={completed:?}"
@@ -54,8 +60,8 @@ fn assert_transition_frames(fps: i64) {
         &std::collections::BTreeMap::new(),
         &output,
     );
-    let first = centered_frame_at_or_after(1.8, fps);
-    let after = centered_frame_at_or_after(2.2, fps);
+    let first = centered_frame_at_or_after(1.6, fps);
+    let after = centered_frame_at_or_after(2.0, fps);
     let progress: Vec<_> = (first..after)
         .map(|frame| {
             blue_progress(rgb_at(
@@ -105,8 +111,8 @@ fn transition_project(fps: i64, duration_ms: i64, kind: TransitionKind) -> Proje
         TrackKind::Video,
         0,
         vec![
-            solid_clip("itm_red", color(255, 0, 0), 0, 2_000),
-            solid_clip("itm_blue", color(0, 0, 255), 2_000, 2_000),
+            visual_solid_clip("itm_red", color(255, 0, 0), 0, 2_000),
+            visual_solid_clip("itm_blue", color(0, 0, 255), 2_000 - duration_ms, 2_000),
         ],
     ));
     canonical.project.relations.push(Relation {
@@ -143,12 +149,12 @@ fn gallery_wipe_project() -> ProjectEnvelope {
         TrackKind::Video,
         0,
         vec![
-            solid_clip("itm_a0", color(255, 190, 11), 0, 1_000),
-            solid_clip("itm_b0", color(251, 86, 7), 1_000, 1_000),
-            solid_clip("itm_a1", color(255, 0, 110), 2_000, 1_000),
-            solid_clip("itm_b1", color(131, 56, 236), 3_000, 1_000),
-            solid_clip("itm_wipe_a", color(58, 134, 255), 4_000, 1_000),
-            solid_clip("itm_wipe_b", color(0, 180, 216), 5_000, 1_000),
+            visual_solid_clip("itm_a0", color(255, 190, 11), 0, 1_175),
+            visual_solid_clip("itm_b0", color(251, 86, 7), 825, 1_175),
+            visual_solid_clip("itm_a1", color(255, 0, 110), 2_000, 1_175),
+            visual_solid_clip("itm_b1", color(131, 56, 236), 2_825, 1_175),
+            visual_solid_clip("itm_wipe_a", color(58, 134, 255), 4_000, 1_175),
+            visual_solid_clip("itm_wipe_b", color(0, 180, 216), 4_825, 1_175),
         ],
     ));
     for (from, to, kind) in [

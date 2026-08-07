@@ -65,6 +65,22 @@ fn binding_manifest_requires_every_plan_input_and_valid_header() {
     assert!(invalid.validate().is_err());
 }
 
+#[test]
+fn binding_manifest_rejects_relative_machine_paths() {
+    let temp = tempfile::tempdir().unwrap();
+    let media = temp.path().join("media.mp4");
+    std::fs::write(&media, b"media").unwrap();
+    let plan = plan(b"media");
+    let bindings = crate::test_support::original_bindings(&plan, &media);
+    let mut manifest = binding_manifest(&plan, &bindings).unwrap();
+    manifest.inputs[0].path = "relative/media.mp4".into();
+
+    let error = manifest.validate().unwrap_err();
+    assert_eq!(error.kind, ArtifactErrorKind::InvalidContract);
+    assert!(error.to_string().contains("path must be absolute"));
+    assert!(resolve_binding_manifest(&plan, &manifest).is_err());
+}
+
 #[cfg(unix)]
 #[test]
 fn binding_manifest_rejects_symlink_inputs() {

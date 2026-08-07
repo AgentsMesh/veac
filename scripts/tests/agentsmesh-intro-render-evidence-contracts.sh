@@ -76,7 +76,7 @@ json_variant missing_padding project/project.veac.json \
 video_variant static_full_title static 'grapheme reveal does not progress'
 video_variant reveal_without_scale no-scale 'title scale is not visible'
 video_variant transform_without_rise no-rise 'does not rise into position'
-video_variant incomplete_at_1310ms incomplete 'not complete and stable after 1.305s'
+video_variant incomplete_at_1170ms incomplete 'not complete and stable by 1.17s'
 video_variant title_promise_overlap overlap 'switch is not exclusive at 5s'
 video_variant missing_promise no-promise 'switch is not exclusive at 5s'
 video_variant off_center_promise off-center-promise 'promise is not centered at 5s'

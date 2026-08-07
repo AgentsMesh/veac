@@ -1,36 +1,23 @@
 use std::fs;
 
-use serde_json::json;
 use veac_artifact::*;
 
 use super::*;
 
 #[test]
-fn media_workflow_rejects_wrong_sources_and_implicit_analysis() {
+fn media_workflow_rejects_wrong_analysis_sources() {
     let temp = tempfile::tempdir().unwrap();
     let input = temp.path().join("input");
     fs::write(&input, b"source").unwrap();
     let store = ArtifactStore::new(temp.path().join("store"));
     let workflow = MediaWorkflow::new("unused");
-    let mut request = analysis_request(ContentDigest::sha256(b"wrong"));
+    let request = analysis_request(ContentDigest::sha256(b"wrong"));
     assert_eq!(
         workflow
-            .store_analysis(&store, &input, &request, &json!({}))
+            .ingest_analysis(&store, &input, &request)
             .unwrap_err()
             .kind,
         WorkflowErrorKind::SourceIdentityMismatch
-    );
-    request.source_identity = ContentDigest::sha256(b"source");
-    assert_eq!(
-        workflow.derive(&store, &input, &request).unwrap_err().kind,
-        WorkflowErrorKind::UnsupportedOperation
-    );
-    assert_eq!(
-        workflow
-            .store_analysis(&store, &input, &request, &json!([]))
-            .unwrap_err()
-            .kind,
-        WorkflowErrorKind::UnsupportedOperation
     );
 }
 
@@ -108,27 +95,14 @@ fn media_workflow_commits_and_reuses_derived_and_analysis_artifacts() {
     assert_eq!(cached.record, created.record);
 
     let request = analysis_request(identity);
-    let created = workflow
-        .store_analysis(
-            &store,
-            &input,
-            &request,
-            &json!({"score": 1, "label": "cut"}),
-        )
-        .unwrap();
+    let created = workflow.ingest_analysis(&store, &input, &request).unwrap();
     assert!(!created.cache_hit);
+    let bytes = store.get(&created.record.key).unwrap().unwrap().payload;
     assert_eq!(
-        store.get(&created.record.key).unwrap().unwrap().payload,
-        br#"{"label":"cut","score":1}"#
+        serde_json::from_slice::<AnalysisResultEnvelope>(&bytes).unwrap(),
+        request.result
     );
-    let cached = workflow
-        .store_analysis(
-            &store,
-            &input,
-            &request,
-            &json!({"score": 1, "label": "cut"}),
-        )
-        .unwrap();
+    let cached = workflow.ingest_analysis(&store, &input, &request).unwrap();
     assert!(cached.cache_hit);
     assert_eq!(cached.record, created.record);
 }
@@ -149,14 +123,12 @@ fn fake_ffmpeg(root: &std::path::Path) -> std::path::PathBuf {
     path
 }
 
-fn analysis_request(source_identity: ContentDigest) -> MediaArtifactRequest {
-    request(
+fn analysis_request(source_identity: ContentDigest) -> AnalysisIngestionRequest {
+    AnalysisIngestionRequest {
         source_identity,
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: "scenes".into(),
-            configuration: json!({}),
-        }),
-    )
+        producer: producer(),
+        result: analysis_result(),
+    }
 }
 
 fn audio_request(source_identity: ContentDigest) -> MediaArtifactRequest {
@@ -179,11 +151,30 @@ fn audio_request(source_identity: ContentDigest) -> MediaArtifactRequest {
 fn request(source_identity: ContentDigest, spec: MediaArtifactSpec) -> MediaArtifactRequest {
     MediaArtifactRequest {
         source_identity,
-        producer: ProducerFingerprint {
-            name: "test".into(),
-            version: "1".into(),
-            configuration: ContentDigest::sha256(b"configuration"),
-        },
+        producer: producer(),
         spec,
     }
+}
+
+fn producer() -> ProducerFingerprint {
+    ProducerFingerprint {
+        name: "test".into(),
+        version: "1".into(),
+        configuration: ContentDigest::sha256(b"configuration"),
+    }
+}
+
+fn analysis_result() -> AnalysisResultEnvelope {
+    AnalysisResultEnvelope::new(
+        AnalysisDescriptor::SceneBoundaries(SceneBoundaryAnalysisDescriptor {
+            sensitivity_millionths: 500_000,
+        }),
+        AnalysisResult::SceneBoundaries(SceneBoundaryAnalysisResult {
+            boundaries: vec![SceneBoundary {
+                at: veac_ir::RationalTime::new(4, 10).unwrap(),
+                confidence_millionths: 900_000,
+            }],
+        }),
+    )
+    .unwrap()
 }

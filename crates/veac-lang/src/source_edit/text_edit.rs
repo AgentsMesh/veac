@@ -47,7 +47,9 @@ pub(crate) fn apply_borrowed_text_edits(
     for pair in ordered.windows(2) {
         let left = pair[0].range;
         let right = pair[1].range;
-        if left.end > right.start || left.start == right.start {
+        let duplicate_insert =
+            left.start == left.end && right.start == right.end && left.start == right.start;
+        if left.end > right.start || duplicate_insert {
             return Err(SourceEditError::OverlappingTextEdits);
         }
     }

@@ -12,7 +12,7 @@ pub(super) fn timeline(value: &OtioTimeline, report: &mut OtioLossReport) {
             !value.metadata.is_empty(),
             "",
             "metadata",
-            "OTIO timeline metadata is retained only as canonical provenance",
+            "OTIO timeline metadata is excluded; canonical authorship retains only a typed document digest",
         ),
         (
             value.tracks.source_range.is_some(),
@@ -24,7 +24,7 @@ pub(super) fn timeline(value: &OtioTimeline, report: &mut OtioLossReport) {
             !value.tracks.metadata.is_empty(),
             "/tracks",
             "metadata",
-            "OTIO stack metadata is retained only as canonical provenance",
+            "OTIO stack metadata is excluded from the closed canonical IR",
         ),
         (
             !value.tracks.enabled,
@@ -58,7 +58,7 @@ pub(super) fn track(value: &OtioTrack, pointer: &str, report: &mut OtioLossRepor
         (
             !value.metadata.is_empty(),
             "metadata",
-            "OTIO track metadata is retained only as canonical provenance",
+            "OTIO track metadata is excluded from the closed canonical IR",
         ),
         (
             !value.name.is_empty(),

@@ -50,12 +50,16 @@ pub fn media_artifact_producer(
     media_artifact_producer_for_contract(
         fingerprint,
         veac_codegen::RENDER_IMPLEMENTATION_CONTRACT_VERSION,
+        &veac_codegen::render_implementation_identity().digest,
+        &crate::runtime_backend_identity(),
     )
 }
 
 fn media_artifact_producer_for_contract(
     fingerprint: &FfmpegFingerprint,
     render_contract_version: u32,
+    codegen: &veac_artifact::ContentDigest,
+    runtime: &veac_artifact::ContentDigest,
 ) -> Result<ProducerFingerprint, RuntimeError> {
     fingerprint.configuration.validate().map_err(|error| {
         RuntimeError::new(format!("invalid FFmpeg producer configuration: {error}"))
@@ -66,8 +70,16 @@ fn media_artifact_producer_for_contract(
         ));
     }
     let mut contract = b"veac.media-workflow-producer".to_vec();
-    contract.extend_from_slice(&4_u32.to_be_bytes());
+    codegen.validate().map_err(|error| {
+        RuntimeError::new(format!("invalid codegen implementation identity: {error}"))
+    })?;
+    runtime.validate().map_err(|error| {
+        RuntimeError::new(format!("invalid runtime implementation identity: {error}"))
+    })?;
+    contract.extend_from_slice(&5_u32.to_be_bytes());
     contract.extend_from_slice(&render_contract_version.to_be_bytes());
+    field(&mut contract, codegen.value.as_bytes());
+    field(&mut contract, runtime.value.as_bytes());
     field(&mut contract, fingerprint.configuration.value.as_bytes());
     for argument in input_policy::string_arguments() {
         field(&mut contract, argument.as_bytes());

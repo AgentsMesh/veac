@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn transition_crud_preserves_identity_and_reports_relation_changes() {
-    let project = magnetic_project();
+    let project = transition_ready_project(30);
     let created = apply_edit_batch(
         &project,
         &batch("op_transition_create", &project, vec![set("itm_video", 30)]),
@@ -18,11 +18,16 @@ fn transition_crud_preserves_identity_and_reports_relation_changes() {
 
     let updated = applied(apply_edit_batch(
         &created,
-        &batch("op_transition_update", &created, vec![set("itm_video", 60)]),
+        &batch(
+            "op_transition_update",
+            &created,
+            vec![set_fade("itm_video", 30)],
+        ),
     ));
     assert_eq!(updated.project.relations[0].id, relation_id);
     let transition = crate::test_support::transition_from(&updated, "itm_video").unwrap();
-    assert_eq!(transition.duration, time(60));
+    assert_eq!(transition.duration, time(30));
+    assert!(matches!(transition.kind, TransitionKind::Fade { .. }));
 
     let removed = applied(apply_edit_batch(
         &updated,
@@ -54,35 +59,20 @@ fn locked_transition_endpoints_reject_updates() {
 }
 
 #[test]
-fn remove_and_ripple_delete_drop_all_incident_transitions() {
-    for ripple in [false, true] {
-        let mut project = transition_project();
-        if !ripple {
-            project.project.sequences[0].tracks[0].placement_mode = PlacementMode::Free;
-        }
-        let operation = if ripple {
-            EditOperation::RippleDelete {
-                clip_id: id("itm_middle"),
-            }
-        } else {
-            EditOperation::RemoveClip {
-                clip_id: id("itm_middle"),
-            }
-        };
-        let result = applied(apply_edit_batch(
+fn remove_drops_all_incident_transitions() {
+    let mut project = transition_project();
+    project.project.sequences[0].tracks[0].placement_mode = PlacementMode::Free;
+    let result = applied(apply_edit_batch(
+        &project,
+        &batch(
+            "op_delete_transition_endpoint",
             &project,
-            &batch(&format!("op_delete_{ripple}"), &project, vec![operation]),
-        ));
-        assert!(result.project.relations.is_empty());
-        if ripple {
-            assert_eq!(
-                result.project.sequences[0].tracks[0].clips[1]
-                    .record_range
-                    .start,
-                time(600)
-            );
-        }
-    }
+            vec![EditOperation::RemoveClip {
+                clip_id: id("itm_middle"),
+            }],
+        ),
+    ));
+    assert!(result.project.relations.is_empty());
 }
 
 #[test]
@@ -135,7 +125,11 @@ fn a_later_failure_rolls_back_split_relation_rewrites() {
 }
 
 fn transition_project() -> ProjectEnvelope {
-    let mut project = magnetic_project();
+    let mut project = transition_ready_project(30);
+    project.project.sequences[0].tracks[0].clips[2]
+        .record_range
+        .start = time(1_140);
+    project.project.sequences[0].tracks[0].placement_mode = PlacementMode::Magnetic;
     add_transition(
         &mut project,
         "seq_main",
@@ -168,6 +162,19 @@ fn dissolve(duration: i64) -> Transition {
     }
 }
 
+fn set_fade(clip: &str, duration: i64) -> EditOperation {
+    EditOperation::SetTransition {
+        clip_id: id(clip),
+        transition: Some(Transition {
+            kind: TransitionKind::Fade {
+                color: FadeColor::Black,
+            },
+            duration: time(duration),
+            alignment: TransitionAlignment::Centered,
+        }),
+    }
+}
+
 fn id(value: &str) -> ItemId {
     ItemId::new(value).unwrap()
 }
@@ -184,15 +191,4 @@ fn assert_edge(project: &ProjectEnvelope, relation: &str, from: &str, to: &str) 
     };
     assert_eq!(a.item_id().unwrap().as_str(), from);
     assert_eq!(b.item_id().unwrap().as_str(), to);
-}
-
-fn applied_changes(outcome: EditOutcome) -> (ProjectEnvelope, Vec<ChangedObjectId>) {
-    match outcome {
-        EditOutcome::Applied {
-            project,
-            changed_objects,
-            ..
-        } => (project, changed_objects),
-        other => panic!("expected applied, got {other:?}"),
-    }
 }

@@ -74,17 +74,21 @@ fn audio_only_and_caption_only_deliveries_have_exact_roles() {
 fn output() -> veac_plan::ResolvedOutput {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    crate::planning::prepare(&project, None, &FakeEnvironment::success())
+    crate::planning::prepare_with_material_root(&project, None, None, &FakeEnvironment::success())
         .unwrap()
         .plan
         .output
 }
 
 fn video_audio(output: &mut veac_plan::ResolvedOutput, audio: AudioOutput) {
-    output
-        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+    let id = output
+        .deliverables
+        .iter()
+        .find(|deliverable| matches!(deliverable.kind, DeliverableKind::Video(_)))
         .unwrap()
-        .audio = Some(audio);
+        .id
+        .clone();
+    output.video_deliverable_mut(&id).unwrap().audio = Some(audio);
 }
 
 fn stem(sample_rate: u32, channels: u8) -> Deliverable {

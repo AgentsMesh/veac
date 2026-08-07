@@ -1,0 +1,10 @@
+{
+  "schema": "https://veac.dev/schemas/build-inputs",
+  "schema_version": 1,
+  "inputs": [
+    {"name":"base_span","value":{"type":"time","value":"2500ms"}},
+    {"name":"locale","value":{"type":"enum","value":"zh-Hans"}},
+    {"name":"canvas_width","value":{"type":"length","value":"1280px"}},
+    {"name":"accent_color","value":{"type":"color","value":"#7b315dff"}}
+  ]
+}

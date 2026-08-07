@@ -42,6 +42,13 @@ fn bound_standard_otio_requires_exact_bindings_and_reports_projection_loss() {
         }],
     };
     let imported = import_bound_timeline(&timeline, &bindings).unwrap();
+    let veac_ir::SequenceAuthorship::Otio { document_sha256 } =
+        imported.sequence.authorship.as_ref().unwrap()
+    else {
+        panic!("bound OTIO import must publish typed digest authorship")
+    };
+    assert_eq!(document_sha256.as_str().len(), 64);
+    assert!(imported.sequence.tracks[0].clips[0].authorship.is_none());
     assert!(imported.relations.is_empty());
     assert_eq!(
         imported.sequence.tracks[0].clips[0]

@@ -1,7 +1,8 @@
 use super::*;
 use std::time::Duration;
 use veac_artifact::{
-    ArtifactDescriptor, ArtifactKind, ArtifactStore, ContentDigest, ProducerFingerprint,
+    ArtifactDescriptor, ArtifactParameters, ArtifactStore, ContentDigest, ProducerFingerprint,
+    ProviderResultParameters,
 };
 
 #[test]
@@ -79,13 +80,12 @@ fn selection_and_role_defenses_preserve_error_classification() {
 
 fn descriptor() -> ArtifactDescriptor {
     ArtifactDescriptor::new(
-        ArtifactKind::Analysis,
         ProducerFingerprint {
             name: "proxy-test".into(),
             version: "1".into(),
             configuration: ContentDigest::sha256(b"configuration"),
         },
         vec![],
-        serde_json::json!({}),
+        ArtifactParameters::Speech(ProviderResultParameters::new("fixture").unwrap()),
     )
 }

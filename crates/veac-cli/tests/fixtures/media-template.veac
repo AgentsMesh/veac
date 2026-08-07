@@ -1,0 +1,30 @@
+fn main(context: Context) -> Project {
+  let hero = video_resource(
+    identifier("hero"), resource_file("placeholder.mp4"),
+    sha256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let scene_item = item(
+    identifier("hero"), item_enabled(), during(0s, 1s),
+    source_media(hero), source_timing_mapped(source_mapping(
+      source_time_linear(0s, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    ))
+  ).with_template(template_contract(
+    slot_video(), fill_fit_duration(), "主视觉媒体",
+    source_duration_any(), template_text_locked()
+  ));
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let picture = video_layer(
+    identifier("picture"), 0, placement_free(), state, track_routing_default()
+  ).with_item(scene_item);
+  let timeline = sequence(
+    identifier("main"), "模板安全测试",
+    sequence_settings(canvas(32px, 24px), frame_rate(10, 1), 48000)
+  ).with_layer(picture);
+  project(identifier("template-security"), project_settings(1000))
+    .with_resource(hero).with_sequence(timeline).entry(timeline)
+}

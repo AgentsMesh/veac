@@ -1,5 +1,8 @@
 use serde_json::json;
-use veac_artifact::{ArtifactDependency, ArtifactKind, ContentDigest};
+use veac_artifact::{
+    ArtifactDependency, ArtifactDependencyRole, ArtifactKind, ArtifactParameters, ContentDigest,
+    ProviderResultParameters,
+};
 
 use crate::test_support::*;
 use crate::*;
@@ -114,34 +117,38 @@ fn response_rejects_mismatch_and_unbound_artifacts() {
 fn artifact_descriptor_sorts_dependencies_and_record_checks_key() {
     let provider = fingerprint();
     let request = ContentDigest::sha256(b"request");
+    let parameters = ArtifactParameters::provider_result(
+        ArtifactKind::Speech,
+        ProviderResultParameters::new("speech").unwrap(),
+    )
+    .unwrap();
     let descriptor = provider_artifact_descriptor(
-        ArtifactKind::Analysis,
         &provider,
         request.clone(),
         vec![
-            ArtifactDependency {
-                role: "z".into(),
-                identity: ContentDigest::sha256(b"z"),
-            },
-            ArtifactDependency {
-                role: "a".into(),
-                identity: ContentDigest::sha256(b"a"),
-            },
+            ArtifactDependency::new(
+                ArtifactDependencyRole::Resources,
+                ContentDigest::sha256(b"z"),
+            ),
+            ArtifactDependency::new(ArtifactDependencyRole::Input, ContentDigest::sha256(b"a")),
         ],
-        json!({"threshold": 0.5}),
+        parameters,
     )
     .unwrap();
-    assert_eq!(descriptor.dependencies[0].role, "a");
-    let mut value = artifact(ArtifactKind::Analysis, "analysis", &provider, request);
-    assert_eq!(value.kind(), ArtifactKind::Analysis);
+    assert_eq!(
+        descriptor.dependencies[0].role,
+        ArtifactDependencyRole::Input
+    );
+    let mut value = artifact(ArtifactKind::Speech, "speech", &provider, request);
+    assert_eq!(value.kind(), ArtifactKind::Speech);
     value.record.key = ContentDigest::sha256(b"wrong");
     assert!(value.validate().is_err());
-    value.role.clear();
+    value.role = ProviderArtifactSlot::new("different-role").unwrap();
     assert!(value.validate().is_err());
 
     value = artifact(
-        ArtifactKind::Analysis,
-        "analysis",
+        ArtifactKind::Speech,
+        "speech",
         &provider,
         ContentDigest::sha256(b"request-2"),
     );

@@ -4,11 +4,13 @@ mod apply;
 mod audio;
 mod audio_graph;
 mod budget;
+mod caption;
 mod clip;
 mod color;
 mod composition;
 mod diagnostics;
 mod effects;
+mod executable;
 mod generator;
 mod graph;
 mod mask;
@@ -19,10 +21,12 @@ mod output;
 mod output_compat;
 mod probe;
 mod project;
+mod provenance;
 mod relation;
 mod sequence;
 mod source_time;
 mod template;
+mod temporal;
 mod text;
 mod values;
 mod visual;
@@ -88,6 +92,8 @@ struct Validator {
     multicam_groups: BTreeMap<String, BTreeSet<String>>,
     output_ids: BTreeSet<String>,
     deliverable_ids: BTreeSet<String>,
+    authorship_paths: BTreeSet<Vec<String>>,
+    authorship_bytes: usize,
 }
 
 pub(crate) use values::json_value_is_ijson;

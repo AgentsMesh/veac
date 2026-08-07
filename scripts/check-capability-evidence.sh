@@ -28,8 +28,8 @@ while IFS= read -r id; do
   ids+=("$id")
 done < <(sed -n 's/^| `\(P[12]-[0-9][0-9]\)` |.*/\1/p' "$MATRIX")
 
-if (( ${#ids[@]} != 50 )); then
-  fail "capability matrix must declare exactly 50 acceptance rows, found ${#ids[@]}"
+if (( ${#ids[@]} != 52 )); then
+  fail "capability matrix must declare exactly 52 acceptance rows, found ${#ids[@]}"
 fi
 duplicates=$(printf '%s\n' "${ids[@]}" | sort | uniq -d)
 if [[ -n "$duplicates" ]]; then

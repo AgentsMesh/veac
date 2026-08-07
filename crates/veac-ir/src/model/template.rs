@@ -20,6 +20,7 @@ pub enum SlotKind {
     Video,
     Image,
     VideoOrImage,
+    Text,
 }
 
 impl SlotKind {
@@ -31,6 +32,7 @@ impl SlotKind {
                 kind,
                 crate::MaterialKind::Video | crate::MaterialKind::Image
             ),
+            Self::Text => false,
         }
     }
 }

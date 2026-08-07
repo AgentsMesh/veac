@@ -17,11 +17,13 @@ fn unavailable_unused_material_succeeds_until_it_becomes_required() {
     std::fs::write(temp.path().join("clip.mp4"), b"fixture").unwrap();
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
+    let base_id = envelope.project.materials[0].id.to_string();
     add_material(&mut envelope, "med_offline", "missing.mp4");
     write_project(&project, &envelope);
     let environment = FakeEnvironment::success();
-    let prepared = crate::planning::prepare(&project, None, &environment).unwrap();
-    assert_exact_inputs(&prepared, &["med_footage"]);
+    let prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
+    assert_exact_inputs(&prepared, &[base_id.as_str()]);
     assert_eq!(
         accessed_names(&environment.probe_paths),
         std::collections::BTreeSet::from(["clip.mp4".to_owned()])
@@ -30,7 +32,13 @@ fn unavailable_unused_material_succeeds_until_it_becomes_required() {
 
     envelope.project.sequences[0].tracks[0].clips[0].source = media("med_offline");
     write_project(&project, &envelope);
-    let error = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap_err();
+    let error = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap_err();
     assert!(error.to_string().contains("PATH_UNAVAILABLE"));
 }
 
@@ -40,6 +48,7 @@ fn disabled_clips_tracks_and_solo_suppression_are_not_hydrated() {
     std::fs::write(temp.path().join("clip.mp4"), b"fixture").unwrap();
     let project = canonical_project(&temp, MEDIA_SOURCE);
     let mut envelope = crate::canonical::load(&project).unwrap();
+    let base_id = envelope.project.materials[0].id.to_string();
     add_material(&mut envelope, "med_disabled", "disabled.mp4");
     add_material(&mut envelope, "med_suppressed", "suppressed.mp4");
     let mut suppressed = envelope.project.sequences[0].tracks[0].clone();
@@ -56,13 +65,25 @@ fn disabled_clips_tracks_and_solo_suppression_are_not_hydrated() {
     envelope.project.sequences[0].tracks.push(suppressed);
     write_project(&project, &envelope);
 
-    let prepared = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
-    assert_exact_inputs(&prepared, &["med_footage"]);
+    let prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
+    assert_exact_inputs(&prepared, &[base_id.as_str()]);
     envelope.project.sequences[0].tracks[0].state.solo = false;
     envelope.project.sequences[0].tracks[1].state.enabled = false;
     write_project(&project, &envelope);
-    let prepared = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
-    assert_exact_inputs(&prepared, &["med_footage"]);
+    let prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
+    assert_exact_inputs(&prepared, &[base_id.as_str()]);
 }
 
 #[test]
@@ -86,15 +107,33 @@ fn muted_audio_only_delivery_with_no_raster_needs_no_media() {
     envelope.project.render_configs[0].deliverables = vec![master_stem()];
     write_project(&project, &envelope);
 
-    let prepared = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     assert_exact_inputs(&prepared, &[]);
     track_state(&mut envelope, false, true);
     write_project(&project, &envelope);
-    let prepared = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     assert_exact_inputs(&prepared, &[]);
     track_state(&mut envelope, false, false);
     write_project(&project, &envelope);
-    let error = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap_err();
+    let error = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap_err();
     assert!(error.to_string().contains("PATH_UNAVAILABLE"));
 }
 

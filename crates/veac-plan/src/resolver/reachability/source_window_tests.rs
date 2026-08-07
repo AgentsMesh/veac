@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::{
     Clip, ClipSource, FrameSynthesisPolicy, ItemId, PlaybackDirection, Rational, RationalTime,
     SequenceId, SourceMapping, SourceOutOfRangePolicy, SourceTimeInterpolation, SourceTimeMap,
@@ -103,7 +101,7 @@ fn clip(start: i64, duration: i64, time_map: SourceTimeMap) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

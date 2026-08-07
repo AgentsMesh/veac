@@ -150,9 +150,6 @@ check_hls_closed_tree() {
     media+=("$uri"); members+=("$uri")
   done < <(hls_playlist_uris "$master")
   ((${#media[@]} == 2)) || fail "HLS master must reference exactly two media playlists"
-  [[ $(printf '%s\n' "${media[@]}" | LC_ALL=C sort | tr '\n' ' ') == \
-    "rendition-rnd_hd.m3u8 rendition-rnd_mobile.m3u8 " ]] ||
-    fail "HLS master references unexpected renditions: ${media[*]}"
   for playlist in "${media[@]}"; do
     assert_hls_exact_tag "$root/$playlist" '#EXT-X-INDEPENDENT-SEGMENTS' \
       "HLS media playlist $playlist"

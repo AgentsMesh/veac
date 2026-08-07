@@ -9,6 +9,7 @@ mod multicam;
 mod output;
 mod sequence;
 mod source_time;
+mod temporal;
 mod text;
 mod transition;
 mod visual;

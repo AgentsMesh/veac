@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 
 use super::{file_identity, fixture, visual};
@@ -18,7 +16,7 @@ pub fn graded_project(kind: MaterialKind, interpolation: LutInterpolation) -> Pr
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     });
     let mut properties = visual();
     properties.color_pipeline = Some(ColorPipeline {

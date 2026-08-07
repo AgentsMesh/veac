@@ -1,120 +1,87 @@
-use crate::ParameterValue;
+mod validation;
+
+use serde::Serialize;
+
+use crate::{Effect, EffectKind, EffectParameter, EffectParameterRef};
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ParameterType {
     Number,
     Boolean,
     Color,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ParameterSpec {
-    pub name: &'static str,
+    pub parameter: EffectParameter,
     pub value_type: ParameterType,
     pub minimum: Option<f64>,
     pub maximum: Option<f64>,
     pub supports_curve: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct EffectSpec {
+    pub kind: EffectKind,
     pub effect_type: &'static str,
     pub parameters: &'static [ParameterSpec],
 }
 
 const COLOR_ADJUST: &[ParameterSpec] = &[
-    number("brightness", -1.0, 1.0),
-    number("contrast", 0.0, 4.0),
-    number("saturation", 0.0, 4.0),
+    curve(EffectParameter::Brightness, -1.0, 1.0),
+    curve(EffectParameter::Contrast, 0.0, 4.0),
+    curve(EffectParameter::Saturation, 0.0, 4.0),
 ];
-const BLUR: &[ParameterSpec] = &[number("radius", 0.0, 100.0)];
-const SHARPEN: &[ParameterSpec] = &[number("amount", 0.0, 10.0)];
-const VIGNETTE: &[ParameterSpec] = &[number("amount", 0.0, 1.0)];
-const GRAIN: &[ParameterSpec] = &[number("amount", 0.0, 1.0)];
+const BLUR: &[ParameterSpec] = &[curve(EffectParameter::Radius, 0.0, 100.0)];
+const SHARPEN: &[ParameterSpec] = &[curve(EffectParameter::Amount, 0.0, 10.0)];
+const UNIT_AMOUNT: &[ParameterSpec] = &[curve(EffectParameter::Amount, 0.0, 1.0)];
 const CHROMA_KEY: &[ParameterSpec] = &[
-    ParameterSpec {
-        name: "color",
-        value_type: ParameterType::Color,
-        minimum: None,
-        maximum: None,
-        supports_curve: false,
-    },
-    number("similarity", 0.00001, 1.0),
-    number("blend", 0.0, 1.0),
+    color(EffectParameter::Color),
+    curve(EffectParameter::Similarity, 0.00001, 1.0),
+    curve(EffectParameter::Blend, 0.0, 1.0),
 ];
 const LUMA_KEY: &[ParameterSpec] = &[
-    number("threshold", 0.0, 1.0),
-    number("tolerance", 0.0, 1.0),
-    number("softness", 0.0, 1.0),
-    boolean("invert"),
+    curve(EffectParameter::Threshold, 0.0, 1.0),
+    curve(EffectParameter::Tolerance, 0.0, 1.0),
+    curve(EffectParameter::Softness, 0.0, 1.0),
+    boolean(EffectParameter::Invert),
 ];
 const CHROMA_SPILL: &[ParameterSpec] = &[
-    ParameterSpec {
-        name: "color",
-        value_type: ParameterType::Color,
-        minimum: None,
-        maximum: None,
-        supports_curve: false,
-    },
-    number("amount", 0.0, 1.0),
-    number("range", 0.0, 1.0),
+    color(EffectParameter::Color),
+    curve(EffectParameter::Amount, 0.0, 1.0),
+    curve(EffectParameter::Range, 0.0, 1.0),
 ];
-const STABILIZE: &[ParameterSpec] = &[ParameterSpec {
-    name: "enabled",
-    value_type: ParameterType::Boolean,
-    minimum: None,
-    maximum: None,
-    supports_curve: false,
-}];
-const NORMALIZE: &[ParameterSpec] = &[static_number("target_lufs", -70.0, -5.0)];
+const STABILIZE: &[ParameterSpec] = &[boolean(EffectParameter::Enabled)];
+const NORMALIZE: &[ParameterSpec] = &[number(EffectParameter::TargetLufs, -70.0, -5.0)];
+
 const EFFECTS: &[EffectSpec] = &[
-    EffectSpec {
-        effect_type: "video.color_adjust",
-        parameters: COLOR_ADJUST,
-    },
-    EffectSpec {
-        effect_type: "video.blur",
-        parameters: BLUR,
-    },
-    EffectSpec {
-        effect_type: "video.sharpen",
-        parameters: SHARPEN,
-    },
-    EffectSpec {
-        effect_type: "video.vignette",
-        parameters: VIGNETTE,
-    },
-    EffectSpec {
-        effect_type: "video.grain",
-        parameters: GRAIN,
-    },
-    EffectSpec {
-        effect_type: "video.chroma_key",
-        parameters: CHROMA_KEY,
-    },
-    EffectSpec {
-        effect_type: "video.luma_key",
-        parameters: LUMA_KEY,
-    },
-    EffectSpec {
-        effect_type: "video.chroma_spill",
-        parameters: CHROMA_SPILL,
-    },
-    EffectSpec {
-        effect_type: "video.stabilize",
-        parameters: STABILIZE,
-    },
-    EffectSpec {
-        effect_type: "audio.normalize",
-        parameters: NORMALIZE,
-    },
+    spec(EffectKind::VideoColorAdjust, COLOR_ADJUST),
+    spec(EffectKind::VideoBlur, BLUR),
+    spec(EffectKind::VideoSharpen, SHARPEN),
+    spec(EffectKind::VideoVignette, UNIT_AMOUNT),
+    spec(EffectKind::VideoGrain, UNIT_AMOUNT),
+    spec(EffectKind::VideoChromaKey, CHROMA_KEY),
+    spec(EffectKind::VideoLumaKey, LUMA_KEY),
+    spec(EffectKind::VideoChromaSpill, CHROMA_SPILL),
+    spec(EffectKind::VideoStabilize, STABILIZE),
+    spec(EffectKind::AudioNormalize, NORMALIZE),
 ];
-const fn number(name: &'static str, minimum: f64, maximum: f64) -> ParameterSpec {
+
+const fn spec(kind: EffectKind, parameters: &'static [ParameterSpec]) -> EffectSpec {
+    EffectSpec {
+        kind,
+        effect_type: kind.type_name(),
+        parameters,
+    }
+}
+
+const fn curve(parameter: EffectParameter, minimum: f64, maximum: f64) -> ParameterSpec {
     ParameterSpec {
-        name,
+        parameter,
         value_type: ParameterType::Number,
         minimum: Some(minimum),
         maximum: Some(maximum),
@@ -122,74 +89,49 @@ const fn number(name: &'static str, minimum: f64, maximum: f64) -> ParameterSpec
     }
 }
 
-const fn static_number(name: &'static str, minimum: f64, maximum: f64) -> ParameterSpec {
+const fn number(parameter: EffectParameter, minimum: f64, maximum: f64) -> ParameterSpec {
     ParameterSpec {
         supports_curve: false,
-        ..number(name, minimum, maximum)
+        ..curve(parameter, minimum, maximum)
     }
 }
 
-const fn boolean(name: &'static str) -> ParameterSpec {
+const fn boolean(parameter: EffectParameter) -> ParameterSpec {
+    typed(parameter, ParameterType::Boolean)
+}
+
+const fn color(parameter: EffectParameter) -> ParameterSpec {
+    typed(parameter, ParameterType::Color)
+}
+
+const fn typed(parameter: EffectParameter, value_type: ParameterType) -> ParameterSpec {
     ParameterSpec {
-        name,
-        value_type: ParameterType::Boolean,
+        parameter,
+        value_type,
         minimum: None,
         maximum: None,
         supports_curve: false,
     }
 }
 
-pub fn built_in_effect(effect_type: &str) -> Option<EffectSpec> {
-    EFFECTS
-        .iter()
-        .copied()
-        .find(|effect| effect.effect_type == effect_type)
+pub fn built_in_effect(kind: EffectKind) -> Option<EffectSpec> {
+    EFFECTS.iter().copied().find(|effect| effect.kind == kind)
+}
+
+pub fn built_in_effect_type(effect_type: &str) -> Option<EffectSpec> {
+    EffectKind::from_type_name(effect_type).and_then(built_in_effect)
 }
 
 pub fn built_in_effects() -> &'static [EffectSpec] {
     EFFECTS
 }
 
-pub fn parameter_matches(spec: ParameterSpec, value: &ParameterValue) -> bool {
-    match (spec.value_type, value) {
-        (ParameterType::Number, ParameterValue::Number { value }) => in_range(spec, *value),
-        (ParameterType::Number, ParameterValue::NumberCurve { value }) if spec.supports_curve => {
-            curve_in_range(spec, value)
-        }
-        (ParameterType::Boolean, ParameterValue::Boolean { .. })
-        | (ParameterType::Color, ParameterValue::Color { .. }) => true,
-        _ => false,
-    }
+pub fn parameter_matches_effect(spec: ParameterSpec, effect: &Effect) -> bool {
+    effect
+        .parameter(spec.parameter)
+        .is_some_and(|value| parameter_matches(spec, value))
 }
 
-fn curve_in_range(spec: ParameterSpec, value: &crate::Animatable<f64>) -> bool {
-    let crate::Animatable::Keyframes { keyframes } = value else {
-        let crate::Animatable::Constant { value } = value else {
-            unreachable!()
-        };
-        return in_range(spec, *value);
-    };
-    keyframes.iter().all(|key| in_range(spec, key.value))
-        && keyframes.windows(2).all(|pair| {
-            if !matches!(pair[0].interpolation, crate::Interpolation::Spring { .. }) {
-                return true;
-            }
-            pair[0]
-                .interpolation
-                .spring_extrema()
-                .is_some_and(|amounts| {
-                    amounts.into_iter().all(|amount| {
-                        in_range(
-                            spec,
-                            pair[0].value + (pair[1].value - pair[0].value) * amount,
-                        )
-                    })
-                })
-        })
-}
-
-fn in_range(spec: ParameterSpec, value: f64) -> bool {
-    value.is_finite()
-        && spec.minimum.is_none_or(|minimum| value >= minimum)
-        && spec.maximum.is_none_or(|maximum| value <= maximum)
+pub fn parameter_matches(spec: ParameterSpec, value: EffectParameterRef<'_>) -> bool {
+    validation::matches(spec, value)
 }

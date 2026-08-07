@@ -1,12 +1,13 @@
 use veac_plan::canonical::{Mask, MaskShape, Vec2};
+use veac_plan::ResolvedRenderPlan;
 
-use super::{animation, mask_path, time};
+use super::{animation, mask_path, process_owner::ProcessOwner, time};
 
-pub(super) fn alpha(mask: &Mask) -> String {
-    let point = Coordinates::new(mask);
+pub(super) fn alpha(plan: &ResolvedRenderPlan, owner: ProcessOwner<'_>, mask: &Mask) -> String {
+    let point = Coordinates::new(plan, owner, mask);
     let distance = signed_distance(&mask.shape, &point);
-    let feather = animation::number(&mask.feather_pixels, "T");
-    let expansion = animation::number(&mask.expansion_pixels, "T");
+    let feather = animation::number(plan, owner, &mask.feather_pixels, "T");
+    let expansion = animation::number(plan, owner, &mask.expansion_pixels, "T");
     let coverage =
         format!("clip(0.5+(({distance})+({expansion}))/max(2*({feather})\\,0.000001)\\,0\\,1)");
     let coverage = if mask.invert {
@@ -25,12 +26,12 @@ struct Coordinates {
 }
 
 impl Coordinates {
-    fn new(mask: &Mask) -> Self {
-        let px = animation::vec_x(&mask.position, "T");
-        let py = animation::vec_y(&mask.position, "T");
-        let sx = animation::vec_x(&mask.scale, "T");
-        let sy = animation::vec_y(&mask.scale, "T");
-        let angle = animation::number(&mask.rotation_degrees, "T");
+    fn new(plan: &ResolvedRenderPlan, owner: ProcessOwner<'_>, mask: &Mask) -> Self {
+        let px = animation::vec_x(plan, owner, &mask.position, "T");
+        let py = animation::vec_y(plan, owner, &mask.position, "T");
+        let sx = animation::vec_x(plan, owner, &mask.scale, "T");
+        let sy = animation::vec_y(plan, owner, &mask.scale, "T");
+        let angle = animation::number(plan, owner, &mask.rotation_degrees, "T");
         let radians = format!("(({angle})*PI/180)");
         let dx = format!("(X-W*({px}))");
         let dy = format!("(Y-H*({py}))");
@@ -121,26 +122,50 @@ fn heart(point: &Coordinates) -> String {
 }
 
 fn star(point: &Coordinates) -> String {
-    // The radial boundary keeps its authored shape; its gradient supplies pixel distance.
-    let x = format!("({})/({})", point.x, point.width);
-    let y = format!("({})/({})", point.y, point.height);
-    let radius = format!("hypot({x}\\,{y})");
-    let angle = format!("atan2({y}\\,{x})");
-    let wave = format!("sin(5*({angle}))");
-    let boundary = format!("0.28+0.12*cos(5*({angle}))");
-    let squared = format!("max(pow({radius}\\,2)\\,0.000001)");
-    let gx = format!(
-        "(0.6*({y})*({wave})/({squared})-({x})/max({radius}\\,0.000001))/({})",
-        point.width
-    );
-    let gy = format!(
-        "(-0.6*({x})*({wave})/({squared})-({y})/max({radius}\\,0.000001))/({})",
-        point.height
-    );
-    format!(
-        "if(eq({radius}\\,0)\\,0.16*({})\\,({boundary}-({radius}))/max(hypot({gx}\\,{gy})\\,0.000001))",
-        point.short_extent()
-    )
+    path(&star_points(), point)
+}
+
+fn star_points() -> [Vec2; 10] {
+    // Outer radius 0.45 alternates with the pentagram intersection radius 0.45 / phi^2.
+    [
+        Vec2 { x: 0.5, y: 0.05 },
+        Vec2 {
+            x: 0.601031294730407,
+            y: 0.360942352531274,
+        },
+        Vec2 {
+            x: 0.927975432332819,
+            y: 0.360942352531274,
+        },
+        Vec2 {
+            x: 0.663472068801206,
+            y: 0.553115294937453,
+        },
+        Vec2 {
+            x: 0.764503363531613,
+            y: 0.864057647468726,
+        },
+        Vec2 {
+            x: 0.5,
+            y: 0.671884705062547,
+        },
+        Vec2 {
+            x: 0.235496636468387,
+            y: 0.864057647468726,
+        },
+        Vec2 {
+            x: 0.336527931198794,
+            y: 0.553115294937453,
+        },
+        Vec2 {
+            x: 0.072024567667181,
+            y: 0.360942352531274,
+        },
+        Vec2 {
+            x: 0.398968705269593,
+            y: 0.360942352531274,
+        },
+    ]
 }
 
 #[cfg(test)]

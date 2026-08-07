@@ -76,11 +76,11 @@ fn report_sequence_features(sequence: &veac_ir::Sequence, losses: &mut OtioLossR
         "OTIO does not standardize VEAC canvas, frame-rate, and sample-rate settings",
         true,
     );
-    if !sequence.metadata.is_empty() {
+    if sequence.authorship.is_some() {
         losses.push(
             "",
-            "metadata",
-            "VEAC sequence metadata is preserved only in the extension",
+            "authorship",
+            "VEAC sequence authorship is preserved only in the extension",
             true,
         );
     }

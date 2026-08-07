@@ -1,4 +1,3 @@
-use serde_json::json;
 use veac_ir::{Rational, RationalTime, StreamSelection};
 
 use crate::{test_support::producer, *};
@@ -53,10 +52,6 @@ fn every_media_spec_has_a_distinct_complete_descriptor() {
             frame_rate: Rational::new(60, 1).unwrap(),
             method: OpticalFlowMethod::MotionCompensated,
         }),
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: "scene_boundaries".into(),
-            configuration: json!({"sensitivity": 0.75}),
-        }),
         MediaArtifactSpec::SourceSegment(SourceSegmentSpec {
             video_stream: stream(),
             start: time(10),
@@ -72,19 +67,19 @@ fn every_media_spec_has_a_distinct_complete_descriptor() {
             crf: 18,
         }),
     ];
-    let extensions = ["mp4", "wav", "png", "png", "mp4", "json", "mp4"];
+    let extensions = ["mp4", "wav", "png", "png", "mp4", "mp4"];
     let mut keys = Vec::new();
     for (spec, extension) in specs.into_iter().zip(extensions) {
         let request = request(spec.clone());
         let descriptor = request.descriptor().unwrap();
-        assert_eq!(descriptor.kind, spec.kind());
+        assert_eq!(descriptor.kind(), spec.kind());
         assert_eq!(spec.extension(), extension);
-        assert_eq!(descriptor.parameters, serde_json::to_value(spec).unwrap());
+        assert_eq!(descriptor.parameters.kind(), spec.kind());
         keys.push(artifact_key(&descriptor).unwrap());
     }
     keys.sort_by(|left, right| left.value.cmp(&right.value));
     keys.dedup();
-    assert_eq!(keys.len(), 7);
+    assert_eq!(keys.len(), 6);
 }
 
 #[test]

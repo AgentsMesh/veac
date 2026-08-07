@@ -1,7 +1,7 @@
 use veac_artifact::{
-    ArtifactDependency, ArtifactDescriptor, ArtifactKind, ArtifactStore, ContentDigest,
-    DigestAlgorithm, ExecutionBindings, MediaArtifactSpec, MediaRole, ProducerFingerprint,
-    ProxyVideoSpec, SourceClockSpec,
+    ArtifactDependency, ArtifactDependencyRole, ArtifactDescriptor, ArtifactParameters,
+    ArtifactStore, ContentDigest, DigestAlgorithm, ExecutionBindings, MediaRole,
+    ProducerFingerprint, ProxyVideoSpec, SourceClockSpec,
 };
 use veac_codegen::emitter::{emit_all, BackendCapabilityKind};
 use veac_plan::canonical::{Rational, RationalTime};
@@ -57,7 +57,7 @@ fn verified_proxy_requirements_describe_proxy_not_original_media() {
 }
 
 fn proxy_descriptor(input: &veac_plan::ResolvedInput) -> ArtifactDescriptor {
-    let spec = MediaArtifactSpec::ProxyVideo(ProxyVideoSpec {
+    let parameters = ArtifactParameters::ProxyVideo(ProxyVideoSpec {
         source_stream: input.video.as_ref().unwrap().selection,
         source_clock: SourceClockSpec::Identity {
             duration: RationalTime::new(600, 600).unwrap(),
@@ -68,20 +68,19 @@ fn proxy_descriptor(input: &veac_plan::ResolvedInput) -> ArtifactDescriptor {
         crf: 24,
     });
     ArtifactDescriptor::new(
-        ArtifactKind::ProxyVideo,
         ProducerFingerprint {
             name: "veac-test".to_owned(),
             version: "1".to_owned(),
             configuration: ContentDigest::sha256(b"proxy-test"),
         },
-        vec![ArtifactDependency {
-            role: "input".to_owned(),
-            identity: ContentDigest {
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Input,
+            ContentDigest {
                 algorithm: DigestAlgorithm::Sha256,
                 value: input.observed_identity.digest.clone(),
             },
-        }],
-        serde_json::to_value(spec).unwrap(),
+        )],
+        parameters,
     )
 }
 

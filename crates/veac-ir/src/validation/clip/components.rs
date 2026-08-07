@@ -31,10 +31,9 @@ impl Validator {
             );
         }
         for effect in &clip.effects {
-            let domain_valid = match effect_domain(&effect.effect_type) {
-                Some(EffectDomain::Video) => track_kind != TrackKind::Audio,
-                Some(EffectDomain::Audio) => track_kind == TrackKind::Audio || clip.audio.is_some(),
-                None => true,
+            let domain_valid = match effect.domain() {
+                EffectDomain::Video => track_kind != TrackKind::Audio,
+                EffectDomain::Audio => track_kind == TrackKind::Audio || clip.audio.is_some(),
             };
             if !domain_valid {
                 self.value_error("EFFECT_MEDIA_TYPE", path, clip.id.as_str());

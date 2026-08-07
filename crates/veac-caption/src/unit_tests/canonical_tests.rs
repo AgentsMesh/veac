@@ -13,6 +13,8 @@ fn canonical_json_and_hash_are_stable() {
     );
     assert_eq!(caption_hash(&value).unwrap().len(), 64);
     assert_eq!(canonical_caption_bytes(&value).unwrap(), first.as_bytes());
+    assert!(first.contains(r#""native":null"#));
+    assert!(!first.contains(r#""settings""#));
 }
 
 #[test]
@@ -46,8 +48,8 @@ fn loss_reports_are_canonical_and_duplicate_names_are_rejected() {
     );
     let json = canonical_caption_json(&envelope()).unwrap();
     let duplicate = json.replacen(
-        r#""schema_version":1"#,
-        r#""schema_version":1,"schema_version":1"#,
+        r#""schema_version":2"#,
+        r#""schema_version":2,"schema_version":2"#,
         1,
     );
     assert!(matches!(

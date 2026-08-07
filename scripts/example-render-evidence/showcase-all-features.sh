@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 all_features_authoring_visual_contract() {
-  local canonical=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
-    def r($s;$d): {"start":t($s),"duration":t($d)};
+  local canonical=$1 shot panel caption music
+  shot=$(canonical_clip_id "$canonical" shot); panel=$(canonical_clip_id "$canonical" lower-third)
+  caption=$(canonical_clip_id "$canonical" cue); music=$(canonical_clip_id "$canonical" music-item)
+  jq -e --arg shot "$shot" --arg panel "$panel" --arg caption "$caption" --arg music "$music" '
+    def seconds: .value/.timescale;
     def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_shot") as $shot | clip("itm_lower-third") as $panel |
-    clip("itm_cue") as $caption |
-    $shot.record_range == r(0;8000) and
-    $shot.source_mapping.time_map.source_start == t(2000) and
+    clip($shot) as $shot | clip($panel) as $panel | clip($caption) as $caption |
+    ($shot.record_range.start|seconds) == 0 and ($shot.record_range.duration|seconds) == 8 and
+    ($shot.source_mapping.time_map.source_start|seconds) == 2 and
     $shot.source_mapping.time_map.rate == {"numerator":1,"denominator":1} and
     $shot.visual.color_pipeline as $grade |
     $grade.input == {"matrix":"bt709","primaries":"bt709","range":"limited","transfer":"bt709"} and
@@ -17,38 +17,46 @@ all_features_authoring_visual_contract() {
     $grade.output == $grade.input and
     $grade.stages == [{"type":"basic","adjustment":{"exposure_stops":0.1,"fade":0.01,
       "highlights":-0.04,"shadows":0.06,"temperature_kelvin":6600,"tint":0}}] and
-    $panel.record_range == r(1000;5000) and
+    ($panel.record_range.start|seconds) == 1 and ($panel.record_range.duration|seconds) == 5 and
     $panel.source.generator.color == {"alpha":221,"blue":94,"green":4,"red":3} and
     $panel.visual.frame == {"fit":"fill","height":{"unit":"pixels","value":180},
       "width":{"unit":"pixels","value":1500}} and
     $panel.visual.placement == {"anchor":"bottom","inset":{"x":0,"y":80},"type":"anchor"} and
     $panel.visual.opacity == {"type":"constant","value":0.95} and
-    $caption.record_range == r(0;8000) and
+    ($caption.record_range.start|seconds) == 0 and ($caption.record_range.duration|seconds) == 8 and
     $caption.source.text == "一种语言，一份类型化中间表示，一套渲染计划。" and
     $caption.source.style.background == {"color":
       {"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20} and
-    first(.project.relations[] | select(.id == "rel_edit-unit")).kind.members ==
-      [{"item_id":"itm_shot","type":"item"},{"item_id":"itm_music-item","type":"item"}] and
-    first(.project.relations[] | select(.id == "rel_linked-av")).kind ==
-      {"audio":[{"item_id":"itm_music-item","type":"item"}],"type":"av_link",
-       "video":{"item_id":"itm_shot","type":"item"}}
+    $caption.source.style.font_weight == "bold" and $caption.source.style.size_pixels == 64 and $caption.source.style.layout.box_width_pixels == 1500 and $caption.source.style.layout.box_height_pixels == 140 and $caption.source.style.layout.overflow == "clip" and
+    $caption.visual.placement == {"type":"absolute","position":{"x":{"unit":"pixels","value":960},"y":{"unit":"pixels","value":850}}} and $caption.visual.frame == {"fit":"contain","height":{"unit":"pixels","value":140},"width":{"unit":"pixels","value":1500}} and
+    any(.project.relations[]; .kind.type == "group" and
+      ([.kind.members[].item_id] | sort) == ([$shot.id,$music] | sort)) and
+    any(.project.relations[]; .kind.type == "av_link" and
+      .kind.video.item_id == $shot.id and [.kind.audio[].item_id] == [$music])
   ' "$canonical" >/dev/null || fail "all-features authoring visual contract failed"
 }
 
 all_features_preview_visual_contract() {
-  local canonical=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 config shot panel caption
+  config=$(delivery_config_id "$canonical" master)
+  shot=$(canonical_clip_id "$canonical" shot); panel=$(canonical_clip_id "$canonical" lower-third)
+  caption=$(canonical_clip_id "$canonical" cue)
+  jq -e --arg config "$config" --arg shot "$shot" --arg panel "$panel" --arg caption "$caption" '
+    def seconds: .value/.timescale;
     def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    first(.project.render_configs[] | select(.id == "out_master")) as $out |
-    clip("itm_shot").record_range.duration == t(8000) and
-    clip("itm_lower-third").record_range == {"start":t(1000),"duration":t(5000)} and
-    clip("itm_cue").record_range.duration == t(8000) and
-    clip("itm_cue").source.style.background == {"color":
+    first(.project.render_configs[] | select(.id == $config)) as $out |
+    (clip($shot).record_range.duration|seconds) == 8 and
+    (clip($panel).record_range.start|seconds) == 1 and
+    (clip($panel).record_range.duration|seconds) == 5 and
+    (clip($caption).record_range.duration|seconds) == 8 and
+    clip($caption).source.style.background == {"color":
       {"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20} and
+    clip($caption).source.style.font_weight == "bold" and clip($caption).source.style.size_pixels == 64 and clip($caption).source.style.layout.box_width_pixels == 1500 and clip($caption).source.style.layout.box_height_pixels == 140 and clip($caption).source.style.layout.overflow == "clip" and
+    clip($caption).visual.placement == {"type":"absolute","position":{"x":{"unit":"pixels","value":960},"y":{"unit":"pixels","value":850}}} and clip($caption).visual.frame == {"fit":"contain","height":{"unit":"pixels","value":140},"width":{"unit":"pixels","value":1500}} and
     $out.raster == {"captions":"burn_in","frame_rate":{"denominator":1,"numerator":12},
       "height":270,"width":480} and
-    first($out.deliverables[] | select(.id == "dlv_master")) as $video |
+    first($out.deliverables[] | select(.kind.type == "video" and
+      .target.name == "all-features.mp4")) as $video |
     $video.target == {"name":"all-features.mp4","type":"file"} and
     $video.kind.settings.video.codec == "h264" and
     $video.kind.settings.video.pixel_format == "yuv420p" and
@@ -58,26 +66,28 @@ all_features_preview_visual_contract() {
 }
 
 all_features_plan_visual_contract() {
-  local plan=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
+  local plan=$1 identity=$2 config sequence shot caption
+  config=$(delivery_config_id "$identity" master); sequence=$(canonical_sequence_id "$identity" main)
+  shot=$(canonical_clip_id "$identity" shot); caption=$(canonical_clip_id "$identity" cue)
+  jq -e --arg config "$config" --arg sequence "$sequence" --arg shot "$shot" --arg caption "$caption" '
+    def seconds: .value/.timescale;
     def clip($id): first(.sequences[].tracks[].clips[] | select(.id == $id));
-    .output.id == "pout_master" and .output.render_config_id == "out_master" and
-    .output.sequence_id == "seq_main" and
+    .output.render_config_id == $config and .output.sequence_id == $sequence and
     .output.raster == {"captions":"burn_in","frame_rate":{"denominator":1,"numerator":12},
       "height":270,"width":480} and
-    first(.output.deliverables[] | select(.id == "dlv_master")).target ==
+    first(.output.deliverables[] | select(.kind.type == "video" and
+      .target.name == "all-features.mp4")).target ==
       {"name":"all-features.mp4","type":"file"} and
-    first(.sequences[] | select(.id == "seq_main")).duration == t(8000) and
-    clip("itm_shot").source_mapping.time_map.source_range_per_repeat ==
-      {"start":t(2000),"duration":t(8000)} and
-    clip("itm_shot").visual.color_pipeline.stages[0].type == "basic" and
-    clip("itm_cue").source.type == "caption" and
-    clip("itm_cue").source.content.text ==
+    (first(.sequences[] | select(.id == $sequence)).duration|seconds) == 8 and
+    (clip($shot).source_mapping.time_map.source_range_per_repeat.start|seconds) == 2 and
+    (clip($shot).source_mapping.time_map.source_range_per_repeat.duration|seconds) == 8 and
+    clip($shot).visual.color_pipeline.stages[0].type == "basic" and
+    clip($caption).source.type == "caption" and
+    clip($caption).source.content.text ==
       "一种语言，一份类型化中间表示，一套渲染计划。" and
-    clip("itm_cue").source.content.presentation.type == "styled" and
-    clip("itm_cue").source.content.presentation.style.background == {"color":
-      {"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20}
+    clip($caption).source.content.presentation.type == "styled" and
+    clip($caption).source.content.presentation.style.background == {"color":
+      {"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20} and clip($caption).source.content.presentation.style.font_weight == "bold" and clip($caption).source.content.presentation.style.size_pixels == 64 and clip($caption).source.content.presentation.style.layout.box_width_pixels == 1500 and clip($caption).source.content.presentation.style.layout.box_height_pixels == 140 and clip($caption).source.content.presentation.style.layout.overflow == "clip" and clip($caption).visual.placement == {"type":"absolute","position":{"x":{"unit":"pixels","value":960},"y":{"unit":"pixels","value":850}}} and clip($caption).visual.frame == {"fit":"contain","height":{"unit":"pixels","value":140},"width":{"unit":"pixels","value":1500}}
   ' "$plan" >/dev/null || fail "all-features preview plan visual contract failed"
 }
 
@@ -164,13 +174,15 @@ check_all_features_visual_evidence() {
   local author preview plan video source uri
   author=$(example_authoring_canonical "$dir")
   preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_master)
-  video=$(delivery_video_path "$dir" master master)
+  plan=$(delivery_plan_path "$dir" master)
+  video=$(delivery_video_path "$dir" master all-features.mp4)
   for file in "$author" "$preview" "$plan" "$video"; do require_file "$file"; done
   all_features_authoring_visual_contract "$author"
   all_features_preview_visual_contract "$preview"
-  all_features_plan_visual_contract "$plan"
-  uri=$(jq -er 'first(.project.materials[] | select(.id == "med_footage")).source.uri' "$preview")
+  all_features_plan_visual_contract "$plan" "$author"
+  uri=$(jq -er --arg shot "$(canonical_clip_id "$preview" shot)" '
+    first(.project.sequences[].tracks[].clips[] | select(.id==$shot)).source.material_id as $id |
+    first(.project.materials[] | select(.id==$id)).source.uri' "$preview")
   [[ $uri == assets/* && $uri != *..* ]] || fail "all-features unsafe footage URI: $uri"
   source="$dir/project/$uri"; require_file "$source"
   video_contract "$video" 7.9

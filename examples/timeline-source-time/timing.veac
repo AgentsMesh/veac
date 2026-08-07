@@ -1,0 +1,60 @@
+module {
+  export fn fit() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)),
+        frame_sized(640px, 360px, fit_contain()),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+
+  export fn media(
+    key: identifier, start: time, duration: time,
+    resource: Resource, mapping: SourceMapping
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, duration),
+      source_media(resource), source_timing_mapped(mapping)
+    ).with_visual(fit())
+  }
+
+  export fn nested(
+    key: identifier, start: time, duration: time, source: Sequence,
+    map: SourceTimeMap, boundary: OutOfRangePolicy
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, duration), source_nested_sequence(source),
+      source_timing_mapped(source_mapping(map, frame_nearest(), boundary))
+    )
+  }
+
+  export fn label(
+    font: Resource, key: identifier, start: time, duration: time, value: text
+  ) -> Item {
+    item(
+      key, item_enabled(), during(start, duration),
+      source_text(value, text_style(
+        text_metrics(
+          font_stack(font_resource_ref(font), []),
+          weight_bold(), font_style_normal(), 16px, 0px, 1.2, #ffffffff
+        ),
+        text_layout(
+          text_box_width(280px), text_wrap_word(), text_overflow_visible(),
+          text_align_center(), text_align_bottom(), writing_horizontal_tb(), orientation_mixed()
+        ),
+        text_path_none(), text_decoration(
+          text_background_present(#07131ddd, 8px), text_outline_none(), shadow_none()
+        ), [], text_animation_none()
+      )), source_timing_native()
+    )
+  }
+}

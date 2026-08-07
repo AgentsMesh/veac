@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::*;
 
 use super::{range, time, visual};
@@ -25,17 +23,17 @@ pub(crate) fn media_clip() -> Clip {
         }),
         effects: vec![EffectInstance {
             id: EffectId::new("fx_color").unwrap(),
-            effect_type: "video.color_adjust".to_owned(),
             enabled: true,
             enable_range: Some(range(0, 300)),
-            parameters: BTreeMap::from([(
-                "brightness".to_owned(),
-                ParameterValue::Number { value: 0.2 },
-            )]),
+            effect: Effect::VideoColorAdjust {
+                brightness: Animatable::constant(0.2),
+                contrast: Animatable::constant(1.0),
+                saturation: Animatable::constant(1.0),
+            },
         }],
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -59,6 +57,7 @@ pub(super) fn caption_clip(font_id: MaterialId) -> Clip {
         source: ClipSource::Caption {
             text: "hello".to_owned(),
             speaker: None,
+            cue: Box::default(),
             style: TextStyle {
                 font: FontRef::Material {
                     material_id: font_id,
@@ -86,7 +85,7 @@ pub(super) fn caption_clip(font_id: MaterialId) -> Clip {
         effects: vec![],
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

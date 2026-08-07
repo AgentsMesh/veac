@@ -10,6 +10,7 @@
     {"id":"effect.video.sharpen","title":"视频锐化","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.sharpen"},
     {"id":"effect.video.vignette","title":"视频暗角","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.vignette"},
     {"id":"effect.audio.normalize","title":"音频归一化","family":"音频效果","coverage":"preview_required","preview_target":"audio-processing","capability_id":"P2-02","registry_key":"audio.normalize"},
-    {"id":"effect.video.stabilize","title":"视频防抖","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-28","registry_key":"video.stabilize"}
+    {"id":"effect.video.stabilize","title":"视频防抖","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-28","registry_key":"video.stabilize"},
+    {"id":"effect.video.plugin-monochrome-v1","title":"版本化单色插件","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-41","registry_key":"video.plugin.veac.reference_monochrome.v1.e208978cbc18912f43b3501f09ea1236c083f6c871567b824655000e7a02e4d9"}
   ]
 }

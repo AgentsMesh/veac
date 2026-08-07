@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use veac_artifact::{MediaArtifactSpec, OpticalFlowMethod, OpticalFlowSpec, SourceClockSpec};
 
 use super::{push, ratio, scale, seconds, source_clock, strings, video_encoding};
-use crate::workflow::{WorkflowError, WorkflowErrorKind, WorkflowResult};
+use crate::workflow::WorkflowResult;
 
 pub(super) fn append(args: &mut Vec<OsString>, spec: &MediaArtifactSpec) -> WorkflowResult<()> {
     match spec {
@@ -88,12 +88,6 @@ pub(super) fn append(args: &mut Vec<OsString>, spec: &MediaArtifactSpec) -> Work
             if value.audio.is_some() {
                 args.extend(strings(&["-c:a", "aac", "-b:a", "192k"]));
             }
-        }
-        MediaArtifactSpec::Analysis(_) => {
-            return Err(WorkflowError::new(
-                WorkflowErrorKind::UnsupportedOperation,
-                "analysis artifacts are not FFmpeg commands",
-            ));
         }
     }
     Ok(())

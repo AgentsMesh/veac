@@ -22,3 +22,6 @@ m3u8-rs = "6.0.1"
 tempfile = "3"
 veac-lang = { path = "../veac-lang" }
 veac-plan = { path = "../veac-plan" }
+
+[build-dependencies]
+sha2 = "0.10"

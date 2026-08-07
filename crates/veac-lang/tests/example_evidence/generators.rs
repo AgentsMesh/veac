@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use veac_ir::{ClipSource, Generator, Gradient, Paint, ProjectEnvelope, VectorGeometry};
+use veac_ir::{
+    ClipSource, Generator, Gradient, MaterialKind, MaterialSource, Paint, ProjectEnvelope,
+    VectorGeometry,
+};
 
 use super::support;
 
@@ -11,9 +14,25 @@ fn generator_claims_have_typed_ir_evidence() {
 
 fn evidence(project: &ProjectEnvelope) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
+    for material in &project.project.materials {
+        if material.kind == MaterialKind::Image {
+            add(&mut found, "resource.kind.image");
+        }
+        if matches!(&material.source, MaterialSource::File { .. }) {
+            add(&mut found, "resource.locator.file");
+        }
+    }
     for clip in support::clips(project) {
-        if let ClipSource::Generated { generator } = &clip.source {
-            add_generator(generator, &mut found);
+        match &clip.source {
+            ClipSource::Generated { generator } => add_generator(generator, &mut found),
+            ClipSource::Media { material_id }
+                if project.project.materials.iter().any(|material| {
+                    material.id == *material_id && material.kind == MaterialKind::Image
+                }) =>
+            {
+                add(&mut found, "source.media.image");
+            }
+            _ => {}
         }
     }
     found

@@ -9,11 +9,11 @@ or decoded-output observation. The linked tests are entry points into broader mo
 - P1-01 rfc: [accepted RFC media model](../../crates/veac-ir/tests/rfc_media_example.rs)
 - P1-01 observable: [canonical CLI integration](../../crates/veac-cli/tests/integration/canonical.rs)
 ### P1-02
-- P1-02 implementation: [authoring parser](../../crates/veac-lang/src/authoring/parser/mod.rs)
+- P1-02 implementation: [executable source parser](../../crates/veac-lang/src/program/parser/mod.rs)
 - P1-02 verification: [public example conformance](../../crates/veac-lang/tests/examples_authoring.rs)
 - P1-02 observable: [source CLI integration](../../crates/veac-cli/tests/integration/source.rs)
-- P1-02 formatting: [authoring format tests](../../crates/veac-lang/src/authoring/tests/format.rs)
-- P1-02 example: [self-contained generated source](../../examples/executable-mechanisms/main.veac)
+- P1-02 formatting: [source formatter contract](../../crates/veac-cli/src/unit_tests/frontend_tests.rs)
+- P1-02 example: [self-contained executable source](../../examples/executable-mechanisms/main.veac)
 ### P1-03
 - P1-03 implementation: [canonical timeline](../../crates/veac-ir/src/model/timeline.rs)
 - P1-03 verification: [source-time resolution](../../crates/veac-plan/tests/source_time_resolution.rs)
@@ -64,10 +64,10 @@ or decoded-output observation. The linked tests are entry points into broader mo
 - P1-14 observable: [mask-shape pixel E2E](../../crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs)
 ### P1-15
 - P1-15 implementation: [card and shadow model](../../crates/veac-ir/src/model/properties/composition.rs)
-- P1-15 authoring AST: [typed surface declaration](../../crates/veac-lang/src/authoring/ast/modifier_surface.rs)
-- P1-15 authoring parser: [closed surface grammar](../../crates/veac-lang/src/authoring/parser/modifier_surface.rs)
-- P1-15 lowering: [surface to canonical card style](../../crates/veac-lang/src/authoring/lower/modifier_surface.rs)
-- P1-15 verification: [surface round-trip and rejection tests](../../crates/veac-lang/src/authoring/tests/surface.rs)
+- P1-15 language surface: [closed Domain operations](../../crates/veac-lang/src/program/domain_system/registry/surface.rs)
+- P1-15 lowering: [Domain value to canonical visual surface](../../crates/veac-lang/src/program/executable/lower/visual/surface.rs)
+- P1-15 verification: [executable visual lowering](../../crates/veac-lang/tests/executable_lowering/visual_v6.rs)
+- P1-15 rejection: [typed transform diagnostics](../../crates/veac-lang/tests/executable_lowering/transform/errors.rs)
 - P1-15 observable: [card render E2E](../../crates/veac-runtime/tests/render_e2e/composition_card.rs)
 - P1-15 shadow observable: [shadow clipping pixel E2E](../../crates/veac-runtime/tests/render_e2e/composition_shadow_clipping.rs)
 ### P1-16

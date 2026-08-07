@@ -34,7 +34,7 @@ fn effect_curve_target_rejects_missing_and_nonnumeric_parameters() {
         &mut clip,
         &NumberCurveTarget::EffectParameter {
             effect_id: EffectId::new("fx_absent").unwrap(),
-            name: "brightness".to_owned(),
+            parameter: EffectParameter::Brightness,
         },
     )
     .is_err());
@@ -42,18 +42,15 @@ fn effect_curve_target_rejects_missing_and_nonnumeric_parameters() {
         &mut clip,
         &NumberCurveTarget::EffectParameter {
             effect_id: effect_id.clone(),
-            name: "absent".to_owned(),
+            parameter: EffectParameter::TargetLufs,
         },
     )
     .is_err());
-    clip.effects[0]
-        .parameters
-        .insert("flag".to_owned(), ParameterValue::Boolean { value: true });
     assert!(number(
         &mut clip,
         &NumberCurveTarget::EffectParameter {
             effect_id,
-            name: "flag".to_owned(),
+            parameter: EffectParameter::Color,
         },
     )
     .is_err());

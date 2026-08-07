@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use serde_json::json;
 use veac_ir::{RationalTime, TimeRange};
 
 use crate::{test_support, *};
@@ -105,17 +104,11 @@ fn verified_proxy_rejects_the_wrong_role_and_source_identity() {
     let input = &plan.inputs[0];
     let temp = tempfile::tempdir().unwrap();
     let store = ArtifactStore::new(temp.path());
+    let mut wrong_source = proxy_descriptor(input, ArtifactKind::ProxyVideo);
+    wrong_source.dependencies[0].identity = ContentDigest::sha256(b"wrong source");
     for descriptor in [
         proxy_descriptor(input, ArtifactKind::ProxyAudio),
-        ArtifactDescriptor::new(
-            ArtifactKind::ProxyVideo,
-            test_support::producer(),
-            vec![ArtifactDependency {
-                role: "input".into(),
-                identity: ContentDigest::sha256(b"wrong source"),
-            }],
-            json!({}),
-        ),
+        wrong_source,
     ] {
         let record = store
             .put(&descriptor, descriptor.kind_name().as_bytes())
@@ -154,17 +147,21 @@ fn proxy_descriptor(input: &veac_plan::ResolvedInput, kind: ArtifactKind) -> Art
         }),
         _ => unreachable!(),
     };
+    let parameters = match spec {
+        MediaArtifactSpec::ProxyVideo(value) => ArtifactParameters::ProxyVideo(value),
+        MediaArtifactSpec::ProxyAudio(value) => ArtifactParameters::ProxyAudio(value),
+        _ => unreachable!(),
+    };
     ArtifactDescriptor::new(
-        kind,
         test_support::producer(),
-        vec![ArtifactDependency {
-            role: "input".into(),
-            identity: ContentDigest {
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Input,
+            ContentDigest {
                 algorithm: DigestAlgorithm::Sha256,
                 value: input.observed_identity.digest.clone(),
             },
-        }],
-        serde_json::to_value(spec).unwrap(),
+        )],
+        parameters,
     )
 }
 
@@ -174,7 +171,7 @@ trait KindName {
 
 impl KindName for ArtifactDescriptor {
     fn kind_name(&self) -> &'static str {
-        match self.kind {
+        match self.kind() {
             ArtifactKind::ProxyVideo => "video",
             ArtifactKind::ProxyAudio => "audio",
             _ => "other",

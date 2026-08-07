@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use serde_json::Value;
 use veac_ir::*;
 
 use crate::{OtioError, OtioItem, OtioMediaReference};
@@ -17,7 +16,7 @@ pub(super) fn import(
     let OtioItem::Clip {
         source_range,
         media_reference,
-        metadata,
+        metadata: _,
         effects,
         markers,
         enabled,
@@ -55,10 +54,6 @@ pub(super) fn import(
         "standard OTIO has no VEAC pipeline; canonical defaults were synthesized",
         false,
     );
-    let metadata = BTreeMap::from([(
-        "otio.metadata".to_owned(),
-        Value::Object(metadata.clone().into_iter().collect()),
-    )]);
     Ok(Clip {
         id,
         enabled: *enabled,
@@ -75,7 +70,7 @@ pub(super) fn import(
         effects: vec![],
         replaceable: None,
         template_editable_text: false,
-        metadata,
+        authorship: None,
     })
 }
 

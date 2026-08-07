@@ -23,9 +23,9 @@ and [sequence preview](https://helpx.adobe.com/premiere/desktop/render-and-expor
 workflows. VEAC accepts mechanisms, not vendor quality or proprietary asset claims.
 
 ```text
-authoring source graph
-    -> module resolution + pure expressions + static expansion
-    -> typed authoring Document
+executable .veac source graph
+    -> module resolution + type/effect/stage verification
+    -> verified Core execution + Temporal residualization
     -> Canonical JSON IR
     -> ResolvedRenderPlan
     -> sealed BackendBundle
@@ -34,8 +34,9 @@ authoring source graph
 ```
 
 Machine-local paths exist only in execution bindings. Providers produce content-addressed artifacts;
-they do not run in plan resolution or code generation. The flat language, legacy frontend IR, old
-render path, `build`, CSV `batch`, variables, and `include` are deleted without compatibility readers.
+they do not run in plan resolution or code generation. The flat property language, legacy frontend model,
+old render path, CSV `batch`, textual variables and `include` are deleted without compatibility readers.
+`veac build` is the executable source-to-IR command.
 
 ## Acceptance Slices
 
@@ -87,7 +88,7 @@ explicit hardware upload/device implementation.
 | `P1-23` | P1 | Chroma/luma key, inversion, animated controls, softness and spill suppression | Delivered | [P1-23](capabilities/p1-evidence-b.md#p1-23) |
 | `P1-24` | P1 | Exact speed, bounded reverse, containing-frame freeze, repeat, pitch and synthesis policy | Delivered | [P1-24](capabilities/p1-evidence-b.md#p1-24) |
 | `P1-25` | P1 | Exact source-time curves, ramps, holds, audio mapping and malformed-plan defense | Delivered | [P1-25](capabilities/p1-evidence-b.md#p1-25) |
-| `P1-26` | P1 | Seven typed transition families, alignment, handle checks and audio continuity fades | Delivered | [P1-26](capabilities/p1-evidence-b.md#p1-26) |
+| `P1-26` | P1 | Seven typed transition families, centered true-overlap contracts and audio continuity fades | Delivered | [P1-26](capabilities/p1-evidence-b.md#p1-26) |
 | `P1-27` | P1 | First-class CompositeBand, Layer and exact ItemSet Apply targets with ordered stages/mix | Delivered | [P1-27](capabilities/p1-evidence-b.md#p1-27) |
 | `P1-28` | P1 | Ordered/bypass/ranged effects with registry-gated typed parameters and curves | Delivered | [P1-28](capabilities/p1-evidence-b.md#p1-28) |
 | `P1-29` | P1 | Solid/transparent/silence, multi-stop gradients and filled/stroked vector shapes | Delivered | [P1-29](capabilities/p1-evidence-b.md#p1-29) |
@@ -98,10 +99,12 @@ explicit hardware upload/device implementation.
 | `P1-34` | P1 | Identity-verified schema-v3 probe, safe input policy and exact stream selection | Delivered | [P1-34](capabilities/p1-evidence-b.md#p1-34) |
 | `P1-35` | P1 | Tool/input manifests, SHA-256 package/restore and bounded identity relink | Delivered | [P1-35](capabilities/p1-evidence-b.md#p1-35) |
 | `P1-36` | P1 | Content-addressed artifact cache with bounded no-follow verified storage | Delivered | [P1-36](capabilities/p1-evidence-b.md#p1-36) |
-| `P1-37` | P1 | Proxy/analysis/optical-flow/source-segment derivation and exact render-segment reuse | Delivered | [P1-37](capabilities/p1-evidence-b.md#p1-37) |
+| `P1-37` | P1 | Proxy/optical-flow/source-segment derivation, typed analysis ingestion, and exact render-segment reuse | Delivered | [P1-37](capabilities/p1-evidence-b.md#p1-37) |
 | `P1-38` | P1 | Canonical source/edit/template/render/caption/OTIO/provider/artifact CLI workflows | Delivered | [P1-38](capabilities/p1-evidence-b.md#p1-38) |
 | `P1-39` | P1 | Scoped snapshots, deadlines, atomic commit/recovery, locks and alias defenses | Delivered | [P1-39](capabilities/p1-evidence-b.md#p1-39) |
-| `P1-40` | P1 | Confined modules, exact pure expressions, typed presets/components, hygienic expansion and revisioned source edits | Delivered | [P1-40](capabilities/p1-evidence-b.md#p1-40) |
+| `P1-40` | P1 | Confined modules, typed functions/methods/closures, nominal values, verified Core execution, authored Temporal leaves and revisioned source edits | Delivered | [P1-40](capabilities/p1-evidence-b.md#p1-40) |
+| `P1-41` | P1 | Versioned, content-addressed typed plugin descriptors with deterministic backend adapters | Delivered | [P1-41](capabilities/p1-evidence-b.md#p1-41) |
+| `P1-42` | P1 | Authored typed Temporal curve sampling across scalar and composite interpolatable values | Delivered | [P1-42](capabilities/p1-evidence-b.md#p1-42) |
 | `P2-01` | P2 | ASR/language/translation/TTS/dubbing contracts and evidence-bound project mappings | Delivered/Contract | [P2-01](capabilities/p2-evidence.md#p2-01) |
 | `P2-02` | P2 | Local audio EQ/dynamics/ducking plus denoise/separation media application | Delivered/Contract | [P2-02](capabilities/p2-evidence.md#p2-02) |
 | `P2-03` | P2 | Advanced color/LUT/scopes plus evidence-bound color-match application | Delivered/Contract | [P2-03](capabilities/p2-evidence.md#p2-03) |
@@ -117,10 +120,10 @@ explicit hardware upload/device implementation.
 
 - **Remote material acquisition is Contract, not Delivered.** A remote locator may enter canonical
   IR, but plan hydration requires an externally supplied identity-verified local binding. VEAC does
-  not download remote media. See [asset binding](language-reference/assets.md#media).
+  not download remote media. See [source binding](language-reference/sources.md).
 - **`hardware require` is Contract, not Delivered.** Portable `auto`/`software` execution is P1-32;
   an explicit hardware requirement fails closed until typed device and upload-path bindings exist.
-  See [execution policy](language-reference/project.md#defaults-and-identity).
+  See [execution policy](capabilities/execution-notes.md#planning-and-backend).
 
 ## Evidence And Quality Gates
 
@@ -131,9 +134,9 @@ chain and add model/schema rejection, edit or parser behavior, planning/codegen 
 observable FFmpeg/ffprobe integration evidence appropriate to their risk.
 
 Public source files are registered by the [example conformance suite](../crates/veac-lang/tests/examples_authoring.rs).
-Complete Markdown snippets use `veac,compile` and are parsed, validated, and checked for canonical
-format by authoring parse/format idempotence tests; fragments stay unmarked.
+Complete Markdown snippets use executable `veac` fences and are built through the production frontend;
+fragments stay explicitly marked as non-entry snippets.
 
-Every Rust source/test file stays below 200 lines; `include!` is rejected. Production Lines and
-Functions must each strictly exceed 95.02 percent for every crate and the workspace. Coverage is a floor:
+Every Rust source/test file stays below 200 lines; `include!` is rejected. Production lines and functions
+must each meet the 95.03 percent gate for every crate and the workspace. Coverage is a floor:
 a backend-visible row cannot be Delivered without decoded pixel, audio, timing, or metadata evidence.

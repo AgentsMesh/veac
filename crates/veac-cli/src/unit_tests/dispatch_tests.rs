@@ -1,28 +1,10 @@
 use tempfile::tempdir;
 
-use super::support::{canonical_project, source_file, FakeEnvironment, GENERATED_SOURCE};
+use super::support::{
+    canonical_project, source_file, FakeEnvironment, EXECUTABLE_SOURCE, GENERATED_SOURCE,
+    TEXT_TEMPLATE_SOURCE,
+};
 use crate::Cli;
-
-const TEMPLATE_SOURCE: &str = r#"
-project dispatch-template {
-  settings {
-    timebase 1/1000;
-    canvas 32px by 24px;
-    frame-rate 10fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  sequence main {
-    layer visual titles {
-      item title {
-        source text { content "Before"; }
-        record { at 0s; duration 1s; }
-        template-slot text;
-      }
-    }
-  }
-}
-"#;
 
 fn dispatch(args: &[&str], environment: &FakeEnvironment) {
     let cli = Cli::try_parse_from(args).unwrap();
@@ -33,15 +15,13 @@ fn dispatch(args: &[&str], environment: &FakeEnvironment) {
 fn dispatcher_reaches_every_non_compile_command_variant() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    let document = veac_lang::authoring::parse(GENERATED_SOURCE).unwrap();
-    let formatted = veac_lang::authoring::format_document(&document);
-    let source = source_file(&temp, &formatted);
+    let source = source_file(&temp, EXECUTABLE_SOURCE);
     let media = temp.path().join("probe.bin");
     let output = temp.path().join("deliveries");
     let manifest = temp.path().join("build.json");
     let package = temp.path().join("package");
     let template_temp = tempdir().unwrap();
-    let template_project = canonical_project(&template_temp, TEMPLATE_SOURCE);
+    let template_project = canonical_project(&template_temp, TEXT_TEMPLATE_SOURCE);
     let template_request = template_temp.path().join("template-request.json");
     let template_batch = template_temp.path().join("template-batch.json");
     let template = crate::canonical::load(&template_project).unwrap();
@@ -65,10 +45,7 @@ fn dispatcher_reaches_every_non_compile_command_variant() {
     std::fs::create_dir(&output).unwrap();
     let environment = FakeEnvironment::success();
 
-    dispatch(
-        &["veac", "fmt", source.to_str().unwrap(), "--check"],
-        &environment,
-    );
+    dispatch(&["veac", "fmt", source.to_str().unwrap()], &environment);
     dispatch(&["veac", "schema"], &environment);
     dispatch(
         &[

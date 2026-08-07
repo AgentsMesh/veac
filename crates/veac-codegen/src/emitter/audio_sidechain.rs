@@ -146,12 +146,12 @@ fn transition_fades(
             .transitions
             .iter()
             .find(|value| value.incoming_clip_id == clip.id)
-            .map(|value| value.incoming_handle.duration),
+            .map(|value| value.incoming_range.duration),
         fade_out: track
             .transitions
             .iter()
             .find(|value| value.outgoing_clip_id == clip.id)
-            .map(|value| value.outgoing_handle.duration),
+            .map(|value| value.outgoing_range.duration),
     }
 }
 

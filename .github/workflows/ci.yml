@@ -24,13 +24,13 @@ jobs:
       - name: Install repository tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ripgrep
+          sudo apt-get install --yes jq ripgrep
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Check Rust module structure
-        run: bash scripts/check-rust-structure.sh
+      - name: Check repository structure and language docs
+        run: make structure
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
@@ -85,6 +85,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - uses: dtolnay/rust-toolchain@1.85.0
 
@@ -93,7 +95,7 @@ jobs:
       - name: Install fonts
         run: |
           sudo apt-get update
-          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji ripgrep
+          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji jq ripgrep
 
       - name: Install FFmpeg 8.0
         run: bash .github/scripts/install-ffmpeg-8.sh

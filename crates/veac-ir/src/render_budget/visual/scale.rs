@@ -1,4 +1,4 @@
-use crate::{visual_scale_valid, Animatable, Vec2};
+use crate::{visual_scale_valid, Animatable, Vec2, MAX_VISUAL_SCALE};
 
 pub fn max_visual_scale(value: &Animatable<Vec2>) -> Option<(f64, f64)> {
     let values: Vec<Vec2> = match value {
@@ -6,7 +6,7 @@ pub fn max_visual_scale(value: &Animatable<Vec2>) -> Option<(f64, f64)> {
         Animatable::Keyframes { keyframes } => {
             let mut values: Vec<Vec2> = keyframes.iter().map(|frame| frame.value).collect();
             for window in keyframes.windows(2) {
-                let Some(extrema) = window[0].interpolation.spring_extrema() else {
+                let Some(extrema) = window[0].interpolation.intermediate_extrema() else {
                     continue;
                 };
                 for progress in extrema {
@@ -18,6 +18,10 @@ pub fn max_visual_scale(value: &Animatable<Vec2>) -> Option<(f64, f64)> {
             }
             values
         }
+        Animatable::Binding { .. } => vec![Vec2 {
+            x: MAX_VISUAL_SCALE,
+            y: MAX_VISUAL_SCALE,
+        }],
     };
     values
         .into_iter()
@@ -25,3 +29,7 @@ pub fn max_visual_scale(value: &Animatable<Vec2>) -> Option<(f64, f64)> {
             visual_scale_valid(value).then_some((x.max(value.x), y.max(value.y)))
         })
 }
+
+#[cfg(test)]
+#[path = "scale/tests.rs"]
+mod tests;

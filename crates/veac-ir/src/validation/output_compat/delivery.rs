@@ -14,15 +14,10 @@ pub fn video_delivery_valid(value: &VideoDeliverable) -> bool {
     passes
         && native_rate
         && hardware_valid(value.video.codec, value.hardware)
-        && encoder_level_valid(&value.video)
         && prores_valid(value)
         && dnxhr_valid(value)
         && alpha_container_valid(value)
         && video_color_delivery_valid(&value.video)
-}
-
-fn encoder_level_valid(value: &VideoOutput) -> bool {
-    value.level.is_none() || !matches!(value.codec, VideoCodec::H265 | VideoCodec::Av1)
 }
 
 fn prores_valid(value: &VideoDeliverable) -> bool {
@@ -78,9 +73,18 @@ pub fn video_color_delivery_valid(value: &VideoOutput) -> bool {
             && matches!(value.codec, VideoCodec::H265 | VideoCodec::Av1))
 }
 
-fn hardware_valid(_: VideoCodec, selection: HardwareSelection) -> bool {
-    matches!(
-        selection,
-        HardwareSelection::Auto | HardwareSelection::Software
-    )
+fn hardware_valid(codec: VideoCodec, selection: HardwareSelection) -> bool {
+    let HardwareSelection::Explicit { backend } = selection else {
+        return true;
+    };
+    match backend {
+        HardwareBackend::VideoToolbox => matches!(codec, VideoCodec::H264 | VideoCodec::H265),
+        HardwareBackend::Nvenc => {
+            matches!(codec, VideoCodec::H264 | VideoCodec::H265 | VideoCodec::Av1)
+        }
+        HardwareBackend::Qsv | HardwareBackend::Vaapi => matches!(
+            codec,
+            VideoCodec::H264 | VideoCodec::H265 | VideoCodec::Vp9 | VideoCodec::Av1
+        ),
+    }
 }

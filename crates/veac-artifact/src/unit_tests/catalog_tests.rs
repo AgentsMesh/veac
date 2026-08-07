@@ -1,15 +1,18 @@
 use std::fs;
 
-use serde_json::json;
+use crate::*;
 
-use crate::{test_support, *};
+#[path = "catalog_tests/support.rs"]
+mod support;
+
+use support::{cache_directory, dependency, descriptor};
 
 #[test]
 fn catalog_matches_exact_dependencies_and_sorts_by_key() {
     let temp = tempfile::tempdir().unwrap();
     let store = ArtifactStore::new(temp.path().join("store"));
-    let source = dependency("source", b"source");
-    let profile = dependency("profile", b"preview");
+    let source = dependency(ArtifactDependencyRole::Source, b"source");
+    let profile = dependency(ArtifactDependencyRole::Profile, b"preview");
     let first = descriptor(ArtifactKind::ProxyVideo, vec![source.clone()], 1);
     let second = descriptor(
         ArtifactKind::ProxyVideo,
@@ -31,7 +34,7 @@ fn catalog_matches_exact_dependencies_and_sorts_by_key() {
     assert!(matches[0].record().key.value < matches[1].record().key.value);
     assert!(matches
         .iter()
-        .all(|artifact| artifact.descriptor().kind == ArtifactKind::ProxyVideo));
+        .all(|artifact| artifact.descriptor().kind() == ArtifactKind::ProxyVideo));
 
     let narrow = ArtifactCatalogQuery::new(ArtifactKind::ProxyVideo, vec![profile]).unwrap();
     let matches = store.catalog(&narrow).unwrap();
@@ -43,7 +46,7 @@ fn catalog_matches_exact_dependencies_and_sorts_by_key() {
 fn catalog_never_wildcards_dependency_roles_or_identities() {
     let temp = tempfile::tempdir().unwrap();
     let store = ArtifactStore::new(temp.path());
-    let source = dependency("source", b"source");
+    let source = dependency(ArtifactDependencyRole::Source, b"source");
     store
         .put(
             &descriptor(ArtifactKind::RenderSegment, vec![source], 1),
@@ -51,8 +54,8 @@ fn catalog_never_wildcards_dependency_roles_or_identities() {
         )
         .unwrap();
     for dependency in [
-        dependency("input", b"source"),
-        dependency("source", b"other"),
+        dependency(ArtifactDependencyRole::Input, b"source"),
+        dependency(ArtifactDependencyRole::Source, b"other"),
     ] {
         let query =
             ArtifactCatalogQuery::new(ArtifactKind::RenderSegment, vec![dependency]).unwrap();
@@ -68,19 +71,16 @@ fn catalog_query_rejects_empty_invalid_and_duplicate_dependencies() {
             .kind,
         ArtifactErrorKind::InvalidContract
     );
-    let mut empty_role = dependency("source", b"source");
-    empty_role.role.clear();
     let invalid_digest = ArtifactDependency {
-        role: "source".into(),
+        role: ArtifactDependencyRole::Source,
         identity: ContentDigest {
             algorithm: DigestAlgorithm::Sha256,
             value: "bad".into(),
         },
     };
     for dependencies in [
-        vec![empty_role],
         vec![invalid_digest],
-        vec![dependency("source", b"source"); 2],
+        vec![dependency(ArtifactDependencyRole::Source, b"source"); 2],
     ] {
         assert_eq!(
             ArtifactCatalogQuery::new(ArtifactKind::ProxyVideo, dependencies)
@@ -96,7 +96,7 @@ fn catalog_is_empty_for_absent_or_initialized_empty_stores() {
     let temp = tempfile::tempdir().unwrap();
     let query = ArtifactCatalogQuery::new(
         ArtifactKind::ProxyVideo,
-        vec![dependency("source", b"source")],
+        vec![dependency(ArtifactDependencyRole::Source, b"source")],
     )
     .unwrap();
     assert!(ArtifactStore::new(temp.path().join("absent"))
@@ -113,7 +113,7 @@ fn catalog_is_empty_for_absent_or_initialized_empty_stores() {
 fn catalog_fails_closed_on_unexpected_or_corrupt_entries() {
     let temp = tempfile::tempdir().unwrap();
     let store = ArtifactStore::new(temp.path().join("store"));
-    let source = dependency("source", b"source");
+    let source = dependency(ArtifactDependencyRole::Source, b"source");
     let record = store
         .put(
             &descriptor(ArtifactKind::ProxyAudio, vec![source.clone()], 1),
@@ -151,40 +151,11 @@ fn catalog_rejects_symlinked_digest_directories() {
     symlink(temp.path(), root.join("sha256")).unwrap();
     let query = ArtifactCatalogQuery::new(
         ArtifactKind::ProxyVideo,
-        vec![dependency("source", b"source")],
+        vec![dependency(ArtifactDependencyRole::Source, b"source")],
     )
     .unwrap();
     assert_eq!(
         ArtifactStore::new(root).catalog(&query).unwrap_err().kind,
         ArtifactErrorKind::CorruptCache
     );
-}
-
-fn descriptor(
-    kind: ArtifactKind,
-    mut dependencies: Vec<ArtifactDependency>,
-    tag: u8,
-) -> ArtifactDescriptor {
-    dependencies.sort_by(|left, right| {
-        (&left.role, &left.identity.value).cmp(&(&right.role, &right.identity.value))
-    });
-    ArtifactDescriptor::new(
-        kind,
-        test_support::producer(),
-        dependencies,
-        json!({"tag": tag}),
-    )
-}
-
-fn dependency(role: &str, bytes: &[u8]) -> ArtifactDependency {
-    ArtifactDependency {
-        role: role.into(),
-        identity: ContentDigest::sha256(bytes),
-    }
-}
-
-fn cache_directory(root: &std::path::Path, key: &ContentDigest) -> std::path::PathBuf {
-    root.join("sha256")
-        .join(&key.value[..2])
-        .join(&key.value[2..])
 }

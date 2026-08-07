@@ -1,13 +1,12 @@
-use std::collections::BTreeMap;
-
 use subtitler::model::{AssStyle, SubtitleFile};
+use veac_ir::CaptionNativeCue;
 
 use crate::{
-    validate, CaptionEnvelope, CaptionError, CaptionFormat, CaptionStyle, ImportOptions,
-    ImportResult,
+    validate, CaptionDocumentNative, CaptionEnvelope, CaptionError, CaptionFormat, CaptionStyle,
+    ImportOptions, ImportResult,
 };
 
-use super::{common, native};
+use super::{ass_info, common, native};
 
 pub(super) fn import_ass(
     input: &str,
@@ -34,26 +33,29 @@ pub(super) fn import_ass(
             "one or more event records are malformed",
         ));
     }
-    let extras = native::ass_extras(input);
+    let extras = native::ass_extras(input)?;
     let styles = data.styles.iter().map(convert_style).collect();
+    let (info, unknown_info) = ass_info::parse(&data.info)?;
     let mut result = common::build(
         &data.subtitles,
         styles,
+        Some(CaptionDocumentNative::Ass { info }),
         CaptionFormat::Ass,
         options,
         |index, subtitle| {
             let mut settings = extras.get(index).cloned().unwrap_or_default();
             if subtitle.is_comment {
-                settings.insert("ass.comment".to_owned(), "true".to_owned());
+                settings.comment = true;
             }
-            (None, settings)
+            Ok((None, Some(CaptionNativeCue::Ass { settings })))
         },
     )?;
-    result.document.settings = data
-        .info
-        .into_iter()
-        .map(|(key, value)| (format!("ass.info.{key}"), value))
-        .collect::<BTreeMap<_, _>>();
+    for key in unknown_info {
+        result.loss_report.document(
+            &format!("native.ass.info.{key}"),
+            "ASS Script Info field is outside the closed contract",
+        );
+    }
     for (index, subtitle) in data.subtitles.iter().enumerate() {
         if native::has_unsupported_ass_override(&subtitle.text) {
             result.loss_report.cue(

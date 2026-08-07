@@ -63,12 +63,7 @@ pub enum EffectParameterEdit {
     Set {
         clip_id: ItemId,
         effect_id: EffectId,
-        name: String,
-        value: ParameterValue,
-    },
-    Remove {
-        clip_id: ItemId,
-        effect_id: EffectId,
-        name: String,
+        parameter: EffectParameter,
+        value: EffectParameterValue,
     },
 }

@@ -1,9 +1,7 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{CaptionCue, CaptionStyle, CURRENT_SCHEMA_VERSION, SCHEMA_ID};
+use crate::{CaptionCue, CaptionDocumentNative, CaptionStyle, CURRENT_SCHEMA_VERSION, SCHEMA_ID};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -29,7 +27,7 @@ pub struct CaptionDocument {
     pub timescale: u32,
     pub language: Option<String>,
     pub overlap_policy: OverlapPolicy,
-    pub settings: BTreeMap<String, String>,
+    pub native: Option<CaptionDocumentNative>,
     pub styles: Vec<CaptionStyle>,
     pub cues: Vec<CaptionCue>,
 }
@@ -40,7 +38,7 @@ impl CaptionDocument {
             timescale,
             language: None,
             overlap_policy,
-            settings: BTreeMap::new(),
+            native: None,
             styles: Vec::new(),
             cues: Vec::new(),
         }

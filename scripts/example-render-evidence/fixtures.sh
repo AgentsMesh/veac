@@ -13,10 +13,10 @@ check_fixture_coverage() {
     awk -v value="$luma" 'BEGIN { exit !(value > 15) }' \
       || fail "$name does not visibly contain its staged fixture"
   done <<'CASES'
-all-features:master:master:0.5
-speed-demo:preview:preview:1.0
-template-fill:preview:preview:1.0
-timeline-source-time:preview:preview:1.0
-nested-and-multicam:preview:preview:3.0
+all-features:master:all-features.mp4:0.5
+speed-demo:preview:preview.mp4:1.0
+template-fill:preview:preview.mp4:1.0
+timeline-source-time:preview:preview.mp4:1.0
+nested-and-multicam:preview:preview.mp4:3.0
 CASES
 }

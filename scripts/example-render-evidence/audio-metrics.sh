@@ -70,6 +70,25 @@ assert_channel_tone_bias() {
   fi || fail "$7: ${4}Hz left=${left}dB, right=${right}dB"
 }
 
+assert_channel_level_bias() {
+  local left right favored other
+  left=$(audio_mean_db "$1" "$2" "$3" 'pan=mono|c0=c0')
+  right=$(audio_mean_db "$1" "$2" "$3" 'pan=mono|c0=c1')
+  if [[ $4 == left ]]; then favored=$left; other=$right; else favored=$right; other=$left; fi
+  awk -v favored="$favored" -v other="$other" -v gap="$5" \
+    'BEGIN { exit !(favored >= other + gap) }' ||
+    fail "$6: left=${left}dB right=${right}dB"
+}
+
+assert_audio_window_louder() {
+  local louder quieter
+  louder=$(audio_mean_db "$1" "$2" "$3" '')
+  quieter=$(audio_mean_db "$1" "$4" "$5" '')
+  awk -v louder="$louder" -v quieter="$quieter" -v gap="$6" \
+    'BEGIN { exit !(louder >= quieter + gap) }' ||
+    fail "$7: louder=${louder}dB quieter=${quieter}dB"
+}
+
 audio_ebur_metrics() {
   local log
   log=$(audio_filter_log "$1" "$2" "$3" 'ebur128=peak=true')

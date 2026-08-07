@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - uses: dtolnay/rust-toolchain@1.85.0
 
@@ -30,7 +32,7 @@ jobs:
       - name: Install fonts
         run: |
           sudo apt-get update
-          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji ripgrep
+          sudo apt-get install --yes fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji jq ripgrep
 
       - name: Install FFmpeg 8.0
         run: bash .github/scripts/install-ffmpeg-8.sh
@@ -39,6 +41,9 @@ jobs:
         run: |
           ffmpeg -version | head -n 1 | grep -E '^ffmpeg version n?8[.]0([ .-]|$)'
           ffprobe -version | head -n 1 | grep -E '^ffprobe version n?8[.]0([ .-]|$)'
+
+      - name: Run focused executable media guards
+        run: make e2e-executable
 
       - name: Build every example preview
         run: make build-examples

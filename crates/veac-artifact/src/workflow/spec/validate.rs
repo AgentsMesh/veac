@@ -2,8 +2,8 @@ use veac_ir::RationalTime;
 
 use super::{MediaArtifactRequest, MediaArtifactSpec};
 use crate::{
-    ArtifactDependency, ArtifactDescriptor, ArtifactError, ArtifactErrorKind, ArtifactResult,
-    MediaArtifactLimits,
+    ArtifactDependency, ArtifactDependencyRole, ArtifactDescriptor, ArtifactError,
+    ArtifactErrorKind, ArtifactParameters, ArtifactResult, MediaArtifactLimits,
 };
 
 mod budget;
@@ -11,20 +11,22 @@ mod budget;
 impl MediaArtifactRequest {
     pub fn descriptor(&self) -> ArtifactResult<ArtifactDescriptor> {
         self.validate()?;
-        let parameters = serde_json::to_value(&self.spec).map_err(|error| {
-            ArtifactError::with_source(
-                ArtifactErrorKind::Serialization,
-                "media artifact parameters cannot be serialized",
-                error,
-            )
-        })?;
+        let parameters = match &self.spec {
+            MediaArtifactSpec::ProxyVideo(value) => ArtifactParameters::ProxyVideo(value.clone()),
+            MediaArtifactSpec::ProxyAudio(value) => ArtifactParameters::ProxyAudio(value.clone()),
+            MediaArtifactSpec::Waveform(value) => ArtifactParameters::Waveform(value.clone()),
+            MediaArtifactSpec::Thumbnail(value) => ArtifactParameters::Thumbnail(value.clone()),
+            MediaArtifactSpec::OpticalFlow(value) => ArtifactParameters::OpticalFlow(value.clone()),
+            MediaArtifactSpec::SourceSegment(value) => {
+                ArtifactParameters::SourceSegment(value.clone())
+            }
+        };
         let descriptor = ArtifactDescriptor::new(
-            self.spec.kind(),
             self.producer.clone(),
-            vec![ArtifactDependency {
-                role: "input".to_owned(),
-                identity: self.source_identity.clone(),
-            }],
+            vec![ArtifactDependency::new(
+                ArtifactDependencyRole::Input,
+                self.source_identity.clone(),
+            )],
             parameters,
         );
         descriptor.validate()?;
@@ -50,6 +52,11 @@ impl MediaArtifactRequest {
 }
 
 impl MediaArtifactSpec {
+    pub(crate) fn validate_descriptor_parameters(&self) -> ArtifactResult<()> {
+        self.validate_contract()?;
+        budget::validate(self, MediaArtifactLimits::default())
+    }
+
     fn validate_contract(&self) -> ArtifactResult<()> {
         match self {
             Self::ProxyVideo(value) => {
@@ -83,11 +90,6 @@ impl MediaArtifactSpec {
                 dimensions(value.width, value.height)?;
                 value.source_clock.validate()?;
                 rate(value.frame_rate, "optical-flow frame rate")?;
-            }
-            Self::Analysis(value) => {
-                if value.analysis_type.is_empty() || !value.configuration.is_object() {
-                    return invalid("analysis parameters are invalid");
-                }
             }
             Self::SourceSegment(value) => {
                 dimensions(value.width, value.height)?;

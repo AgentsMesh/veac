@@ -57,8 +57,8 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
         }
     ));
     assert!(matches!(
-        parse(&["veac", "compile", "main.veac"]).command,
-        Command::Compile { emit_ir: None, .. }
+        parse(&["veac", "build", "main.veac"]).command,
+        Command::Build { emit_ir: None, .. }
     ));
     assert!(matches!(
         parse(&[
@@ -71,6 +71,18 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
         ])
         .command,
         Command::Derive(_)
+    ));
+    assert!(matches!(
+        parse(&[
+            "veac",
+            "ingest-analysis",
+            "input.mp4",
+            "analysis.json",
+            "--store",
+            "cache"
+        ])
+        .command,
+        Command::IngestAnalysis(_)
     ));
     assert!(matches!(
         parse(&[
@@ -162,7 +174,6 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
         parse(&["veac", "probe", "clip.mp4"]).command,
         Command::Probe { .. }
     ));
-    assert!(Cli::try_parse_from(["veac", "build", "main.veac"]).is_err());
     assert!(Cli::try_parse_from(["veac", "batch", "main.veac"]).is_err());
     assert!(Cli::try_parse_from(["veac", "fmt", "x", "--check", "--stdout"]).is_err());
     assert!(Cli::try_parse_from([

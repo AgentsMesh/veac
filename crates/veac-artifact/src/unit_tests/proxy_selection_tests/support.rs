@@ -45,25 +45,25 @@ pub(super) fn proxy_descriptor(
     role: MediaRole,
     spec: MediaArtifactSpec,
 ) -> ArtifactDescriptor {
-    let kind = match role {
-        MediaRole::Video => ArtifactKind::ProxyVideo,
-        MediaRole::Audio => ArtifactKind::ProxyAudio,
+    let parameters = match spec {
+        MediaArtifactSpec::ProxyVideo(value) => ArtifactParameters::ProxyVideo(value),
+        MediaArtifactSpec::ProxyAudio(value) => ArtifactParameters::ProxyAudio(value),
+        _ => unreachable!(),
     };
-    descriptor(input, kind, serde_json::to_value(spec).unwrap())
+    let _ = role;
+    descriptor(input, parameters)
 }
 
 pub(super) fn descriptor(
     input: &veac_plan::ResolvedInput,
-    kind: ArtifactKind,
-    parameters: serde_json::Value,
+    parameters: ArtifactParameters,
 ) -> ArtifactDescriptor {
     ArtifactDescriptor::new(
-        kind,
         test_support::producer(),
-        vec![ArtifactDependency {
-            role: "input".into(),
-            identity: source(input),
-        }],
+        vec![ArtifactDependency::new(
+            ArtifactDependencyRole::Input,
+            source(input),
+        )],
         parameters,
     )
 }

@@ -94,6 +94,8 @@ mod timing_tests;
 mod transaction_edge_tests;
 #[path = "edit_tests/transition_edit_topology_tests.rs"]
 mod transition_edit_topology_tests;
+#[path = "edit_tests/transition_overlap_atomicity_tests.rs"]
+mod transition_overlap_atomicity_tests;
 #[path = "edit_tests/transition_overwrite_tests.rs"]
 mod transition_overwrite_tests;
 

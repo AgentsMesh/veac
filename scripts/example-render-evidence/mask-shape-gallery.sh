@@ -1,24 +1,33 @@
 #!/usr/bin/env bash
 
 mask_shape_canonical_contract() {
-  local canonical=$1 label=$2 root=${3:-.project}
-  jq -e --arg root "$root" '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 label=$2 root=${3:-.project} identity=${4:-$1}
+  local heart star linear mirror
+  heart=$(canonical_clip_id "$identity" heart); star=$(canonical_clip_id "$identity" star)
+  linear=$(canonical_clip_id "$identity" linear); mirror=$(canonical_clip_id "$identity" mirror)
+  jq -e --arg root "$root" --arg heart "$heart" --arg star "$star" \
+    --arg linear "$linear" --arg mirror "$mirror" '
+    def seconds: .value/.timescale;
     def clips: if $root == ".project" then .project.sequences[].tracks[].clips[]
       else .sequences[].tracks[].clips[] end;
     def clip($id): first(clips | select(.id == $id));
     def constant($v): {"type":"constant","value":$v};
+    def centered:
+      .visual.placement == {"anchor":"center","inset":{"x":0,"y":0},"type":"anchor"} and
+      .visual.frame == null and .visual.transform.anchor == {"x":0.5,"y":0.5};
     def contract($id;$start;$shape;$x;$y;$sx;$sy;$rotation):
-      clip($id) as $clip | $clip.record_range == {"start":t($start),"duration":t(1000)} and
+      clip($id) as $clip | ($clip.record_range.start | seconds) == $start and
+      ($clip.record_range.duration | seconds) == 1 and
+      ($clip | centered) and
       ($clip.visual.masks | length) == 1 and $clip.visual.masks[0] as $mask |
       $mask.shape == {"type":$shape} and $mask.position == constant({"x":$x,"y":$y}) and
       $mask.scale == constant({"x":$sx,"y":$sy}) and
       $mask.rotation_degrees == constant($rotation) and
       $mask.feather_pixels == constant(8) and $mask.invert == false;
-    contract("itm_heart";0;"heart";0.5;0.47;0.65;0.65;0) and
-    contract("itm_star";1000;"star";0.5;0.48;0.65;0.65;8) and
-    contract("itm_linear";2000;"linear";0.5;0.5;0.6;0.6;20) and
-    contract("itm_mirror";3000;"mirror";0.5;0.5;0.6;0.6;-12)
+    contract($heart;0;"heart";0.5;0.5;0.65;0.65;0) and
+    contract($star;1;"star";0.5;0.5;0.65;0.65;8) and
+    contract($linear;2;"linear";0.5;0.5;0.6;0.6;20) and
+    contract($mirror;3;"mirror";0.5;0.5;0.6;0.6;0)
   ' "$canonical" >/dev/null || fail "mask-shape-gallery $label mask contract failed"
 }
 
@@ -26,11 +35,13 @@ mask_shape_metrics() {
   local video=$1 time=$2 kind=$3
   ffmpeg -v error -ss "$time" -i "$video" -frames:v 1 -vf format=rgb24 -f rawvideo - |
     od -An -v -tu1 | awk -v width=480 -v height=270 -v kind="$kind" '
-      function is_hit(r,g,b) {
+      function is_hit(r,g,b,x,y,progress,background_b,alpha) {
         if (kind=="heart") return r>175 && g<145 && b>70
         if (kind=="star") return r>175 && g>135 && b<165
         if (kind=="linear") return r<115 && g>135 && b>110
-        return r>65 && g>95 && b>155
+        progress=(x/479+y/269)/2; background_b=32+(88-32)*progress
+        alpha=(b-background_b)/(247-background_b)
+        return alpha>.5 && b>r+35 && b>g+25
       }
       function transitions(y, x,last,value,total) {
         last=hit[y*width]+0
@@ -40,11 +51,12 @@ mask_shape_metrics() {
       }
       function row_hits(y, x,total) { for (x=0;x<width;x++) total+=hit[y*width+x]+0; return total+0 }
       { for (i=1;i<=NF;i++) { rgb[channel++]=$i
-          if (channel==3) { yes=is_hit(rgb[0],rgb[1],rgb[2]); hit[pixel]=yes
-            x=pixel%width; y=int(pixel/width)
+          if (channel==3) { x=pixel%width; y=int(pixel/width)
+            yes=is_hit(rgb[0],rgb[1],rgb[2],x,y); hit[pixel]=yes
             if (yes) { count++; if (!seen||x<minx) minx=x; if (!seen||x>maxx) maxx=x
               if (!seen||y<miny) miny=y; if (!seen||y>maxy) maxy=y
-              if (x<width/2) left++; else right++; seen=1 }
+              if (y<height*.75) { if (x<width/2) left++; else right++ }
+              seen=1 }
             channel=0; pixel++ } } }
       END {
         center=hit[135*width+240]+0; left_edge=0; right_edge=0
@@ -56,12 +68,12 @@ mask_shape_metrics() {
           if (edges>=4 && hits>lobe_hits) lobe_hits=hits }
         tl=hit[20*width+20]+0; br=hit[250*width+460]+0; spikes=0; gaps=0
         if (kind=="star") for (i=0;i<5;i++) {
-          theta=i*2*3.14159265/5; rot=8*3.14159265/180
+          theta=-3.14159265/2+i*2*3.14159265/5; rot=8*3.14159265/180
           lx=312*.34*cos(theta); ly=175.5*.34*sin(theta)
-          sx=int(240+cos(rot)*lx-sin(rot)*ly+.5); sy=int(129.6+sin(rot)*lx+cos(rot)*ly+.5)
+          sx=int(240+cos(rot)*lx-sin(rot)*ly+.5); sy=int(135+sin(rot)*lx+cos(rot)*ly+.5)
           spikes+=hit[sy*width+sx]+0
           theta+=(3.14159265/5); lx=312*.25*cos(theta); ly=175.5*.25*sin(theta)
-          sx=int(240+cos(rot)*lx-sin(rot)*ly+.5); sy=int(129.6+sin(rot)*lx+cos(rot)*ly+.5)
+          sx=int(240+cos(rot)*lx-sin(rot)*ly+.5); sy=int(135+sin(rot)*lx+cos(rot)*ly+.5)
           gaps+=hit[sy*width+sx]+0
         }
         print count+0,minx+0,maxx+0,miny+0,maxy+0,center,left_edge,right_edge,
@@ -107,11 +119,11 @@ check_mask_shape_gallery_evidence() {
   [[ -d $dir ]] || return 0
   local author preview plan video
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_preview); video=$(delivery_video_path "$dir" preview preview)
+  plan=$(delivery_plan_path "$dir" preview); video=$(delivery_video_path "$dir" preview preview.mp4)
   for file in "$author" "$preview" "$plan" "$video"; do require_file "$file"; done
   mask_shape_canonical_contract "$author" authoring
   mask_shape_canonical_contract "$preview" preview
-  mask_shape_canonical_contract "$plan" plan .plan
+  mask_shape_canonical_contract "$plan" plan .plan "$author"
   video_contract "$video" 3.9
   assert_stream_field "$video" v:0 width 480 "mask-shape-gallery video"
   assert_stream_field "$video" v:0 height 270 "mask-shape-gallery video"

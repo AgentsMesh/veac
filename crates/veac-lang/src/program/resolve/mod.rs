@@ -1,109 +1,83 @@
 mod active;
-mod components;
 mod constants;
+mod entry;
+mod functions;
+mod inputs;
+mod methods;
 mod names;
-mod presets;
 mod retained;
+mod standalone;
+mod type_annotations;
+mod types;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use super::diagnostic::Diagnostic;
-use super::expand::definition::Budget as DefinitionBudget;
+use super::expression::ExecutionBudget;
 use super::limits::SourceBudget;
 use super::loader::{validate_source_id, LoadedSource, SourceLoader};
-use super::model::{ComponentCatalog, FileKind, Scope, SurfaceFile};
+use super::model::{FileKind, Scope, SurfaceFile};
 use super::parser;
+
+pub(crate) use entry::resolve as executable_entry;
+pub(crate) use standalone::resolve as standalone_module;
+
 pub(crate) struct Resolution {
     pub entry: SurfaceFile,
     pub scope: Scope,
-    pub component_catalog: ComponentCatalog,
     pub sources: BTreeMap<String, String>,
-}
-pub(crate) fn entry(
-    root: LoadedSource,
-    loader: &dyn SourceLoader,
-) -> Result<Resolution, Vec<Diagnostic>> {
-    validate_source_id(&root.id).map_err(|message| {
-        vec![Diagnostic::new(
-            "PROGRAM_SOURCE_ID",
-            &root.id,
-            message,
-            crate::authoring::Span::default(),
-        )]
-    })?;
-    let mut budget = SourceBudget::default();
-    budget
-        .add(&root.id, &root.source, crate::authoring::Span::default())
-        .map_err(|error| vec![error])?;
-    let entry = parser::parse(&root.id, &root.source)?;
-    if !matches!(entry.kind, FileKind::Entry) {
-        return Err(vec![Diagnostic::new(
-            "PROGRAM_ENTRY_MODULE",
-            &root.id,
-            "entry path contains a module instead of a project",
-            crate::authoring::Span::default(),
-        )]);
-    }
-    let mut resolver = Resolver::new(loader, budget);
-    resolver
-        .sources
-        .insert(root.id.clone(), root.source.clone());
-    resolver.active.push(root.id.clone());
-    let result = resolver.scope(&entry, false);
-    resolver.active.pop();
-    let scope = result.map_err(|error| vec![error])?;
-    Ok(Resolution {
-        entry,
-        scope,
-        component_catalog: resolver.component_catalog,
-        sources: resolver.sources,
-    })
 }
 struct Resolver<'a> {
     loader: &'a dyn SourceLoader,
     cache: BTreeMap<String, Arc<Scope>>,
     active: Vec<String>,
     sources: BTreeMap<String, String>,
-    component_catalog: ComponentCatalog,
     budget: SourceBudget,
-    definitions: DefinitionBudget,
     retained: retained::Budget,
+    execution: &'a ExecutionBudget,
 }
 
 impl<'a> Resolver<'a> {
-    fn new(loader: &'a dyn SourceLoader, budget: SourceBudget) -> Self {
+    fn new(
+        loader: &'a dyn SourceLoader,
+        budget: SourceBudget,
+        execution: &'a ExecutionBudget,
+    ) -> Self {
         Self {
             loader,
             cache: BTreeMap::new(),
             active: Vec::new(),
             sources: BTreeMap::new(),
-            component_catalog: ComponentCatalog::new(),
             budget,
-            definitions: DefinitionBudget::default(),
             retained: retained::Budget::default(),
+            execution,
         }
     }
 
     fn scope(&mut self, file: &SurfaceFile, exports_only: bool) -> Result<Scope, Diagnostic> {
         let mut scope = Scope::default();
         self.imports(file, &mut scope)?;
-        let exported_values = constants::resolve(file, &mut scope, &mut self.retained)?;
-        let exported_presets =
-            presets::resolve(file, &mut scope, &mut self.definitions, &mut self.retained)?;
-        let exported_components = components::resolve(
+        let exported_types = types::resolve(file, &mut scope, &mut self.retained)?;
+        inputs::resolve(file, &mut scope)?;
+        methods::declare(file, &mut scope, &mut self.retained)?;
+        types::validate_exports(file, &scope, &exported_types)?;
+        let constant_types = constants::declaration_types(file, &scope)?;
+        let provisional_functions = functions::provisional(file, &scope, &constant_types)?;
+        let exported_values = constants::resolve(
             file,
             &mut scope,
-            &mut self.component_catalog,
-            &mut self.definitions,
             &mut self.retained,
+            self.execution,
+            provisional_functions,
+            constant_types,
         )?;
+        let exported_functions = functions::resolve(file, &mut scope, &mut self.retained)?;
         if exports_only {
+            types::retain_exports(file, &mut scope, &exported_types)?;
+            methods::retain_exports(&mut scope);
+            functions::retain_exports(&mut scope, &exported_functions);
             Arc::make_mut(&mut scope.values).retain(|name, _| exported_values.contains(name));
-            Arc::make_mut(&mut scope.presets).retain(|key, _| exported_presets.contains(key));
-            scope
-                .components
-                .retain(|name, _| exported_components.contains(name));
         }
         Ok(scope)
     }
@@ -189,6 +163,3 @@ impl<'a> Resolver<'a> {
         self.scope(&file, true)
     }
 }
-
-#[cfg(test)]
-mod tests;

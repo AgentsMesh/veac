@@ -1,63 +1,136 @@
-project delivery-closed-sets {
-  settings {
-    canvas 320px by 180px;
-    frame-rate 24fps;
-    sample-rate 48000hz;
-    timebase 1/1000;
-  }
-  entry sequence main;
-  sequence main {
-    layer visual picture {
-      item background {
-        source generated solid { color #202020ff; }
-        record { at 0s; duration 1s; }
-      }
-    }
-    layer caption captions {
-      item caption {
-        source caption { content "Closed delivery sets"; }
-        record { at 0s; duration 1s; }
-      }
-    }
-  }
+fn state() -> TrackState {
+  track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  )
+}
 
-  delivery closed-sets {
-    sequence main;
-    raster { canvas 320px by 180px; frame-rate 24fps; captions discard; }
+fn encoded(
+  codec: VideoCodec, pixel: PixelFormat, rate: VideoRateControl,
+  profile: VideoProfileChoice, level: VideoLevelChoice
+) -> VideoOutput {
+  video_output(
+    codec, pixel, alpha_opaque(), video_color_unspecified(), rate,
+    gop_auto(), b_frames_auto(), profile, level
+  )
+}
 
-    artifact video h264-mp4 { target file "h264.mp4"; mux mp4 { video h264 {} audio none; } }
-    artifact video h265-mkv { target file "h265.mkv"; mux mkv { video h265 {} audio none; } }
-    artifact video vp9-webm { target file "vp9.webm"; mux webm { video vp9 {} audio none; } }
-    artifact video av1-mkv { target file "av1.mkv"; mux mkv { video av1 {} audio none; } }
-    artifact video prores-mov { target file "prores.mov"; mux mov { video prores { pixel-format yuva444p10le; alpha straight; profile prores-4444; rate-control lossless; } audio none; } }
-    artifact video dnxhr-mxf { target file "dnxhr.mxf"; mux mxf { video dnxhr { pixel-format yuv422p; profile dnxhr-hq; rate-control lossless; } audio none; } }
+fn movie(
+  key: identifier, target: text, container: OutputContainer,
+  video: VideoOutput, audio: EmbeddedAudioChoice, streaming: bool
+) -> Deliverable {
+  deliverable_video(
+    key, delivery_file(target),
+    video_delivery(container, video, audio, streaming, pass_single(), hardware_software())
+  )
+}
 
-    artifact video audio-aac { target file "aac.mp4"; mux mp4 { video h264 {} audio aac { sample-rate 48khz; channel-layout stereo; } } }
-    artifact video audio-opus { target file "opus.webm"; mux webm { video vp9 {} audio opus { sample-rate 48khz; channel-layout stereo; } } }
-    artifact video audio-pcm16 { target file "pcm16.mov"; mux mov { video h264 {} audio pcm-s16le { sample-rate 48khz; channel-layout stereo; } } }
-    artifact video audio-pcm24 { target file "pcm24.mov"; mux mov { video h264 {} audio pcm-s24le { sample-rate 48khz; channel-layout stereo; } } }
-    artifact video audio-pcm32 { target file "pcm32.mov"; mux mov { video h264 {} audio pcm-s32le { sample-rate 48khz; channel-layout stereo; } } }
-    artifact video audio-flac { target file "flac.mkv"; mux mkv { video h264 {} audio flac { sample-rate 48khz; channel-layout stereo; } } }
-
-    artifact image-sequence image-png { target pattern "png-%04d.png"; numbering from 0; encode png; }
-    artifact image-sequence image-jpeg { target pattern "jpeg-%04d.jpg"; numbering from 0; encode jpeg; }
-    artifact image-sequence image-tiff { target pattern "tiff-%04d.tiff"; numbering from 0; encode tiff; }
-    artifact image-sequence image-exr { target pattern "exr-%04d.exr"; numbering from 0; encode exr; }
-
-    artifact caption-sidecar caption-srt { target file "captions.srt"; source caption-tracks { track captions; } encode srt; }
-    artifact caption-sidecar caption-webvtt { target file "captions.vtt"; source caption-tracks { track captions; } encode web-vtt; }
-    artifact caption-sidecar caption-ass { target file "captions.ass"; source caption-tracks { track captions; } encode ass; }
-
-    artifact audio-stem stem-wav { target file "master.wav"; source master; encode wav { sample-format pcm-s16le; sample-rate 48khz; channel-layout stereo; } }
-    artifact audio-stem stem-flac { target file "master.flac"; source master; encode flac { sample-rate 48khz; channel-layout stereo; } }
-
-    artifact scope scope-waveform { target file "waveform.png"; analyze waveform; frame containing 0s; canvas 320px by 180px; encode png; }
-    artifact scope scope-vectorscope { target file "vectorscope.png"; analyze vectorscope; frame containing 0s; canvas 320px by 180px; encode png; }
-    artifact scope scope-histogram { target file "histogram.png"; analyze histogram; frame containing 0s; canvas 320px by 180px; encode png; }
-
-    artifact audio-file audio-mp3 { target file "master.mp3"; source master; encode mp3 { bitrate 192kbps; sample-rate 48khz; channel-layout stereo; } }
-    artifact animated-image image-gif { target file "preview.gif"; encode gif { playback forever; dither sierra2; } }
-    artifact still-image image-still { target file "still.png"; frame containing 500ms; encode png; }
-    artifact adaptive-package package-hls { target package "stream"; package hls { segment-duration 1s; audio none; rendition hd { canvas 320px by 180px; encode h264 { rate-control capped { target 1mbps; max 1100kbps; buffer 2mbit; } } } rendition sd { canvas 160px by 90px; encode h264 { rate-control capped { target 400kbps; max 440kbps; buffer 800kbit; } } } } }
-  }
+fn main(context: Context) -> Project {
+  let visual = visual_layer(
+    identifier("visual"), 0, placement_free(), state(), track_routing_default()
+  ).with_item(item(
+    identifier("background"), item_enabled(), during(0s, 1s),
+    source_generated(generator_solid(#202020ff)), source_timing_native()
+  ));
+  let captions = caption_layer(
+    identifier("captions"), 1, placement_free(), state(), track_routing_default()
+  );
+  let timeline = sequence(
+    identifier("main"), "交付类型闭集验证",
+    sequence_settings(canvas(320px, 180px), frame_rate(24, 1), 48000)
+  ).with_layer(visual).with_layer(captions);
+  let h264 = encoded(
+    video_h264(), pixel_yuv420p(), video_crf(23),
+    video_profile_present(profile_h264_high()), video_level_auto()
+  );
+  let h265 = encoded(
+    video_h265(), pixel_yuv420p10le(), video_crf(28),
+    video_profile_present(profile_h265_main10()), video_level_auto()
+  );
+  let vp9 = encoded(
+    video_vp9(), pixel_yuv420p(), video_crf(30),
+    video_profile_present(profile_vp9_0()), video_level_auto()
+  );
+  let av1 = encoded(
+    video_av1(), pixel_yuv420p(), video_crf(30),
+    video_profile_present(profile_av1_main()), video_level_auto()
+  );
+  let prores = video_output(
+    video_prores(), pixel_yuva444p10le(), alpha_straight(), video_color_unspecified(),
+    video_lossless(), gop_auto(), b_frames_auto(),
+    video_profile_present(profile_prores_4444()), video_level_auto()
+  );
+  let dnxhr = encoded(
+    video_dnxhr(), pixel_yuv422p(), video_lossless(),
+    video_profile_present(profile_dnxhr_hq()), video_level_auto()
+  );
+  let artifacts = [
+    movie(identifier("h264-mp4"), "h264.mp4", container_mp4(), h264,
+      embedded_audio_none(), true),
+    movie(identifier("h265-mkv"), "h265.mkv", container_mkv(), h265,
+      embedded_audio_none(), false),
+    movie(identifier("vp9-webm"), "vp9.webm", container_webm(), vp9,
+      embedded_audio_none(), false),
+    movie(identifier("av1-mkv"), "av1.mkv", container_mkv(), av1,
+      embedded_audio_none(), false),
+    movie(identifier("prores-mov"), "prores.mov", container_mov(), prores,
+      embedded_audio_none(), false),
+    movie(identifier("dnxhr-mxf"), "dnxhr.mxf", container_mxf(), dnxhr,
+      embedded_audio_none(), false),
+    movie(identifier("audio-aac"), "aac.mp4", container_mp4(), h264,
+      embedded_audio_present(audio_output(audio_aac(), 48000, 2)), true),
+    movie(identifier("audio-opus"), "opus.webm", container_webm(), vp9,
+      embedded_audio_present(audio_output(audio_opus(), 48000, 2)), false),
+    movie(identifier("audio-pcm16"), "pcm16.mov", container_mov(), h264,
+      embedded_audio_present(audio_output(audio_pcm_s16le(), 48000, 2)), false),
+    movie(identifier("audio-pcm24"), "pcm24.mov", container_mov(), h264,
+      embedded_audio_present(audio_output(audio_pcm_s24le(), 48000, 2)), false),
+    movie(identifier("audio-pcm32"), "pcm32.mov", container_mov(), h264,
+      embedded_audio_present(audio_output(audio_pcm_s32le(), 48000, 2)), false),
+    movie(identifier("audio-flac"), "flac.mkv", container_mkv(), h264,
+      embedded_audio_present(audio_output(audio_flac(), 48000, 2)), false),
+    deliverable_image_frames(identifier("image-png"),
+      delivery_image_sequence("png-%04d.png"), image_png(), 0),
+    deliverable_image_frames(identifier("image-jpeg"),
+      delivery_image_sequence("jpeg-%04d.jpg"), image_jpeg(), 0),
+    deliverable_image_frames(identifier("image-tiff"),
+      delivery_image_sequence("tiff-%04d.tiff"), image_tiff(), 0),
+    deliverable_image_frames(identifier("image-exr"),
+      delivery_image_sequence("exr-%04d.exr"), image_exr(), 0),
+    deliverable_caption_sidecar(identifier("caption-srt"),
+      delivery_file("captions.srt"), caption_srt(), [captions]),
+    deliverable_caption_sidecar(identifier("caption-webvtt"),
+      delivery_file("captions.vtt"), caption_webvtt(), [captions]),
+    deliverable_caption_sidecar(identifier("caption-ass"),
+      delivery_file("captions.ass"), caption_ass(), [captions]),
+    deliverable_audio_stem(identifier("stem-wav"), delivery_file("master.wav"),
+      stem_wav(), audio_output(audio_pcm_s16le(), 48000, 2), mix_master()),
+    deliverable_audio_stem(identifier("stem-flac"), delivery_file("master.flac"),
+      stem_flac(), audio_output(audio_flac(), 48000, 2), mix_master()),
+    deliverable_scope(identifier("scope-waveform"), delivery_file("waveform.png"),
+      scope_waveform(), 0s, canvas(320px, 180px), image_png()),
+    deliverable_scope(identifier("scope-vectorscope"), delivery_file("vectorscope.png"),
+      scope_vectorscope(), 0s, canvas(320px, 180px), image_png()),
+    deliverable_scope(identifier("scope-histogram"), delivery_file("histogram.png"),
+      scope_histogram(), 0s, canvas(320px, 180px), image_png()),
+    deliverable_mp3(identifier("audio-mp3"), delivery_file("master.mp3"),
+      mix_master(), 192000, 48000, channel_stereo()),
+    deliverable_gif(identifier("image-gif"), delivery_file("preview.gif"),
+      gif_forever(), gif_dither_sierra2()),
+    deliverable_still(identifier("image-still"), delivery_file("still.png"),
+      500ms, image_png()),
+    deliverable_hls(identifier("package-hls"), delivery_package("stream"), 1s,
+      hls_audio_none(), [hls_rendition(
+        identifier("sd"), canvas(320px, 180px), 400000, 440000, 800000,
+        hls_profile_present(hls_profile_main()), video_level_auto(),
+        video_color_unspecified(), b_frames_auto()
+      )])
+  ];
+  let output = delivery(
+    identifier("closed-sets"), timeline,
+    raster_settings(canvas(320px, 180px), frame_rate(24, 1), caption_discard()),
+    artifacts
+  );
+  project(identifier("delivery-closed-sets"), project_settings(600))
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

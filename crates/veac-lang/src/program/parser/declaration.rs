@@ -1,12 +1,13 @@
 use super::{kind, Parser};
 use crate::program::diagnostic::Diagnostic;
-use crate::program::model::{ConstDecl, ImportDecl, PresetDecl};
+use crate::program::model::{ConstDecl, ImportDecl};
 use crate::program::token::TokenKind;
+use crate::vocabulary::control_uses::static_program as controls;
 
 pub(super) fn import(parser: &mut Parser<'_>) -> Result<ImportDecl, Diagnostic> {
-    let start = parser.expect_word("import")?;
+    let start = parser.expect_control(controls::IMPORT_DECLARATION)?;
     let (path, _) = parser.string("relative module path")?;
-    parser.expect_word("as")?;
+    parser.expect_control(controls::IMPORT_AS_CLAUSE)?;
     let (alias, _) = parser.identifier("import alias")?;
     let end = parser.expect(TokenKind::Semicolon, "`;`")?;
     Ok(ImportDecl {
@@ -17,31 +18,21 @@ pub(super) fn import(parser: &mut Parser<'_>) -> Result<ImportDecl, Diagnostic> 
 }
 
 pub(super) fn constant(parser: &mut Parser<'_>, exported: bool) -> Result<ConstDecl, Diagnostic> {
-    let start = parser.expect_word("const")?;
-    let value_type = kind::value(parser)?;
+    let start = parser.expect_control(controls::CONST_DECLARATION)?;
+    let type_syntax = kind::value(parser)?;
     let (name, _) = parser.identifier("constant name")?;
     parser.expect(TokenKind::Equals, "`=`")?;
-    let (expression, expression_span) = parser.expression_until_semicolon()?;
+    let (expression, expression_span, end) = parser.expression_until_semicolon()?;
     Ok(ConstDecl {
         name,
-        value_type,
+        type_syntax,
         expression,
         expression_span,
         exported,
-        span: start.join(expression_span),
+        span: start.join(end),
     })
 }
 
-pub(super) fn preset(parser: &mut Parser<'_>, exported: bool) -> Result<PresetDecl, Diagnostic> {
-    let start = parser.expect_word("preset")?;
-    let kind = kind::preset(parser)?;
-    let (name, _) = parser.identifier("preset name")?;
-    let body = parser.raw_block()?;
-    Ok(PresetDecl {
-        kind,
-        name,
-        exported,
-        span: start.join(body.span),
-        body,
-    })
-}
+#[cfg(test)]
+#[path = "declaration/tests.rs"]
+mod tests;

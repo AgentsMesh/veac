@@ -1,4 +1,5 @@
 mod cue;
+mod native;
 mod style;
 
 use std::{collections::BTreeSet, fmt};
@@ -69,7 +70,7 @@ pub fn validate(value: &CaptionEnvelope) -> Result<(), ValidationErrors> {
         "$.document.language",
         document.language.as_deref(),
     );
-    settings(&mut issues, "$.document.settings", &document.settings);
+    native::document(document.native.as_ref(), &mut issues);
     style::validate_styles(document, &mut issues);
     cue::validate_cues(document, &mut issues);
     if issues.is_empty() {
@@ -90,19 +91,6 @@ pub(crate) fn issue(issues: &mut Vec<ValidationIssue>, path: &str, code: &str, m
 pub(crate) fn optional_text(issues: &mut Vec<ValidationIssue>, path: &str, value: Option<&str>) {
     if value.is_some_and(|text| text.trim().is_empty()) {
         issue(issues, path, "EMPTY", "must be absent or nonempty");
-    }
-}
-
-pub(crate) fn settings(
-    issues: &mut Vec<ValidationIssue>,
-    path: &str,
-    values: &std::collections::BTreeMap<String, String>,
-) {
-    if values
-        .iter()
-        .any(|(key, value)| key.trim().is_empty() || value.trim().is_empty())
-    {
-        issue(issues, path, "SETTING", "keys and values must be nonempty");
     }
 }
 

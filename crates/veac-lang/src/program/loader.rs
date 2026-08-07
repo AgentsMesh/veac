@@ -16,6 +16,3 @@ pub struct LoadedSource {
 pub trait SourceLoader {
     fn load(&self, importer: &str, requested: &str) -> Result<LoadedSource, String>;
 }
-
-#[cfg(test)]
-pub(crate) use path::normalize;

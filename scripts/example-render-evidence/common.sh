@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/example-preview-layout.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/example-preview-delivery.sh"
+# shellcheck source=example-render-evidence/resolution-chain.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/resolution-chain.sh"
 
 fail() {
   echo "render evidence check failed: $*" >&2
@@ -12,34 +15,61 @@ require_file() {
   [[ -s $path ]] || fail "missing or empty artifact: $path"
 }
 
-delivery_video_path() {
-  local example_dir=$1 delivery_id=$2 artifact_id=$3
-  local canonical
-  canonical=$(example_preview_canonical "$example_dir")
-  [[ $delivery_id =~ ^[a-z][a-z0-9-]*$ ]] || fail "unsafe delivery ID: $delivery_id"
-  [[ $artifact_id =~ ^[a-z][a-z0-9-]*$ ]] || fail "unsafe artifact ID: $artifact_id"
-  require_file "$canonical"
+canonical_clip_id() {
+  local canonical=$1 logical_key=$2
+  [[ $logical_key =~ ^[a-z][a-z0-9-]*$ ]] || fail "unsafe clip logical key: $logical_key"
+  jq -er --arg key "$logical_key" '
+    [.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key) | .id] |
+    if length == 1 then .[0] else error("clip logical key is not unique") end
+  ' "$canonical" || fail "cannot resolve clip logical key: $logical_key"
+}
 
-  local config_id="out_$delivery_id" deliverable_id="dlv_$artifact_id" file_name
-  file_name=$(jq -er --arg config "$config_id" --arg artifact "$deliverable_id" '
+canonical_sequence_id() {
+  local canonical=$1 logical_key=$2
+  [[ $logical_key =~ ^[a-z][a-z0-9-]*$ ]] || fail "unsafe sequence logical key: $logical_key"
+  jq -er --arg key "$logical_key" '
+    [.project.sequences[] |
+      select(.authorship.type == "veac" and
+        .authorship.entity.logical_path[-1] == $key) | .id] |
+    if length == 1 then .[0] else error("sequence logical key is not unique") end
+  ' "$canonical" || fail "cannot resolve sequence logical key: $logical_key"
+}
+
+delivery_plan_path() {
+  local example_dir=$1 logical_key=$2 canonical config
+  canonical=$(example_preview_canonical "$example_dir")
+  require_file "$canonical"
+  config=$(delivery_config_id "$canonical" "$logical_key") ||
+    fail "cannot resolve delivery plan: $logical_key"
+  example_preview_plan "$example_dir" "$config"
+}
+
+delivery_video_path() {
+  local example_dir=$1 logical_key=$2 target_name=$3
+  local canonical config file_name
+  canonical=$(example_preview_canonical "$example_dir")
+  [[ $target_name =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] ||
+    fail "unsafe video target basename: $target_name"
+  [[ $target_name != *..* ]] || fail "unsafe video target basename: $target_name"
+  require_file "$canonical"
+  config=$(delivery_config_id "$canonical" "$logical_key") ||
+    fail "cannot resolve delivery: $logical_key"
+  file_name=$(jq -er --arg config "$config" --arg target "$target_name" '
     [.project.render_configs[]? | select(.id == $config)] as $configs
     | if ($configs | length) != 1 then
         error("expected exactly one render config")
       else
         [$configs[0].deliverables[]? |
-          select(.id == $artifact and .kind.type == "video")] as $videos
+          select(.kind.type == "video" and .target.type == "file" and
+            .target.name == $target)] as $videos
         | if ($videos | length) != 1 then
             error("expected exactly one video deliverable")
-          elif $videos[0].target.type != "file" then
-            error("video deliverable requires a file target")
           else $videos[0].target.name
           end
       end
     | select(type == "string" and length > 0)
-  ' "$canonical") || fail "cannot resolve video artifact: $delivery_id/$artifact_id"
-  [[ $file_name =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] ||
-    fail "unsafe video deliverable basename: $file_name"
-  [[ $file_name != *..* ]] || fail "unsafe video deliverable basename: $file_name"
+  ' "$canonical") || fail "cannot resolve video target: $logical_key/$target_name"
   printf '%s/rendered/%s\n' "$example_dir" "$file_name"
 }
 

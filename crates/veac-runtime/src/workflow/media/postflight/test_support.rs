@@ -100,16 +100,6 @@ pub(super) fn audio_spec() -> MediaArtifactSpec {
     })
 }
 
-pub(super) fn analysis_case() -> (MediaArtifactSpec, MediaProbeSnapshot) {
-    pair(
-        MediaArtifactSpec::Analysis(AnalysisSpec {
-            analysis_type: "scene".into(),
-            configuration: serde_json::json!({}),
-        }),
-        vec![video("png", 1, 1, Some(rate(1)), None, false)],
-    )
-}
-
 fn pair(
     spec: MediaArtifactSpec,
     streams: Vec<ProbedStream>,

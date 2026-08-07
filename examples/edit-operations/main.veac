@@ -1,0 +1,60 @@
+import "./showcase.veac" as showcase;
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let first = showcase.solid(identifier("first"), #2563ebff, 0s, 2s);
+  let second = showcase.solid(identifier("second"), #db2777ff, 2s, 2s);
+  let scenes = visual_layer(
+    identifier("scenes"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(first).with_item(second);
+  let labels = visual_layer(
+    identifier("labels"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 4s),
+    source_text(
+      "编辑操作：分组移动、独立裁剪、音视频同时分割与删除",
+      showcase.caption_style(font, 34px, 600px)
+    ), source_timing_native()
+  ));
+  let linked_video = item(
+    identifier("linked-video"), item_disabled(), during(0s, 4s),
+    source_generated(generator_transparent()), source_timing_native()
+  );
+  let linked_audio = item(
+    identifier("linked-audio"), item_disabled(), during(0s, 4s),
+    source_generated(generator_silence()), source_timing_native()
+  );
+  let trimmable = item(
+    identifier("trimmable"), item_disabled(), during(0s, 4s),
+    source_generated(generator_transparent()), source_timing_native()
+  );
+  let removable = item(
+    identifier("removable"), item_disabled(), during(0s, 4s),
+    source_generated(generator_transparent()), source_timing_native()
+  );
+  let linked_visuals = visual_layer(
+    identifier("linked-visuals"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(linked_video);
+  let linked_audio_track = audio_layer(
+    identifier("linked-audio"), 3, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(linked_audio);
+  let trimmable_items = visual_layer(
+    identifier("trimmable-items"), 4, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(trimmable);
+  let removable_items = visual_layer(
+    identifier("removable-items"), 5, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(removable);
+  let timeline = sequence(
+    identifier("main"), "编辑操作工作流夹具",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(scenes).with_layer(labels).with_layer(linked_visuals)
+    .with_layer(linked_audio_track).with_layer(trimmable_items).with_layer(removable_items)
+    .with_relation(relation_group(identifier("edit-group"), [first, second]))
+    .with_relation(relation_av_link(identifier("linked-av"), linked_video, [linked_audio]));
+  let output = showcase.video(timeline, canvas(640px, 360px), frame_rate(30, 1), false, false);
+  project(identifier("edit-operations"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
+}

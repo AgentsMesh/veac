@@ -13,11 +13,9 @@ impl Validator {
         sample_rate: u32,
         path: &str,
     ) {
-        self.metadata(
-            &clip.metadata,
-            &format!("{path}/metadata"),
-            clip.id.as_str(),
-        );
+        if let Some(authorship) = &clip.authorship {
+            self.entity_authorship(authorship, &format!("{path}/authorship"), clip.id.as_str());
+        }
         let timed_source = matches!(
             clip.source,
             ClipSource::Media { .. } | ClipSource::Sequence { .. }
@@ -88,6 +86,16 @@ impl Validator {
             if invalid {
                 self.value_error("CAPTION_SPEAKER", path, clip.id.as_str());
             }
+        }
+        if let ClipSource::Caption { text, cue, .. } = &clip.source {
+            self.caption_semantics(
+                cue,
+                text,
+                clip.record_range,
+                timebase,
+                &format!("{path}/source/cue"),
+                clip.id.as_str(),
+            );
         }
         let text_style = match &clip.source {
             ClipSource::Text { text, style } => Some((text, style)),

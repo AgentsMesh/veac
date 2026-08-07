@@ -1,6 +1,7 @@
-use veac_plan::canonical::{Animatable, Keyframe, Point, Vec2};
+use veac_plan::canonical::{Animatable, Keyframe, Point, TemporalValue, Vec2};
+use veac_plan::{ResolvedClip, ResolvedRenderPlan};
 
-use crate::emitter::geometry;
+use crate::emitter::{geometry, process_owner::ProcessOwner, temporal, text::error::TextError};
 
 pub(super) fn constant<T>(value: &Animatable<T>) -> bool {
     matches!(value, Animatable::Constant { .. })
@@ -14,6 +15,27 @@ pub(super) fn number(value: &Animatable<f64>, seconds: f64) -> f64 {
             Location::Value(value) => *value,
             Location::Between(left, right, amount) => left + (right - left) * amount,
         },
+        Animatable::Binding { .. } => {
+            unreachable!("temporal bindings are rejected by codegen preflight")
+        }
+    }
+}
+
+pub(super) fn bound_number(
+    plan: &ResolvedRenderPlan,
+    clip: &ResolvedClip,
+    value: &Animatable<f64>,
+    seconds: f64,
+) -> Result<f64, TextError> {
+    let Animatable::Binding { binding_id } = value else {
+        return Ok(number(value, seconds));
+    };
+    match evaluate(plan, clip, binding_id, seconds)? {
+        TemporalValue::Scalar { value } => Ok(value),
+        TemporalValue::Angle { degrees } => Ok(degrees),
+        _ => Err(TextError::invalid(
+            "temporal text number has the wrong type",
+        )),
     }
 }
 
@@ -31,6 +53,28 @@ pub(super) fn point(value: &Animatable<Point>, seconds: f64, surface: (u32, u32)
             Location::Value(value) => resolve(value),
             Location::Between(left, right, amount) => pair(resolve(left), resolve(right), amount),
         },
+        Animatable::Binding { .. } => {
+            unreachable!("temporal bindings are rejected by codegen preflight")
+        }
+    }
+}
+
+pub(super) fn bound_point(
+    plan: &ResolvedRenderPlan,
+    clip: &ResolvedClip,
+    value: &Animatable<Point>,
+    seconds: f64,
+    surface: (u32, u32),
+) -> Result<(f64, f64), TextError> {
+    let Animatable::Binding { binding_id } = value else {
+        return Ok(point(value, seconds, surface));
+    };
+    match evaluate(plan, clip, binding_id, seconds)? {
+        TemporalValue::Point { value } => Ok((
+            geometry::pixel_value(value.x, surface.0),
+            geometry::pixel_value(value.y, surface.1),
+        )),
+        _ => Err(TextError::invalid("temporal text point has the wrong type")),
     }
 }
 
@@ -43,7 +87,37 @@ pub(super) fn vec2(value: &Animatable<Vec2>, seconds: f64) -> (f64, f64) {
             Location::Value(value) => resolve(value),
             Location::Between(left, right, amount) => pair(resolve(left), resolve(right), amount),
         },
+        Animatable::Binding { .. } => {
+            unreachable!("temporal bindings are rejected by codegen preflight")
+        }
     }
+}
+
+pub(super) fn bound_vec2(
+    plan: &ResolvedRenderPlan,
+    clip: &ResolvedClip,
+    value: &Animatable<Vec2>,
+    seconds: f64,
+) -> Result<(f64, f64), TextError> {
+    let Animatable::Binding { binding_id } = value else {
+        return Ok(vec2(value, seconds));
+    };
+    match evaluate(plan, clip, binding_id, seconds)? {
+        TemporalValue::Vec2 { value } => Ok((value.x, value.y)),
+        _ => Err(TextError::invalid(
+            "temporal text vector has the wrong type",
+        )),
+    }
+}
+
+fn evaluate(
+    plan: &ResolvedRenderPlan,
+    clip: &ResolvedClip,
+    binding_id: &veac_plan::canonical::TemporalBindingId,
+    seconds: f64,
+) -> Result<TemporalValue, TextError> {
+    temporal::evaluate_binding(plan, binding_id, ProcessOwner::clip(clip), seconds)
+        .map_err(|error| TextError::new(error.code, error.message))
 }
 
 enum Location<'a, T> {

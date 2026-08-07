@@ -61,7 +61,6 @@ pub(super) fn validate(
             }
             Ok(())
         }
-        MediaArtifactSpec::Analysis(_) => invalid("analysis artifacts do not run FFmpeg"),
     }
 }
 

@@ -10,10 +10,12 @@ mod source_graph;
 mod source_location;
 mod source_lock;
 
-pub(crate) use source_graph::ensure_source_graph_unchanged;
+pub(crate) use source_graph::{ensure_source_graph_unchanged, ensure_source_modules_unchanged};
 pub(crate) use source_location::SourceLocation;
-pub(crate) use source_lock::SourceGraphLock;
 pub(crate) use source_lock::SOURCE_LOCK_NAME;
+pub(crate) use source_lock::{
+    SourceGraphLock, SourceGraphReadLock, SourceModuleGuard, SourceModuleReplacement,
+};
 
 pub(crate) fn read_utf8(path: &Path, role: &str) -> CliResult<String> {
     read_utf8_bounded(path, role, veac_artifact::MAX_IN_MEMORY_ARTIFACT_BYTES)
@@ -143,6 +145,22 @@ pub(crate) fn canonical_file(path: &Path, role: &str) -> CliResult<PathBuf> {
         return Err(CliError::new(
             "NOT_A_FILE",
             format!("{role} {} is not a regular file", path.display()),
+        ));
+    }
+    Ok(canonical)
+}
+
+pub(crate) fn canonical_directory(path: &Path, role: &str) -> CliResult<PathBuf> {
+    let canonical = fs::canonicalize(path).map_err(|error| {
+        CliError::new(
+            "PATH_UNAVAILABLE",
+            format!("cannot resolve {role} {}: {error}", path.display()),
+        )
+    })?;
+    if !canonical.is_dir() {
+        return Err(CliError::new(
+            "NOT_A_DIRECTORY",
+            format!("{role} {} is not a directory", path.display()),
         ));
     }
     Ok(canonical)

@@ -1,9 +1,18 @@
-//! Agent-oriented VEAC authoring language lowered directly to canonical IR.
+//! Agent-oriented executable VEAC language evaluated into canonical IR.
 
-pub mod authoring;
+#[cfg(test)]
+extern crate self as veac_lang;
+
+mod authoring;
 mod name;
 pub mod program;
 pub mod source_edit;
 mod string_codec;
+mod syntax_token;
+pub mod vocabulary;
 
-pub use authoring::{format_document, lower_document, parse, Diagnostics, Document};
+pub use syntax_token::SyntaxToken;
+pub(crate) use syntax_token::{
+    define_syntax_tokens, impl_composite_syntax_tokens, impl_local_syntax_token_array_body,
+    impl_local_syntax_token_body, impl_local_syntax_tokens, impl_syntax_tokens,
+};

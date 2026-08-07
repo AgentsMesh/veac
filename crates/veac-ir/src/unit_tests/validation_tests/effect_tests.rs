@@ -31,12 +31,11 @@ fn keyframes_effect_registry_and_transitions_fail_closed() {
     visual.transform.scale = Animatable::Keyframes { keyframes: vec![] };
     let effect = &mut clip.effects[0];
     effect.id = serde_json::from_str("\"bad\"").unwrap();
-    effect.effect_type = "video.color_adjsut".to_owned();
     effect.enable_range = Some(range(500, 200));
-    effect.parameters.insert(
-        "brighness".to_owned(),
-        ParameterValue::Boolean { value: true },
-    );
+    let Effect::VideoColorAdjust { brightness, .. } = &mut effect.effect else {
+        unreachable!()
+    };
+    *brightness = Animatable::constant(f64::NAN);
     let duplicate = effect.clone();
     clip.effects.push(duplicate);
     let transition = Transition {
@@ -46,7 +45,7 @@ fn keyframes_effect_registry_and_transitions_fail_closed() {
             softness: 2.0,
         },
         duration: time(700),
-        alignment: TransitionAlignment::AfterCut,
+        alignment: TransitionAlignment::Centered,
     };
     let mut next = clip.clone();
     next.id = ItemId::new("itm_transition_target").unwrap();
@@ -68,7 +67,7 @@ fn keyframes_effect_registry_and_transitions_fail_closed() {
         "EMPTY_KEYFRAMES",
         "INVALID_ID",
         "DUPLICATE_EFFECT_ID",
-        "UNKNOWN_EFFECT",
+        "EFFECT_PARAMETER_RANGE",
         "EFFECT_RANGE",
         "TRANSITION",
     ] {
@@ -77,67 +76,25 @@ fn keyframes_effect_registry_and_transitions_fail_closed() {
 }
 
 #[test]
-fn known_effect_rejects_unknown_parameter_type_and_range() {
+fn known_effect_rejects_out_of_range_typed_parameters() {
     let mut project = sample_project();
     let effect = &mut project.project.sequences[0].tracks[0].clips[0].effects[0];
-    effect
-        .parameters
-        .insert("unknown".to_owned(), ParameterValue::Number { value: 0.0 });
-    effect.parameters.insert(
-        "contrast".to_owned(),
-        ParameterValue::Boolean { value: true },
-    );
-    effect.parameters.insert(
-        "saturation".to_owned(),
-        ParameterValue::Number { value: 9.0 },
-    );
+    let Effect::VideoColorAdjust { saturation, .. } = &mut effect.effect else {
+        unreachable!()
+    };
+    *saturation = Animatable::constant(9.0);
     let codes = validation_codes(&project);
-    assert_code(&codes, "UNKNOWN_EFFECT_PARAMETER");
-    assert_code(&codes, "EFFECT_PARAMETER_TYPE");
+    assert_code(&codes, "EFFECT_PARAMETER_RANGE");
 }
 
 #[test]
-fn effect_parameter_spring_extrema_must_stay_inside_registry_range() {
-    let mut project = sample_project();
-    let effect = &mut project.project.sequences[0].tracks[0].clips[0].effects[0];
-    effect.effect_type = "video.luma_key".to_owned();
-    effect.parameters.clear();
-    effect.parameters.insert(
-        "threshold".to_owned(),
-        ParameterValue::NumberCurve {
-            value: Animatable::Keyframes {
-                keyframes: vec![
-                    threshold_key("kf_threshold_start", 0, 0.1),
-                    threshold_key("kf_threshold_end", 600, 0.9),
-                ],
-            },
-        },
-    );
-    assert_code(&validation_codes(&project), "EFFECT_PARAMETER_TYPE");
-}
-
-fn threshold_key(id: &str, at: i64, value: f64) -> Keyframe<f64> {
-    Keyframe {
-        id: KeyframeId::new(id).unwrap(),
-        time: time(at),
-        value,
-        interpolation: Interpolation::Spring {
-            frequency: 1.5,
-            decay: 6.0,
-            initial_velocity: 0.0,
-        },
-    }
-}
-
-#[test]
-fn transition_requires_an_adjacent_clip_with_handles() {
+fn transition_requires_exact_visual_overlap() {
     let mut project = sample_project();
     let track = &mut project.project.sequences[0].tracks[0];
-    track.clips[0].visual = None;
     let mut next = track.clips[0].clone();
     next.id = ItemId::new("itm_video_next").unwrap();
-    next.record_range = range(600, 300);
-    next.visual = None;
+    next.record_range = range(540, 300);
+    next.visual.as_mut().unwrap().opacity = Animatable::constant(1.0);
     next.audio = None;
     next.effects.clear();
     let transition = Transition {
@@ -157,6 +114,6 @@ fn transition_requires_an_adjacent_clip_with_handles() {
 
     project.project.sequences[0].tracks[0].clips[1]
         .record_range
-        .start = time(601);
-    assert_code(&validation_codes(&project), "TRANSITION_HANDLES");
+        .start = time(541);
+    assert_code(&validation_codes(&project), "TRANSITION_DURATION_MISMATCH");
 }

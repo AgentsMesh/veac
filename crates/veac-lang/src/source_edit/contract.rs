@@ -2,10 +2,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use veac_ir::OperationId;
 
-use super::{ExpressionSite, SourceNodeRef};
+use super::{
+    BodySite, DeclarationSite, ExpressionSite, ImportSource, SourceImportRef, SourceModuleAnchor,
+    SourceNodeRef, StatementSite, TopLevelDeclarationSource,
+};
 
 pub const SOURCE_EDIT_SCHEMA: &str = "https://veac.dev/schemas/source-edit";
-pub const SOURCE_EDIT_SCHEMA_VERSION: u32 = 1;
+pub const SOURCE_EDIT_SCHEMA_VERSION: u32 = 6;
 pub const MAX_SOURCE_EDIT_OPERATIONS: usize = 4_096;
 pub const MAX_SOURCE_EDIT_PRECONDITIONS: usize = 4_096;
 
@@ -19,8 +22,9 @@ pub struct SourceRevision {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SourceEditBatch {
+    #[schemars(extend("const" = SOURCE_EDIT_SCHEMA))]
     pub schema: String,
-    #[schemars(range(min = 1, max = 1))]
+    #[schemars(extend("const" = SOURCE_EDIT_SCHEMA_VERSION))]
     pub schema_version: u32,
     pub operation_id: OperationId,
     pub base_revision: SourceRevision,
@@ -45,6 +49,35 @@ pub enum SourcePrecondition {
         site: ExpressionSite,
         expression: ExpressionSource,
     },
+    StatementEquals {
+        target: SourceNodeRef,
+        site: StatementSite,
+        statement: StatementSource,
+    },
+    BodyEquals {
+        target: SourceNodeRef,
+        site: BodySite,
+        body: BodySource,
+    },
+    DeclarationEquals {
+        target: SourceNodeRef,
+        site: DeclarationSite,
+        declaration: DeclarationSource,
+    },
+    TopLevelDeclarationEquals {
+        target: SourceNodeRef,
+        declaration: TopLevelDeclarationSource,
+    },
+    ImportExists {
+        target: SourceImportRef,
+    },
+    ImportAbsent {
+        target: SourceImportRef,
+    },
+    ImportEquals {
+        target: SourceImportRef,
+        import: ImportSource,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -55,11 +88,67 @@ pub enum SourceEditOperation {
         site: ExpressionSite,
         expression: ExpressionSource,
     },
+    SetStatement {
+        target: SourceNodeRef,
+        site: StatementSite,
+        statement: StatementSource,
+    },
+    SetBody {
+        target: SourceNodeRef,
+        site: BodySite,
+        body: BodySource,
+    },
+    SetDeclaration {
+        target: SourceNodeRef,
+        site: DeclarationSite,
+        declaration: DeclarationSource,
+    },
+    SetTopLevelDeclaration {
+        target: SourceNodeRef,
+        declaration: TopLevelDeclarationSource,
+    },
+    InsertDeclaration {
+        module: String,
+        anchor: SourceModuleAnchor,
+        declaration: TopLevelDeclarationSource,
+    },
+    RemoveDeclaration {
+        target: SourceNodeRef,
+    },
+    InsertImport {
+        module: String,
+        anchor: SourceModuleAnchor,
+        import: ImportSource,
+    },
+    RemoveImport {
+        target: SourceImportRef,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ExpressionSource {
+    #[schemars(length(min = 1, max = 65536))]
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StatementSource {
+    #[schemars(length(min = 1, max = 65536))]
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BodySource {
+    #[schemars(length(min = 1, max = 65536))]
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeclarationSource {
     #[schemars(length(min = 1, max = 65536))]
     pub source: String,
 }

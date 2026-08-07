@@ -153,10 +153,12 @@ impl PlanResolver<'_> {
                 text,
                 speaker,
                 style,
+                cue,
             } => Some((
                 ResolvedClipSource::Caption {
                     content: self.resolve_text(text, style, text_demand, path)?,
                     speaker: speaker.clone(),
+                    cue: cue.as_ref().clone(),
                 },
                 None,
             )),

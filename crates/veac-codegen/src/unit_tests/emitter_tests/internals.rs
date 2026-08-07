@@ -1,6 +1,8 @@
 use veac_plan::canonical::*;
 
-use crate::emitter::{animation, audio, geometry, graph::Graph, time};
+use crate::emitter::{animation, audio, geometry, graph::Graph, process_owner::ProcessOwner, time};
+
+use super::support::{fixture, resolved};
 
 #[test]
 fn exact_time_and_number_formatting_covers_boundaries() {
@@ -37,6 +39,9 @@ fn exact_time_and_number_formatting_covers_boundaries() {
 
 #[test]
 fn animation_expressions_cover_every_interpolation_and_unit() {
+    let plan = resolved(&fixture());
+    let clip = &plan.sequences[0].tracks[0].clips[0];
+    let owner = ProcessOwner::clip(clip);
     let cases = [
         (Interpolation::Hold, "*(0)"),
         (Interpolation::Linear, "clip("),
@@ -60,7 +65,7 @@ fn animation_expressions_cover_every_interpolation_and_unit() {
                 frame(&format!("kf_i{index}_b"), 600, 1.0, Interpolation::Linear),
             ],
         };
-        let expression = animation::number(&curve, "t");
+        let expression = animation::number(&plan, owner, &curve, "t");
         assert!(expression.contains(marker), "{expression}");
         if index == 5 {
             assert!(!expression.contains("0.083333333333"), "{expression}");
@@ -69,12 +74,17 @@ fn animation_expressions_cover_every_interpolation_and_unit() {
         }
     }
     assert_eq!(
-        animation::number(&Animatable::Keyframes { keyframes: vec![] }, "t"),
+        animation::number(
+            &plan,
+            owner,
+            &Animatable::Keyframes { keyframes: vec![] },
+            "t",
+        ),
         "0"
     );
     let vector = Animatable::constant(Vec2 { x: 2.0, y: 3.0 });
-    assert_eq!(animation::vec_x(&vector, "t"), "2");
-    assert_eq!(animation::vec_y(&vector, "t"), "3");
+    assert_eq!(animation::vec_x(&plan, owner, &vector, "t"), "2");
+    assert_eq!(animation::vec_y(&plan, owner, &vector, "t"), "3");
     for (unit, marker) in [
         (LengthUnit::Pixels, "2"),
         (LengthUnit::Normalized, "W*2"),
@@ -84,8 +94,8 @@ fn animation_expressions_cover_every_interpolation_and_unit() {
             x: Length { value: 2.0, unit },
             y: Length { value: 2.0, unit },
         });
-        assert_eq!(animation::point_x(&point, "t", "W"), marker);
-        assert!(animation::point_y(&point, "t", "H").contains('2'));
+        assert_eq!(animation::point_x(&plan, owner, &point, "t", "W"), marker);
+        assert!(animation::point_y(&plan, owner, &point, "t", "H").contains('2'));
     }
 }
 

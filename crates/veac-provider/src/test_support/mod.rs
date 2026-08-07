@@ -6,8 +6,10 @@ pub(crate) use output_helpers::*;
 pub(crate) use outputs::*;
 pub(crate) use requests::*;
 
-use serde_json::json;
-use veac_artifact::{artifact_key, ArtifactKind, ArtifactRecord, ContentDigest};
+use veac_artifact::{
+    artifact_key, ArtifactKind, ArtifactParameters, ArtifactRecord, ContentDigest,
+    ProviderResultParameters,
+};
 use veac_ir::{RationalTime, Rect, TimeRange};
 
 use crate::*;
@@ -62,10 +64,14 @@ pub(crate) fn artifact(
     provider: &ProviderFingerprint,
     request: ContentDigest,
 ) -> ProviderArtifact {
-    let descriptor = provider_artifact_descriptor(kind, provider, request, vec![], json!({}))
+    let slot = ProviderArtifactSlot::new(role).expect("fixture slot");
+    let parameters =
+        ArtifactParameters::provider_result(kind, ProviderResultParameters { slot: slot.clone() })
+            .expect("fixture parameters");
+    let descriptor = provider_artifact_descriptor(provider, request, vec![], parameters)
         .expect("fixture descriptor");
     ProviderArtifact {
-        role: role.to_owned(),
+        role: slot,
         record: ArtifactRecord {
             key: artifact_key(&descriptor).unwrap(),
             content: ContentDigest::sha256(role.as_bytes()),

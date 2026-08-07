@@ -1,6 +1,4 @@
-use veac_ir::{
-    Animatable, ApplyOperation, EditOperation, Interpolation, ParameterValue, StructureEdit,
-};
+use veac_ir::{Animatable, ApplyOperation, EditOperation, Interpolation, StructureEdit};
 
 use crate::{
     ClipTimeBinding, ProposalEvidence, ProviderOutput, RetouchControlEvidence, RetouchResult,
@@ -78,9 +76,7 @@ fn parameter(
     else {
         return false;
     };
-    let Some(ParameterValue::NumberCurve {
-        value: Animatable::Keyframes { keyframes },
-    }) = effect.parameters.get(&binding.effect_parameter)
+    let Some(Animatable::Keyframes { keyframes }) = effect.effect.curve(binding.effect_parameter)
     else {
         return false;
     };

@@ -22,7 +22,7 @@ pub(crate) enum SegmentDisposition {
     Disabled,
     Hit,
     Store {
-        contract: FullRenderSegmentContract,
+        contract: Box<FullRenderSegmentContract>,
         deadline: Instant,
     },
 }
@@ -88,7 +88,10 @@ pub(super) fn select(
             "RENDER_SEGMENT_REQUIRED_MISSING",
             "no exact full-range render segment exists",
         )),
-        None => Ok(SegmentDisposition::Store { contract, deadline }),
+        None => Ok(SegmentDisposition::Store {
+            contract: Box::new(contract),
+            deadline,
+        }),
     }
 }
 

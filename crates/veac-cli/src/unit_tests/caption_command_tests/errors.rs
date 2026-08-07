@@ -129,9 +129,12 @@ fn caption_project_commands_reject_invalid_targets_and_bindings() {
 
     let malformed = temp.path().join("malformed-bindings.json");
     std::fs::write(&malformed, "{]").unwrap();
+    let project = project_and_bindings(&temp, &document).0;
+    let envelope = crate::canonical::load(&project).unwrap();
+    let track = envelope.project.sequences[0].tracks[0].id.to_string();
     assert!(run(CaptionCommand::Extract {
-        project: project_and_bindings(&temp, &document).0,
-        track: "trk_base".to_owned(),
+        project,
+        track,
         bindings: malformed,
         output: None,
     })

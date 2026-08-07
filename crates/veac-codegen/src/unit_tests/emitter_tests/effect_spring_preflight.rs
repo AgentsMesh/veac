@@ -12,9 +12,13 @@ fn resolved_effect_rejects_spring_extrema_outside_parameter_bounds() {
         .effects
         .push(ResolvedEffect {
             id: EffectId::new("fx_threshold_spring").unwrap(),
-            effect_type: "video.luma_key".to_owned(),
             active_range: TimeRange::new(time(0), duration).unwrap(),
-            parameters: [("threshold".to_owned(), spring_curve())].into(),
+            effect: Effect::VideoLumaKey {
+                threshold: spring_curve(),
+                tolerance: Animatable::constant(0.01),
+                softness: Animatable::constant(0.0),
+                invert: false,
+            },
         });
     let error = emit_all(&plan, &bindings(&plan)).expect_err("spring overshoot must fail");
     assert!(error.diagnostics().iter().any(|diagnostic| {
@@ -23,14 +27,12 @@ fn resolved_effect_rejects_spring_extrema_outside_parameter_bounds() {
     }));
 }
 
-fn spring_curve() -> ParameterValue {
-    ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
-            keyframes: vec![
-                key("kf_threshold_start", 0, 0.1),
-                key("kf_threshold_end", 600, 0.9),
-            ],
-        },
+fn spring_curve() -> Animatable<f64> {
+    Animatable::Keyframes {
+        keyframes: vec![
+            key("kf_threshold_start", 0, 0.1),
+            key("kf_threshold_end", 600, 0.9),
+        ],
     }
 }
 

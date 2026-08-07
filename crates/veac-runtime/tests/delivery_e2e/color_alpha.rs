@@ -74,33 +74,21 @@ fn color_stabilize_and_key_effects_preserve_or_multiply_real_alpha() {
     clip.effects = vec![
         video_effect(
             "fx_alpha_vignette",
-            "video.vignette",
-            BTreeMap::from([("amount".to_owned(), ParameterValue::Number { value: 0.5 })]),
+            Effect::VideoVignette {
+                amount: Animatable::constant(0.5),
+            },
         ),
         video_effect(
             "fx_alpha_stabilize",
-            "video.stabilize",
-            BTreeMap::from([(
-                "enabled".to_owned(),
-                ParameterValue::Boolean { value: true },
-            )]),
+            Effect::VideoStabilize { enabled: true },
         ),
         video_effect(
             "fx_alpha_key",
-            "video.chroma_key",
-            BTreeMap::from([
-                (
-                    "color".to_owned(),
-                    ParameterValue::Color {
-                        value: color(0, 255, 0),
-                    },
-                ),
-                (
-                    "similarity".to_owned(),
-                    ParameterValue::Number { value: 0.1 },
-                ),
-                ("blend".to_owned(), ParameterValue::Number { value: 0.0 }),
-            ]),
+            Effect::VideoChromaKey {
+                color: color(0, 255, 0),
+                similarity: Animatable::constant(0.1),
+                blend: Animatable::constant(0.0),
+            },
         ),
     ];
     canonical.project.sequences[0].tracks.push(track(

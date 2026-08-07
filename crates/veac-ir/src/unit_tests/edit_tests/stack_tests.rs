@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::test_support::time;
 
 use super::*;
@@ -7,10 +5,11 @@ use super::*;
 fn blur_effect() -> EffectInstance {
     EffectInstance {
         id: EffectId::new("fx_blur_added").unwrap(),
-        effect_type: "video.blur".to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([("radius".to_owned(), ParameterValue::Number { value: 3.0 })]),
+        effect: Effect::VideoBlur {
+            radius: Animatable::constant(3.0),
+        },
     }
 }
 
@@ -121,7 +120,7 @@ fn common_properties_and_transition_are_typed_mutations() {
         ));
     }
 
-    let timeline = magnetic_project();
+    let timeline = transition_ready_project(60);
     let transition = Transition {
         kind: TransitionKind::Dissolve,
         duration: time(60),

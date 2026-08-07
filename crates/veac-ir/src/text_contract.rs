@@ -11,17 +11,13 @@ pub const MAX_TEXT_PADDING_PIXELS: f64 = 4_096.0;
 pub const MAX_TEXT_OUTLINE_PIXELS: f64 = 256.0;
 
 pub fn text_box_valid(width: Option<f64>, height: Option<f64>) -> bool {
-    match (width, height) {
-        (None, None) => true,
-        (Some(width), Some(height)) => {
-            width.is_finite()
-                && height.is_finite()
-                && width > 0.0
-                && height > 0.0
-                && width <= MAX_TEXT_BOX_DIMENSION
-                && height <= MAX_TEXT_BOX_DIMENSION
-                && width * height <= MAX_TEXT_BOX_PIXELS
-        }
-        _ => false,
-    }
+    let axis_valid = |value: Option<f64>| {
+        value
+            .is_none_or(|value| value.is_finite() && value > 0.0 && value <= MAX_TEXT_BOX_DIMENSION)
+    };
+    axis_valid(width)
+        && axis_valid(height)
+        && width
+            .zip(height)
+            .is_none_or(|(width, height)| width * height <= MAX_TEXT_BOX_PIXELS)
 }

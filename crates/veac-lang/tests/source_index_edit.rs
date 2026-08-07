@@ -1,175 +1,100 @@
 use std::fs;
 
 use tempfile::tempdir;
-use veac_lang::program::{apply_source_edit_path, compile_path, SourceTransactionError};
+use veac_ir::{Animatable, EffectParameter};
+use veac_lang::program::{apply_executable_source_edit_path, prepare_path, SourceTransactionError};
 use veac_lang::source_edit::{
-    ExpressionSite, ExpressionSource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
-    SourceSnapshot,
+    BodySite, BodySource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
 };
 
-const SOURCE: &str = r#"project source-index-edit {
-  settings {
-    timebase 1/1000; canvas 640px by 360px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource image logo { locator local { path "old.png"; } }
-  sequence main {
-    layer visual content {
-      item title {
-        source text { content "旧标题"; }
-        record { at 0s; duration 1s; }
-        state { playback disabled; }
-        modifiers {
-          effect title-sharpen { type video.sharpen; parameter amount 1; }
-        }
-      }
-      item secondary {
-        source text { content "保留标题"; }
-        record { at 2s; duration 1s; }
-        modifiers {
-          layout title-sharpen {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 320px; height 180px; fit contain; }
-          }
-        }
-      }
+const SOURCE: &str = r#"
+fn amount() -> scalar { 1.0 }
+
+fn card(key: identifier, start: time, color: color) -> Item {
+  item(
+    key, item_enabled(), during(start, 1s),
+    source_generated(generator_solid(color)), source_timing_native()
+  ).with_effect(video_sharpen_effect(
+    identifier("shared"), effect_enabled(effect_window_full()),
+    scalar_constant(amount())
+  ))
+}
+
+fn main(context: Context) -> Project {
+  let first = card(identifier("first"), 0s, #245b78ff);
+  let second = card(identifier("second"), 1s, #8d315bff);
+  let state = track_state(track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked());
+  let visual = visual_layer(identifier("visual"), 0, placement_free(), state,
+    track_routing_default()).with_item(first).with_item(second);
+  let timeline = sequence(identifier("main"), "源码索引",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000))
+    .with_layer(visual);
+  project(identifier("source-index-edit"), project_settings(600))
+    .with_sequence(timeline).entry(timeline)
+}
+"#;
+
+#[test]
+fn function_body_edit_rebuilds_canonical_ir_without_writing_source() {
+    let temp = tempdir().unwrap();
+    let entry = temp.path().join("main.veac");
+    fs::write(&entry, SOURCE).unwrap();
+    let before = fs::read(&entry).unwrap();
+    let prepared = prepare_path(&entry).unwrap();
+    let target = SourceNodeRef::function("main.veac", "amount");
+    assert!(prepared
+        .source_index()
+        .unwrap()
+        .body(&target, BodySite::FunctionBody)
+        .is_some());
+
+    let preview = apply_executable_source_edit_path(&entry, &batch(&entry, "{ 2.0 }")).unwrap();
+    let clips = &preview.built.envelope().project.sequences[0].tracks[0].clips;
+    assert_eq!(clips.len(), 2);
+    assert_ne!(clips[0].effects[0].id, clips[1].effects[0].id);
+    for clip in clips {
+        assert_eq!(
+            clip.effects[0].effect.curve(EffectParameter::Amount),
+            Some(&Animatable::constant(2.0))
+        );
     }
-  }
-}"#;
+    assert!(preview
+        .source()
+        .unwrap()
+        .contains("fn amount() -> scalar { 2.0 }"));
+    assert_eq!(fs::read(&entry).unwrap(), before);
+    veac_ir::validate(preview.built.envelope()).unwrap();
+}
 
 #[test]
-fn edits_project_sites_and_recompiles_the_source_of_truth() {
+fn invalid_function_body_edit_is_atomic() {
     let temp = tempdir().unwrap();
     let entry = temp.path().join("main.veac");
     fs::write(&entry, SOURCE).unwrap();
-    let compiled = compile_path(&entry).unwrap();
-    let mut batch = SourceEditBatch::new(
-        veac_ir::OperationId::new("op_project_sites").unwrap(),
-        compiled.source_index().unwrap().revision().clone(),
+    let before = fs::read(&entry).unwrap();
+    let error =
+        apply_executable_source_edit_path(&entry, &batch(&entry, "{ \"wrong\" }")).unwrap_err();
+    assert!(matches!(error, SourceTransactionError::Program(_)));
+    assert!(
+        error.to_string().contains("EXPRESSION_RETURN_TYPE"),
+        "{error}"
     );
-    batch.operations = vec![
-        operation(item("title"), ExpressionSite::ItemRecordStart, "250ms"),
-        operation(item("title"), ExpressionSite::ItemRecordDuration, "2s"),
-        operation(item("title"), ExpressionSite::TextContent, "\"新标题\""),
-        operation(item("title"), ExpressionSite::ItemEnabled, "enabled"),
-        operation(
-            SourceNodeRef::resource("main.veac", "logo"),
-            ExpressionSite::ResourceLocator,
-            "\"new.png\"",
-        ),
-        operation(
-            modifier("title", "title-sharpen"),
-            ExpressionSite::ModifierParameter {
-                parameter: "amount".into(),
-            },
-            "2",
-        ),
-    ];
-    let preview = apply_source_edit_path(&entry, &batch).unwrap();
-    let expected = SOURCE
-        .replace("\"old.png\"", "\"new.png\"")
-        .replace("\"旧标题\"", "\"新标题\"")
-        .replace("at 0s; duration 1s", "at 250ms; duration 2s")
-        .replace("playback disabled", "playback enabled")
-        .replace("parameter amount 1", "parameter amount 2");
-    assert_eq!(preview.source(), expected);
-    assert!(preview.source().contains("layout title-sharpen"));
-    assert!(preview.source().contains("width 320px"));
-    veac_ir::validate(&veac_lang::authoring::lower_document(preview.compiled.document()).unwrap())
-        .unwrap();
+    assert_eq!(fs::read(&entry).unwrap(), before);
 }
 
-#[test]
-fn item_enabled_edit_is_checked_against_the_playback_closed_set() {
-    let temp = tempdir().unwrap();
-    let entry = temp.path().join("main.veac");
-    fs::write(&entry, SOURCE).unwrap();
-    let compiled = compile_path(&entry).unwrap();
+fn batch(entry: &std::path::Path, body: &str) -> SourceEditBatch {
+    let prepared = prepare_path(entry).unwrap();
     let mut batch = SourceEditBatch::new(
-        veac_ir::OperationId::new("op_invalid_playback").unwrap(),
-        compiled.source_index().unwrap().revision().clone(),
+        veac_ir::OperationId::new("op_source_index_edit").unwrap(),
+        prepared.source_index().unwrap().revision().clone(),
     );
-    batch.operations.push(operation(
-        item("title"),
-        ExpressionSite::ItemEnabled,
-        "true",
-    ));
-    assert!(matches!(
-        apply_source_edit_path(&entry, &batch),
-        Err(SourceTransactionError::Program(_))
-    ));
-}
-
-#[test]
-fn example_revisions_accept_locally_reused_modifier_ids() {
-    let generated = example_index("generated-graphics");
-    assert!(generated.node_exists(&modifier_at(
-        "generated-graphics",
-        "dark-top-left",
-        "top-left-cell",
-        "cell",
-    )));
-    assert!(generated.node_exists(&modifier_at(
-        "generated-graphics",
-        "dark-bottom-right",
-        "bottom-right-cell",
-        "cell",
-    )));
-
-    let blends = example_index("blend-modes");
-    assert!(blends.node_exists(&modifier_at("blend-modes", "overlays", "screen", "mode")));
-    assert!(blends.node_exists(&modifier_at("blend-modes", "overlays", "multiply", "mode")));
-
-    let effects = example_index("video-effects");
-    assert!(effects.node_exists(&modifier_at(
-        "video-effects",
-        "effects",
-        "focus",
-        "canvas-fill"
-    )));
-    assert!(effects.node_exists(&modifier_at(
-        "video-effects",
-        "effects",
-        "finish",
-        "canvas-fill"
-    )));
-}
-
-fn operation(target: SourceNodeRef, site: ExpressionSite, source: &str) -> SourceEditOperation {
-    SourceEditOperation::SetExpression {
-        target,
-        site,
-        expression: ExpressionSource {
-            source: source.into(),
+    batch.operations.push(SourceEditOperation::SetBody {
+        target: SourceNodeRef::function("main.veac", "amount"),
+        site: BodySite::FunctionBody,
+        body: BodySource {
+            source: body.to_owned(),
         },
-    }
-}
-
-fn item(id: &str) -> SourceNodeRef {
-    SourceNodeRef::item("main.veac", "source-index-edit", "main", "content", id)
-}
-
-fn modifier(item: &str, id: &str) -> SourceNodeRef {
-    SourceNodeRef::modifier(
-        "main.veac",
-        "source-index-edit",
-        "main",
-        "content",
-        item,
-        id,
-    )
-}
-
-fn example_index(example: &str) -> veac_lang::program::SourceIndex {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("examples")
-        .join(example)
-        .join("main.veac");
-    compile_path(&path).unwrap().source_index().unwrap()
-}
-
-fn modifier_at(project: &str, layer: &str, item: &str, modifier: &str) -> SourceNodeRef {
-    SourceNodeRef::modifier("main.veac", project, "main", layer, item, modifier)
+    });
+    batch
 }

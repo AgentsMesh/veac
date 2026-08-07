@@ -24,7 +24,7 @@ fn source_location_rejects_invalid_names_and_missing_parents() {
 
 #[cfg(unix)]
 #[test]
-fn source_location_does_not_follow_the_final_symlink() {
+fn source_location_rejects_the_final_symlink() {
     use std::os::unix::fs::symlink;
 
     let temp = tempfile::tempdir().unwrap();
@@ -34,10 +34,9 @@ fn source_location_does_not_follow_the_final_symlink() {
     let source = temp.path().join("main.veac");
     symlink(&target, &source).unwrap();
 
-    let location = SourceLocation::resolve(&source).unwrap();
-
-    assert_eq!(
-        location.path(),
-        temp.path().canonicalize().unwrap().join("main.veac")
-    );
+    let error = match SourceLocation::resolve(&source) {
+        Err(error) => error,
+        Ok(_) => panic!("final source symlink must be rejected"),
+    };
+    assert!(error.to_string().contains("source is not a regular file"));
 }

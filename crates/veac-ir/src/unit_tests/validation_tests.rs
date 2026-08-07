@@ -1,3 +1,5 @@
+#[path = "validation_tests/animation_bezier_tests.rs"]
+mod animation_bezier_tests;
 #[path = "validation_tests/apply_crossing_tests.rs"]
 mod apply_crossing_tests;
 #[path = "validation_tests/apply_json_tests.rs"]
@@ -14,6 +16,10 @@ mod audio_processing_fixture;
 mod audio_processing_tests;
 #[path = "validation_tests/audio_processor_identity_tests.rs"]
 mod audio_processor_identity_tests;
+#[path = "validation_tests/authorship_tests.rs"]
+mod authorship_tests;
+#[path = "validation_tests/caption_semantics_tests.rs"]
+mod caption_semantics_tests;
 #[path = "validation_tests/caption_speaker_tests.rs"]
 mod caption_speaker_tests;
 #[path = "validation_tests/color_matrix_tests.rs"]
@@ -52,6 +58,8 @@ mod output_compat_tests;
 mod output_contract_tests;
 #[path = "validation_tests/output_tests.rs"]
 mod output_tests;
+#[path = "validation_tests/plugin_effect_tests.rs"]
+mod plugin_effect_tests;
 #[path = "validation_tests/probe_tests.rs"]
 mod probe_tests;
 #[path = "validation_tests/project_tests.rs"]
@@ -68,12 +76,16 @@ mod source_tests;
 mod source_time_tests;
 #[path = "validation_tests/template_tests.rs"]
 mod template_tests;
+#[path = "validation_tests/template_text_tests.rs"]
+mod template_text_tests;
 #[path = "validation_tests/text_budget_tests.rs"]
 mod text_budget_tests;
 #[path = "validation_tests/text_geometry_tests.rs"]
 mod text_geometry_tests;
 #[path = "validation_tests/text_graphics_tests.rs"]
 mod text_graphics_tests;
+#[path = "validation_tests/text_layout_axis_tests.rs"]
+mod text_layout_axis_tests;
 #[path = "validation_tests/timeline_tests.rs"]
 mod timeline_tests;
 #[path = "validation_tests/transition_contract_tests.rs"]

@@ -1,0 +1,58 @@
+module {
+  fn none() -> AnnotationProvenanceChoice { annotation_provenance_none() }
+
+  export fn attach(
+    owner: Project, timeline: Sequence, layer: Layer, focus: Item
+  ) -> Project {
+    let marker = annotation(
+      identifier("marker"), annotation_target_item(focus), annotation_point(500ms),
+      annotation_marker("机制出现", marker_color_present(#34d399ff)), none()
+    );
+    let language = annotation(
+      identifier("language"), annotation_target_layer(layer), annotation_untimed(),
+      annotation_language([
+        language_confidence("zh-Hans", 95%), language_confidence("en-US", 5%)
+      ]), none()
+    );
+    let boundary = annotation(
+      identifier("boundary"), annotation_target_sequence(timeline), annotation_point(800ms),
+      annotation_scene_boundary(98%, false), none()
+    );
+    let scene = annotation(
+      identifier("scene"), annotation_target_sequence(timeline),
+      annotation_range(during(0s, 2s)), annotation_scene(), none()
+    );
+    let beat = annotation(
+      identifier("beat"), annotation_target_sequence(timeline), annotation_point(1s),
+      annotation_beat(90%, 1, 1, 120.0, 4), none()
+    );
+    let silence = annotation(
+      identifier("silence"), annotation_target_sequence(timeline),
+      annotation_range(during(1s, 200ms)), annotation_silence(-60.0, 96%), none()
+    );
+    let filler = annotation(
+      identifier("filler"), annotation_target_item(focus),
+      annotation_range(during(100ms, 200ms)),
+      annotation_filler("嗯", 88%, filler_tighten()), none()
+    );
+    let highlight = annotation(
+      identifier("highlight"), annotation_target_item(focus),
+      annotation_range(during(0s, 800ms)),
+      annotation_highlight(100%, "主要机制", ["动画", "蒙版", "混合"]),
+      annotation_provenance_present(annotation_provenance(
+        "veac-example-v6",
+        sha256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        sha256("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      ))
+    );
+    let review = annotation(
+      identifier("review"), annotation_target_sequence(timeline),
+      annotation_range(during(0s, 2s)),
+      annotation_review(review_keep(), "中文证据完整", 100%), none()
+    );
+    owner.with_annotation(marker).with_annotation(language)
+      .with_annotation(boundary).with_annotation(scene).with_annotation(beat)
+      .with_annotation(silence).with_annotation(filler)
+      .with_annotation(highlight).with_annotation(review)
+  }
+}

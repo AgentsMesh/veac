@@ -12,7 +12,8 @@ fn segment_store_rejects_every_malformed_execution_shape() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let contract = FullRenderSegmentContract::new(
         &prepared.plan,
@@ -95,7 +96,7 @@ fn attempt(
         prepared,
         store_ref,
         SegmentDisposition::Store {
-            contract: contract.clone(),
+            contract: Box::new(contract.clone()),
             deadline: Instant::now() + std::time::Duration::from_secs(2),
         },
         &BundleExecution { tasks },

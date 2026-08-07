@@ -8,13 +8,14 @@ mod audio_contract;
 mod canonical;
 mod color_contract;
 mod edit;
-mod effect_contract;
 mod id;
 mod model;
+mod plugin_registry;
 mod registry;
 mod relation_graph;
 mod render_budget;
 mod strict_json;
+mod temporal;
 mod text_contract;
 mod time;
 mod validation;
@@ -25,20 +26,23 @@ pub use audio_contract::*;
 pub use canonical::*;
 pub use color_contract::*;
 pub use edit::*;
-pub use effect_contract::*;
 pub use id::*;
 pub use model::*;
+pub use plugin_registry::*;
 pub use registry::*;
 pub use relation_graph::*;
 pub use render_budget::*;
+pub use temporal::*;
 pub use text_contract::*;
 pub use time::*;
 pub use validation::*;
 pub use visual_contract::*;
 
 pub const SCHEMA_ID: &str = "https://veac.dev/schemas/project";
-pub const CURRENT_SCHEMA_VERSION: u32 = 5;
-pub const MIN_READER_VERSION: u32 = 5;
+pub const CURRENT_SCHEMA_VERSION: u32 = 9;
+pub const MIN_READER_VERSION: u32 = 9;
+pub const CURRENT_CORE_VERSION: u16 = 10;
+pub const CURRENT_DOMAIN_OPSET_VERSION: u16 = 7;
 /// Largest integer represented exactly by the IEEE-754 number domain required by RFC 8785/I-JSON.
 pub const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 pub const MAX_SEQUENCE_NESTING_DEPTH: usize = 64;
@@ -74,6 +78,9 @@ mod edit_tests;
 #[path = "unit_tests/effect_schema_tests.rs"]
 mod effect_schema_tests;
 #[cfg(test)]
+#[path = "unit_tests/executable_temporal_tests.rs"]
+mod executable_temporal_tests;
+#[cfg(test)]
 #[path = "unit_tests/id_time_tests.rs"]
 mod id_time_tests;
 #[cfg(test)]
@@ -82,6 +89,9 @@ mod model_tests;
 #[cfg(test)]
 #[path = "unit_tests/output_model_tests.rs"]
 mod output_model_tests;
+#[cfg(test)]
+#[path = "unit_tests/plugin_registry_tests.rs"]
+mod plugin_registry_tests;
 #[cfg(test)]
 #[path = "unit_tests/professional_aux_output_tests.rs"]
 mod professional_aux_output_tests;

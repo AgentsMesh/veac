@@ -119,7 +119,7 @@ fn explicit_dispatch_parses_every_public_command_and_fails_closed() {
         ],
         &[
             "veac",
-            "compile",
+            "build",
             "missing",
             "--emit-ir",
             "out",

@@ -1,36 +1,43 @@
-mod component;
+mod component_animation;
+mod expression;
+mod fragment;
+mod function;
 mod inventory;
-mod item;
-mod preset;
-mod project;
-pub(crate) mod syntax;
+mod method;
+mod nominal;
+mod snapshot;
+mod storage;
+mod structural;
+mod temporal;
+mod value;
 
 pub use inventory::*;
-pub(crate) use syntax::validate_expression_fragment;
+pub use value::*;
 
 use std::collections::BTreeMap;
 
 use crate::authoring::Span;
 use crate::source_edit::{
-    source_graph_revision, ExpressionSite, SourceModule, SourceNodeRef, SourceRevision,
-    SourceSnapshot, TextRange,
+    source_graph_revision, BodySite, DeclarationSite, ExpressionSite, SourceModule, SourceNodeRef,
+    SourceRevision, StatementSite, TextRange,
 };
 
 use super::diagnostic::{Diagnostic, Diagnostics};
 use super::model::SurfaceFile;
 use super::parser;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexedExpression {
-    pub source: String,
-    pub range: TextRange,
-}
-
 #[derive(Debug, Clone)]
 pub struct SourceIndex {
     revision: SourceRevision,
+    build_inputs: Vec<SourceIndexBuildInput>,
     expressions: BTreeMap<(SourceNodeRef, ExpressionSite), IndexedExpression>,
+    statements: BTreeMap<(SourceNodeRef, StatementSite), IndexedStatement>,
+    bodies: BTreeMap<(SourceNodeRef, BodySite), IndexedBody>,
+    declarations: BTreeMap<(SourceNodeRef, DeclarationSite), IndexedDeclaration>,
+    imports: BTreeMap<crate::source_edit::SourceImportRef, IndexedImport>,
+    modules: BTreeMap<String, TextRange>,
     nodes: BTreeMap<SourceNodeRef, Span>,
+    top_levels: BTreeMap<SourceNodeRef, IndexedTopLevelDeclaration>,
 }
 
 impl SourceIndex {
@@ -49,11 +56,18 @@ impl SourceIndex {
         })?;
         let mut index = Self {
             revision,
+            build_inputs: Vec::new(),
             expressions: BTreeMap::new(),
+            statements: BTreeMap::new(),
+            bodies: BTreeMap::new(),
+            declarations: BTreeMap::new(),
+            imports: BTreeMap::new(),
+            modules: BTreeMap::new(),
             nodes: BTreeMap::new(),
+            top_levels: BTreeMap::new(),
         };
         for (path, source) in sources {
-            let file = parser::parse(path, source).map_err(Diagnostics)?;
+            let file = parser::parse_executable(path, source).map_err(Diagnostics)?;
             index.file(&file).map_err(Diagnostics::one)?;
         }
         Ok(index)
@@ -71,7 +85,32 @@ impl SourceIndex {
         self.expressions.get(&(target.clone(), site.clone()))
     }
 
+    pub fn statement(
+        &self,
+        target: &SourceNodeRef,
+        site: &StatementSite,
+    ) -> Option<&IndexedStatement> {
+        self.statements.get(&(target.clone(), site.clone()))
+    }
+
+    pub fn body(&self, target: &SourceNodeRef, site: BodySite) -> Option<&IndexedBody> {
+        self.bodies.get(&(target.clone(), site))
+    }
+
+    pub fn declaration(
+        &self,
+        target: &SourceNodeRef,
+        site: DeclarationSite,
+    ) -> Option<&IndexedDeclaration> {
+        self.declarations.get(&(target.clone(), site))
+    }
+
     fn file(&mut self, file: &SurfaceFile) -> Result<(), Diagnostic> {
+        function::index(self, file)?;
+        method::index(self, file)?;
+        nominal::index(self, file)?;
+        structural::index(self, file)?;
+        temporal::index(self, file)?;
         for value in &file.constants {
             let target = SourceNodeRef::constant(&file.path, &value.name);
             self.register(&file.path, target.clone(), value.span)?;
@@ -83,43 +122,30 @@ impl SourceIndex {
                 value.expression_span,
             )?;
         }
-        for value in &file.components {
-            let target = SourceNodeRef::component(&file.path, &value.name);
+        for value in &file.inputs {
+            let target = SourceNodeRef::input(&file.path, &value.name);
             self.register(&file.path, target.clone(), value.span)?;
-            for parameter in &value.parameters {
-                if let Some(default) = &parameter.default {
-                    self.insert(
-                        &file.path,
-                        target.clone(),
-                        ExpressionSite::ComponentParameterDefault {
-                            parameter: parameter.name.clone(),
-                        },
-                        &default.source,
-                        default.span,
-                    )?;
-                }
-            }
-            component::index(self, file, value)?;
+            self.insert_declaration(
+                &file.path,
+                target,
+                DeclarationSite::BuildInputDeclaration,
+                &file.source,
+                value.span,
+            )?;
         }
-        for value in &file.presets {
-            preset::index(self, file, value)?;
-        }
-        for value in &file.instances {
-            let target = SourceNodeRef::component_instance(&file.path, &value.id);
-            self.register(&file.path, target.clone(), value.span)?;
-            for (parameter, binding) in &value.bindings {
-                self.insert(
-                    &file.path,
-                    target.clone(),
-                    ExpressionSite::ComponentInstanceArgument {
-                        parameter: parameter.clone(),
-                    },
-                    &binding.source,
-                    binding.span,
-                )?;
-            }
-        }
-        project::index(self, file)
+        Ok(())
+    }
+
+    pub fn import(&self, target: &crate::source_edit::SourceImportRef) -> Option<&IndexedImport> {
+        self.imports.get(target)
+    }
+
+    pub fn module_range(&self, module: &str) -> Option<TextRange> {
+        self.modules.get(module).copied()
+    }
+
+    pub fn top_level(&self, target: &SourceNodeRef) -> Option<&IndexedTopLevelDeclaration> {
+        self.top_levels.get(target)
     }
 
     fn register(
@@ -133,43 +159,12 @@ impl SourceIndex {
         }
         Ok(())
     }
-
-    fn insert(
-        &mut self,
-        path: &str,
-        target: SourceNodeRef,
-        site: ExpressionSite,
-        source: &str,
-        span: Span,
-    ) -> Result<(), Diagnostic> {
-        let value = IndexedExpression {
-            source: source.to_owned(),
-            range: TextRange {
-                start: span.start,
-                end: span.end,
-            },
-        };
-        if self
-            .expressions
-            .insert((target.clone(), site), value)
-            .is_some()
-        {
-            return Err(ambiguous(path, &target, span));
-        }
-        Ok(())
-    }
 }
 
-impl SourceSnapshot for SourceIndex {
-    fn node_exists(&self, target: &SourceNodeRef) -> bool {
-        self.nodes.contains_key(target)
-    }
-
-    fn expression_source(&self, target: &SourceNodeRef, site: &ExpressionSite) -> Option<&str> {
-        self.expression(target, site)
-            .map(|value| value.source.as_str())
-    }
-}
+pub(crate) use fragment::{
+    validate_build_input_fragment, validate_import_fragment, validate_temporal_fragment,
+    validate_top_level_fragment,
+};
 
 fn ambiguous(path: &str, target: &SourceNodeRef, span: Span) -> Diagnostic {
     Diagnostic::new(
@@ -181,13 +176,14 @@ fn ambiguous(path: &str, target: &SourceNodeRef, span: Span) -> Diagnostic {
 }
 
 #[cfg(test)]
-#[path = "index/tests.rs"]
-mod tests;
-
-#[cfg(test)]
-#[path = "index/syntax_tests.rs"]
-mod syntax_tests;
-
+#[path = "index/build_input_inventory_tests.rs"]
+mod build_input_inventory_tests;
 #[cfg(test)]
 #[path = "index/inventory_tests.rs"]
 mod inventory_tests;
+#[cfg(test)]
+#[path = "index/statement_tests.rs"]
+mod statement_tests;
+#[cfg(test)]
+#[path = "index/structural_tests.rs"]
+mod structural_tests;

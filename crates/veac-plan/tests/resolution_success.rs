@@ -1,7 +1,5 @@
 mod support;
 
-use std::collections::BTreeMap;
-
 use support::*;
 use veac_plan::{
     canonical::*, resolve, resolve_one, ResolvedSourceTimeMap, CURRENT_RENDER_PLAN_VERSION,
@@ -127,7 +125,7 @@ fn nested_sequences_are_dependency_first_and_tracks_are_ordered() {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     };
     project.project.sequences[0].tracks.insert(
         0,

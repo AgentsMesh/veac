@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use crate::*;
@@ -35,7 +33,6 @@ fn retouch_without_artifact_builds_direct_apply() {
 fn retouch_preserves_apply_anchor() {
     let (mut project, request, response, mut context) = retouch_fixture();
     project.project.sequences[0].applies.push(anchor_apply());
-    project = ProjectEnvelope::new(project.project);
     retouch_mut(&mut context).before_apply_id = Some(ApplyId::new("apl_anchor").unwrap());
     let proposal = proposal_result(&project, &request, &response, &context).unwrap();
     assert!(
@@ -70,13 +67,11 @@ fn anchor_apply() -> Apply {
             operation: ApplyOperation::Effect {
                 effect: EffectInstance {
                     id: EffectId::new("fx_anchor").unwrap(),
-                    effect_type: "video.blur".into(),
                     enabled: true,
                     enable_range: None,
-                    parameters: BTreeMap::from([(
-                        "radius".into(),
-                        ParameterValue::Number { value: 1.0 },
-                    )]),
+                    effect: Effect::VideoBlur {
+                        radius: Animatable::constant(1.0),
+                    },
                 },
             },
         }],

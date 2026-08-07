@@ -1,4 +1,5 @@
 mod ass;
+mod ass_info;
 mod common;
 mod ids;
 pub(crate) mod native;

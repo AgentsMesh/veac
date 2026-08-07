@@ -38,11 +38,23 @@ pub use source::*;
 pub use staged::*;
 pub use workflow::*;
 
-pub const ARTIFACT_CONTRACT_VERSION: u32 = 1;
+pub const ARTIFACT_CONTRACT_VERSION: u32 = 2;
 pub const ARTIFACT_SCHEMA_ID: &str = "https://veac.dev/schemas/artifact";
 pub const BUILD_MANIFEST_SCHEMA_ID: &str = "https://veac.dev/schemas/build-manifest";
 pub const PACKAGE_MANIFEST_SCHEMA_ID: &str = "https://veac.dev/schemas/package-manifest";
 
+#[cfg(test)]
+#[path = "unit_tests/artifact_parameter_analysis_tests.rs"]
+mod artifact_parameter_analysis_tests;
+#[cfg(test)]
+#[path = "unit_tests/artifact_parameter_dispatch_tests.rs"]
+mod artifact_parameter_dispatch_tests;
+#[cfg(test)]
+#[path = "unit_tests/artifact_parameter_provider_tests.rs"]
+mod artifact_parameter_provider_tests;
+#[cfg(test)]
+#[path = "unit_tests/artifact_parameter_render_tests.rs"]
+mod artifact_parameter_render_tests;
 #[cfg(test)]
 #[path = "unit_tests/binding_contract_edge_tests.rs"]
 mod binding_contract_edge_tests;

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use veac_ir::{Clip, ClipSource, EditOperation, ItemId, Precondition, ProjectEnvelope, TrackKind};
 
@@ -86,6 +86,7 @@ fn caption(
         source: ClipSource::Caption {
             text: segment.text.clone(),
             speaker: None,
+            cue: Box::default(),
             style: context.style.clone(),
         },
         source_mapping: None,
@@ -94,7 +95,7 @@ fn caption(
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     })
 }
 

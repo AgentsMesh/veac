@@ -84,7 +84,8 @@ fn custom_transition_progresses_from_outgoing_to_incoming() {
 fn patterned_frame(kind: TransitionKind) -> Vec<u8> {
     let temp = tempdir().unwrap();
     let mut canonical = project(false);
-    let first = pattern_clip("itm_pattern_a", 0, first_gradient());
+    let mut first = pattern_clip("itm_pattern_a", 0, first_gradient());
+    first.record_range.duration = time(1_250);
     let transition = Transition {
         duration: time(500),
         alignment: TransitionAlignment::Centered,
@@ -94,10 +95,11 @@ fn patterned_frame(kind: TransitionKind) -> Vec<u8> {
         "trk_transition_pattern",
         TrackKind::Video,
         0,
-        vec![
-            first,
-            pattern_clip("itm_pattern_b", 1_000, second_gradient()),
-        ],
+        vec![first, {
+            let mut clip = pattern_clip("itm_pattern_b", 750, second_gradient());
+            clip.record_range.duration = time(1_250);
+            clip
+        }],
     ));
     add_transition(
         &mut canonical,
@@ -112,7 +114,7 @@ fn patterned_frame(kind: TransitionKind) -> Vec<u8> {
 }
 
 fn pattern_clip(id: &str, start_ms: i64, gradient: Gradient) -> Clip {
-    let mut clip = solid_clip(id, color(0, 0, 0), start_ms, 1_000);
+    let mut clip = visual_solid_clip(id, color(0, 0, 0), start_ms, 1_000);
     clip.source = ClipSource::Generated {
         generator: Generator::Gradient { gradient },
     };

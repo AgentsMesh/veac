@@ -1,111 +1,52 @@
-project apply-scopes {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./scopes.veac" as scopes;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual base {
-      order 0;
-      item background {
-        source generated gradient linear {
-          from 0% 0%; to 100% 100%;
-          stop 0% #264653ff; stop 100% #2a9d8fff;
-        }
-        record { at 0s; duration 6s; }
-      }
-    }
-
-    layer visual overlay {
-      order 1;
-      item accent {
-        source generated solid { color #ef476fdd; }
-        record { at 0s; duration 6s; }
-        modifiers {
-          mask accent-window {
-            shape circle;
-            position { x 50%; y 50%; }
-            scale { x 42%; y 72%; }
-            feather 0px;
-          }
-        }
-      }
-    }
-    relation group selected-items {
-      members { item background; item accent; }
-    }
-    apply band-stack {
-      scope composite-band { from layer base; through layer overlay; }
-      record { at 0s; duration 2s; }
-      pipeline {
-        stage effect band-contrast {
-          type video.color_adjust;
-          parameter contrast 1.3;
-        }
-        stage effect band-soften {
-          type video.blur;
-          parameter radius 14;
-        }
-      }
-      mix {
-        opacity 88%;
-        blend screen;
-        mask band-window {
-          shape circle;
-          position { x 50%; y 50%; }
-          scale { x 60%; y 78%; }
-          feather 24px;
-        }
-      }
-    }
-    apply overlay-layer {
-      scope layer overlay;
-      record { at 2s; duration 2s; }
-      pipeline {
-        stage effect overlay-brightness {
-          type video.color_adjust;
-          parameter brightness 0.35;
-        }
-      }
-      mix {}
-    }
-    apply selected-item-set {
-      scope items { group selected-items; }
-      record { at 4s; duration 2s; }
-      pipeline {
-        stage effect selection-contrast {
-          type video.color_adjust;
-          parameter contrast 1.55;
-        }
-      }
-      mix { opacity 70%; blend multiply; }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = item(
+    identifier("background"), item_enabled(), during(0s, 6s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.0), vector(1.0, 1.0),
+      [gradient_stop(0%, #264653ff), gradient_stop(100%, #2a9d8fff)]
+    ))), source_timing_native()
+  );
+  let accent = showcase.solid(identifier("accent"), #ef476fdd, 0s, 6s)
+    .with_visual(scopes.accent_style());
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(background);
+  let overlay = visual_layer(
+    identifier("overlay"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(accent);
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("band-label"), item_enabled(), during(0s, 2s),
+    source_text("作用域：合成时间带", showcase.caption_style(font, 38px, 600px)),
+    source_timing_native()
+  )).with_item(item(
+    identifier("layer-label"), item_enabled(), during(2s, 2s),
+    source_text("作用域：单个图层", showcase.caption_style(font, 38px, 600px)),
+    source_timing_native()
+  )).with_item(item(
+    identifier("items-label"), item_enabled(), during(4s, 2s),
+    source_text("作用域：精确条目集合", showcase.caption_style(font, 38px, 700px)),
+    source_timing_native()
+  ));
+  let selected = relation_group(identifier("selected-items"), [background, accent]);
+  let timeline = sequence(
+    identifier("main"), "三类应用作用域",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(base).with_layer(overlay).with_layer(labels).with_relation(selected)
+    .with_apply(scopes.composite_band(base, overlay))
+    .with_apply(scopes.layer(overlay))
+    .with_apply(scopes.items(background, accent));
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("apply-scopes"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

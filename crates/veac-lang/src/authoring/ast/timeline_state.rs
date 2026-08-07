@@ -1,46 +1,16 @@
-use super::{Span, Spanned};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlacementModeDecl {
-    Free,
-    Magnetic,
+super::impl_syntax_tokens!(veac_ir::PlacementMode,
+    veac_ir::PlacementMode::Free => "free",
+    veac_ir::PlacementMode::Magnetic => "magnetic",
+);
+super::define_syntax_tokens! {
+    pub enum PlaybackStateDecl { Enabled => "enabled", Disabled => "disabled" }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlaybackStateDecl {
-    Enabled,
-    Disabled,
+super::define_syntax_tokens! {
+    pub enum AudioStateDecl { Audible => "audible", Muted => "muted" }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AudioStateDecl {
-    Audible,
-    Muted,
+super::define_syntax_tokens! {
+    pub enum IsolationStateDecl { Normal => "normal", Solo => "solo" }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IsolationStateDecl {
-    Normal,
-    Solo,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EditingStateDecl {
-    Editable,
-    Locked,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TrackStateDecl {
-    pub playback: Option<Spanned<PlaybackStateDecl>>,
-    pub audio: Option<Spanned<AudioStateDecl>>,
-    pub isolation: Option<Spanned<IsolationStateDecl>>,
-    pub editing: Option<Spanned<EditingStateDecl>>,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ItemStateDecl {
-    pub playback: Spanned<PlaybackStateDecl>,
-    pub span: Span,
+super::define_syntax_tokens! {
+    pub enum EditingStateDecl { Editable => "editable", Locked => "locked" }
 }

@@ -1259,11 +1259,13 @@ dependencies = [
  "base64",
  "cosmic-text",
  "serde_json",
+ "sha2",
  "tempfile",
  "ttf-parser",
  "unicode-script",
  "unicode-segmentation",
  "veac-artifact",
+ "veac-ir",
  "veac-plan",
 ]
 

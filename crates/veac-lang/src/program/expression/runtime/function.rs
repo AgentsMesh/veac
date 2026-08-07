@@ -1,23 +1,25 @@
 use std::cmp::Ordering;
 use std::ops::Range;
 
-use crate::program::expression::{ExpressionError, Value};
+use crate::program::expression::{BuiltinFunction, ExpressionError, Value};
 
-pub(super) fn call(
-    name: &str,
+pub(in crate::program::expression) fn call_builtin(
+    function: BuiltinFunction,
     arguments: Vec<Value>,
     span: Range<usize>,
 ) -> Result<Value, ExpressionError> {
-    match name {
-        "min" => extremum(name, arguments, span, Ordering::Less),
-        "max" => extremum(name, arguments, span, Ordering::Greater),
-        "clamp" => clamp(arguments, span),
-        "identifier" => identifier(name, arguments, span),
-        _ => Err(ExpressionError::new(
-            "EXPRESSION_UNKNOWN_FUNCTION",
-            format!("unknown function `{name}`"),
+    let name = function.as_str();
+    match function {
+        BuiltinFunction::Min => extremum(name, arguments, span, Ordering::Less),
+        BuiltinFunction::Max => extremum(name, arguments, span, Ordering::Greater),
+        BuiltinFunction::Clamp => clamp(arguments, span),
+        BuiltinFunction::Identifier => identifier(name, arguments, span),
+        function if function.is_curve() => Err(ExpressionError::new(
+            "EXPRESSION_TEMPORAL_CURVE_CONTEXT",
+            format!("{} requires a Temporal input", function.as_str()),
             span,
         )),
+        _ => unreachable!("every builtin has runtime semantics"),
     }
 }
 
@@ -93,7 +95,10 @@ fn comparable(arguments: &[Value], span: Range<usize>) -> Result<(), ExpressionE
     let Some(first) = arguments.first() else {
         return Ok(());
     };
-    if !first.kind().is_numeric() || arguments.iter().any(|value| value.kind() != first.kind()) {
+    let kind = first.primitive_kind();
+    if !kind.is_some_and(|value| value.is_numeric())
+        || arguments.iter().any(|value| value.primitive_kind() != kind)
+    {
         return Err(ExpressionError::new(
             "EXPRESSION_TYPE",
             "function arguments must have one numeric kind",

@@ -24,7 +24,8 @@ fn post_render_output_replacement_cannot_be_promoted_as_an_exact_segment() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     crate::output::bind_render_outputs(&mut prepared, None).unwrap();
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let contract = FullRenderSegmentContract::new(
@@ -57,7 +58,7 @@ fn post_render_output_replacement_cannot_be_promoted_as_an_exact_segment() {
         &prepared,
         &artifact_store,
         SegmentDisposition::Store {
-            contract,
+            contract: Box::new(contract),
             deadline: Instant::now() + std::time::Duration::from_secs(1),
         },
         &execution,
@@ -78,7 +79,8 @@ fn expired_prefer_selection_propagates_without_starting_ffmpeg() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let error = select(
         &mut prepared,
@@ -99,7 +101,8 @@ fn prefer_propagates_a_contract_resource_limit_without_starting_ffmpeg() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     let mut producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     producer.version = "v".repeat(veac_artifact::MAX_ARTIFACT_JSON_STRING_BYTES);
     let error = select(
@@ -121,7 +124,8 @@ fn prefer_does_not_select_a_segment_from_another_producer_contract() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let environment = FakeEnvironment::success();
-    let mut prepared = crate::planning::prepare(&project, None, &environment).unwrap();
+    let mut prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &environment).unwrap();
     let producer = super::super::producer(environment.ffmpeg_fingerprint().unwrap()).unwrap();
     let mut previous = producer.clone();
     previous.configuration = ContentDigest::sha256(b"previous render implementation");

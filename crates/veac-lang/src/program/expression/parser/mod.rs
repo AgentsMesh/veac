@@ -1,19 +1,26 @@
+mod binary;
+mod closure;
+mod collection;
+mod control;
+mod iteration;
+mod r#match;
+mod nominal;
+mod postfix;
 mod primary;
+mod range;
+mod statement;
+mod temporal_attachment;
+mod value_type;
 
 use std::mem::discriminant;
 use std::ops::Range;
 
-use super::ast::{BinaryOperator, Expression, ExpressionKind, UnaryOperator};
+use super::ast::{Expression, ExpressionKind, Statement, UnaryOperator};
 use super::lexer::{Token, TokenKind};
 use super::{ExpressionError, MAX_EXPRESSION_DEPTH, MAX_EXPRESSION_NODES};
 
 pub(super) fn parse(tokens: Vec<Token>) -> Result<Expression, ExpressionError> {
-    let mut parser = Parser {
-        tokens,
-        cursor: 0,
-        nodes: 0,
-        depth: 0,
-    };
+    let mut parser = Parser::new(tokens);
     let expression = parser.expression()?;
     if !parser.at(&TokenKind::Eof) {
         return Err(parser.error("EXPRESSION_TRAILING_TOKEN", "unexpected trailing token"));
@@ -21,76 +28,66 @@ pub(super) fn parse(tokens: Vec<Token>) -> Result<Expression, ExpressionError> {
     Ok(expression)
 }
 
+pub(super) fn parse_statement(tokens: Vec<Token>) -> Result<Statement, ExpressionError> {
+    let mut parser = Parser::new(tokens);
+    if !matches!(
+        parser.current().kind,
+        TokenKind::Let | TokenKind::Var | TokenKind::Set
+    ) {
+        return Err(parser.error(
+            "EXPRESSION_EXPECTED_STATEMENT",
+            "expected one `let`, `var`, or `set` statement",
+        ));
+    }
+    let statement = parser.statement()?;
+    if !parser.at(&TokenKind::Eof) {
+        return Err(parser.error("EXPRESSION_TRAILING_TOKEN", "unexpected trailing token"));
+    }
+    Ok(statement)
+}
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Self {
+        Self {
+            tokens,
+            cursor: 0,
+            nodes: 0,
+            depth: 0,
+            construct_floor: None,
+        }
+    }
+}
+
 struct Parser {
     tokens: Vec<Token>,
     cursor: usize,
     nodes: usize,
     depth: usize,
+    construct_floor: Option<usize>,
 }
 
 impl Parser {
     fn expression(&mut self) -> Result<Expression, ExpressionError> {
-        self.additive()
-    }
-
-    fn additive(&mut self) -> Result<Expression, ExpressionError> {
-        let mut expression = self.multiplicative()?;
-        loop {
-            let operator = if self.take(&TokenKind::Plus).is_some() {
-                BinaryOperator::Add
-            } else if self.take(&TokenKind::Minus).is_some() {
-                BinaryOperator::Subtract
-            } else {
-                break;
-            };
-            let right = self.multiplicative()?;
-            let span = expression.span.start..right.span.end;
-            expression = self.node(
-                ExpressionKind::Binary {
-                    operator,
-                    left: Box::new(expression),
-                    right: Box::new(right),
-                },
-                span,
-            )?;
-        }
-        Ok(expression)
-    }
-
-    fn multiplicative(&mut self) -> Result<Expression, ExpressionError> {
-        let mut expression = self.unary()?;
-        loop {
-            let operator = if self.take(&TokenKind::Star).is_some() {
-                BinaryOperator::Multiply
-            } else if self.take(&TokenKind::Slash).is_some() {
-                BinaryOperator::Divide
-            } else {
-                break;
-            };
-            let right = self.unary()?;
-            let span = expression.span.start..right.span.end;
-            expression = self.node(
-                ExpressionKind::Binary {
-                    operator,
-                    left: Box::new(expression),
-                    right: Box::new(right),
-                },
-                span,
-            )?;
-        }
-        Ok(expression)
+        self.logical_or()
     }
 
     fn unary(&mut self) -> Result<Expression, ExpressionError> {
         let operator = if let Some(span) = self.take(&TokenKind::Plus) {
             Some((UnaryOperator::Positive, span))
+        } else if let Some(span) = self.take(&TokenKind::Minus) {
+            Some((UnaryOperator::Negative, span))
         } else {
-            self.take(&TokenKind::Minus)
-                .map(|span| (UnaryOperator::Negative, span))
+            self.take(&TokenKind::Bang)
+                .map(|span| (UnaryOperator::Not, span))
         };
         let Some((operator, start)) = operator else {
-            return self.primary();
+            return self.postfix();
         };
+        if operator == UnaryOperator::Negative {
+            if let Some(literal) = self.signed_min_literal(start.clone())? {
+                return Ok(literal);
+            }
+        }
         self.enter_depth(start.clone())?;
         let operand = self.unary()?;
         self.depth -= 1;
@@ -132,6 +129,10 @@ impl Parser {
         Ok(())
     }
 
+    fn nominal_allowed(&self) -> bool {
+        self.construct_floor.is_none_or(|floor| self.depth > floor)
+    }
+
     fn current(&self) -> &Token {
         &self.tokens[self.cursor]
     }
@@ -150,6 +151,19 @@ impl Parser {
 
     fn take(&mut self, expected: &TokenKind) -> Option<Range<usize>> {
         self.at(expected).then(|| self.advance().span)
+    }
+
+    fn expect(
+        &mut self,
+        expected: &TokenKind,
+        spelling: &str,
+    ) -> Result<Range<usize>, ExpressionError> {
+        self.take(expected).ok_or_else(|| {
+            self.error(
+                "EXPRESSION_EXPECTED_TOKEN",
+                format!("expected `{spelling}`"),
+            )
+        })
     }
 
     fn error(&self, code: &'static str, message: impl Into<String>) -> ExpressionError {

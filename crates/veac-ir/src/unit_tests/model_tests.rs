@@ -48,6 +48,7 @@ fn clip_source_reports_only_typed_font_material_references() {
     let caption = ClipSource::Caption {
         text: "b".to_owned(),
         speaker: None,
+        cue: Box::default(),
         style,
     };
     assert_eq!(text.font_material().unwrap().as_str(), "med_font");
@@ -102,5 +103,30 @@ fn spring_interpolation_has_an_explicit_canonical_shape() {
     assert_eq!(
         serde_json::from_value::<Interpolation>(json).unwrap(),
         spring
+    );
+}
+
+#[test]
+fn cubic_interpolation_reports_intermediate_overshoot_extrema() {
+    let easing = Interpolation::CubicBezier {
+        x1: 0.2,
+        y1: -0.4,
+        x2: 0.8,
+        y2: 1.4,
+    };
+    let extrema = easing.intermediate_extrema().unwrap();
+    assert_eq!(extrema.len(), 2);
+    assert!((extrema[0] + 0.058_406_766).abs() < 1e-6);
+    assert!((extrema[1] - 1.058_406_766).abs() < 1e-6);
+    assert_eq!(Interpolation::Linear.intermediate_extrema(), Some(vec![]));
+    assert_eq!(
+        Interpolation::CubicBezier {
+            x1: 0.2,
+            y1: f64::MAX,
+            x2: 0.8,
+            y2: -f64::MAX,
+        }
+        .intermediate_extrema(),
+        None
     );
 }

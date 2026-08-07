@@ -124,7 +124,7 @@ fn provider_commands_execute_protocol_and_emit_a_caption_proposal() {
             project_revision: project.project.revision,
             operation_id: OperationId::new("op_provider_cli").unwrap(),
         },
-        sequence_id: SequenceId::new("seq_main").unwrap(),
+        sequence_id: project.project.sequences[0].id.clone(),
         track_id: TrackId::new("trk_provider_captions").unwrap(),
         style: TextStyle::default(),
         visual,
@@ -172,6 +172,7 @@ fn caption_project(temp: &TempDir) -> std::path::PathBuf {
         routing: TrackRouting::Default,
         clips: Vec::new(),
     });
+    project.project.sequences[0].authorship = None;
     std::fs::write(&path, veac_ir::canonical_json(&project).unwrap()).unwrap();
     path
 }

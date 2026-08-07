@@ -17,6 +17,7 @@ pub(crate) struct LoadedProject {
 pub(crate) struct HydratedProject {
     pub envelope: veac_ir::ProjectEnvelope,
     pub project_file: PathBuf,
+    pub material_root: crate::material_root::MaterialRoot,
     pub material_paths: BTreeMap<MaterialId, PathBuf>,
 }
 
@@ -34,13 +35,15 @@ pub(crate) fn load_local(path: &Path) -> CliResult<LoadedProject> {
     })
 }
 
-pub(crate) fn hydrate(
+pub(crate) fn hydrate_with_material_root(
     mut loaded: LoadedProject,
     required: &BTreeSet<MaterialId>,
+    requested_root: Option<&Path>,
     environment: &dyn Environment,
 ) -> CliResult<HydratedProject> {
     let project_file = loaded.project_file;
-    let base = project_file.parent().unwrap_or(Path::new("."));
+    let material_root =
+        crate::material_root::MaterialRoot::for_project(&project_file, requested_root)?;
     let mut material_paths = BTreeMap::new();
     for material in &mut loaded.envelope.project.materials {
         if !required.contains(&material.id) {
@@ -55,7 +58,7 @@ pub(crate) fn hydrate(
                 ))
             }
         };
-        let local = fs::canonical_file(&base.join(uri), "material")?;
+        let local = material_root.resolve_file(uri)?;
         let observed = if matches!(
             material.kind,
             MaterialKind::Font | MaterialKind::Lut1d | MaterialKind::Lut3d
@@ -74,6 +77,7 @@ pub(crate) fn hydrate(
     Ok(HydratedProject {
         envelope: loaded.envelope,
         project_file,
+        material_root,
         material_paths,
     })
 }

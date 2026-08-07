@@ -162,3 +162,21 @@ fn payload_contracts_reject_wrong_spans_text_scores_and_ordering() {
             .any(|value| value.code == "ANNOTATION_PAYLOAD"));
     }
 }
+
+#[test]
+fn highlight_evidence_preserves_authored_semantic_order() {
+    let mut project = sample_project();
+    project.project.annotations = vec![annotation(
+        "ann_highlight",
+        sequence_target(),
+        range(0, 100),
+        AnnotationPayload::Highlight {
+            score: 0.9,
+            rationale: "ordered evidence".into(),
+            evidence: vec!["second observation".into(), "first observation".into()],
+        },
+    )];
+    validate(&project).unwrap();
+    let json = canonical_json(&project).unwrap();
+    assert_eq!(decode_canonical_json(&json).unwrap(), project);
+}

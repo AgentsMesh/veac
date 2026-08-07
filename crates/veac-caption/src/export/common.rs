@@ -1,13 +1,12 @@
-use std::collections::HashMap;
-
 use subtitler::model::{AssStyle, Subtitle};
+use veac_ir::CaptionNativeCue;
 
 use crate::{
     time::range_to_millis, CaptionCue, CaptionEnvelope, CaptionError, CaptionFormat, ExportResult,
     LossReport,
 };
 
-use super::{losses, markup};
+use super::{losses, markup, native};
 
 pub(super) fn export(
     value: &CaptionEnvelope,
@@ -17,19 +16,12 @@ pub(super) fn export(
     losses::document(&value.document, format, &mut report);
     let mut subtitles = Vec::with_capacity(value.document.cues.len());
     for (index, cue) in value.document.cues.iter().enumerate() {
-        losses::cue(cue, format, index, &mut report);
+        losses::cue(cue, format, &mut report);
         subtitles.push(to_subtitle(cue, format, index, &mut report)?);
     }
     let content = match format {
-        CaptionFormat::Srt => subtitler::srt::to_string(&subtitles),
-        CaptionFormat::WebVtt => {
-            let header = value
-                .document
-                .settings
-                .get("webvtt.header")
-                .map(String::as_str);
-            subtitler::vtt::to_string(&subtitles, header)
-        }
+        CaptionFormat::Srt => native::srt::render(&subtitles, &value.document.cues),
+        CaptionFormat::WebVtt => native::webvtt::render(&value.document, &subtitles),
         CaptionFormat::Ass => {
             let styles: Vec<_> = value.document.styles.iter().map(to_ass_style).collect();
             let defaults = [AssStyle::default_style()];
@@ -38,7 +30,7 @@ pub(super) fn export(
             } else {
                 &styles
             };
-            subtitler::ass::to_string(&HashMap::new(), styles, &subtitles)
+            native::ass::render(&value.document, styles, &subtitles)
         }
     };
     Ok(ExportResult {
@@ -64,15 +56,17 @@ fn to_subtitle(
     match format {
         CaptionFormat::Srt => {}
         CaptionFormat::WebVtt => {
-            subtitle.settings = cue.settings.get("webvtt.settings").cloned();
+            if let Some(CaptionNativeCue::WebVtt { settings, .. }) = &cue.native {
+                subtitle.settings = settings.as_ref().map(crate::ir::semantics::webvtt::format);
+            }
         }
         CaptionFormat::Ass => {
             subtitle.style = cue.style.clone();
             subtitle.actor = cue.speaker.clone();
-            subtitle.is_comment = cue
-                .settings
-                .get("ass.comment")
-                .is_some_and(|value| value == "true");
+            subtitle.is_comment = matches!(
+                &cue.native,
+                Some(CaptionNativeCue::Ass { settings }) if settings.comment
+            );
         }
     }
     Ok(subtitle)

@@ -1,64 +1,66 @@
-# Text, Captions, and Audio
+# Text、Caption 与 Audio
 
-Text owns content, style, layout, and optional unit animation:
+Text source 由 content 和 typed `TextStyle` 组成。Style 明确组合 metrics、layout、path、decoration、
+rich spans 与 unit animation：
 
-```veac
-source text {
-  content "Typed editing";
-  style {
-    font family "Inter";
-    size 64px;
-    weight bold;
-    fill #ffffffff;
-    background { color #000000aa; padding 12px; }
-  }
-  layout {
-    box-width 1000px;
-    box-height 240px;
-    wrap word;
-    overflow ellipsis;
-    horizontal-align center;
-    vertical-align middle;
-  }
-  animation {
-    unit word;
-    stagger 100ms;
-    reveal 100%;
-    opacity 100%;
-  }
-}
+```veac,fragment
+let style = text_style(
+  text_metrics(
+    font_stack(font_resource_ref(font), []),
+    weight_bold(), font_style_normal(), 48px, 1px, 1.2, #ffffffff
+  ),
+  text_layout(
+    text_box_width(900px), text_wrap_word(), text_overflow_ellipsis(),
+    text_align_center(), text_align_middle(),
+    writing_horizontal_tb(), orientation_mixed()
+  ),
+  text_path_none(),
+  text_decoration(
+    text_background_present(#07131dcc, 12px),
+    text_outline_present(#22d3eeff, 2px), shadow_none()
+  ),
+  [], text_animation_none()
+);
+source_text("类型化文本", style)
 ```
 
-Style also supports fallback fonts, outline, shadow, tracking, line height, and non-overlapping scalar-index spans. Layout supports writing mode, glyph orientation, and typed paths. Animation units are whole, line, word, or grapheme. On a line containing whitespace, `word` treats each non-whitespace token as an author-defined unit; without whitespace it follows Unicode word boundaries. Whitespace and rich style spans never create extra animation units, and numbering continues across lines in logical reading order.
+Font stack 持有 Project-owned font Resource reference。Layout 覆盖 fixed/width/height box、wrap、
+overflow、horizontal/vertical alignment、writing mode、glyph orientation 和 typed path。Rich span 使用
+scalar index 的非重叠半开区间。Unit animation 支持 whole、line、word、grapheme 的 reveal、highlight、
+opacity、position、scale、rotation 和 stagger。
 
-Caption adds an optional speaker while reusing the text value objects:
+Caption 复用同一个 TextStyle，并可携带 speaker：
 
-```veac
-source caption {
-  content "Welcome";
-  speaker "Narrator";
-  style { font family "Inter"; size 48px; fill #ffffffff; }
-}
+```veac,fragment
+source_caption("可烧录也可独立交付", style)
+source_caption_speaker("欢迎", "讲述者", style)
 ```
 
-Caption sources are valid only on caption layers. Sidecars select typed caption layers; cue timing comes from item record spans.
+Caption source 只能进入 caption Layer。`deliverable_caption_sidecar` 选择 typed caption Layer handle，
+cue timing 来自 Item record span；SRT、WebVTT 和 ASS 是闭合 sidecar format。
 
-Audio is a closed pipeline:
+Audio Item 使用 `AudioStyle`，不是字段袋：
 
-```veac
-audio voice {
-  gain -2db;
-  pan 0;
-  muted false;
-  normalize false;
-  pitch preserve;
-  crossfade { fade-in 80ms; fade-out 120ms; curve equal-power; }
-  processor high-pass voice-hpf { frequency 80hz; q 0.707; poles 2; }
-  processor compressor voice-compressor {
-    threshold -18db; ratio 3; attack 10ms; release 120ms;
-    knee 6db; makeup-gain 2db; mix 100%;
-  }
-}
+```veac,fragment
+audio_style(
+  scalar_constant(0.8), scalar_constant(0.0),
+  audio_playback(false, false, pitch_preserve()),
+  [
+    audio_high_pass(identifier("rumble"), 80.0, 0.7, 2),
+    audio_compressor(
+      identifier("voice"),
+      compressor_settings(-18.0, 3.0, 10.0, 120.0, 4.0, 2.0, 75%)
+    )
+  ],
+  audio_crossfade_present(200ms, 200ms, audio_fade_equal_power())
+)
 ```
 
-Layers may route to typed buses; sidechain relations connect an item or bus key to a target item.
+Gain/pan 可为 keyframes 或 authored temporal binding。Processor 顺序是语义；EQ、high/low pass、
+compressor、limiter、gate、loudness、normalize、denoise 等 operation 各自有闭合参数。Audio Layer 可
+route 到 typed bus，sidechain relation 使用 Layer/Item handle，不用字符串 lookup。
+
+完整示例见 [`examples/text-layout`](../../examples/text-layout)、
+[`examples/text-animation`](../../examples/text-animation)、
+[`examples/captions-and-sidecars`](../../examples/captions-and-sidecars) 和
+[`examples/audio-processing`](../../examples/audio-processing)。

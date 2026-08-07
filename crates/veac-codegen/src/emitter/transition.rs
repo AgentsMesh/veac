@@ -50,37 +50,13 @@ fn outgoing_side(
     input: &str,
     transition: &ResolvedTransition,
 ) -> String {
-    let handle = transition.outgoing_handle;
-    if handle.duration.value == 0
-        || !time::frame_interval_has_sample(
-            handle.offset,
-            handle.duration,
-            context.canvas.frame_rate,
-        )
-    {
-        let sample_end = handle
-            .offset
-            .checked_add(handle.duration)
-            .unwrap_or(handle.offset);
-        let start = time::frame_window_start(sample_end, context.canvas.frame_rate);
-        return context.graph.filter(
-            &[input],
-            format!(
-                "trim=start={start},reverse,trim=end_frame=1,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={},trim=duration={}",
-                time::seconds(transition.record_window.duration),
-                time::seconds(transition.record_window.duration)
-            ),
-            "transitionoutv",
-        );
-    }
+    let range = transition.outgoing_range;
     context.graph.filter(
         &[input],
         format!(
-            "trim=start={}:duration={},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={},trim=duration={}",
-            time::seconds(handle.offset),
-            time::seconds(handle.duration),
-            time::seconds(transition.incoming_handle.duration),
-            time::seconds(transition.record_window.duration)
+            "trim=start={}:duration={},setpts=PTS-STARTPTS",
+            time::seconds(range.start),
+            time::seconds(range.duration),
         ),
         "transitionoutv",
     )
@@ -91,25 +67,13 @@ fn incoming_side(
     input: &str,
     transition: &ResolvedTransition,
 ) -> String {
-    let handle = transition.incoming_handle;
-    if handle.duration.value == 0 {
-        return context.graph.filter(
-            &[input],
-            format!(
-                "trim=end_frame=1,setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration={},trim=duration={}",
-                time::seconds(transition.record_window.duration),
-                time::seconds(transition.record_window.duration)
-            ),
-            "transitioninv",
-        );
-    }
+    let range = transition.incoming_range;
     context.graph.filter(
         &[input],
         format!(
-            "trim=start=0:duration={},setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration={},trim=duration={}",
-            time::seconds(handle.duration),
-            time::seconds(transition.outgoing_handle.duration),
-            time::seconds(transition.record_window.duration)
+            "trim=start={}:duration={},setpts=PTS-STARTPTS",
+            time::seconds(range.start),
+            time::seconds(range.duration),
         ),
         "transitioninv",
     )

@@ -1,11 +1,11 @@
 use std::collections::BTreeSet;
 
 use veac_ir::{
-    Animatable, BlendMode, ClipSource, MaskShape, Placement, ProjectEnvelope, RelationKind,
-    TrackMatteMode, TransitionKind,
+    Animatable, BlendMode, MaskShape, Placement, ProjectEnvelope, RelationKind, TrackMatteMode,
+    TransitionKind,
 };
 
-use crate::support::{assert_preview_evidence, clips, lower_example};
+use crate::support::{assert_preview_evidence, authored_key, clip_by_key, clips, lower_example};
 
 #[test]
 fn preview_composition_rows_have_typed_variants_in_their_target() {
@@ -15,14 +15,7 @@ fn preview_composition_rows_have_typed_variants_in_their_target() {
 #[test]
 fn image_overlay_keeps_the_asset_inside_its_bottom_right_inset() {
     let envelope = crate::support::lower_example("image-overlay/main.veac");
-    let logo = envelope
-        .project
-        .sequences
-        .iter()
-        .flat_map(|sequence| &sequence.tracks)
-        .flat_map(|track| &track.clips)
-        .find(|clip| clip.id.as_str() == "itm_logo")
-        .expect("image-overlay logo clip");
+    let logo = clip_by_key(&envelope, "logo");
     let visual = logo.visual.as_ref().expect("logo visual properties");
     let frame = visual.frame.as_ref().expect("logo fit frame");
     assert_eq!(frame.width.value, 320.0);
@@ -43,19 +36,24 @@ fn image_overlay_keeps_the_asset_inside_its_bottom_right_inset() {
 fn blend_gallery_changes_only_the_mode_between_segments() {
     let envelope = lower_example("blend-modes/main.veac");
     let overlays: Vec<_> = clips(&envelope)
-        .filter(|clip| matches!(clip.source, ClipSource::Sequence { .. }))
+        .filter(|clip| {
+            clip.record_range.duration.value == 600
+                && clip.visual.as_ref().is_some_and(|visual| {
+                    matches!(
+                        visual.opacity, Animatable::Constant { value }
+                            if (value - 0.82).abs() < f64::EPSILON
+                    )
+                })
+        })
         .collect();
     assert_eq!(overlays.len(), 12);
 
     let mut modes = BTreeSet::new();
     for (index, clip) in overlays.iter().enumerate() {
-        assert!(matches!(&clip.source,
-            ClipSource::Sequence { sequence_id } if sequence_id.as_str() == "seq_foreground"));
-        assert_eq!(clip.record_range.start.value, index as i64 * 1_000);
-        assert_eq!(clip.record_range.duration.value, 1_000);
+        assert_eq!(clip.source, overlays[0].source);
+        assert_eq!(clip.record_range.start.value, index as i64 * 600);
+        assert!(authored_key(&clip.authorship).is_some());
         let visual = clip.visual.as_ref().expect("blend visual properties");
-        assert!(matches!(visual.opacity, Animatable::Constant { value }
-            if (value - 0.82).abs() < f64::EPSILON));
         modes.insert(blend_id(visual.compositing.blend_mode));
     }
     assert_eq!(modes.len(), 12);
@@ -66,6 +64,7 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
     for clip in clips(envelope) {
         if let Some(visual) = &clip.visual {
             found.insert(blend_id(visual.compositing.blend_mode).to_owned());
+            add_program_transform(&visual.transform, &mut found);
             found.extend(
                 visual
                     .masks
@@ -103,6 +102,32 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
         }
     }
     found
+}
+
+fn add_program_transform(value: &veac_ir::Transform2D, found: &mut BTreeSet<String>) {
+    let translated = matches!(&value.position,
+        Animatable::Constant { value } if value.x.value != 0.0 || value.y.value != 0.0);
+    let scaled = matches!(&value.scale,
+        Animatable::Constant { value } if value.x != 1.0 || value.y != 1.0);
+    let rotated = matches!(&value.rotation_degrees,
+        Animatable::Constant { value } if *value != 0.0);
+    let anchored = value.anchor.x != 0.5 || value.anchor.y != 0.5;
+    let flipped = value.flip_horizontal || value.flip_vertical;
+    for (present, id) in [
+        (translated, "program.transform.translate"),
+        (scaled, "program.transform.scale"),
+        (rotated, "program.transform.rotate"),
+        (anchored, "program.transform.anchor"),
+        (flipped, "program.transform.flip"),
+    ] {
+        if present {
+            found.insert(id.to_owned());
+        }
+    }
+    if translated || scaled || rotated || anchored || flipped {
+        found.insert("program.transform.identity".to_owned());
+        found.insert("program.item.with-transform".to_owned());
+    }
 }
 
 fn transition_id(kind: &TransitionKind) -> &'static str {

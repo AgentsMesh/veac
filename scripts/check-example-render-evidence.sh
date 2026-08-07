@@ -11,10 +11,14 @@ for module in \
   showcase-all-features audio-metrics audio audio-all-features fixtures core-media \
   delivery-typed-common delivery-contracts \
   delivery-audio-file delivery-images delivery-waveform delivery-hls-playlist delivery-hls \
-  delivery media-smoke-path media-smoke-roster \
+  delivery-master-audio delivery-master delivery media-smoke-path media-smoke-roster \
   media-smoke-container media-smoke-timing media-smoke-probe media-smoke \
-  timing text text-showcase text-agentsmesh-intro visual-mechanisms \
-  advanced-color-stages mask-shape-gallery video-stabilization \
+  timing text text-showcase text-agentsmesh-intro mechanism-pixels \
+  visual-canonical-contracts visual-mechanisms \
+  generated-graphics advanced-color-stages mask-shape-gallery video-stabilization \
+  executable-family \
+  workflow-showcase-core workflow-keying workflow-routing workflow-operations \
+  workflow-showcase-media workflow-showcases \
   delivery-codec-matrix; do
   # shellcheck source=/dev/null
   source "$SCRIPT_DIR/example-render-evidence/$module.sh"
@@ -67,6 +71,8 @@ check_agentsmesh_intro_evidence
 check_advanced_color_stage_evidence
 check_mask_shape_gallery_evidence
 check_video_stabilization_evidence
+check_executable_family_evidence
+check_workflow_showcase_evidence
 check_delivery_codec_matrix_evidence
 check_all_example_media_smoke "$CATALOG"
 

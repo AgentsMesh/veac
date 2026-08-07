@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::{
-    Annotation, Material, MulticamGroup, OperationId, ProjectId, Relation, RenderConfig, Sequence,
-    SequenceId, CURRENT_SCHEMA_VERSION, MIN_READER_VERSION, SCHEMA_ID,
+    Annotation, ExecutableManifest, Material, MulticamGroup, OperationId, ProjectAuthorship,
+    ProjectId, Relation, RenderConfig, Sequence, SequenceId, TemporalProgramLibrary,
+    CURRENT_SCHEMA_VERSION, MIN_READER_VERSION, SCHEMA_ID,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -15,15 +13,23 @@ pub struct ProjectEnvelope {
     pub schema: String,
     pub schema_version: u32,
     pub min_reader_version: u32,
+    pub executable: ExecutableManifest,
+    pub temporal: TemporalProgramLibrary,
     pub project: Project,
 }
 
 impl ProjectEnvelope {
-    pub fn new(project: Project) -> Self {
+    pub fn new(
+        project: Project,
+        executable: ExecutableManifest,
+        temporal: TemporalProgramLibrary,
+    ) -> Self {
         Self {
             schema: SCHEMA_ID.to_owned(),
             schema_version: CURRENT_SCHEMA_VERSION,
             min_reader_version: MIN_READER_VERSION,
+            executable,
+            temporal,
             project,
         }
     }
@@ -44,7 +50,7 @@ pub struct Project {
     pub relations: Vec<Relation>,
     pub sequences: Vec<Sequence>,
     pub applied_operations: Vec<AppliedOperation>,
-    pub metadata: BTreeMap<String, Value>,
+    pub authorship: Option<ProjectAuthorship>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

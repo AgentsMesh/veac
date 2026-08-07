@@ -37,8 +37,8 @@ pub(super) fn unsafe_time(keys: &mut [Keyframe<f64>], _: RationalTime) {
 
 pub(super) fn invalid_easing(keys: &mut [Keyframe<f64>], _: RationalTime) {
     keys[0].interpolation = Interpolation::CubicBezier {
-        x1: 0.1,
-        y1: -0.1,
+        x1: -0.1,
+        y1: 0.1,
         x2: 1.0,
         y2: 1.0,
     };

@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
-use veac_lang::program::{compile_source, compile_with_loader, LoadedSource, SourceLoader};
+use veac_lang::program::{prepare_source, prepare_with_loader, LoadedSource, SourceLoader};
+
+use super::executable_entry;
 
 struct GeneratedModules;
 
@@ -43,21 +45,13 @@ fn entry_with_imports(count: usize) -> String {
     for index in 0..count {
         writeln!(source, "import \"./m{index}.veac\" as m{index};").unwrap();
     }
-    source.push_str(
-        r#"project root {
-  settings {
-    timebase 1/1000; canvas 1px by 1px;
-    frame-rate 1fps; sample-rate 48000hz;
-  }
-  entry sequence main; sequence main {}
-}"#,
-    );
+    source.push_str(&executable_entry("", "1s"));
     source
 }
 
 #[test]
 fn public_compile_boundary_enforces_the_1024_module_budget() {
-    let error = compile_with_loader(
+    let error = prepare_with_loader(
         LoadedSource {
             id: "main.veac".to_owned(),
             source: entry_with_imports(1024),
@@ -70,7 +64,7 @@ fn public_compile_boundary_enforces_the_1024_module_budget() {
 
 #[test]
 fn public_compile_boundary_enforces_the_64_mib_graph_budget() {
-    let error = compile_with_loader(
+    let error = prepare_with_loader(
         LoadedSource {
             id: "main.veac".to_owned(),
             source: entry_with_imports(4),
@@ -84,13 +78,13 @@ fn public_compile_boundary_enforces_the_64_mib_graph_budget() {
 #[test]
 fn public_compile_boundary_enforces_the_one_million_token_budget() {
     let source = "a ".repeat(1_000_000);
-    let error = compile_source(&source).unwrap_err();
+    let error = prepare_source(&source).unwrap_err();
     assert_eq!(error.as_slice()[0].code, "PROGRAM_TOKEN_LIMIT");
 }
 
 #[test]
-fn compile_source_rejects_oversized_input_before_parsing() {
+fn prepare_source_rejects_oversized_input_before_parsing() {
     let source = " ".repeat(16 * 1024 * 1024 + 1);
-    let error = compile_source(&source).unwrap_err();
+    let error = prepare_source(&source).unwrap_err();
     assert_eq!(error.as_slice()[0].code, "PROGRAM_SOURCE_LIMIT");
 }

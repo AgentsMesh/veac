@@ -32,7 +32,10 @@ fn arguments_with_suffix(
         ]);
     }
     if let Some(level) = &video.level {
-        args.extend([option("-level:v", "-level:v", suffix), level.clone()]);
+        args.extend([
+            option("-level:v", "-level:v", suffix),
+            level_argument(video.codec, level),
+        ]);
     }
     if video.alpha == AlphaMode::Straight {
         args.extend([
@@ -46,6 +49,18 @@ fn arguments_with_suffix(
         super::color_output::stream_arguments(video.color_space, suffix)
     });
     args
+}
+
+fn level_argument(codec: VideoCodec, value: &str) -> String {
+    if codec != VideoCodec::Av1 {
+        return value.to_owned();
+    }
+    let (major, minor) = value
+        .split_once('.')
+        .map_or((value, "0"), |(major, minor)| (major, minor));
+    let major = major.parse::<u8>().expect("validated AV1 level major");
+    let minor = minor.parse::<u8>().expect("validated AV1 level minor");
+    ((major - 2) * 4 + minor).to_string()
 }
 
 fn rate_control(args: &mut Vec<String>, video: &VideoOutput, suffix: &str) {

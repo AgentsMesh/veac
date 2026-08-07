@@ -1,18 +1,15 @@
 use veac_plan::canonical::{Interpolation, Keyframe, Length, Point, Rect, Vec2};
 
-pub(super) trait SpringValue: Sized {
+pub(super) trait CurveValue: Sized {
     fn spring_value(&self, next: &Self, amount: f64) -> Option<Self>;
 }
 
-pub(super) fn spring_ranges_valid<T: SpringValue>(
+pub(super) fn interpolation_ranges_valid<T: CurveValue>(
     keyframes: &[Keyframe<T>],
     valid: fn(&T) -> bool,
 ) -> bool {
     keyframes.windows(2).all(|pair| {
-        if !matches!(pair[0].interpolation, Interpolation::Spring { .. }) {
-            return true;
-        }
-        let Some(amounts) = pair[0].interpolation.spring_extrema() else {
+        let Some(amounts) = pair[0].interpolation.intermediate_extrema() else {
             return false;
         };
         amounts.into_iter().all(|amount| {
@@ -76,22 +73,20 @@ pub(super) fn interpolation(value: &Interpolation) -> bool {
                 && x2.is_finite()
                 && y2.is_finite()
                 && (0.0..=1.0).contains(x1)
-                && (0.0..=1.0).contains(y1)
                 && (0.0..=1.0).contains(x2)
-                && (0.0..=1.0).contains(y2)
         }
         Interpolation::Spring { .. } => value.spring_coefficients().is_some(),
         _ => true,
     }
 }
 
-impl SpringValue for f64 {
+impl CurveValue for f64 {
     fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(self + (next - self) * amount)
     }
 }
 
-impl SpringValue for Vec2 {
+impl CurveValue for Vec2 {
     fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(Self {
             x: self.x + (next.x - self.x) * amount,
@@ -100,7 +95,7 @@ impl SpringValue for Vec2 {
     }
 }
 
-impl SpringValue for Point {
+impl CurveValue for Point {
     fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
         if self.x.unit != next.x.unit || self.y.unit != next.y.unit {
             return None;
@@ -118,7 +113,7 @@ impl SpringValue for Point {
     }
 }
 
-impl SpringValue for Rect {
+impl CurveValue for Rect {
     fn spring_value(&self, next: &Self, amount: f64) -> Option<Self> {
         Some(Self {
             x: self.x + (next.x - self.x) * amount,

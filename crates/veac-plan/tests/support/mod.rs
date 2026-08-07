@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
 mod applies;
+mod effects;
 mod media;
 mod properties;
 mod relation_assertions;
@@ -8,13 +9,14 @@ mod relations;
 mod timeline;
 
 pub use applies::*;
+pub use effects::*;
 pub use media::*;
 pub use properties::*;
 pub use relation_assertions::*;
 pub use relations::*;
 pub use timeline::*;
 
-use veac_plan::{canonical::*, ResolutionErrors};
+use veac_plan::{canonical::*, ResolutionErrors, ResolvedClip, ResolvedSequence};
 
 pub fn project() -> ProjectEnvelope {
     let mut envelope: ProjectEnvelope = serde_json::from_str(include_str!(
@@ -41,4 +43,13 @@ pub fn time(value: i64) -> RationalTime {
 
 pub fn range(start: i64, duration: i64) -> TimeRange {
     TimeRange::new(time(start), time(duration)).expect("fixture range")
+}
+
+pub fn find_clip<'a>(sequence: &'a ResolvedSequence, id: &str) -> &'a ResolvedClip {
+    sequence
+        .tracks
+        .iter()
+        .flat_map(|track| &track.clips)
+        .find(|clip| clip.id.as_str() == id)
+        .unwrap()
 }

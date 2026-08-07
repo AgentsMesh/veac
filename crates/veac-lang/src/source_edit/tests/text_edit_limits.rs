@@ -34,7 +34,7 @@ fn resolved_replacement_count_is_checked_before_borrowed_collection() {
     let operation = operation("y");
     let mut replacements = (0..MAX_SOURCE_EDIT_OPERATIONS)
         .map(|start| {
-            resolve_set_expression_text(
+            resolve_source_edit_text(
                 start,
                 &operation,
                 TextRange {

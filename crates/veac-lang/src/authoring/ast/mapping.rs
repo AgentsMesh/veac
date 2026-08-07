@@ -1,38 +1,14 @@
-use super::{Identifier, InterpolationDecl, NumberLiteral, Span};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MappingDecl {
-    Linear {
-        from: NumberLiteral,
-        to: NumberLiteral,
-        outside: SourceOutOfRangeDecl,
-        span: Span,
-    },
-    Curve {
-        keys: Vec<MappingKey>,
-        outside: SourceOutOfRangeDecl,
-        span: Span,
-    },
-    Freeze {
-        source: NumberLiteral,
-        span: Span,
-    },
+super::define_syntax_tokens! {
+    pub enum MappingKind {
+        Linear => "linear",
+        Curve => "curve",
+        Freeze => "freeze",
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum SourceOutOfRangeDecl {
-    #[default]
-    Strict,
-    HoldFirst,
-    HoldLast,
-    HoldBoth,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MappingKey {
-    pub id: Identifier,
-    pub at: NumberLiteral,
-    pub source: NumberLiteral,
-    pub interpolation: InterpolationDecl,
-    pub span: Span,
-}
+super::impl_syntax_tokens!(veac_ir::SourceOutOfRangePolicy,
+    veac_ir::SourceOutOfRangePolicy::Strict => "strict",
+    veac_ir::SourceOutOfRangePolicy::HoldFirst => "hold-first",
+    veac_ir::SourceOutOfRangePolicy::HoldLast => "hold-last",
+    veac_ir::SourceOutOfRangePolicy::HoldBoth => "hold-both",
+);

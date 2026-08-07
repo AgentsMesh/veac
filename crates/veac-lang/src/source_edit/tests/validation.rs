@@ -6,6 +6,9 @@ use super::*;
 struct Snapshot {
     nodes: BTreeSet<SourceNodeRef>,
     expressions: BTreeMap<(SourceNodeRef, ExpressionSite), String>,
+    statements: BTreeMap<(SourceNodeRef, StatementSite), String>,
+    bodies: BTreeMap<(SourceNodeRef, BodySite), String>,
+    declarations: BTreeMap<(SourceNodeRef, DeclarationSite), String>,
 }
 
 impl SourceSnapshot for Snapshot {
@@ -18,17 +21,47 @@ impl SourceSnapshot for Snapshot {
             .get(&(target.clone(), site.clone()))
             .map(String::as_str)
     }
+
+    fn statement_source(&self, target: &SourceNodeRef, site: &StatementSite) -> Option<&str> {
+        self.statements
+            .get(&(target.clone(), site.clone()))
+            .map(String::as_str)
+    }
+
+    fn body_source(&self, target: &SourceNodeRef, site: BodySite) -> Option<&str> {
+        self.bodies.get(&(target.clone(), site)).map(String::as_str)
+    }
+
+    fn declaration_source(&self, target: &SourceNodeRef, site: DeclarationSite) -> Option<&str> {
+        self.declarations
+            .get(&(target.clone(), site))
+            .map(String::as_str)
+    }
 }
 
 #[test]
 fn valid_batch_checks_revision_and_preconditions() {
     let target = target();
-    let site = ExpressionSite::ItemRecordDuration;
+    let site = ExpressionSite::ConstantValue;
     let mut snapshot = Snapshot::default();
     snapshot.nodes.insert(target.clone());
     snapshot
         .expressions
         .insert((target.clone(), site.clone()), "4s".to_owned());
+    let function = SourceNodeRef::function("timeline/main.veac", "duration");
+    snapshot.bodies.insert(
+        (function.clone(), BodySite::FunctionBody),
+        "{ 4s }".to_owned(),
+    );
+    let declaration_target =
+        SourceNodeRef::struct_field("timeline/main.veac", "Timing", "duration");
+    snapshot.declarations.insert(
+        (
+            declaration_target.clone(),
+            DeclarationSite::StructFieldDeclaration,
+        ),
+        "duration: time".to_owned(),
+    );
     let mut batch = batch();
     batch.preconditions = vec![
         SourcePrecondition::NodeExists {
@@ -39,6 +72,20 @@ fn valid_batch_checks_revision_and_preconditions() {
             site,
             expression: ExpressionSource {
                 source: "4s".to_owned(),
+            },
+        },
+        SourcePrecondition::BodyEquals {
+            target: function,
+            site: BodySite::FunctionBody,
+            body: BodySource {
+                source: "{ 4s }".to_owned(),
+            },
+        },
+        SourcePrecondition::DeclarationEquals {
+            target: declaration_target,
+            site: DeclarationSite::StructFieldDeclaration,
+            declaration: DeclarationSource {
+                source: "duration: time".to_owned(),
             },
         },
     ];
@@ -88,8 +135,8 @@ fn contract_rejects_non_atomic_empty_and_incompatible_operations() {
         Err(SourceEditError::EmptyOperations)
     );
     value.operations.push(SourceEditOperation::SetExpression {
-        target: SourceNodeRef::sequence("timeline/main.veac", "timeline", "main"),
-        site: ExpressionSite::TextContent,
+        target: SourceNodeRef::function("timeline/main.veac", "duration"),
+        site: ExpressionSite::ConstantValue,
         expression: ExpressionSource {
             source: "\"hello\"".to_owned(),
         },
@@ -120,7 +167,7 @@ fn contract_rejects_bad_schema_digest_target_and_expression() {
             module: "../escape.veac".to_owned(),
             ..target()
         },
-        site: ExpressionSite::ItemEnabled,
+        site: ExpressionSite::ConstantValue,
         expression: ExpressionSource {
             source: "\0".to_owned(),
         },

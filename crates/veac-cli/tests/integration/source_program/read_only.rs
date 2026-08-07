@@ -39,5 +39,5 @@ fn dry_run_with_explicit_target_needs_no_source_root_write() {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    assert!(!temp.path().join(".veac-source.lock").exists());
+    assert!(temp.path().join(".veac-source.lock").is_file());
 }

@@ -23,13 +23,15 @@ assert_numeric_between() {
 
 delivery_metadata() {
   local plan
-  plan=$(example_preview_plan "$1" out_master)
+  plan=$(delivery_plan_path "$1" master)
   require_file "$plan"
   jq -er '
     .output as $output |
     first(.sequences[] | select(.id == $output.sequence_id)) as $sequence |
-    first($output.deliverables[] | select(.id == "dlv_frames")) as $frames |
-    first($output.deliverables[] | select(.id == "dlv_cover")) as $cover |
+    first($output.deliverables[] | select(.kind.type == "image_sequence" and
+      .target.pattern == "frame-%04d.png")) as $frames |
+    first($output.deliverables[] | select(.kind.type == "still_image" and
+      .target.name == "cover.png")) as $cover |
     ($output.raster.frame_rate.numerator) as $numerator |
     ($output.raster.frame_rate.denominator) as $denominator |
     ($sequence.duration.value * $numerator) as $frame_ticks |
@@ -76,9 +78,10 @@ delivery_boundary_frame_numbers() {
 delivery_frame_path() {
   local rendered=$1 number=$2 pattern entry plan
   entry=$(dirname "$rendered")
-  plan=$(example_preview_plan "$entry" out_master)
+  plan=$(delivery_plan_path "$entry" master)
   pattern=$(jq -er '
-    first(.output.deliverables[] | select(.id == "dlv_frames")).target.pattern |
+    first(.output.deliverables[] | select(.kind.type == "image_sequence" and
+      .target.pattern == "frame-%04d.png")).target.pattern |
     if test("^frame-%0[1-9][0-9]*d[.]png$") then . else error("unsafe frame pattern") end
   ' "$plan")
   [[ $pattern == 'frame-%04d.png' ]] || fail "unsupported delivery frame pattern"
