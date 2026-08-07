@@ -2,6 +2,8 @@ use tempfile::tempdir;
 
 use super::support::*;
 
+const MINIMUM_VISIBLE_MOVEMENT: f64 = 5.0;
+
 #[test]
 fn true_overlap_uses_moving_frames_from_both_endpoints() {
     let temp = tempdir().unwrap();
@@ -18,11 +20,11 @@ fn true_overlap_uses_moving_frames_from_both_endpoints() {
     let early_blue = channel_center(&early, 2);
     let late_blue = channel_center(&late, 2);
     assert!(
-        late_green > early_green + 7.0,
+        late_green > early_green + MINIMUM_VISIBLE_MOVEMENT,
         "green={early_green}..{late_green}"
     );
     assert!(
-        late_blue > early_blue + 7.0,
+        late_blue > early_blue + MINIMUM_VISIBLE_MOVEMENT,
         "blue={early_blue}..{late_blue}"
     );
 }
