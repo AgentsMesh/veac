@@ -54,14 +54,14 @@ cat >"$ENTRY/project/source.revision.json" <<'JSON'
 {"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 JSON
 cat >"$ENTRY/project/source.index.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-index","schema_version":7,
+{"schema":"https://veac.dev/schemas/source-index","schema_version":8,"build_inputs":[],
 "revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 "modules":[{"module":"main.veac","range":{"start":0,"end":1},"imports":[],
 "declarations":[{"target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
 "source":"const time duration = brand.duration;","range":{"start":0,"end":1}}]}],
 "nodes":[{"target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
 "range":{"start":0,"end":1},"expressions":[{"site":{"type":"constant_value"},
-"source":"brand.duration","range":{"start":0,"end":1}}],"bodies":[],"declarations":[]}]}
+"source":"brand.duration","range":{"start":0,"end":1}}],"statements":[],"bodies":[],"declarations":[]}]}
 JSON
 cat >"$ENTRY/project/source-edit.outcome.json" <<'JSON'
 {"modules":["main.veac"],
@@ -82,6 +82,14 @@ cp -R "$ENTRY" "$BASELINE"
 
 rm "$ENTRY/project/source.index.json"
 expect_guard_failure "missing source index"
+restore_entry
+jq '.schema_version = 7' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
+mv "$TMP/source.index.json" "$ENTRY/project/source.index.json"
+expect_guard_failure "legacy source index"
+restore_entry
+jq 'del(.build_inputs)' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
+mv "$TMP/source.index.json" "$ENTRY/project/source.index.json"
+expect_guard_failure "source index without Build input inventory"
 restore_entry
 rm "$ENTRY/project/probe.snapshot.json"
 expect_guard_failure "missing probe snapshot"

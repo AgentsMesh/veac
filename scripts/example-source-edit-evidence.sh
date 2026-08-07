@@ -36,12 +36,16 @@ verify_example_source_edit_evidence() {
     (.source_graph_sha256 | test("^[0-9a-f]{64}$"))
   ' "$revision" >/dev/null ||
     source_edit_evidence_error "invalid source revision contract" || return 1
-  jq -e --slurpfile revision "$revision" '
+  jq -e '
     .schema == "https://veac.dev/schemas/source-index" and
-    .schema_version == 7 and .revision == $revision[0] and
+    .schema_version == 8 and
+    (.build_inputs | type == "array") and
     (.modules | type == "array" and length > 0) and
     (.nodes | type == "array" and length > 0)
   ' "$index" >/dev/null ||
+    source_edit_evidence_error "invalid source index v8 contract" || return 1
+  jq -e --slurpfile revision "$revision" '.revision == $revision[0]' \
+    "$index" >/dev/null ||
     source_edit_evidence_error "source index does not match the revision" || return 1
   jq -e --slurpfile revision "$revision" --slurpfile index "$index" '
     def module_exists($name): any($index[0].modules[]; .module == $name);
