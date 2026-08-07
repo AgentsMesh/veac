@@ -1,7 +1,7 @@
 mod support;
 
-use veac_plan::{canonical::*, resolve, ResolvedClip, ResolvedClipSource, ResolvedSourceTimeMap};
-use {std::collections::BTreeMap, support::*};
+use support::*;
+use veac_plan::{canonical::*, resolve, ResolvedClipSource, ResolvedSourceTimeMap};
 
 #[test]
 fn resolves_fonts_freeze_generated_audio_effects_and_transitions() {
@@ -17,16 +17,30 @@ fn resolves_fonts_freeze_generated_audio_effects_and_transitions() {
     project.project.materials.push(font_material("med_font"));
     let main = &mut project.project.sequences[0];
     let first = &mut main.tracks[0].clips[0];
+    first.visual = Some(visual_properties());
     first.effects = vec![
-        effect("fx_blur", "video.blur", true),
-        effect("fx_off", "video.grain", false),
+        effect_instance(
+            "fx_blur",
+            true,
+            Effect::VideoBlur {
+                radius: Animatable::constant(4.0),
+            },
+        ),
+        effect_instance(
+            "fx_off",
+            false,
+            Effect::VideoGrain {
+                amount: Animatable::constant(0.2),
+            },
+        ),
     ];
     let transition = Transition {
         kind: TransitionKind::Dissolve,
         duration: time(120),
         alignment: TransitionAlignment::Centered,
     };
-    let mut second = media_clip("itm_second", "med_video", 600);
+    let mut second = media_clip("itm_second", "med_video", 480);
+    second.visual = Some(visual_properties());
     let mapping = second.source_mapping.as_mut().unwrap();
     let SourceTimeMap::Linear { rate, repeat, .. } = &mut mapping.time_map else {
         panic!("linear mapping");
@@ -77,9 +91,18 @@ fn resolves_fonts_freeze_generated_audio_effects_and_transitions() {
     let main = plan.sequences.last().unwrap();
     let video = &main.tracks[0];
     assert_eq!(video.transitions.len(), 1);
-    assert_eq!(video.transitions[0].outgoing_handle.duration, time(60));
-    assert_eq!(video.transitions[0].incoming_handle.duration, time(60));
+    assert_eq!(video.transitions[0].record_window, range(480, 120));
+    assert_eq!(video.transitions[0].outgoing_range, range(480, 120));
+    assert_eq!(video.transitions[0].incoming_range, range(0, 120));
     assert_eq!(video.clips[0].effects.len(), 1);
+    let effect = &video.clips[0].effects[0];
+    assert_eq!(effect.active_range, range(0, 600));
+    assert!(matches!(
+        &effect.effect,
+        Effect::VideoBlur {
+            radius: Animatable::Constant { value: 4.0 }
+        }
+    ));
     let mapping = video.clips[1].source_mapping.as_ref().unwrap();
     let ResolvedSourceTimeMap::Linear {
         source_range_per_repeat,
@@ -110,35 +133,32 @@ fn resolves_fonts_freeze_generated_audio_effects_and_transitions() {
 }
 
 #[test]
-fn transition_alignment_materializes_both_zero_handle_cases() {
-    let cases = [
-        (TransitionAlignment::BeforeCut, 120, 0),
-        (TransitionAlignment::Centered, 60, 60),
-        (TransitionAlignment::AfterCut, 0, 120),
-    ];
-    for (alignment, outgoing, incoming) in cases {
-        let mut project = project();
-        let track = &mut project.project.sequences[0].tracks[0];
-        let transition = Transition {
+fn odd_tick_overlap_has_floor_left_and_ceil_right_of_cut() {
+    let mut project = project();
+    let track = &mut project.project.sequences[0].tracks[0];
+    track.clips[0].visual = Some(visual_properties());
+    let mut incoming = media_clip("itm_incoming", "med_video", 479);
+    incoming.visual = Some(visual_properties());
+    track.clips.push(incoming);
+    add_transition(
+        &mut project,
+        "seq_main",
+        "itm_video",
+        "itm_incoming",
+        Transition {
             kind: TransitionKind::Dissolve,
-            duration: time(120),
-            alignment,
-        };
-        track
-            .clips
-            .push(media_clip("itm_incoming", "med_video", 600));
-        add_transition(
-            &mut project,
-            "seq_main",
-            "itm_video",
-            "itm_incoming",
-            transition,
-        );
-        let plan = resolve(&project, None).unwrap().remove(0);
-        let transition = &plan.sequences[0].tracks[0].transitions[0];
-        assert_eq!(transition.outgoing_handle.duration, time(outgoing));
-        assert_eq!(transition.incoming_handle.duration, time(incoming));
-    }
+            duration: time(121),
+            alignment: TransitionAlignment::Centered,
+        },
+    );
+    let plan = resolve(&project, None).unwrap().remove(0);
+    let transition = &plan.sequences[0].tracks[0].transitions[0];
+    assert_eq!(transition.record_window, range(479, 121));
+    assert_eq!(transition.cut_time, time(539));
+    assert_eq!(
+        transition.record_window.end().unwrap().value - transition.cut_time.value,
+        61
+    );
 }
 
 fn freeze_clip() -> Clip {
@@ -161,6 +181,7 @@ fn text_clip(caption: bool) -> Clip {
         ClipSource::Caption {
             text: "caption".to_owned(),
             speaker: None,
+            cue: Box::default(),
             style,
         }
     } else {
@@ -171,28 +192,4 @@ fn text_clip(caption: bool) -> Clip {
     };
     clip.visual = Some(visual_properties());
     clip
-}
-
-fn effect(id: &str, effect_type: &str, enabled: bool) -> EffectInstance {
-    let parameters = if effect_type == "video.blur" {
-        BTreeMap::from([("radius".to_owned(), ParameterValue::Number { value: 4.0 })])
-    } else {
-        BTreeMap::from([("amount".to_owned(), ParameterValue::Number { value: 0.2 })])
-    };
-    EffectInstance {
-        id: EffectId::new(id).unwrap(),
-        effect_type: effect_type.to_owned(),
-        enabled,
-        enable_range: None,
-        parameters,
-    }
-}
-
-fn find_clip<'a>(sequence: &'a veac_plan::ResolvedSequence, id: &str) -> &'a ResolvedClip {
-    sequence
-        .tracks
-        .iter()
-        .flat_map(|track| &track.clips)
-        .find(|clip| clip.id.as_str() == id)
-        .unwrap()
 }

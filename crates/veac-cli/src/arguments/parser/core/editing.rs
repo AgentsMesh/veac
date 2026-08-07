@@ -1,13 +1,14 @@
 use clap::{Arg, ArgMatches, Command as ClapCommand};
 
 use super::super::shared::{
-    flag, flag_value, path, path_option, path_value, required_path_value, value,
+    flag, flag_value, material_root, path, path_option, path_value, required_path_value,
+    string_values, value,
 };
 use crate::arguments::Command;
 
 pub(super) fn commands() -> [ClapCommand; 8] {
     [
-        compile(),
+        build(),
         check(),
         format(),
         check_ir(),
@@ -18,6 +19,36 @@ pub(super) fn commands() -> [ClapCommand; 8] {
     ]
 }
 
+fn build() -> ClapCommand {
+    ClapCommand::new("build")
+        .about("Execute programmable VEAC source into canonical project JSON")
+        .arg(path("source"))
+        .arg(
+            path_option("emit_ir")
+                .long("emit-ir")
+                .value_name("PATH")
+                .help("Write IR to PATH; detached local-material IR requires --material-root"),
+        )
+        .arg(inputs())
+        .arg(inline_input())
+        .arg(material_root())
+        .arg(revision())
+}
+
+fn inputs() -> Arg {
+    path_option("inputs")
+        .long("inputs")
+        .value_name("PATH")
+        .help("Bind declared Build inputs from a veac.build-inputs/v1 JSON manifest")
+}
+
+fn inline_input() -> Arg {
+    value("inline_inputs")
+        .long("input")
+        .action(clap::ArgAction::Append)
+        .help("Bind one declared Build input as NAME=VALUE; repeat to bind more")
+}
+
 fn revision() -> Arg {
     value("revision")
         .long("revision")
@@ -25,32 +56,25 @@ fn revision() -> Arg {
         .default_value("0")
 }
 
-fn compile() -> ClapCommand {
-    ClapCommand::new("compile")
-        .about("Lower agent-oriented source into canonical project JSON")
-        .arg(path("source"))
-        .arg(
-            path_option("emit_ir")
-                .long("emit-ir")
-                .value_name("PATH")
-                .help("Write canonical IR to PATH; omit it (or use `-`) for stdout"),
-        )
-        .arg(revision())
-}
-
 fn check() -> ClapCommand {
     ClapCommand::new("check")
-        .about("Validate agent-oriented source without media I/O")
+        .about("Validate executable VEAC source without media I/O")
         .arg(path("source"))
+        .arg(inputs())
+        .arg(inline_input())
         .arg(revision())
 }
 
 fn format() -> ClapCommand {
     ClapCommand::new("fmt")
-        .about("Canonically format agent-oriented source")
+        .about("Canonically format syntax-aware executable VEAC source")
         .arg(path("source"))
-        .arg(flag("check", "check").conflicts_with("stdout"))
-        .arg(flag("stdout", "stdout"))
+        .arg(
+            flag("check", "check")
+                .help("Fail when SOURCE is not canonically formatted")
+                .conflicts_with("stdout"),
+        )
+        .arg(flag("stdout", "stdout").help("Print formatted source without writing SOURCE"))
 }
 
 fn check_ir() -> ClapCommand {
@@ -94,6 +118,8 @@ fn source_edit() -> ClapCommand {
         .about("Apply one atomic typed edit batch to .veac source of truth")
         .arg(path("source"))
         .arg(path("source_edit_batch"))
+        .arg(inputs())
+        .arg(inline_input())
         .arg(
             path_option("output")
                 .short('o')
@@ -107,13 +133,18 @@ fn source_edit() -> ClapCommand {
 
 pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
     match name {
-        "compile" => Command::Compile {
+        "build" => Command::Build {
             source: required_path_value(matches, "source"),
             emit_ir: path_value(matches, "emit_ir"),
+            inputs: path_value(matches, "inputs"),
+            inline_inputs: string_values(matches, "inline_inputs"),
+            material_root: path_value(matches, "material_root"),
             revision: revision_value(matches),
         },
         "check" => Command::Check {
             source: required_path_value(matches, "source"),
+            inputs: path_value(matches, "inputs"),
+            inline_inputs: string_values(matches, "inline_inputs"),
             revision: revision_value(matches),
         },
         "fmt" => Command::Fmt {
@@ -139,6 +170,8 @@ pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
         "source-edit" => Command::SourceEdit {
             source: required_path_value(matches, "source"),
             source_edit_batch: required_path_value(matches, "source_edit_batch"),
+            inputs: path_value(matches, "inputs"),
+            inline_inputs: string_values(matches, "inline_inputs"),
             output: path_value(matches, "output"),
             dry_run: flag_value(matches, "dry_run"),
         },

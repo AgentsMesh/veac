@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::{
     Animatable, BlendMode, Compositing, FontRef, Length, LengthUnit, Placement, Point,
     RationalTime, TextStyle, TimeRange, Transform2D, Vec2, VisualProperties,
@@ -53,7 +51,7 @@ pub(crate) fn cue(id: &str, start: i64, text: &str) -> CaptionCue {
         },
         speaker: None,
         style: Some("Default".to_owned()),
-        settings: BTreeMap::new(),
+        native: None,
         words: Vec::new(),
     }
 }

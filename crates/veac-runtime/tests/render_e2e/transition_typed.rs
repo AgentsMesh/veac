@@ -139,13 +139,13 @@ fn render_with<T>(
     let temp = tempdir().unwrap();
     let output = temp.path().join(format!("{name}.mp4"));
     let mut project = project(false);
-    let red = solid_clip("itm_typed_red", color(255, 0, 0), 0, 1_000);
+    let red = visual_solid_clip("itm_typed_red", color(255, 0, 0), 0, 1_250);
     let transition = Transition {
         kind,
         duration: time(500),
         alignment: TransitionAlignment::Centered,
     };
-    let blue = solid_clip("itm_typed_blue", color(0, 0, 255), 1_000, 1_000);
+    let blue = visual_solid_clip("itm_typed_blue", color(0, 0, 255), 750, 1_250);
     project.project.sequences[0].tracks.push(track(
         "trk_typed_transition",
         TrackKind::Video,

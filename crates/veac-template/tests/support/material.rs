@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use super::time;
@@ -80,7 +78,7 @@ pub fn media(
             }),
             selected_audio_stream: None,
         }),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

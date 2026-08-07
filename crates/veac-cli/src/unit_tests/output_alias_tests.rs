@@ -30,6 +30,22 @@ fn future_case_and_unicode_aliases_follow_the_actual_filesystem_policy() {
     }
 }
 
+#[test]
+fn portable_outputs_reject_case_and_unicode_aliases_on_every_filesystem() {
+    let temp = tempfile::tempdir().unwrap();
+    for (protected_name, candidate_name) in [
+        ("VEAC-Protected.JSON", "veac-protected.json"),
+        ("Caf\u{e9}.json", "Cafe\u{301}.json"),
+    ] {
+        let protected = temp.path().join(protected_name);
+        let candidate = temp.path().join(candidate_name);
+        let error =
+            crate::output::guarded_write_portable(&candidate, std::iter::once(protected.as_path()))
+                .unwrap_err();
+        assert!(error.to_string().contains("OUTPUT_OVERWRITES_INPUT"));
+    }
+}
+
 fn aliases_on_disk(parent: &Path, authored: &str, alternate: &str) -> bool {
     let authored = parent.join(authored);
     let alternate = parent.join(alternate);

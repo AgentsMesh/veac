@@ -39,12 +39,15 @@ impl Validator {
     }
 
     fn text_box(&mut self, layout: &TextLayout, path: &str, item_id: &str) {
+        let inline_bounded = match layout.writing_mode {
+            TextWritingMode::HorizontalTb => layout.box_width_pixels.is_some(),
+            TextWritingMode::VerticalRl | TextWritingMode::VerticalLr => {
+                layout.box_height_pixels.is_some()
+            }
+        };
         let invalid = !text_box_valid(layout.box_width_pixels, layout.box_height_pixels)
-            || (layout.wrap != TextWrap::None && layout.box_width_pixels.is_none())
-            || (layout.overflow != TextOverflow::Visible
-                && (layout.box_width_pixels.is_none() || layout.box_height_pixels.is_none()))
-            || (layout.writing_mode != TextWritingMode::HorizontalTb
-                && (layout.wrap != TextWrap::None || layout.overflow == TextOverflow::Ellipsis));
+            || (layout.wrap != TextWrap::None && !inline_bounded)
+            || (layout.overflow != TextOverflow::Visible && !inline_bounded);
         if invalid {
             self.value_error("TEXT_LAYOUT", path, item_id);
         }

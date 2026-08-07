@@ -18,13 +18,15 @@ check_file() {
 while IFS= read -r -d '' file; do
   check_file "$file"
 done < <(
-  find "$ROOT/crates" "$ROOT/docs" "$ROOT/examples" "$ROOT/scripts" \
-    -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.jq' -o -name '*.md' \
-      -o -name '*.veac' -o -name '*.json' -o -name '*.toml' -o -name '*.cube' \) \
+  find "$ROOT/crates" "$ROOT/docs" "$ROOT/examples" "$ROOT/scripts" "$ROOT/.github" \
+    -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.py' -o -name '*.jq' \
+      -o -name '*.md' -o -name '*.txt' \
+      -o -name '*.veac' -o -name '*.json' -o -name '*.toml' -o -name '*.cube' \
+      -o -name '*.yml' -o -name '*.yaml' \) \
     -print0
 )
 
-for file in "$ROOT/README.md" "$ROOT/CONTRIBUTING.md" "$ROOT/Makefile"; do
+for file in "$ROOT/README.md" "$ROOT/CONTRIBUTING.md" "$ROOT/Makefile" "$ROOT/install.sh"; do
   [[ -f "$file" ]] || {
     echo "error: missing controlled file: ${file#"$ROOT"/}" >&2
     STATUS=1

@@ -1,0 +1,91 @@
+module {
+  fn input() -> ColorSpace {
+    color_space(primaries_bt709(), transfer_bt709(), matrix_bt709(), range_limited())
+  }
+
+  export fn picture() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)),
+        frame_sized(1920px, 1080px, fit_cover()),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+      [], color_pipeline_present(color_pipeline(
+        input(),
+        color_space(primaries_bt709(), transfer_linear(), matrix_rgb(), range_full()),
+        input(), [color_stage_basic(basic_color(0.1, 6600.0, 0.0, -0.04, 0.06, 0.01))]
+      ))
+    )
+  }
+
+  export fn lower_third() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_bottom(), vector(0.0, 80.0)),
+        frame_sized(1500px, 180px, fit_fill()),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 1.0), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(95%), compositing(20, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+
+  export fn caption() -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_absolute(point(960px, 850px)),
+        frame_sized(1500px, 140px, fit_contain()),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+      [], color_pipeline_none()
+    )
+  }
+
+  export fn caption_text(font: Resource) -> TextStyle {
+    text_style(
+      text_metrics(
+        font_stack(font_resource_ref(font), []),
+        weight_bold(), font_style_normal(), 64px, 0px, 1.2, #ffffffff
+      ),
+      text_layout(
+        text_box_fixed(1500px, 140px), text_wrap_word(), text_overflow_clip(),
+        text_align_center(), text_align_bottom(),
+        writing_horizontal_tb(), orientation_mixed()
+      ),
+      text_path_none(),
+      text_decoration(
+        text_background_present(#000000cc, 20px), text_outline_none(), shadow_none()
+      ),
+      [], text_animation_none()
+    )
+  }
+
+  export fn music() -> AudioStyle {
+    audio_style(
+      scalar_constant(0.501187), scalar_constant(0.0),
+      audio_playback(false, true, pitch_preserve()), [
+        audio_limiter(identifier("music-limiter"), limiter_settings(-1.0, 1.0, 80.0))
+      ], audio_crossfade_present(250ms, 500ms, audio_fade_equal_power())
+    )
+  }
+}

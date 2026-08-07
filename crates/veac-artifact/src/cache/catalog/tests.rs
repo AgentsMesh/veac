@@ -1,7 +1,5 @@
-use serde_json::json;
-
 use super::*;
-use crate::test_support;
+use crate::{test_support, ArtifactParameters};
 
 #[test]
 fn catalog_enforces_aggregate_metadata_and_payload_budgets_before_hashing() {
@@ -9,10 +7,13 @@ fn catalog_enforces_aggregate_metadata_and_payload_budgets_before_hashing() {
     let store = ArtifactStore::new(temp.path().join("store"));
     let first = test_support::descriptor();
     let mut second = first.clone();
-    second.parameters = json!({"codec": "h264", "height": 720, "tag": 2});
+    let ArtifactParameters::ProxyVideo(parameters) = &mut second.parameters else {
+        unreachable!()
+    };
+    parameters.crf = 25;
     store.put(&first, b"first-a").unwrap();
     store.put(&second, b"second!").unwrap();
-    let query = ArtifactCatalogQuery::new(first.kind, first.dependencies.clone()).unwrap();
+    let query = ArtifactCatalogQuery::new(first.kind(), first.dependencies.clone()).unwrap();
 
     assert_eq!(
         catalog_with_budgets(&store, &query, 1, 14)

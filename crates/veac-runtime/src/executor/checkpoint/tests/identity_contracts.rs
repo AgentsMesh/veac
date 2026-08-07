@@ -118,7 +118,10 @@ fn output_descriptor_maps_every_backend_product_kind() {
         (BackendProduct::Vectorscope, ArtifactKind::Vectorscope),
         (BackendProduct::Histogram, ArtifactKind::Histogram),
     ] {
-        assert_eq!(identity::output(&identity, product, "output", 0).kind, kind);
+        assert_eq!(
+            identity::output(&identity, product, "output", 0).kind(),
+            kind
+        );
     }
 }
 

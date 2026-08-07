@@ -5,9 +5,23 @@ write_stabilization_canonical() {
   cat >"$file" <<'JSON'
 {"project":{"sequences":[{"id":"seq_main","tracks":[{"clips":[
 {"id":"itm_stabilize-before","record_range":{"start":{"timescale":1000,"value":4000},"duration":{"timescale":1000,"value":2000}},"source":{"type":"media","material_id":"med_shaky"},"source_mapping":{"time_map":{"source_start":{"timescale":1000,"value":0}}},"effects":[]},
-{"id":"itm_stabilize-after","record_range":{"start":{"timescale":1000,"value":6000},"duration":{"timescale":1000,"value":2000}},"source":{"type":"media","material_id":"med_shaky"},"source_mapping":{"time_map":{"source_start":{"timescale":1000,"value":0}}},"effects":[{"effect_type":"video.stabilize","enable_range":null,"enabled":true,"id":"fx_stabilize","parameters":{"enabled":{"type":"boolean","value":true}}}]}
+{"id":"itm_stabilize-after","record_range":{"start":{"timescale":1000,"value":6000},"duration":{"timescale":1000,"value":2000}},"source":{"type":"media","material_id":"med_shaky"},"source_mapping":{"time_map":{"source_start":{"timescale":1000,"value":0}}},"effects":[{"effect":{"type":"video_stabilize","enabled":true},"enable_range":null,"enabled":true,"id":"fx_stabilize"}]}
 ]}]}],"render_configs":[{"id":"out_preview","sequence_id":"seq_main","deliverables":[{"id":"dlv_preview","target":{"type":"file","name":"preview.mp4"},"kind":{"type":"video","settings":{"video":{"codec":"h264"}}}}]}]}}
 JSON
+  jq '
+    .project.entry_sequence_id = "seq_main" |
+    .project.sequences[0].settings = {width:640,height:360} |
+    .project.render_configs[0].raster = {width:640,height:360} |
+    .project.authorship = {entity:{logical_path:["video-effects"],events:[]},
+      multicam_groups:[],annotations:[],deliveries:[{render_config_id:"out_preview",
+      entity:{logical_path:["video-effects","preview"],events:[]}}]} |
+    .project.sequences[0].authorship = {type:"veac",
+      entity:{logical_path:["video-effects","main"],events:[]},tracks:[],relations:[],applies:[]} |
+    (.project.sequences[].tracks[].clips[]) |=
+      (.authorship = {logical_path:
+        ["video-effects","main","visual",(.id | sub("^itm_"; ""))],events:[]})
+  ' "$file" >"$file.tmp"
+  mv "$file.tmp" "$file"
 }
 
 make_stabilization_part() {
@@ -56,8 +70,10 @@ make_stabilization_fixture() {
   printf 'video stabilization fixture\n' >"$dir/project/main.veac"
   author=$(example_authoring_canonical "$dir"); preview=$(example_preview_canonical "$dir")
   plan=$(example_preview_plan "$dir" out_preview)
-  write_stabilization_canonical "$author"; cp "$author" "$preview"
-  jq '{sequences:.project.sequences,output:{id:"pout_preview",render_config_id:"out_preview",sequence_id:"seq_main"}}
+  write_stabilization_canonical "$author"
+  jq '.project.render_configs[0].raster={width:480,height:270}' "$author" >"$preview"
+  jq '{sequences:.project.sequences,output:{id:"pout_preview",render_config_id:"out_preview",
+      sequence_id:"seq_main",raster:{width:480,height:270}}}
     | (.. | objects | select(.id? == "itm_stabilize-before" or .id? == "itm_stabilize-after")) |=
       (.source={audio_stream:null,input_id:"pin_shaky",type:"media",
         video_stream:{global_index:0,type_index:0}} |
@@ -66,7 +82,7 @@ make_stabilization_fixture() {
         duration:{timescale:1000,value:2000}},type:"linear"}})
     | (.. | objects | select(.id? == "itm_stabilize-after") | .effects[0]) |=
       {active_range:{start:{timescale:1000,value:0},duration:{timescale:1000,value:2000}},
-       effect_type:.effect_type,id:.id,parameters:.parameters}' \
+       effect:.effect,id:.id}' \
     "$preview" >"$plan"
   make_stabilization_video "$dir"
 }

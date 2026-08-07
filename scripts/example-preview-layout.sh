@@ -38,6 +38,22 @@ example_source_edit_outcome() {
   printf '%s/project/source-edit.outcome.json\n' "$1"
 }
 
+example_edit_batch() {
+  printf '%s/project/edit.batch.json\n' "$1"
+}
+
+example_edit_outcome() {
+  printf '%s/project/edit.outcome.json\n' "$1"
+}
+
+example_edit_replay_outcome() {
+  printf '%s/project/edit.replay.outcome.json\n' "$1"
+}
+
+example_probe_snapshot() {
+  printf '%s/project/probe.snapshot.json\n' "$1"
+}
+
 require_preview_regular_file() {
   local file=$1 label=$2
   [[ -f $file && ! -L $file && -s $file ]] || {

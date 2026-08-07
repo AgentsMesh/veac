@@ -1,33 +1,44 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016
 
+assert_transition_gallery_plan_evidence() {
+  assert_plan_query "$1" '
+    . as $plan |
+    def as_seconds: .value / .timescale;
+    def near($value; $target):
+      (($value | as_seconds) - $target | if . < 0 then -. else . end) < 0.000001;
+    def transition($kind):
+      [$plan.sequences[].tracks[].transitions[] | select(.kind.type == $kind)] |
+      if length == 1 then .[0] else error("transition kind is not unique") end;
+    transition("pixelize").kind.amount == 0.65 and
+    ([
+      ["dissolve",0.65,0.825], ["fade",2.65,2.825],
+      ["wipe",4.65,4.825], ["slide",6.65,6.825],
+      ["zoom",8.65,8.825], ["circle",10.65,10.825],
+      ["pixelize",12.65,12.825]
+    ] | all(.[]; . as $expected |
+      transition($expected[0]) as $transition |
+      $transition.alignment == "centered" and
+      near($transition.record_window.start; $expected[1]) and
+      near($transition.record_window.duration; 0.35) and
+      near($transition.cut_time; $expected[2])))
+  ' 'transition gallery plan contract failed'
+}
+
 check_transition_gallery_timing_evidence() {
   local dir=$1 plan video canonical
   plan=$(timing_plan "$dir")
-  video=$(timing_video "$dir" preview preview)
+  video=$(timing_video "$dir" preview preview.mp4)
   canonical="$dir/project/project.veac.json"
-  assert_plan_query "$plan" '
-    def t($v; $s): {"timescale":$s,"value":$v};
-    def r($sv; $ss; $dv; $ds): {"start":t($sv;$ss),"duration":t($dv;$ds)};
-    def transition($id): first(.sequences[].tracks[].transitions[] | select(.relation_id == $id));
-    transition("rel_dissolve-cut").kind.type == "dissolve" and
-    transition("rel_fade-cut").kind.type == "fade" and
-    transition("rel_wipe-cut").kind.type == "wipe" and
-    transition("rel_slide-cut").kind.type == "slide" and
-    transition("rel_zoom-cut").kind.type == "zoom" and
-    transition("rel_circle-cut").kind.type == "circle" and
-    transition("rel_pixelize-cut").kind.amount == 0.65 and
-    transition("rel_dissolve-cut").cut_time == t(1000;1000) and
-    transition("rel_dissolve-cut").record_window == r(825;1000;350;1000) and
-    transition("rel_pixelize-cut").cut_time == t(13000;1000)
-  ' 'transition gallery plan contract failed'
+  assert_transition_gallery_plan_evidence "$plan"
 
   video_contract "$video" 13.9
-  local stage
+  local stage clip_id
   while read -r sample clip red green blue; do
     stage="transition stage at ${sample}s"
     local ir_color
-    ir_color=$(jq -er --arg clip "itm_$clip" '
+    clip_id=$(canonical_clip_id "$canonical" "$clip")
+    ir_color=$(jq -er --arg clip "$clip_id" '
       [
         .project.sequences[].tracks[].clips[]
         | select(.id == $clip)
@@ -57,64 +68,75 @@ check_transition_gallery_timing_evidence() {
 10.5 circle-a 247 37 133
 11.5 circle-b 114 9 183
 STAGES
-  assert_channel_gap_at 'dissolve midpoint mixes red and orange' "$video" 1.0 \
+  assert_channel_gap_at 'dissolve midpoint mixes red and orange' "$video" 0.825 \
     'iw:ih:0:0' g 'iw:ih:0:0' b 20
   local fade_before fade_midpoint fade_after
   fade_before=$(frame_yavg "$video" 2.5)
-  fade_midpoint=$(frame_yavg "$video" 3.0)
+  fade_midpoint=$(frame_yavg "$video" 2.825)
   fade_after=$(frame_yavg "$video" 3.5)
   awk -v before="$fade_before" -v midpoint="$fade_midpoint" -v after="$fade_after" \
     'BEGIN { exit !(midpoint + 20 < before && midpoint + 20 < after) }' \
     || fail 'fade midpoint is not visibly darker than both endpoints'
-  assert_channel_gap_at 'leftward wipe midpoint advances from the right side' "$video" 5.0 \
+  assert_channel_gap_at 'leftward wipe midpoint advances from the right side' "$video" 4.825 \
     'iw/3:ih:0:0' r 'iw/3:ih:iw*2/3:0' r 45
-  assert_channel_gap_at 'upward slide separates the bottom and top regions' "$video" 7.0 \
+  assert_channel_gap_at 'upward slide separates the bottom and top regions' "$video" 6.825 \
     'iw:ih/3:0:ih*2/3' r 'iw:ih/3:0:0' r 45
-  assert_channel_gap_at 'zoom midpoint reveals the incoming center first' "$video" 9.0 \
+  assert_channel_gap_at 'zoom midpoint reveals the incoming center first' "$video" 8.825 \
     'iw/5:ih/5:0:0' g 'iw/5:ih/5:2*iw/5:2*ih/5' g 30
-  assert_channel_gap_at 'circle midpoint reveals the incoming center' "$video" 11.0 \
+  assert_channel_gap_at 'circle midpoint reveals the incoming center' "$video" 10.825 \
     'iw/5:ih/5:0:0' r 'iw/5:ih/5:2*iw/5:2*ih/5' r 70
   assert_rgb_distance_at_least 'pixelize outgoing endpoint remains a horizontal gradient' \
     "$video" 12.5 'iw/20:ih/20:iw*.05:ih*.48' 'iw/20:ih/20:iw*.90:ih*.48' 60
   assert_rgb_distance_at_least 'pixelize incoming endpoint remains a vertical gradient' \
     "$video" 13.5 'iw/20:ih/20:iw*.48:ih*.05' 'iw/20:ih/20:iw*.48:ih*.90' 60
-  assert_rgb_distance_at_most 'pixelize midpoint forms a flat coarse block' "$video" 13.0 \
+  assert_rgb_distance_at_most 'pixelize midpoint forms a flat coarse block' "$video" 12.825 \
     'iw/50:ih/25:iw*.05:ih*.08' 'iw/50:ih/25:iw*.18:ih*.08' 18
-  assert_rgb_distance_at_least 'pixelize midpoint separates adjacent coarse blocks' "$video" 13.0 \
+  assert_rgb_distance_at_least 'pixelize midpoint separates adjacent coarse blocks' "$video" 12.825 \
     'iw/50:ih/25:iw*.05:ih*.08' 'iw/50:ih/25:iw*.55:ih*.08' 35
 }
 
 check_executable_mechanisms_evidence() {
-  local dir=$1 plan video
-  plan=$(timing_plan "$dir" main)
-  video=$(timing_video "$dir" main main)
-  assert_plan_query "$plan" '
-    def t($v; $s): {"timescale":$s,"value":$v};
+  local dir=$1 plan video canonical warm cool badge config badge_delta
+  plan=$(timing_plan "$dir")
+  video=$(timing_video "$dir" preview preview.mp4)
+  canonical=$(example_authoring_canonical "$dir")
+  assert_resolution_chain "$dir" "$plan" "$video" executable-mechanisms
+  warm=$(canonical_clip_id "$canonical" warm)
+  cool=$(canonical_clip_id "$canonical" cool)
+  badge=$(canonical_clip_id "$canonical" badge)
+  config=$(delivery_config_id "$canonical" preview)
+  jq -e --arg warm "$warm" --arg cool "$cool" --arg badge "$badge" \
+    --arg config "$config" '
+    def as_seconds: .value / .timescale;
     def clip($id): first(.sequences[].tracks[].clips[] | select(.id == $id));
-    def transition($id): first(.sequences[].tracks[].transitions[] | select(.relation_id == $id));
-    .output.id == "pout_main" and .output.render_config_id == "out_main" and
-    clip("itm_warm").source.generator.gradient.type == "linear" and
-    clip("itm_warm").source.generator.gradient.start == {"x":0,"y":0.5} and
-    clip("itm_warm").source.generator.gradient.end == {"x":1,"y":0.5} and
-    (clip("itm_warm").source.generator.gradient.stops | map(.color)) ==
-      [{"red":255,"green":0,"blue":0,"alpha":255},{"red":255,"green":255,"blue":0,"alpha":255}] and
-    (clip("itm_cool").source.generator.gradient.stops | map(.color)) ==
-      [{"red":0,"green":0,"blue":255,"alpha":255},{"red":0,"green":255,"blue":255,"alpha":255}] and
-    transition("rel_dissolve").kind.type == "dissolve" and
-    transition("rel_dissolve").cut_time == t(1000;1000) and
-    clip("itm_badge").visual.transform.position.type == "keyframes" and
-    (clip("itm_badge").visual.transform.position.keyframes | length) == 2 and
-    clip("itm_badge").visual.transform.scale.value == {"x":0.35,"y":0.35} and
-    clip("itm_badge").visual.masks[0].shape.type == "circle" and
-    clip("itm_badge").visual.opacity.value == 0.85 and
-    clip("itm_badge").visual.compositing.blend_mode == "screen"
-  ' 'executable mechanism plan contract failed'
+    def transition:
+      [.sequences[].tracks[].transitions[] | select(.kind.type == "dissolve")] |
+      if length == 1 then .[0] else error("dissolve transition is not unique") end;
+    .output.render_config_id == $config and
+    clip($warm).source.generator.gradient.type == "linear" and
+    clip($warm).source.generator.gradient.start == {"x":0,"y":0.5} and
+    clip($warm).source.generator.gradient.end == {"x":1,"y":0.5} and
+    (clip($warm).source.generator.gradient.stops | map(.color)) ==
+      [{"red":239,"green":68,"blue":68,"alpha":255},{"red":250,"green":204,"blue":21,"alpha":255}] and
+    (clip($cool).source.generator.gradient.stops | map(.color)) ==
+      [{"red":37,"green":99,"blue":235,"alpha":255},{"red":34,"green":211,"blue":238,"alpha":255}] and
+    (transition.record_window.start | as_seconds) == 0.8 and
+    (transition.record_window.duration | as_seconds) == 0.4 and
+    (transition.cut_time | as_seconds) == 1.0 and
+    clip($badge).visual.transform.position.type == "keyframes" and
+    (clip($badge).visual.transform.position.keyframes | length) == 2 and
+    clip($badge).visual.transform.scale.value == {"x":0.65,"y":0.65} and
+    clip($badge).visual.masks[0].shape.type == "circle" and
+    clip($badge).visual.opacity.value == 0.82 and
+    clip($badge).visual.compositing.blend_mode == "screen"
+  ' "$plan" >/dev/null || fail 'executable mechanism plan contract failed'
 
   video_contract "$video" 1.9
   assert_rgb_near_at 'warm gradient is visible before the transition' "$video" 0.25 \
-    'iw*.20:ih*.70:iw*.08:ih*.15' '255 46 0' 28
+    'iw*.20:ih*.70:iw*.08:ih*.15' '241 95 58' 28
   assert_rgb_near_at 'cool gradient is visible after the transition' "$video" 1.75 \
-    'iw*.20:ih*.70:iw*.40:ih*.15' '0 128 255' 30
-  assert_channel_gap_at 'animated circular badge is visible over the base' "$video" 0.75 \
-    'iw*.18:ih*.32:iw*.41:ih*.34' g 'iw*.18:ih*.32:iw*.05:ih*.34' g 25
+    'iw*.20:ih*.70:iw*.40:ih*.15' '35 155 237' 30
+  badge_delta=$(frame_difference_avg "$video" 0.25 0.75)
+  awk -v delta="$badge_delta" 'BEGIN { exit !(delta > 1.0) }' ||
+    fail "animated circular badge is not visible over the stable warm base: delta=$badge_delta"
 }

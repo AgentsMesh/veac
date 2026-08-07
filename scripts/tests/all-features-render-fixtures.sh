@@ -3,29 +3,30 @@
 write_all_features_authoring() {
   local file=$1
   cat >"$file" <<'JSON'
-{"project":{"materials":[
+{"project":{"authorship":{"entity":{"logical_path":["all-features"],"events":[]},"multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":"out_master","entity":{"logical_path":["all-features","master"],"events":[]}}]},"materials":[
 {"id":"med_footage","kind":"video","source":{"type":"file","uri":"assets/footage.mp4"}},
 {"id":"med_music","kind":"audio","source":{"type":"file","uri":"assets/music.wav"}}],
-"sequences":[{"id":"seq_main","tracks":[
-{"id":"trk_picture","kind":"video","clips":[{"id":"itm_shot",
+"sequences":[{"id":"seq_main","authorship":{"type":"veac","entity":{"logical_path":["all-features","main"],"events":[]},"tracks":[],"relations":[],"applies":[]},"tracks":[
+{"id":"trk_picture","kind":"video","clips":[{"id":"itm_shot","authorship":{"logical_path":["all-features","main","picture","shot"],"events":[]},
 "record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
+"source":{"material_id":"med_footage"},
 "source_mapping":{"time_map":{"type":"linear","source_start":{"timescale":1000,"value":2000},"rate":{"numerator":1,"denominator":1}}},
 "visual":{"color_pipeline":{"input":{"matrix":"bt709","primaries":"bt709","range":"limited","transfer":"bt709"},
 "working":{"matrix":"rgb","primaries":"bt709","range":"full","transfer":"linear"},
 "output":{"matrix":"bt709","primaries":"bt709","range":"limited","transfer":"bt709"},
 "stages":[{"type":"basic","adjustment":{"exposure_stops":0.1,"fade":0.01,"highlights":-0.04,"shadows":0.06,"temperature_kelvin":6600,"tint":0}}]}}}]},
-{"id":"trk_graphics","kind":"visual","clips":[{"id":"itm_lower-third",
+{"id":"trk_graphics","kind":"visual","clips":[{"id":"itm_lower-third","authorship":{"logical_path":["all-features","main","graphics","lower-third"],"events":[]},
 "record_range":{"start":{"timescale":1000,"value":1000},"duration":{"timescale":1000,"value":5000}},
 "source":{"generator":{"color":{"alpha":221,"blue":94,"green":4,"red":3}}},
 "visual":{"frame":{"fit":"fill","height":{"unit":"pixels","value":180},"width":{"unit":"pixels","value":1500}},
 "placement":{"anchor":"bottom","inset":{"x":0,"y":80},"type":"anchor"},"opacity":{"type":"constant","value":0.95}}}]},
-{"id":"trk_score","kind":"audio","clips":[{"id":"itm_music-item",
+{"id":"trk_score","kind":"audio","clips":[{"id":"itm_music-item","authorship":{"logical_path":["all-features","main","score","music-item"],"events":[]},
 "record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
 "audio":{"gain":{"type":"constant","value":0.5011872336272722},"pan":{"type":"constant","value":0},"muted":false,"normalize":true,"pitch_policy":"preserve",
 "crossfade":{"curve":"equal_power","fade_in":{"timescale":1000,"value":250},"fade_out":{"timescale":1000,"value":500}},
     "processors":[{"id":"aud_voice-limiter","kind":{"attack_ms":1,"ceiling_db":-1,"release_ms":80,"type":"limiter"}}]}}]},
-{"id":"trk_subtitles","kind":"caption","clips":[{"id":"itm_cue","record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
-"source":{"text":"一种语言，一份类型化中间表示，一套渲染计划。","style":{"background":{"color":{"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20}}}}]}]}],
+{"id":"trk_subtitles","kind":"caption","clips":[{"id":"itm_cue","authorship":{"logical_path":["all-features","main","subtitles","cue"],"events":[]},"record_range":{"start":{"timescale":1000,"value":0},"duration":{"timescale":1000,"value":8000}},
+"source":{"text":"一种语言，一份类型化中间表示，一套渲染计划。","style":{"font_weight":"bold","size_pixels":64,"background":{"color":{"alpha":204,"blue":0,"green":0,"red":0},"padding_pixels":20},"layout":{"box_width_pixels":1500,"box_height_pixels":140,"overflow":"clip"}}},"visual":{"placement":{"type":"absolute","position":{"x":{"unit":"pixels","value":960},"y":{"unit":"pixels","value":850}}},"frame":{"fit":"contain","height":{"unit":"pixels","value":140},"width":{"unit":"pixels","value":1500}}}}]}]}],
 "relations":[{"id":"rel_edit-unit","kind":{"members":[{"item_id":"itm_shot","type":"item"},{"item_id":"itm_music-item","type":"item"}],"type":"group"},"sequence_id":"seq_main"},
 {"id":"rel_linked-av","kind":{"audio":[{"item_id":"itm_music-item","type":"item"}],"type":"av_link","video":{"item_id":"itm_shot","type":"item"}},"sequence_id":"seq_main"}],
 "render_configs":[{"id":"out_master","sequence_id":"seq_main","raster":{"captions":"burn_in","frame_rate":{"denominator":1,"numerator":30},"height":1080,"width":1920},

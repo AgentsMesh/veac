@@ -31,6 +31,13 @@ while IFS= read -r file; do SHELL_FILES+=("$file"); done < <(
 }
 bash -n "${SHELL_FILES[@]}"
 make -s -C "$ROOT" help >/dev/null
+rg -q '^RUST_TOOLCHAIN \?= 1[.]85[.]0$' "$ROOT/Makefile"
+install_dry_run=$(RUST_TOOLCHAIN=1.85.0 make -s -n -C "$ROOT" install)
+[[ $install_dry_run == "cargo +1.85.0 install --path crates/veac-cli --locked --root \"$HOME/.local\"" ]]
+all_examples_dry_run=$(make -s -n -C "$ROOT" build-examples)
+rg -Fq 'VEAC_EXAMPLES=""' <<<"$all_examples_dry_run"
+serve_dry_run=$(make -s -n -C "$ROOT" serve-examples)
+rg -Fq 'python3 -m http.server "8000" --bind 127.0.0.1' <<<"$serve_dry_run"
 rg -q '^test-example-index:' "$ROOT/Makefile"
 rg -q '^test-example-render-contracts:' "$ROOT/Makefile"
 rg -q '^build-examples: check-examples ' "$ROOT/Makefile"
@@ -47,12 +54,26 @@ awk -v minimum="$COVERAGE_MINIMUM" 'BEGIN { exit !(minimum > 95.02) }' || {
   exit 1
 }
 for contract in example-preview example-preview-fixture example-preview-provenance \
-  example-preview-build-flow render-evidence text-render-evidence timing-render-evidence \
+  example-preview-build-flow example-preview-finalization \
+  example-workflow-evidence render-evidence text-render-evidence \
+  text-animation-render-evidence timing-render-evidence \
   media-smoke-render-evidence all-features-render-evidence \
   agentsmesh-intro-render-evidence advanced-color-render-evidence \
-  mask-shape-render-evidence video-stabilization-render-evidence \
+  visual-mechanism-render-evidence generated-graphics-render-evidence \
+  masks-render-evidence mask-shape-render-evidence video-stabilization-render-evidence \
+  video-effects-sharpen resolution-chain-render-evidence executable-family-render-evidence \
+  workflow-showcase-render-evidence workflow-showcase-media \
   delivery-codec-render-evidence; do
   rg -q "bash scripts/tests/$contract-contracts.sh" "$ROOT/Makefile"
+done
+
+for target in language_docs_contract executable_docs_contract executable_temporal_docs \
+  program_nominal_docs programming_components_docs_contract \
+  nominal_source_edit_docs_contract; do
+  rg -q -- "--test $target" "$ROOT/Makefile" || {
+    echo "Makefile does not run language docs contract: $target" >&2
+    exit 1
+  }
 done
 jq --argjson edge 240 --argjson fps 12 --argjson window null \
   -f "$ROOT/scripts/example-preview.jq" >/dev/null <<'JSON'
@@ -105,10 +126,10 @@ rg -q -- '--test cli_tests' "$ROOT/Makefile" || {
   exit 1
 }
 
-for target in structure fmt-check check clippy test coverage coverage-packages verify \
-  check-language-docs check-example-capabilities \
+for target in doctor install build structure fmt-check check clippy test coverage coverage-packages verify \
+  check-language-docs check-stdlib-codegen test-stdlib-codegen check-example-capabilities \
   test-example-capabilities check-examples build-examples serve-examples \
-  clean-examples e2e; do
+  clean-examples e2e e2e-executable; do
   rg -q -- "^$target:" "$ROOT/Makefile" || {
     echo "Makefile does not expose target: $target" >&2
     exit 1

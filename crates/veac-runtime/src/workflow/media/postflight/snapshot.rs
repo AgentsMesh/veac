@@ -56,7 +56,6 @@ pub(super) fn validate(probe: &MediaProbeSnapshot, spec: &MediaArtifactSpec) -> 
             }
             Ok(())
         }
-        MediaArtifactSpec::Analysis(_) => invalid("analysis is not an FFmpeg artifact"),
     }
 }
 

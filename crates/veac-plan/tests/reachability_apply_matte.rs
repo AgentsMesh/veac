@@ -69,6 +69,7 @@ fn caption_matte() -> Clip {
     clip.source = ClipSource::Caption {
         text: "dormant matte".to_owned(),
         speaker: None,
+        cue: Box::default(),
         style: text_style(FontRef::Material {
             material_id: MaterialId::new("med_matte_font").unwrap(),
         }),

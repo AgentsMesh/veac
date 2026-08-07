@@ -1,11 +1,13 @@
 mod artifact;
+mod build;
 mod caption;
 mod check;
 mod check_ir;
-mod compile;
 mod derive;
 mod edit;
 mod fmt;
+mod ingest_analysis;
+mod language_spec;
 mod manifest;
 mod otio;
 mod package;
@@ -24,13 +26,17 @@ mod template;
 pub(crate) mod workflow_io;
 
 pub(crate) use artifact::run as artifact;
+pub(crate) use build::run as build;
 pub(crate) use caption::run as caption;
 pub(crate) use check::run as check;
 pub(crate) use check_ir::run as check_ir;
-pub(crate) use compile::run as compile;
 pub(crate) use derive::run as derive;
 pub(crate) use edit::run as edit;
 pub(crate) use fmt::run as format;
+pub(crate) use ingest_analysis::run as ingest_analysis;
+#[cfg(test)]
+pub(crate) use language_spec::encode as language_spec_json;
+pub(crate) use language_spec::run as language_spec;
 pub(crate) use manifest::run as manifest;
 pub(crate) use otio::run as otio;
 pub(crate) use package::run as package;

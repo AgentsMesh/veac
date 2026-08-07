@@ -10,6 +10,15 @@ fn slot(kind: SlotKind) -> SlotConstraint {
     }
 }
 
+fn text_slot() -> SlotConstraint {
+    SlotConstraint {
+        kind: SlotKind::Text,
+        fill: FillMode::FitDuration,
+        label: "Title".to_owned(),
+        min_source_duration: None,
+    }
+}
+
 fn media(project: &mut ProjectEnvelope) -> &mut Clip {
     &mut project.project.sequences[0].tracks[0].clips[0]
 }
@@ -28,6 +37,7 @@ fn accepts_a_valid_slot_and_editable_text() {
         text: text.clone(),
         style: style.clone(),
     };
+    clip.replaceable = Some(text_slot());
     clip.template_editable_text = true;
     validate(&project).unwrap();
 }

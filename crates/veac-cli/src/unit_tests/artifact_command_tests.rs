@@ -8,14 +8,22 @@ use super::support::{
 fn manifest_supports_stdout_and_propagates_failures() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    crate::commands::manifest(&project, None, None, None, &FakeEnvironment::success()).unwrap();
+    crate::commands::manifest(
+        &project,
+        None,
+        None,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     let failed = FakeEnvironment {
         fail_version: true,
         ..FakeEnvironment::success()
     };
     let failed_output = temp.path().join("failed-manifest.json");
     assert!(
-        crate::commands::manifest(&project, None, None, Some(&failed_output), &failed)
+        crate::commands::manifest(&project, None, None, None, Some(&failed_output), &failed)
             .unwrap_err()
             .to_string()
             .contains("FAKE_VERSION")
@@ -23,6 +31,7 @@ fn manifest_supports_stdout_and_propagates_failures() {
     assert!(!failed_output.exists());
     assert!(crate::commands::manifest(
         &project,
+        None,
         None,
         None,
         Some(&project),
@@ -43,6 +52,7 @@ fn manifest_cannot_overwrite_a_reachable_material() {
         &project,
         None,
         None,
+        None,
         Some(&material),
         &FakeEnvironment::success(),
     )
@@ -51,7 +61,7 @@ fn manifest_cannot_overwrite_a_reachable_material() {
 }
 
 #[test]
-fn package_maps_artifact_filesystem_failures() {
+fn package_rejects_a_file_destination_before_artifact_io() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let destination = temp.path().join("file");
@@ -60,12 +70,31 @@ fn package_maps_artifact_filesystem_failures() {
         &project,
         None,
         None,
+        None,
         &destination,
         &FakeEnvironment::success()
     )
     .unwrap_err()
     .to_string()
-    .contains("PACKAGE_FAILED"));
+    .contains("OUTPUT_IS_FILE"));
+}
+
+#[test]
+fn package_maps_artifact_publication_failures() {
+    let temp = tempdir().unwrap();
+    let project = canonical_project(&temp, GENERATED_SOURCE);
+    let destination = temp.path().join("package");
+    std::fs::create_dir_all(destination.join("project.veac.json")).unwrap();
+    let error = crate::commands::package(
+        &project,
+        None,
+        None,
+        None,
+        &destination,
+        &FakeEnvironment::success(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("PACKAGE_FAILED"));
 }
 
 #[test]
@@ -76,6 +105,7 @@ fn manifest_contains_every_authored_deliverable() {
     let output = temp.path().join("manifest.json");
     crate::commands::manifest(
         &project,
+        None,
         None,
         None,
         Some(&output),
@@ -104,8 +134,17 @@ fn manifest_uses_the_complete_environment_ffmpeg_fingerprint() {
     second_environment.fingerprint_configuration =
         veac_artifact::ContentDigest::sha256("different configuration");
 
-    crate::commands::manifest(&project, None, None, Some(&first), &first_environment).unwrap();
-    crate::commands::manifest(&project, None, None, Some(&second), &second_environment).unwrap();
+    crate::commands::manifest(&project, None, None, None, Some(&first), &first_environment)
+        .unwrap();
+    crate::commands::manifest(
+        &project,
+        None,
+        None,
+        None,
+        Some(&second),
+        &second_environment,
+    )
+    .unwrap();
     let first: veac_artifact::BuildManifest =
         serde_json::from_slice(&std::fs::read(first).unwrap()).unwrap();
     let second: veac_artifact::BuildManifest =

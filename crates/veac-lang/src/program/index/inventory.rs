@@ -1,43 +1,38 @@
+mod build_inputs;
+mod model;
+
 use std::collections::BTreeMap;
 
-use schemars::{schema_for, JsonSchema};
-use serde::{Deserialize, Serialize};
+use schemars::schema_for;
 
-use crate::source_edit::{ExpressionSite, SourceNodeRef, SourceRevision, TextRange};
+use crate::source_edit::TextRange;
 
 use super::SourceIndex;
+pub use model::*;
 
 pub const SOURCE_INDEX_SCHEMA: &str = "https://veac.dev/schemas/source-index";
-pub const SOURCE_INDEX_SCHEMA_VERSION: u32 = 1;
+pub const SOURCE_INDEX_SCHEMA_VERSION: u32 = 8;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct SourceIndexInventory {
-    pub schema: String,
-    pub schema_version: u32,
-    pub revision: SourceRevision,
-    pub nodes: Vec<SourceIndexNode>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct SourceIndexNode {
-    pub target: SourceNodeRef,
-    pub range: TextRange,
-    pub expressions: Vec<SourceIndexExpression>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct SourceIndexExpression {
-    pub site: ExpressionSite,
-    pub source: String,
-    pub range: TextRange,
-}
+pub(crate) use build_inputs::describe as describe_build_inputs;
 
 impl SourceIndex {
-    /// Returns a detached, read-only view ordered by module, typed path, and expression site.
+    pub(crate) fn with_build_inputs(mut self, values: Vec<SourceIndexBuildInput>) -> Self {
+        self.build_inputs = values;
+        self
+    }
+
+    /// Returns a detached view ordered by module, typed path, and source site.
     pub fn inventory(&self) -> SourceIndexInventory {
+        let modules = self
+            .modules
+            .iter()
+            .map(|(module, range)| SourceIndexModule {
+                module: module.clone(),
+                range: *range,
+                imports: self.module_imports(module),
+                declarations: self.module_declarations(module),
+            })
+            .collect();
         let mut nodes = self
             .nodes
             .iter()
@@ -49,6 +44,9 @@ impl SourceIndex {
                         end: span.end,
                     },
                     expressions: Vec::new(),
+                    statements: Vec::new(),
+                    bodies: Vec::new(),
+                    declarations: Vec::new(),
                 };
                 (target.clone(), node)
             })
@@ -64,12 +62,72 @@ impl SourceIndex {
                     range: value.range,
                 });
         }
+        for ((target, site), value) in &self.bodies {
+            nodes
+                .get_mut(target)
+                .expect("indexed bodies belong to registered nodes")
+                .bodies
+                .push(SourceIndexBody {
+                    site: *site,
+                    source: value.source.clone(),
+                    range: value.range,
+                });
+        }
+        for ((target, site), value) in &self.statements {
+            nodes
+                .get_mut(target)
+                .expect("indexed statements belong to registered nodes")
+                .statements
+                .push(SourceIndexStatement {
+                    site: site.clone(),
+                    source: value.source.clone(),
+                    range: value.range,
+                });
+        }
+        for ((target, site), value) in &self.declarations {
+            nodes
+                .get_mut(target)
+                .expect("indexed declarations belong to registered nodes")
+                .declarations
+                .push(SourceIndexDeclaration {
+                    site: *site,
+                    source: value.source.clone(),
+                    range: value.range,
+                });
+        }
         SourceIndexInventory {
             schema: SOURCE_INDEX_SCHEMA.to_owned(),
             schema_version: SOURCE_INDEX_SCHEMA_VERSION,
             revision: self.revision.clone(),
+            build_inputs: self.build_inputs.clone(),
+            modules,
             nodes: nodes.into_values().collect(),
         }
+    }
+
+    fn module_imports(&self, module: &str) -> Vec<SourceIndexImport> {
+        self.imports
+            .iter()
+            .filter(|(target, _)| target.module == module)
+            .map(|(target, value)| SourceIndexImport {
+                target: target.clone(),
+                path: value.path.clone(),
+                source: value.source.clone(),
+                range: value.range,
+            })
+            .collect()
+    }
+
+    fn module_declarations(&self, module: &str) -> Vec<SourceIndexTopLevelDeclaration> {
+        self.top_levels
+            .iter()
+            .filter(|(target, _)| target.module == module)
+            .map(|(target, value)| SourceIndexTopLevelDeclaration {
+                target: target.clone(),
+                source: value.source.clone(),
+                range: value.range,
+            })
+            .collect()
     }
 }
 

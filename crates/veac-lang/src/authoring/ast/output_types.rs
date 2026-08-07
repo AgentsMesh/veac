@@ -163,9 +163,3 @@ pub enum ColorRange {
     Limited,
     Full,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct OutputRatio {
-    pub numerator: i64,
-    pub denominator: i64,
-}

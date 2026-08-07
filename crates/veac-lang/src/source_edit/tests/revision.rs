@@ -2,14 +2,20 @@ use super::*;
 
 #[test]
 fn graph_revision_is_order_independent_and_byte_exact() {
-    let first = SourceModule::utf8("main.veac", "project demo {}");
-    let second = SourceModule::utf8("parts/title.veac", "component title {}");
+    let first = SourceModule::utf8(
+        "main.veac",
+        "fn main(context: Context) -> Project { context }",
+    );
+    let second = SourceModule::utf8("parts/title.veac", "module { export const title = \"x\"; }");
     let forward = source_graph_revision(&[first, second]).unwrap();
     let reverse = source_graph_revision(&[second, first]).unwrap();
     assert_eq!(forward, reverse);
     assert_eq!(forward.source_graph_sha256.len(), 64);
 
-    let changed = SourceModule::utf8("main.veac", "project demo {}\n");
+    let changed = SourceModule::utf8(
+        "main.veac",
+        "fn main(context: Context) -> Project { context }\n",
+    );
     assert_ne!(source_graph_revision(&[changed, second]).unwrap(), forward);
 }
 

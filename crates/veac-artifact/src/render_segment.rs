@@ -1,23 +1,15 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use veac_ir::{DeliverableId, DeliverableKind, SequenceId, TimeRange};
+use veac_ir::{DeliverableId, DeliverableKind, TimeRange};
 use veac_plan::ResolvedRenderPlan;
 
 use crate::{
-    artifact_key, ArtifactDependency, ArtifactDescriptor, ArtifactError, ArtifactErrorKind,
-    ArtifactKind, ArtifactResult, ArtifactStore, ContentDigest, ProducerFingerprint,
-    VerifiedArtifact,
+    artifact_key, ArtifactDependency, ArtifactDependencyRole, ArtifactDescriptor, ArtifactError,
+    ArtifactErrorKind, ArtifactParameters, ArtifactResult, ArtifactStore, ContentDigest,
+    ProducerFingerprint, RenderSegmentFidelity, RenderSegmentParameters, VerifiedArtifact,
 };
 
 mod profile;
 
 pub use profile::FullRenderSegmentMediaProfile;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum RenderSegmentFidelity {
-    ExactDeliveryMaster,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FullRenderSegmentContract {
@@ -27,14 +19,6 @@ pub struct FullRenderSegmentContract {
 }
 
 impl Eq for FullRenderSegmentContract {}
-
-#[derive(Serialize)]
-struct SegmentParameters<'a> {
-    sequence_id: &'a SequenceId,
-    range: TimeRange,
-    deliverable_id: &'a DeliverableId,
-    fidelity: RenderSegmentFidelity,
-}
 
 impl FullRenderSegmentContract {
     pub fn new(
@@ -82,20 +66,18 @@ impl FullRenderSegmentContract {
         plan_identity.validate()?;
         let media_profile = FullRenderSegmentMediaProfile::new(raster, deliverable);
         let profile = media_profile.digest()?;
-        let parameters = serde_json::to_value(SegmentParameters {
-            sequence_id: &plan.entry_sequence_id,
+        let parameters = ArtifactParameters::RenderSegment(RenderSegmentParameters {
+            sequence_id: plan.entry_sequence_id.clone(),
             range,
-            deliverable_id: &deliverable.id,
+            deliverable_id: deliverable.id.clone(),
             fidelity: RenderSegmentFidelity::ExactDeliveryMaster,
-        })
-        .map_err(serialization_error)?;
+        });
         let descriptor = ArtifactDescriptor::new(
-            ArtifactKind::RenderSegment,
             producer,
             vec![
-                dependency("plan", plan_identity),
-                dependency("profile", profile),
-                dependency("source_clocks", source_clocks),
+                dependency(ArtifactDependencyRole::Plan, plan_identity),
+                dependency(ArtifactDependencyRole::Profile, profile),
+                dependency(ArtifactDependencyRole::SourceClocks, source_clocks),
             ],
             parameters,
         );
@@ -161,11 +143,8 @@ fn active(guard: &mut impl FnMut() -> bool) -> ArtifactResult<()> {
     }
 }
 
-fn dependency(role: &str, identity: ContentDigest) -> ArtifactDependency {
-    ArtifactDependency {
-        role: role.to_owned(),
-        identity,
-    }
+fn dependency(role: ArtifactDependencyRole, identity: ContentDigest) -> ArtifactDependency {
+    ArtifactDependency::new(role, identity)
 }
 
 fn time_error(error: veac_ir::TimeError) -> ArtifactError {

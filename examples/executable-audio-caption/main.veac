@@ -1,0 +1,56 @@
+import "./showcase.veac" as showcase;
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("example-font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let tone = audio_resource(
+    identifier("tone"), resource_file("assets/tone.wav"),
+    sha256("5c3aaa006e4c341feddf589f9eb0ba3b215c60353e491abf8f06f4bee4478cfc"),
+    stream_auto()
+  );
+  let style = showcase.caption_style(font, 28px, 600px);
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("background"), #183c36ff, 0s, 4s));
+  let sound = audio_layer(
+    identifier("tone"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("tone"), item_enabled(), during(1s, 2s),
+    source_media(tone), source_timing_native()
+  ).with_audio(audio_style(
+    scalar_constant(0.7), scalar_constant(0.0),
+    audio_playback(false, false, pitch_preserve()), [],
+    audio_crossfade_present(100ms, 100ms, audio_fade_equal_power())
+  )));
+  let captions = caption_layer(
+    identifier("captions"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(item(
+      identifier("intro"), item_enabled(), during(0s, 1500ms),
+      source_caption_speaker("可执行音频与字幕", "小石", style),
+      source_timing_native()
+    ))
+    .with_item(item(
+      identifier("audible"), item_enabled(), during(1500ms, 1500ms),
+      source_caption("有声音轨：均衡功率淡入淡出", style), source_timing_native()
+    ))
+    .with_item(item(
+      identifier("silent"), item_enabled(), during(3s, 1s),
+      source_caption("无声区间：字幕仍然保持", style), source_timing_native()
+    ));
+  let timeline = sequence(
+    identifier("main"), "音频与字幕",
+    sequence_settings(canvas(640px, 360px), frame_rate(24, 1), 48000)
+  ).with_layer(background).with_layer(sound).with_layer(captions);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(24, 1), true, true
+  );
+  project(identifier("executable-audio-caption"), project_settings(600))
+    .with_resource(font).with_resource(tone)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
+}

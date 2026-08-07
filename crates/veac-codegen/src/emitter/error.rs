@@ -13,6 +13,7 @@ pub enum CodegenErrorKind {
     UnsupportedAudioProcessing,
     UnsupportedColorProcessing,
     UnsupportedCaptionFeature,
+    UnsupportedTemporal,
     InvalidResourceBinding,
     InvalidPlan,
 }
@@ -96,7 +97,8 @@ fn repair(kind: CodegenErrorKind) -> &'static str {
         | CodegenErrorKind::UnsupportedEffect
         | CodegenErrorKind::UnsupportedAudioProcessing
         | CodegenErrorKind::UnsupportedColorProcessing
-        | CodegenErrorKind::UnsupportedCaptionFeature => {
+        | CodegenErrorKind::UnsupportedCaptionFeature
+        | CodegenErrorKind::UnsupportedTemporal => {
             "remove the unsupported mechanism or select a capable backend"
         }
         CodegenErrorKind::InvalidResourceBinding => {

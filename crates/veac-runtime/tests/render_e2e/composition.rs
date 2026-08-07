@@ -96,13 +96,13 @@ fn animated_layer() -> VisualProperties {
 fn brightness_effect() -> EffectInstance {
     EffectInstance {
         id: EffectId::new("fx_brightness").unwrap(),
-        effect_type: "video.color_adjust".to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([(
-            "brightness".to_owned(),
-            ParameterValue::Number { value: 0.2 },
-        )]),
+        effect: Effect::VideoColorAdjust {
+            brightness: Animatable::constant(0.2),
+            contrast: Animatable::constant(1.0),
+            saturation: Animatable::constant(1.0),
+        },
     }
 }
 

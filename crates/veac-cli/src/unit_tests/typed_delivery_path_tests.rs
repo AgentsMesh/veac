@@ -67,8 +67,13 @@ fn hls_package_cannot_consume_an_input_or_the_artifact_store() {
         uri: "stream/clip.mp4".into(),
     };
     std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     set_target(
         &mut prepared,
         DeliverableTarget::Package {
@@ -90,16 +95,21 @@ fn hls_package_cannot_consume_an_input_or_the_artifact_store() {
 #[test]
 fn package_ancestor_of_the_project_and_store_is_rejected() {
     let temp = tempdir().unwrap();
-    let name = temp.path().file_name().unwrap().to_str().unwrap();
-    let destination = temp.path().parent().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let name = root.file_name().unwrap().to_str().unwrap();
+    let destination = root.parent().unwrap();
     let mut prepared = generated_hls(&temp, name);
     let error = crate::output::bind_render_outputs(&mut prepared, Some(destination)).unwrap_err();
-    assert!(error.to_string().contains("OUTPUT_OVERWRITES_INPUT"));
+    assert!(
+        error.to_string().contains("OUTPUT_OVERWRITES_INPUT"),
+        "unexpected output guard: {error}"
+    );
 }
 
 fn generated(temp: &TempDir) -> crate::planning::PreparedPlan {
     let project = canonical_project(temp, GENERATED_SOURCE);
-    crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap()
+    crate::planning::prepare_with_material_root(&project, None, None, &FakeEnvironment::success())
+        .unwrap()
 }
 
 fn generated_hls(temp: &TempDir, name: &str) -> crate::planning::PreparedPlan {

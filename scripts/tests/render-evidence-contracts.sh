@@ -12,6 +12,8 @@ source "$ROOT_DIR/scripts/tests/typed-delivery-fixtures.sh"
 source "$ROOT_DIR/scripts/tests/media-smoke-fixtures.sh"
 # shellcheck source=scripts/tests/all-features-render-fixtures.sh
 source "$ROOT_DIR/scripts/tests/all-features-render-fixtures.sh"
+# shellcheck source=scripts/tests/core-media-render-fixtures.sh
+source "$ROOT_DIR/scripts/tests/core-media-render-fixtures.sh"
 
 expect_pass() {
   local label=$1
@@ -29,19 +31,6 @@ expect_fail() {
   fi
 }
 
-make_minimal() {
-  local root=$1
-  prepare_preview_fixture_dirs "$root/minimal"
-  ffmpeg -v error -f lavfi -i 'color=c=#1b3a57:s=480x270:r=12:d=3' \
-    -c:v libx264 -pix_fmt yuv420p "$root/minimal/rendered/preview.mp4"
-  cat >"$root/minimal/project/project.veac.json" <<'JSON'
-{"project":{"render_configs":[{"id":"out_preview","raster":{"width":480,"height":270,"frame_rate":{"numerator":12,"denominator":1}},"deliverables":[{"target":{"type":"file","name":"preview.mp4"},"kind":{"type":"video","settings":{"audio":null}}}]}]}}
-JSON
-  complete_video_settings "$root/minimal/project/project.veac.json"
-  mirror_fixture_preview_canonical "$root/minimal"
-  write_smoke_plan "$root/minimal/plans/preview/out_preview.json" out_preview 3000
-}
-
 make_all_features() {
   local root=$1
   local project="$root/all-features/project"
@@ -54,36 +43,6 @@ make_all_features() {
   write_all_features_plan \
     "$project/project.preview.veac.json" \
     "$root/all-features/plans/preview/out_master.json"
-}
-
-make_transitions() {
-  local root=$1
-  local dir="$root/transitions"
-  prepare_preview_fixture_dirs "$dir"
-  ffmpeg -v error -f lavfi -i 'color=c=black:s=480x270:r=12:d=4' \
-    -vf "format=gbrp,geq=r='if(lt(T,1.8),230,if(gt(T,2.2),69,230+(69-230)*(T-1.8)/.4))':g='if(lt(T,1.8),57,if(gt(T,2.2),123,57+(123-57)*(T-1.8)/.4))':b='if(lt(T,1.8),70,if(gt(T,2.2),157,70+(157-70)*(T-1.8)/.4))'" \
-    -c:v libx264 -pix_fmt yuv420p "$dir/rendered/preview.mp4"
-  cat >"$dir/plans/preview/out_preview.json" <<'JSON'
-{
-  "output": {"render_config_id":"out_preview","sequence_id":"seq_main"},
-  "sequences": [{"id":"seq_main","duration":{"timescale":1000,"value":4000},
-    "tracks": [{
-      "transitions": [{
-        "record_window": {
-          "start": { "value": 1800, "timescale": 1000 },
-          "duration": { "value": 400, "timescale": 1000 }
-        },
-        "kind": { "type": "dissolve" }
-      }]
-    }]
-  }]
-}
-JSON
-  cat >"$dir/project/project.veac.json" <<'JSON'
-{"project":{"render_configs":[{"id":"out_preview","raster":{"width":480,"height":270,"frame_rate":{"numerator":12,"denominator":1}},"deliverables":[{"target":{"type":"file","name":"preview.mp4"},"kind":{"type":"video","settings":{"audio":null}}}]}]}}
-JSON
-  complete_video_settings "$dir/project/project.veac.json"
-  mirror_fixture_preview_canonical "$dir"
 }
 
 VALID="$TMP_DIR/valid"
@@ -100,6 +59,30 @@ for selector in '' all; do
     exit 1
   fi
 done
+
+OLD_MINIMAL="$TMP_DIR/old-minimal"
+mkdir -p "$OLD_MINIMAL"
+cp -R "$VALID/minimal" "$OLD_MINIMAL/minimal"
+ffmpeg -v error -y -f lavfi -i 'color=c=#1b3a57:s=480x270:r=12:d=3' \
+  -c:v libx264 -pix_fmt yuv420p "$OLD_MINIMAL/minimal/rendered/preview.mp4"
+expect_fail old_uniform_minimal "$OLD_MINIMAL"
+
+BAD_MINIMAL_IR="$TMP_DIR/bad-minimal-ir"
+mkdir -p "$BAD_MINIMAL_IR"
+cp -R "$VALID/minimal" "$BAD_MINIMAL_IR/minimal"
+jq '(.project.sequences[0].tracks[0].clips[] |
+  select(.id=="itm_background").source.generator.color.red) = 27' \
+  "$BAD_MINIMAL_IR/minimal/project/project.veac.json" >"$BAD_MINIMAL_IR/minimal.tmp"
+mv "$BAD_MINIMAL_IR/minimal.tmp" "$BAD_MINIMAL_IR/minimal/project/project.veac.json"
+expect_fail wrong_minimal_identity "$BAD_MINIMAL_IR"
+
+NO_TRANSITION_LABEL="$TMP_DIR/no-transition-label"
+mkdir -p "$NO_TRANSITION_LABEL"
+cp -R "$VALID/transitions" "$NO_TRANSITION_LABEL/transitions"
+ffmpeg -v error -y -f lavfi -i 'color=c=black:s=480x270:r=12:d=4' \
+  -vf "format=gbrp,geq=r='if(lt(T,1.6),230,if(gt(T,2.0),69,230+(69-230)*(T-1.6)/.4))':g='if(lt(T,1.6),57,if(gt(T,2.0),123,57+(123-57)*(T-1.6)/.4))':b='if(lt(T,1.6),70,if(gt(T,2.0),157,70+(157-70)*(T-1.6)/.4))'" \
+  -c:v libx264 -pix_fmt yuv420p "$NO_TRANSITION_LABEL/transitions/rendered/preview.mp4"
+expect_fail missing_transition_explanation "$NO_TRANSITION_LABEL"
 
 UNKNOWN="$TMP_DIR/unknown"
 mkdir -p "$UNKNOWN/not-a-gallery-example"
@@ -131,6 +114,19 @@ cp -R "$VALID/delivery-formats" "$STATIC_DELIVERY/delivery-formats"
 cp "$STATIC_DELIVERY/delivery-formats/rendered/frame-0001.png" \
   "$STATIC_DELIVERY/delivery-formats/rendered/frame-0036.png"
 expect_fail static_delivery_frames "$STATIC_DELIVERY"
+
+CORRUPT_DELIVERY_FRAME="$TMP_DIR/corrupt-delivery-frame"
+mkdir -p "$CORRUPT_DELIVERY_FRAME"
+cp -R "$VALID/delivery-formats" "$CORRUPT_DELIVERY_FRAME/delivery-formats"
+corrupt_frame="$CORRUPT_DELIVERY_FRAME/delivery-formats/rendered/frame-0018.png"
+corrupt_size=$(wc -c <"$corrupt_frame" | tr -d ' ')
+dd if=/dev/zero of="$corrupt_frame" bs=1 seek=$((corrupt_size / 2)) \
+  count=64 conv=notrunc 2>/dev/null
+ffprobe -v error -select_streams v:0 \
+  -show_entries stream=codec_name,width,height -of json "$corrupt_frame" |
+  jq -e '.streams==[{"codec_name":"png","width":480,"height":270}]' >/dev/null
+expect_fail corrupt_delivery_frame "$CORRUPT_DELIVERY_FRAME"
+grep -qF 'delivery frame 18 does not fully decode' "$TMP_DIR/corrupt_delivery_frame.log"
 
 BAD_SCOPE="$TMP_DIR/bad-scope"
 mkdir -p "$BAD_SCOPE"

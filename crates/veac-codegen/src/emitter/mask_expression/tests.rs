@@ -1,6 +1,8 @@
 use veac_plan::canonical::{Animatable, Mask, MaskShape, Vec2};
 
-use super::{alpha, signed_distance, Coordinates};
+use super::{alpha, signed_distance, star_points, Coordinates};
+use crate::emitter::process_owner::ProcessOwner;
+use crate::unit_tests::emitter_tests::support::{fixture, resolved};
 
 #[test]
 fn primitive_distances_use_their_actual_pixel_axes() {
@@ -38,16 +40,30 @@ fn rounded_rectangle_radius_uses_the_short_pixel_extent() {
 
 #[test]
 fn implicit_shapes_normalize_their_gradients_in_each_pixel_axis() {
-    for (shape, axes) in [
-        (MaskShape::Heart, ["/(0.45*(w))", "/(0.45*(h))"]),
-        (MaskShape::Star, ["/(w)", "/(h)"]),
-    ] {
-        let distance = signed_distance(&shape, &point());
-        for axis in axes {
-            assert!(distance.contains(axis), "{shape:?}: {distance}");
-        }
-        assert!(distance.contains("max(hypot("), "{shape:?}: {distance}");
+    let distance = signed_distance(&MaskShape::Heart, &point());
+    for axis in ["/(0.45*(w))", "/(0.45*(h))"] {
+        assert!(distance.contains(axis), "missing {axis}: {distance}");
     }
+    assert!(distance.contains("max(hypot("), "{distance}");
+}
+
+#[test]
+fn star_is_a_ten_edge_polygon_with_alternating_radii() {
+    let points = star_points();
+    for (index, point) in points.iter().enumerate() {
+        let radius = ((point.x - 0.5).powi(2) + (point.y - 0.5).powi(2)).sqrt();
+        let expected = if index % 2 == 0 {
+            0.45
+        } else {
+            0.171884705062547
+        };
+        assert!((radius - expected).abs() < 1e-12, "point {index}: {radius}");
+    }
+    let distance = signed_distance(&MaskShape::Star, &point());
+    assert_eq!(distance.matches("hypot(").count(), 10, "{distance}");
+    assert!(distance.contains("(0.5-0.5)*(w)"), "{distance}");
+    assert!(distance.contains("(0.05-0.5)*(h)"), "{distance}");
+    assert!(!distance.contains("cos("), "{distance}");
 }
 
 #[test]
@@ -58,7 +74,9 @@ fn alpha_keeps_animated_transform_and_pixel_feather_in_one_expression() {
     mask.rotation_degrees = Animatable::constant(30.0);
     mask.feather_pixels = Animatable::constant(6.0);
     mask.expansion_pixels = Animatable::constant(4.0);
-    let expression = alpha(&mask);
+    let plan = resolved(&fixture());
+    let clip = &plan.sequences[0].tracks[0].clips[0];
+    let expression = alpha(&plan, ProcessOwner::clip(clip), &mask);
     for marker in [
         "X-W*(0.25)",
         "Y-H*(0.75)",

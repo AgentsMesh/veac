@@ -4,33 +4,9 @@ use veac_ir::{ItemId, MaterialSource, OperationId};
 
 use crate::arguments::TemplateCommand;
 
-use super::support::{canonical_project, identity, snapshot, FakeEnvironment};
-
-const SOURCE: &str = r#"
-project template-security {
-  settings {
-    timebase 1/1000; canvas 32px by 24px;
-    frame-rate 10fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video hero {
-    locator local { path "placeholder.mp4"; }
-    streams { video auto; audio disabled; }
-  }
-  sequence main {
-    layer video picture {
-      item hero {
-        source media resource hero;
-        record { at 0s; duration 1s; }
-        mapping linear { from 0s; to 1s; }
-        template-slot media {
-          accepts video; fill fit-duration; label "Hero";
-        }
-      }
-    }
-  }
-}
-"#;
+use super::support::{
+    canonical_project, identity, snapshot, FakeEnvironment, MEDIA_TEMPLATE_SOURCE,
+};
 
 #[test]
 fn local_replacement_requires_exact_identity_and_probe_facts() {
@@ -149,7 +125,7 @@ fn invalid_requests_are_rejected_before_any_replacement_probe() {
 }
 
 fn fixture(temp: &TempDir) -> (std::path::PathBuf, std::path::PathBuf) {
-    let project = canonical_project(temp, SOURCE);
+    let project = canonical_project(temp, MEDIA_TEMPLATE_SOURCE);
     let envelope = crate::canonical::load(&project).unwrap();
     let clip = &envelope.project.sequences[0].tracks[0].clips[0];
     let mut material = envelope.project.materials[0].clone();

@@ -2,101 +2,122 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-for module in common pixels showcase-pixels showcase-effects composition-image-overlay; do
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/veac-visual-mechanisms.XXXXXX")
+trap 'rm -rf "$TMP"' EXIT
+for module in common pixels mechanism-pixels visual-canonical-contracts visual-mechanisms; do
   # shellcheck source=/dev/null
   source "$ROOT/scripts/example-render-evidence/$module.sh"
 done
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/veac-visual-contracts.XXXXXX")
-trap 'rm -rf "$tmp"' EXIT
+# shellcheck source=/dev/null
+source "$ROOT/scripts/tests/visual-canonical-fixtures.sh"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/tests/visual-mechanism-video-fixtures.sh"
 
-make_effects() {
-  local root=$1 sharpen=${2:-yes} grain=${3:-yes} spill=${4:-yes} key=${5:-yes}
-  local dir="$root/video-effects" filter
-  mkdir -p "$dir/rendered"
-  filter="drawgrid=w=48:h=45:color=0x4ade80:t=3,gblur=sigma=10:enable='lt(t,.5)'"
-  [[ $sharpen != yes ]] || filter+=",cas=strength=.22:enable='between(t,1,1.999)'"
-  filter+=",eq=brightness=.04:contrast=1.25:saturation=.35:enable='between(t,1,1.999)'"
-  filter+=",vignette=PI/3:enable='between(t,1,1.999)'"
-  [[ $grain != yes ]] || filter+=",noise=alls=28:allf=t+u:enable='between(t,1,1.999)'"
-  if [[ $key == yes ]]; then
-    filter+=",drawbox=x=0:y=0:w=iw:h=ih:color=0xd1495b:t=fill:enable='between(t,2,3.999)'"
-  else
-    filter+=",drawbox=x=0:y=0:w=iw:h=ih:color=0xd1495b:t=fill:enable='gte(t,3)'"
+delivery_video_path() { printf '%s/rendered/preview.mp4\n' "$1"; }
+
+check_fixture() {
+  case $1 in
+    color-grade) check_color_grade_evidence ;;
+    blend-modes) check_blend_modes_evidence ;;
+    apply-scopes) check_apply_scopes_evidence ;;
+  esac
+}
+
+make_fixture() {
+  local root=$1 name=$2 dir="$1/$2"
+  mkdir -p "$dir/project" "$dir/rendered"
+  case $name in
+    color-grade)
+      write_color_grade_fixture "$dir/project/project.veac.json"
+      make_color_grade_video "$dir/rendered/preview.mp4" ;;
+    blend-modes)
+      write_blend_modes_fixture "$dir/project/project.veac.json"
+      make_blend_modes_video "$dir/rendered/preview.mp4" ;;
+    apply-scopes)
+      write_apply_scopes_fixture "$dir/project/project.veac.json"
+      make_apply_scopes_video "$dir/rendered/preview.mp4" ;;
+  esac
+}
+
+expect_failure() {
+  local root=$1 name=$2 expected=$3 log="$TMP/$name.log"
+  if (PREVIEW_ROOT=$root check_fixture "$name") >"$log" 2>&1; then
+    fail "$name negative visual mechanism contract passed"
   fi
-  [[ $spill == yes ]] || filter+=",drawbox=x=225:y=0:w=10:h=ih:color=0x4ade80:t=fill:enable='between(t,2,2.999)'"
-  filter+=",drawbox=x=210:y=0:w=60:h=ih:color=0x4ade80:t=fill:enable='gte(t,3)'"
-  ffmpeg -nostdin -hide_banner -loglevel error -y \
-    -f lavfi -i 'color=c=0x20262e:s=480x270:r=12:d=4' -vf "$filter" \
-    -c:v libx264 -pix_fmt yuv420p "$dir/rendered/preview.mp4"
+  rg -qF "$expected" "$log" || { cat "$log" >&2; fail "$name failed incorrectly"; }
 }
 
-make_overlay() {
-  local root=$1 color=$2
-  local dir="$root/image-overlay"
-  mkdir -p "$dir/rendered" "$dir/project/assets"
-  ffmpeg -nostdin -hide_banner -loglevel error -y \
-    -f lavfi -i 'color=c=0xf4c95d:s=180x180' -frames:v 1 "$dir/project/assets/logo.png"
-  ffmpeg -nostdin -hide_banner -loglevel error -y \
-    -f lavfi -i 'color=c=0x203040:s=480x270:r=12:d=4' \
-    -vf "drawbox=x=372:y=162:w=90:h=90:color=$color:t=fill" \
-    -c:v libx264 -pix_fmt yuv420p "$dir/rendered/preview.mp4"
+VALID="$TMP/valid"
+for name in color-grade blend-modes apply-scopes; do
+  make_fixture "$VALID" "$name"
+  PREVIEW_ROOT=$VALID check_fixture "$name"
+done
+
+canonical_variant() {
+  local name=$1 filter=$2 root="$TMP/$1-canonical"
+  mkdir -p "$root"
+  cp -R "$VALID/$name" "$root/$name"
+  jq "$filter" "$root/$name/project/project.veac.json" >"$root/value.json"
+  mv "$root/value.json" "$root/$name/project/project.veac.json"
+  expect_failure "$root" "$name" "canonical mechanism identity contract failed"
 }
 
-expect_effect_failure() {
-  local label=$1 root=$2 expected=$3
-  local log="$tmp/$label.log"
-  if (PREVIEW_ROOT=$root check_effects_evidence >"$log" 2>&1); then
-    fail "$label negative effects contract unexpectedly passed"
-  fi
-  rg -q --fixed-strings "$expected" "$log" || {
-    cat "$log" >&2
-    fail "$label failed for the wrong effects mechanism"
-  }
-}
+canonical_variant color-grade \
+  '(.project.sequences[].tracks[].clips[]|select(.authorship.logical_path[-1]=="balanced")|.visual.color_pipeline.stages[0].adjustment.exposure_stops)=0'
+canonical_variant blend-modes \
+  '(.project.sequences[].tracks[].clips[]|select(.authorship.logical_path[-1]=="screen")|.visual.compositing.blend_mode)="normal"'
+canonical_variant apply-scopes \
+  '(.project.sequences[].applies[1].target.type)="item_set"'
+canonical_variant color-grade \
+  '(.project.sequences[].tracks[].clips[]|select(.authorship.logical_path[-1]=="balanced")|.visual.placement)={type:"absolute",position:{x:{unit:"pixels",value:0},y:{unit:"pixels",value:0}}}'
+canonical_variant blend-modes \
+  '(.project.sequences[].tracks[].clips[]|select(.authorship.logical_path[-1]=="screen")|.visual.placement)={type:"absolute",position:{x:{unit:"pixels",value:0},y:{unit:"pixels",value:0}}}'
+canonical_variant apply-scopes \
+  '(.project.sequences[].tracks[].clips[]|select(.authorship.logical_path[-1]=="accent")|.visual.placement)={type:"absolute",position:{x:{unit:"pixels",value:0},y:{unit:"pixels",value:0}}}'
 
-expect_overlay_failure() {
-  local label=$1 root=$2
-  local log="$tmp/$label.log"
-  if (PREVIEW_ROOT=$root check_image_overlay_evidence >"$log" 2>&1); then
-    fail "$label negative image-overlay contract unexpectedly passed"
-  fi
-  rg -q --fixed-strings '90% opacity with screen blending' "$log" || {
-    cat "$log" >&2
-    fail "$label failed for the wrong image-overlay mechanism"
-  }
-}
+hard_edge="$TMP/apply-scopes-hard-edge"
+mkdir -p "$hard_edge"
+cp -R "$VALID/apply-scopes" "$hard_edge/apply-scopes"
+make_apply_scopes_hard_edge_video \
+  "$hard_edge/apply-scopes/rendered/preview.mp4"
+expect_failure "$hard_edge" apply-scopes "圆形模糊边界"
 
-valid_effects="$tmp/valid-effects"
-make_effects "$valid_effects"
-PREVIEW_ROOT=$valid_effects check_effects_evidence
+for name in color-grade blend-modes; do
+  root="$TMP/$name-quarter-footprint"
+  mkdir -p "$root"
+  cp -R "$VALID/$name" "$root/$name"
+  video="$root/$name/rendered/preview.mp4"
+  make_quarter_footprint_video "$video" "$root/quarter.mp4"
+  mv "$root/quarter.mp4" "$video"
+  expect_failure "$root" "$name" "覆盖右侧无标签 ROI"
+done
 
-no_sharpen="$tmp/no-sharpen"
-make_effects "$no_sharpen" no yes yes yes
-expect_effect_failure missing_sharpen "$no_sharpen" 'sharpen does not produce an edge halo'
+misplaced="$TMP/apply-scopes-misplaced"
+mkdir -p "$misplaced"
+cp -R "$VALID/apply-scopes" "$misplaced/apply-scopes"
+make_apply_scopes_misplaced_video "$misplaced/apply-scopes/rendered/preview.mp4"
+expect_failure "$misplaced" apply-scopes "画面中心而非左上角"
 
-no_grain="$tmp/no-grain"
-make_effects "$no_grain" yes no yes yes
-expect_effect_failure missing_grain "$no_grain" 'grain has no temporal texture'
-
-no_spill="$tmp/no-spill"
-make_effects "$no_spill" yes yes no yes
-expect_effect_failure missing_spill_suppression "$no_spill" \
-  'spill suppression leaves a green fringe'
-
-no_key="$tmp/no-key"
-make_effects "$no_key" yes yes yes no
-expect_effect_failure missing_chroma_key "$no_key" 'chroma key evidence failed'
-
-valid_overlay="$tmp/valid-overlay"
-make_overlay "$valid_overlay" 0xe0c37f
-PREVIEW_ROOT=$valid_overlay check_image_overlay_evidence
-
-normal_overlay="$tmp/normal-overlay"
-make_overlay "$normal_overlay" 0xdfba5a
-expect_overlay_failure normal_blend "$normal_overlay"
-
-opaque_overlay="$tmp/opaque-overlay"
-make_overlay "$opaque_overlay" 0xf5d386
-expect_overlay_failure wrong_opacity "$opaque_overlay"
+for name in color-grade blend-modes apply-scopes; do
+  root="$TMP/$name-label-only"
+  mkdir -p "$root"
+  cp -R "$VALID/$name" "$root/$name"
+  case $name in
+    color-grade)
+      make_label_only_video "$root/$name/rendered/preview.mp4" 2 2
+      assert_unique_frames "$root/$name/rendered/preview.mp4" 2 1 3
+      expected="无标签 ROI" ;;
+    blend-modes)
+      make_label_only_video "$root/$name/rendered/preview.mp4" 12 1
+      assert_unique_frames "$root/$name/rendered/preview.mp4" 12 \
+        0.5 1.5 2.5 3.5 4.5 5.5 6.5 7.5 8.5 9.5 10.5 11.5
+      expected=label-free ;;
+    apply-scopes)
+      make_label_only_video "$root/$name/rendered/preview.mp4" 3 2
+      assert_unique_frames "$root/$name/rendered/preview.mp4" 3 1 3 5
+      expected=label-free ;;
+  esac
+  expect_failure "$root" "$name" "$expected"
+done
 
 printf 'visual mechanism render evidence contract tests passed\n'

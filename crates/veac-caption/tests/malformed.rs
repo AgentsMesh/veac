@@ -34,12 +34,12 @@ fn rejects_unsorted_cues_instead_of_reordering_silently() {
 fn schema_rejects_unknown_fields() {
     let json = r#"{
       "schema":"https://veac.dev/schemas/caption-document",
-      "schema_version":1,
+      "schema_version":2,
       "document":{
         "timescale":1000,
         "language":null,
         "overlap_policy":"reject",
-        "settings":{},
+        "native":null,
         "styles":[],
         "cues":[],
         "unknown":true
@@ -47,6 +47,20 @@ fn schema_rejects_unknown_fields() {
     }"#;
     assert!(matches!(
         decode_caption_json(json),
+        Err(CaptionError::Json(_))
+    ));
+
+    let mut legacy = serde_json::to_value(CaptionEnvelope::new(CaptionDocument::new(
+        1000,
+        OverlapPolicy::Reject,
+    )))
+    .unwrap();
+    legacy["document"]
+        .as_object_mut()
+        .unwrap()
+        .insert("settings".to_owned(), serde_json::json!({}));
+    assert!(matches!(
+        decode_caption_json(&legacy.to_string()),
         Err(CaptionError::Json(_))
     ));
 }

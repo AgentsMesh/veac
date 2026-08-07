@@ -1,0 +1,27 @@
+module {
+  export fn balanced() -> VisualStyle {
+    let input = color_space(
+      primaries_bt709(), transfer_bt709(), matrix_bt709(), range_limited()
+    );
+    let working = color_space(
+      primaries_bt709(), transfer_linear(), matrix_rgb(), range_full()
+    );
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+      [], color_pipeline_present(color_pipeline(
+        input, working, input,
+        [color_stage_basic(basic_color(0.4, 4800.0, 0.08, -0.18, 0.28, 0.04))]
+      ))
+    )
+  }
+}

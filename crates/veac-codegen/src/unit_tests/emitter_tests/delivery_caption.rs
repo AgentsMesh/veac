@@ -10,6 +10,7 @@ use super::support::{
 };
 
 mod ass;
+mod native;
 mod plain;
 
 #[test]

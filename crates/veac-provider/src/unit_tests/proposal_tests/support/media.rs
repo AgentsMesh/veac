@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use crate::{InputArtifact, MaterialInsertion, MediaType, ProviderArtifact};
@@ -53,7 +51,7 @@ pub(crate) fn output_material(
             identity: Some(identity.clone()),
             stream_intent: intent(kind),
             probe: Some(probe(kind, identity, duration)),
-            metadata: BTreeMap::new(),
+            authorship: None,
         },
         before_id: None,
         after_id: None,
@@ -89,7 +87,7 @@ fn source_material(id: &str, media_type: MediaType) -> Material {
         identity: Some(identity.clone()),
         stream_intent: intent(kind),
         probe: Some(probe(kind, identity, time(100))),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -131,6 +129,6 @@ fn media_clip(id: &str, material_id: &str, has_visual: bool) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }

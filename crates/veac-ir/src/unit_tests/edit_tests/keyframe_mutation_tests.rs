@@ -55,10 +55,10 @@ fn move_and_remove_find_keyframes_across_visual_audio_and_effect_curves() {
         clip.audio.as_ref().unwrap().gain.keyframes().unwrap().len(),
         1
     );
-    let effect_curve = match &clip.effects[0].parameters["brightness"] {
-        ParameterValue::NumberCurve { value } => value,
-        other => panic!("expected curve, got {other:?}"),
-    };
+    let effect_curve = clip.effects[0]
+        .effect
+        .curve(EffectParameter::Brightness)
+        .unwrap();
     assert_eq!(effect_curve.keyframes().unwrap().len(), 1);
 }
 
@@ -169,7 +169,7 @@ fn seeded_project() -> ProjectEnvelope {
             clip_id: id.clone(),
             target: NumberCurveTarget::EffectParameter {
                 effect_id: EffectId::new("fx_color").unwrap(),
-                name: "brightness".to_owned(),
+                parameter: EffectParameter::Brightness,
             },
             keyframe: number_key(value, if value.ends_with('a') { 0 } else { 20 }, 0.2),
         }));

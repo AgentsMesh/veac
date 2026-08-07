@@ -1,4 +1,4 @@
-use veac_artifact::{artifact_key, ArtifactKind};
+use veac_artifact::ArtifactKind;
 use veac_ir::{EditOutcome, ItemId, MaterialId, MaterialKind, TimeRange};
 
 use crate::*;
@@ -9,14 +9,12 @@ use super::support::*;
 fn separation_inserts_every_ordered_stem_as_material_and_audio_clip() {
     let project = project();
     let (request, mut response) = exchange(Capability::VocalSeparation);
-    let mut music_artifact = crate::test_support::artifact(
+    let music_artifact = crate::test_support::artifact(
         ArtifactKind::AudioStem,
         "music",
         &request.provider,
         request_hash(&request).unwrap(),
     );
-    music_artifact.descriptor.parameters = serde_json::json!({"stem": "music"});
-    music_artifact.record.key = artifact_key(&music_artifact.descriptor).unwrap();
     let ProviderOutput::VocalSeparation(result) = &mut response.output else {
         unreachable!()
     };

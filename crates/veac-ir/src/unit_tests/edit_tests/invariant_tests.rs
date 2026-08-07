@@ -39,6 +39,7 @@ fn invalid_values_and_revision_overflow_are_rejected() {
     let source = ClipSource::Caption {
         text: "invalid".to_owned(),
         speaker: None,
+        cue: Box::default(),
         style: TextStyle {
             font: FontRef::Family {
                 family: "Inter".to_owned(),

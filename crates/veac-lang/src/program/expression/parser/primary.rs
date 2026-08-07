@@ -1,9 +1,29 @@
 use super::Parser;
 use crate::program::expression::ast::{Expression, ExpressionKind};
 use crate::program::expression::lexer::TokenKind;
-use crate::program::expression::{ExactNumber, ExpressionError, Value};
+use crate::program::expression::{ExactNumber, ExpressionError, UnitSuffix, Value};
 
 impl Parser {
+    pub(super) fn signed_min_literal(
+        &mut self,
+        sign: std::ops::Range<usize>,
+    ) -> Result<Option<Expression>, ExpressionError> {
+        let is_minimum = matches!(
+            &self.current().kind,
+            TokenKind::Number { number, unit }
+                if number == "9223372036854775808" && unit.is_empty()
+        );
+        if !is_minimum {
+            return Ok(None);
+        }
+        let number = self.advance();
+        self.node(
+            ExpressionKind::Literal(Value::Integer(i64::MIN)),
+            sign.start..number.span.end,
+        )
+        .map(Some)
+    }
+
     pub(super) fn primary(&mut self) -> Result<Expression, ExpressionError> {
         let token = self.advance();
         match token.kind {
@@ -11,23 +31,33 @@ impl Parser {
                 let value = number_value(&number, &unit, token.span.clone())?;
                 self.node(ExpressionKind::Literal(value), token.span)
             }
-            TokenKind::Text(value) => {
-                self.node(ExpressionKind::Literal(Value::Text(value)), token.span)
-            }
-            TokenKind::Color(value) => {
-                self.node(ExpressionKind::Literal(Value::Color(value)), token.span)
-            }
+            TokenKind::Text(value) => self.node(
+                ExpressionKind::Literal(Value::Text(value.into())),
+                token.span,
+            ),
+            TokenKind::Color(value) => self.node(
+                ExpressionKind::Literal(Value::Color(value.into())),
+                token.span,
+            ),
             TokenKind::Bool(value) => {
                 self.node(ExpressionKind::Literal(Value::Bool(value)), token.span)
             }
-            TokenKind::Symbol(value) if self.at(&TokenKind::LeftParen) => {
-                self.call(value, token.span.start)
-            }
             TokenKind::Symbol(value) => self.node(ExpressionKind::Symbol(value), token.span),
             TokenKind::LeftParen => self.parenthesized(token.span),
+            TokenKind::LeftBracket => self.list(token.span),
+            TokenKind::MapStart => self.map(token.span),
+            TokenKind::LeftBrace => {
+                let (block, span) = self.block(token.span)?;
+                self.node(ExpressionKind::Block(block), span)
+            }
+            TokenKind::If => self.conditional(token.span),
+            TokenKind::Fn => self.closure(token.span),
+            TokenKind::For => self.iteration(token.span),
+            TokenKind::Match => self.match_expression(token.span),
+            TokenKind::Animate => self.temporal_attachment(token.span),
             _ => Err(ExpressionError::new(
                 "EXPRESSION_EXPECTED_VALUE",
-                "expected a literal, symbol, function call, or parenthesized expression",
+                "expected a value, block, conditional, closure, or function call",
                 token.span,
             )),
         }
@@ -37,40 +67,10 @@ impl Parser {
         &mut self,
         opening: std::ops::Range<usize>,
     ) -> Result<Expression, ExpressionError> {
-        self.enter_depth(opening)?;
-        let expression = self.expression()?;
+        self.enter_depth(opening.clone())?;
+        let expression = self.parenthesized_contents(opening);
         self.depth -= 1;
-        if self.take(&TokenKind::RightParen).is_none() {
-            return Err(self.error("EXPRESSION_EXPECTED_TOKEN", "expected `)`"));
-        }
-        Ok(expression)
-    }
-
-    fn call(&mut self, function: String, start: usize) -> Result<Expression, ExpressionError> {
-        let opening = self
-            .take(&TokenKind::LeftParen)
-            .expect("call starts at a left parenthesis");
-        self.enter_depth(opening)?;
-        let mut arguments = Vec::new();
-        if !self.at(&TokenKind::RightParen) {
-            loop {
-                arguments.push(self.expression()?);
-                if self.take(&TokenKind::Comma).is_none() {
-                    break;
-                }
-            }
-        }
-        let closing = self
-            .take(&TokenKind::RightParen)
-            .ok_or_else(|| self.error("EXPRESSION_EXPECTED_TOKEN", "expected `)`"))?;
-        self.depth -= 1;
-        self.node(
-            ExpressionKind::Call {
-                function,
-                arguments,
-            },
-            start..closing.end,
-        )
+        expression
     }
 }
 
@@ -79,6 +79,15 @@ fn number_value(
     unit: &str,
     span: std::ops::Range<usize>,
 ) -> Result<Value, ExpressionError> {
+    if unit.is_empty() && !raw.contains('.') {
+        return raw.parse::<i64>().map(Value::Integer).map_err(|_| {
+            ExpressionError::new(
+                "EXPRESSION_NUMBER_LITERAL",
+                format!("integer literal `{raw}` is outside the signed 64-bit range"),
+                span,
+            )
+        });
+    }
     let number = decimal(raw).ok_or_else(|| {
         ExpressionError::new(
             "EXPRESSION_NUMBER_LITERAL",
@@ -86,14 +95,14 @@ fn number_value(
             span.clone(),
         )
     })?;
-    let value = match unit {
-        "" => Value::Scalar(number),
-        "s" => Value::Time(number),
-        "ms" => Value::Time(divide(number, 1_000, &span)?),
-        "us" => Value::Time(divide(number, 1_000_000, &span)?),
-        "px" => Value::Length(number),
-        "%" => Value::Percent(number),
-        "deg" => Value::Angle(number),
+    let value = match UnitSuffix::parse(unit) {
+        None if unit.is_empty() => Value::Scalar(number),
+        Some(UnitSuffix::Seconds) => Value::Time(number),
+        Some(UnitSuffix::Milliseconds) => Value::Time(divide(number, 1_000, &span)?),
+        Some(UnitSuffix::Microseconds) => Value::Time(divide(number, 1_000_000, &span)?),
+        Some(UnitSuffix::Pixels) => Value::Length(number),
+        Some(UnitSuffix::Percent) => Value::Percent(number),
+        Some(UnitSuffix::Degrees) => Value::Angle(number),
         _ => {
             return Err(ExpressionError::new(
                 "EXPRESSION_UNIT",
@@ -114,6 +123,7 @@ fn decimal(raw: &str) -> Option<ExactNumber> {
         return None;
     }
     let whole = if whole.is_empty() { "0" } else { whole };
+    let fraction = fraction.trim_end_matches('0');
     let digits = format!("{whole}{fraction}");
     let numerator = digits.parse::<i128>().ok()?;
     let denominator = 10_i128.checked_pow(u32::try_from(fraction.len()).ok()?)?;

@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 
 use super::{range, time};
@@ -38,7 +36,7 @@ pub fn media_clip(id: &str, material_id: &str, start: i64) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -54,7 +52,7 @@ pub fn generated_clip(id: &str, generator: Generator, start: i64) -> Clip {
         effects: Vec::new(),
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -70,6 +68,6 @@ pub fn sequence(id: &str, tracks: Vec<Track>) -> Sequence {
         },
         tracks,
         applies: Vec::new(),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }

@@ -110,7 +110,9 @@ impl Validate for ProviderResponseEnvelope {
                 .descriptor
                 .dependencies
                 .iter()
-                .filter(|dependency| dependency.role == "provider_request")
+                .filter(|dependency| {
+                    dependency.role == veac_artifact::ArtifactDependencyRole::ProviderRequest
+                })
                 .collect::<Vec<_>>();
             if artifact.descriptor.producer != self.provider.artifact_producer()
                 || request_dependencies.len() != 1

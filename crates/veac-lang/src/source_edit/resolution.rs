@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    apply_borrowed_text_edits, text_edit::ensure_edit_count, BorrowedTextEdit, ExpressionSite,
-    SourceEditError, SourceEditOperation, SourceNodeRef, TextEdit, TextRange,
+    apply_borrowed_text_edits, text_edit::ensure_edit_count, BorrowedTextEdit, SourceEditError,
+    SourceEditOperation, SourceNodeRef, TextEdit, TextRange,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -11,29 +11,45 @@ use super::{
 pub struct ResolvedTextReplacement {
     pub operation_index: usize,
     pub target: SourceNodeRef,
-    pub site: ExpressionSite,
     pub edit: TextEdit,
 }
 
-pub fn resolve_set_expression_text(
+pub fn resolve_source_edit_text(
     operation_index: usize,
     operation: &SourceEditOperation,
     range: TextRange,
 ) -> Result<ResolvedTextReplacement, SourceEditError> {
     super::validation::validate_operation(operation)?;
-    Ok(match operation {
+    let (target, replacement) = match operation {
         SourceEditOperation::SetExpression {
+            target, expression, ..
+        } => (target, &expression.source),
+        SourceEditOperation::SetStatement {
+            target, statement, ..
+        } => (target, &statement.source),
+        SourceEditOperation::SetBody { target, body, .. } => (target, &body.source),
+        SourceEditOperation::SetDeclaration {
             target,
-            site,
-            expression,
-        } => ResolvedTextReplacement {
-            operation_index,
-            target: target.clone(),
-            site: site.clone(),
-            edit: TextEdit {
-                range,
-                replacement: expression.source.clone(),
-            },
+            declaration,
+            ..
+        } => (target, &declaration.source),
+        SourceEditOperation::SetTopLevelDeclaration {
+            target,
+            declaration,
+        } => (target, &declaration.source),
+        SourceEditOperation::InsertDeclaration { .. }
+        | SourceEditOperation::RemoveDeclaration { .. }
+        | SourceEditOperation::InsertImport { .. }
+        | SourceEditOperation::RemoveImport { .. } => {
+            return Err(SourceEditError::StructuralOperationRequiresIndex)
+        }
+    };
+    Ok(ResolvedTextReplacement {
+        operation_index,
+        target: target.clone(),
+        edit: TextEdit {
+            range,
+            replacement: replacement.clone(),
         },
     })
 }

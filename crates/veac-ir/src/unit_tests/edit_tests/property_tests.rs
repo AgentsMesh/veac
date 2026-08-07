@@ -63,8 +63,8 @@ fn typed_visual_audio_and_effect_parameter_edits_update_only_their_targets() {
             edit: EffectParameterEdit::Set {
                 clip_id: id.clone(),
                 effect_id: EffectId::new("fx_color").unwrap(),
-                name: "contrast".to_owned(),
-                value: ParameterValue::Number { value: 1.5 },
+                parameter: EffectParameter::Contrast,
+                value: EffectParameterValue::Curve(Animatable::constant(1.5)),
             },
         },
     ];
@@ -88,23 +88,10 @@ fn typed_visual_audio_and_effect_parameter_edits_update_only_their_targets() {
     );
     assert!(clip.visual.as_ref().unwrap().transform.flip_vertical);
     assert!(clip.audio.as_ref().unwrap().muted);
-    assert!(clip.effects[0].parameters.contains_key("contrast"));
-
-    let remove = batch(
-        "op_remove_parameter",
-        &updated,
-        vec![EditOperation::EditEffectParameter {
-            edit: EffectParameterEdit::Remove {
-                clip_id: id,
-                effect_id: EffectId::new("fx_color").unwrap(),
-                name: "contrast".to_owned(),
-            },
-        }],
+    assert_eq!(
+        clip.effects[0].effect.curve(EffectParameter::Contrast),
+        Some(&Animatable::constant(1.5))
     );
-    let removed = applied(apply_edit_batch(&updated, &remove));
-    assert!(!removed.project.sequences[0].tracks[0].clips[0].effects[0]
-        .parameters
-        .contains_key("contrast"));
 }
 
 #[test]
@@ -116,10 +103,11 @@ fn typed_property_edits_reject_missing_components_locks_and_invalid_values_atomi
             AudioProperty::Muted(true),
         ),
         EditOperation::EditEffectParameter {
-            edit: EffectParameterEdit::Remove {
+            edit: EffectParameterEdit::Set {
                 clip_id: ItemId::new("itm_video").unwrap(),
                 effect_id: EffectId::new("fx_color").unwrap(),
-                name: "missing".to_owned(),
+                parameter: EffectParameter::TargetLufs,
+                value: EffectParameterValue::Number(-18.0),
             },
         },
         visual(

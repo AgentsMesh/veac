@@ -46,6 +46,17 @@ fn is_valid_id(value: &str, prefix: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
 }
 
+fn digest_id(prefix: &str, digest: [u8; 32]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut value = String::with_capacity(prefix.len() + digest.len() * 2);
+    value.push_str(prefix);
+    for byte in digest {
+        value.push(char::from(HEX[usize::from(byte >> 4)]));
+        value.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    value
+}
+
 macro_rules! typed_id {
     ($name:ident, $prefix:literal, $pattern:literal) => {
         #[derive(
@@ -67,6 +78,11 @@ macro_rules! typed_id {
                         value,
                     })
                 }
+            }
+
+            /// Constructs a canonical typed ID from a fixed-width binary digest.
+            pub fn from_digest(digest: [u8; 32]) -> Self {
+                Self(digest_id(Self::PREFIX, digest))
             }
 
             pub fn as_str(&self) -> &str {

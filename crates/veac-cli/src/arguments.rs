@@ -10,6 +10,8 @@ pub(crate) use artifact::*;
 mod otio;
 pub(crate) use otio::*;
 mod parser;
+mod schema_contract;
+pub(crate) use schema_contract::*;
 mod template;
 pub(crate) use template::*;
 mod workflow;
@@ -63,6 +65,8 @@ pub(super) enum Command {
     Template { command: TemplateCommand },
     /// Derive one content-addressed media artifact with FFmpeg.
     Derive(DeriveArgs),
+    /// Ingest one closed typed provider analysis result.
+    IngestAnalysis(IngestAnalysisArgs),
     /// Execute one deterministic external provider request.
     ProviderRun(ProviderRunArgs),
     /// Convert a provider response into a reviewable canonical edit proposal.
@@ -73,16 +77,24 @@ pub(super) enum Command {
     PackageBindings(PackageBindingsArgs),
     /// Discover identity-matched replacement files for one canonical plan.
     Relink(RelinkArgs),
-    /// Lower agent-oriented source into canonical project JSON.
-    Compile {
+    /// Execute a programmable source entry and publish canonical project JSON.
+    Build {
         source: PathBuf,
         /// Write canonical IR to PATH; omit it (or use `-`) for stdout.
         emit_ir: Option<PathBuf>,
+        inputs: Option<PathBuf>,
+        inline_inputs: Vec<String>,
+        material_root: Option<PathBuf>,
         revision: u64,
     },
-    /// Validate agent-oriented source without media I/O.
-    Check { source: PathBuf, revision: u64 },
-    /// Canonically format agent-oriented source.
+    /// Validate executable VEAC source without media I/O.
+    Check {
+        source: PathBuf,
+        inputs: Option<PathBuf>,
+        inline_inputs: Vec<String>,
+        revision: u64,
+    },
+    /// Canonically format syntax-aware executable VEAC source.
     Fmt {
         source: PathBuf,
         check: bool,
@@ -107,6 +119,8 @@ pub(super) enum Command {
     SourceEdit {
         source: PathBuf,
         source_edit_batch: PathBuf,
+        inputs: Option<PathBuf>,
+        inline_inputs: Vec<String>,
         output: Option<PathBuf>,
         dry_run: bool,
     },
@@ -115,11 +129,14 @@ pub(super) enum Command {
         contract: SchemaContract,
         format: SchemaFormat,
     },
+    /// Print the versioned VEAC language contract or its JSON Schema.
+    LanguageSpec { schema: bool },
     /// Hydrate media facts and print one backend-neutral render plan.
     Plan {
         project: PathBuf,
         config: Option<String>,
         bindings: Option<PathBuf>,
+        material_root: Option<PathBuf>,
         format: PlanFormat,
     },
     /// Emit a deterministic execution manifest for one resolved output.
@@ -127,6 +144,7 @@ pub(super) enum Command {
         project: PathBuf,
         config: Option<String>,
         bindings: Option<PathBuf>,
+        material_root: Option<PathBuf>,
         output: Option<PathBuf>,
     },
     /// Package reachable, identity-verified inputs for one resolved output.
@@ -134,6 +152,7 @@ pub(super) enum Command {
         project: PathBuf,
         config: Option<String>,
         bindings: Option<PathBuf>,
+        material_root: Option<PathBuf>,
         destination: PathBuf,
     },
     /// Render canonical project JSON through a resolved plan and FFmpeg.
@@ -141,13 +160,18 @@ pub(super) enum Command {
         project: PathBuf,
         config: Option<String>,
         bindings: Option<PathBuf>,
+        material_root: Option<PathBuf>,
         /// Place every authored deliverable file name in this existing directory.
         destination: Option<PathBuf>,
         proxy_policy: SubstitutionPolicy,
         render_segment_policy: SubstitutionPolicy,
     },
     /// Print a normalized canonical media probe snapshot.
-    Probe { media: PathBuf },
+    Probe {
+        input: PathBuf,
+        material: Option<String>,
+        material_root: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,35 +184,4 @@ pub(crate) enum SubstitutionPolicy {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum PlanFormat {
     Json,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum SchemaFormat {
-    JsonSchema,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum SchemaContract {
-    Project,
-    Caption,
-    CaptionTrackInsertion,
-    CaptionDocumentBindings,
-    EditBatch,
-    SourceEditBatch,
-    SourceIndex,
-    EditOutcome,
-    RenderPlan,
-    Artifact,
-    MediaArtifactRequest,
-    BuildManifest,
-    PackageManifest,
-    ExecutionBindings,
-    ProviderRequest,
-    ProviderResponse,
-    ProviderManifest,
-    ProviderEditProposal,
-    OtioLoss,
-    OtioImportBindings,
-    OtioEditProposal,
-    TemplateFillRequest,
 }

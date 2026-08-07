@@ -1,182 +1,80 @@
-project masks-and-mattes {
-  settings {
-    timebase 1/1000;
-    canvas 640px by 360px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./masks.veac" as masks;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual content {
-      item circle-stage {
-        source generated solid { color #ff2d95ff; }
-        record { at 0s; duration 1s; }
-        modifiers {
-          mask circle-only {
-            shape circle;
-            position { x 50%; y 50%; }
-            scale { x 56%; y 56%; }
-            feather 8px;
-          }
-        }
-      }
-      item rectangle-stage {
-        source generated solid { color #00b4d8ff; }
-        record { at 1s; duration 1s; }
-        modifiers {
-          mask rectangle-only {
-            shape rectangle;
-            scale { x 70%; y 58%; }
-            feather 8px;
-          }
-        }
-      }
-      item ellipse-stage {
-        source generated solid { color #ffc857ff; }
-        record { at 2s; duration 1s; }
-        modifiers {
-          mask ellipse-only {
-            shape ellipse;
-            scale { x 68%; y 44%; }
-            feather 8px;
-          }
-        }
-      }
-      item rounded-stage {
-        source generated solid { color #7bd389ff; }
-        record { at 3s; duration 1s; }
-        modifiers {
-          mask rounded-only {
-            shape rounded-rectangle { radius 14%; }
-            scale { x 66%; y 52%; }
-            feather 8px;
-          }
-        }
-      }
-      item polygon-stage {
-        source generated solid { color #9b5de5ff; }
-        record { at 4s; duration 1s; }
-        modifiers {
-          mask polygon-only {
-            shape polygon {
-              point { x 50%; y 18%; }
-              point { x 82%; y 42%; }
-              point { x 68%; y 78%; }
-              point { x 32%; y 78%; }
-              point { x 18%; y 42%; }
-            }
-            feather 8px;
-          }
-        }
-      }
-      item path-stage {
-        source generated solid { color #f15bb5ff; }
-        record { at 5s; duration 1s; }
-        modifiers {
-          mask path-only {
-            shape path {
-              point { x 18%; y 72%; }
-              point { x 50%; y 18%; }
-              point { x 82%; y 72%; }
-            }
-            feather 8px;
-          }
-        }
-      }
-      item combined-masks {
-        source generated solid { color #ff006eff; }
-        record { at 6s; duration 2s; }
-        modifiers {
-          mask circle-window {
-            shape circle;
-            scale { x 76%; y 76%; }
-            feather 18px;
-            expansion 4px;
-          }
-          mask rectangle-window { shape rectangle; scale { x 74%; y 58%; } }
-          mask ellipse-window { shape ellipse; scale { x 72%; y 48%; } }
-          mask rounded-window {
-            shape rounded-rectangle { radius 12%; }
-            scale { x 70%; y 52%; }
-          }
-          mask polygon-window {
-            shape polygon {
-              point { x 16%; y 22%; }
-              point { x 84%; y 22%; }
-              point { x 92%; y 78%; }
-              point { x 50%; y 92%; }
-              point { x 8%; y 78%; }
-            }
-          }
-          mask path-window {
-            shape path {
-              point { x 10%; y 50%; }
-              point { x 28%; y 16%; }
-              point { x 72%; y 16%; }
-              point { x 90%; y 50%; }
-              point { x 72%; y 84%; }
-              point { x 28%; y 84%; }
-            }
-            feather 10px;
-            expansion -2px;
-          }
-        }
-      }
-      item alpha-content {
-        source generated solid { color #00bbf9ff; }
-        record { at 8s; duration 2s; }
-      }
-    }
-
-    layer visual matte {
-      item radial-matte {
-        source generated gradient radial {
-          center 50% 50%; radius 62%;
-          stop 0% #ffffffff; stop 100% #000000ff;
-        }
-        record { at 6s; duration 2s; }
-      }
-      item alpha-source {
-        source generated gradient radial {
-          center 50% 50%; radius 48%;
-          stop 0% #ffffffff; stop 100% #00000000;
-        }
-        record { at 8s; duration 2s; }
-      }
-    }
-
-    relation matte soft-window {
-      endpoints { producer item radial-matte; consumer item combined-masks; }
-      style { luma { invert false; } }
-    }
-    relation matte inverted-alpha {
-      endpoints { producer item alpha-source; consumer item alpha-content; }
-      style { alpha { invert true; } }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 640px by 360px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let circle = masks.sample(identifier("circle"), 0s, #ff2d95ff, mask_circle(), vector(0.56, 0.56));
+  let rectangle = masks.sample(identifier("rectangle"), 1s, #00b4d8ff, mask_rectangle(), vector(0.7, 0.58));
+  let ellipse = masks.sample(identifier("ellipse"), 2s, #ffc857ff, mask_ellipse(), vector(0.68, 0.44));
+  let rounded = masks.sample(
+    identifier("rounded"), 3s, #7bd389ff, mask_rounded_rectangle(0.14), vector(0.66, 0.52)
+  );
+  let polygon = masks.sample(
+    identifier("polygon"), 4s, #9b5de5ff,
+    mask_polygon([
+      vector(0.5, 0.18), vector(0.82, 0.42), vector(0.68, 0.78),
+      vector(0.32, 0.78), vector(0.18, 0.42)
+    ]), vector(1.0, 1.0)
+  );
+  let path = masks.sample(
+    identifier("path"), 5s, #f15bb5ff,
+    mask_path([vector(0.18, 0.72), vector(0.5, 0.18), vector(0.82, 0.72)]),
+    vector(1.0, 1.0)
+  );
+  let combined = masks.combined(identifier("combined"), 6s, #ff006eff);
+  let alpha_content = showcase.solid(identifier("alpha-content"), #00bbf9ff, 8s, 2s);
+  let content = visual_layer(
+    identifier("content"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(circle).with_item(rectangle).with_item(ellipse).with_item(rounded)
+    .with_item(polygon).with_item(path).with_item(combined).with_item(alpha_content);
+  let radial_matte = item(
+    identifier("radial-matte"), item_enabled(), during(6s, 2s),
+    source_generated(generator_gradient(gradient_radial(
+      vector(0.5, 0.5), 0.62,
+      [gradient_stop(0%, #ffffffff), gradient_stop(100%, #000000ff)]
+    ))), source_timing_native()
+  );
+  let alpha_source = item(
+    identifier("alpha-source"), item_enabled(), during(8s, 2s),
+    source_generated(generator_gradient(gradient_radial(
+      vector(0.5, 0.5), 0.48,
+      [gradient_stop(0%, #ffffffff), gradient_stop(100%, #00000000)]
+    ))), source_timing_native()
+  );
+  let matte = visual_layer(
+    identifier("matte"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(radial_matte).with_item(alpha_source);
+  let labels = visual_layer(
+    identifier("labels"), 3, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 10s),
+    source_text(
+      "几何蒙版全集，随后展示亮度轨道遮罩与反相透明度轨道遮罩",
+      showcase.caption_style(font, 24px, 560px)
+    ), source_timing_native()
+  ));
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("canvas"), #101820ff, 0s, 10s));
+  let timeline = sequence(
+    identifier("main"), "蒙版与轨道遮罩",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(base).with_layer(content).with_layer(matte).with_layer(labels)
+    .with_relation(relation_matte_item(
+      identifier("soft-window"), radial_matte, combined, matte_luma(), false
+    ))
+    .with_relation(relation_matte_item(
+      identifier("inverted-alpha"), alpha_source, alpha_content, matte_alpha(), true
+    ));
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("masks-and-mattes"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

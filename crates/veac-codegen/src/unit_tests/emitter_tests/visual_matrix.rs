@@ -7,7 +7,10 @@ use super::support::{bindings, emit_video_command, fixture, resolved, time};
 fn fill_contain_cover_and_no_frame_take_distinct_paths() {
     let cases = [
         (FitMode::Fill, "scale=320:180["),
-        (FitMode::Contain, "force_original_aspect_ratio=decrease"),
+        (
+            FitMode::Contain,
+            "format=gbrap16le,scale=320:180:force_original_aspect_ratio=decrease",
+        ),
         (FitMode::Cover, "force_original_aspect_ratio=increase"),
     ];
     for (fit, marker) in cases {
@@ -83,6 +86,30 @@ fn identity_visual_properties_skip_optional_filters() {
     for absent in ["cropv", "transformscalev", "pivotv", "opacityv", "cornerv"] {
         assert!(!graph.contains(absent), "unexpected {absent}: {graph}");
     }
+}
+
+#[test]
+fn rotation_promotes_opaque_media_before_transparent_pivot_padding() {
+    let mut plan = resolved(&fixture());
+    let visual = visual(&mut plan);
+    visual.frame = None;
+    visual.transform.crop = None;
+    visual.transform.scale = Animatable::constant(Vec2 { x: 0.72, y: 0.72 });
+    visual.transform.anchor = Vec2 { x: 0.25, y: 0.5 };
+    visual.transform.rotation_degrees = Animatable::constant(8.0);
+    visual.opacity = Animatable::constant(1.0);
+    visual.masks.clear();
+    visual.card = None;
+
+    let graph = graph(&plan);
+    assert!(
+        graph.contains("format=gbrap16le,pad=w='2*max(0.25*iw"),
+        "pivot padding must receive an alpha-capable stream: {graph}"
+    );
+    assert!(
+        graph.contains("rotate=angle='(8)*PI/180'") && graph.contains(":c=black@0"),
+        "rotation must retain a transparent fill: {graph}"
+    );
 }
 
 #[test]

@@ -25,6 +25,17 @@ pub(super) fn crop(
     ] {
         crop_animatable(curve, start, end, owner, path, reidentify, changed)?;
     }
+    if let Some(highlight) = &mut animation.highlight {
+        crop_animatable(
+            &mut highlight.progress,
+            start,
+            end,
+            owner,
+            "text_highlight_progress",
+            reidentify,
+            changed,
+        )?;
+    }
     crop_animatable(
         &mut animation.transform.position_offset,
         start,

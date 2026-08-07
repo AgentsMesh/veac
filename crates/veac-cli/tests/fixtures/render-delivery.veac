@@ -1,0 +1,38 @@
+fn main(context: Context) -> Project {
+  let background = item(
+    identifier("background"), item_enabled(), during(0s, 200ms),
+    source_generated(generator_solid(#24a148ff)), source_timing_native()
+  );
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let base = visual_layer(
+    identifier("base"), 0, placement_free(), state, track_routing_default()
+  ).with_item(background);
+  let timeline = sequence(
+    identifier("main"), "多交付测试",
+    sequence_settings(canvas(32px, 24px), frame_rate(10, 1), 48000)
+  ).with_layer(base);
+  let video_spec = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(23), gop_auto(), b_frames_auto(), video_profile_auto(), video_level_auto()
+  );
+  let master = deliverable_video(
+    identifier("master"), delivery_file("authored-master.mp4"),
+    video_delivery(
+      container_mp4(), video_spec, embedded_audio_none(),
+      false, pass_single(), hardware_software()
+    )
+  );
+  let frames = deliverable_image_frames(
+    identifier("frames"), delivery_image_sequence("authored-frame-%04d.png"), image_png(), 1
+  );
+  let delivery_spec = delivery(
+    identifier("main"), timeline,
+    raster_settings(canvas(32px, 24px), frame_rate(10, 1), caption_discard()),
+    [master, frames]
+  );
+  project(identifier("multi-delivery"), project_settings(600))
+    .with_sequence(timeline).entry(timeline).with_delivery(delivery_spec)
+}

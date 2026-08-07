@@ -1,99 +1,86 @@
-project transition-gallery {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual scenes {
-      item dissolve-a { source generated solid { color #ffbe0bff; } record { at 0s; duration 1s; } }
-      item dissolve-b { source generated solid { color #fb5607ff; } record { at 1s; duration 1s; } }
-      item fade-a { source generated solid { color #ff006eff; } record { at 2s; duration 1s; } }
-      item fade-b { source generated solid { color #8338ecff; } record { at 3s; duration 1s; } }
-      item wipe-a { source generated solid { color #3a86ffff; } record { at 4s; duration 1s; } }
-      item wipe-b { source generated solid { color #00b4d8ff; } record { at 5s; duration 1s; } }
-      item slide-a { source generated solid { color #06d6a0ff; } record { at 6s; duration 1s; } }
-      item slide-b { source generated solid { color #8ac926ff; } record { at 7s; duration 1s; } }
-      item zoom-a { source generated solid { color #ffca3aff; } record { at 8s; duration 1s; } }
-      item zoom-b { source generated solid { color #ff924cff; } record { at 9s; duration 1s; } }
-      item circle-a { source generated solid { color #f72585ff; } record { at 10s; duration 1s; } }
-      item circle-b { source generated solid { color #7209b7ff; } record { at 11s; duration 1s; } }
-      item pixelize-a {
-        source generated gradient linear {
-          from 0% 50%; to 100% 50%;
-          stop 0% #4361eeff; stop 50% #3a0ca3ff; stop 100% #f72585ff;
-        }
-        record { at 12s; duration 1s; }
-      }
-      item pixelize-b {
-        source generated gradient linear {
-          from 50% 0%; to 50% 100%;
-          stop 0% #4cc9f0ff; stop 50% #06d6a0ff; stop 100% #ffca3aff;
-        }
-        record { at 13s; duration 1s; }
-      }
-    }
-    relation transition dissolve-cut {
-      endpoints { from item dissolve-a; to item dissolve-b; }
-      timing { duration 350ms; alignment centered; }
-      style { dissolve; }
-    }
-    relation transition fade-cut {
-      endpoints { from item fade-a; to item fade-b; }
-      timing { duration 350ms; alignment centered; }
-      style { fade { color black; } }
-    }
-    relation transition wipe-cut {
-      endpoints { from item wipe-a; to item wipe-b; }
-      timing { duration 350ms; alignment centered; }
-      style { wipe { direction left; angle 0deg; softness 10%; } }
-    }
-    relation transition slide-cut {
-      endpoints { from item slide-a; to item slide-b; }
-      timing { duration 350ms; alignment centered; }
-      style { slide { direction up; amount 1; } }
-    }
-    relation transition zoom-cut {
-      endpoints { from item zoom-a; to item zoom-b; }
-      timing { duration 350ms; alignment centered; }
-      style { zoom { direction in; amount 1.4; } }
-    }
-    relation transition circle-cut {
-      endpoints { from item circle-a; to item circle-b; }
-      timing { duration 350ms; alignment centered; }
-      style { circle { direction open; softness 10%; } }
-    }
-    relation transition pixelize-cut {
-      endpoints { from item pixelize-a; to item pixelize-b; }
-      timing { duration 350ms; alignment centered; }
-      style { pixelize { amount 65%; } }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let dissolve_a = showcase.solid(identifier("dissolve-a"), #ffbe0bff, 0s, 1s);
+  let dissolve_b = showcase.solid(identifier("dissolve-b"), #fb5607ff, 650ms, 1350ms);
+  let fade_a = showcase.solid(identifier("fade-a"), #ff006eff, 2s, 1s);
+  let fade_b = showcase.solid(identifier("fade-b"), #8338ecff, 2650ms, 1350ms);
+  let wipe_a = showcase.solid(identifier("wipe-a"), #3a86ffff, 4s, 1s);
+  let wipe_b = showcase.solid(identifier("wipe-b"), #00b4d8ff, 4650ms, 1350ms);
+  let slide_a = showcase.solid(identifier("slide-a"), #06d6a0ff, 6s, 1s);
+  let slide_b = showcase.solid(identifier("slide-b"), #8ac926ff, 6650ms, 1350ms);
+  let zoom_a = showcase.solid(identifier("zoom-a"), #ffca3aff, 8s, 1s);
+  let zoom_b = showcase.solid(identifier("zoom-b"), #ff924cff, 8650ms, 1350ms);
+  let circle_a = showcase.solid(identifier("circle-a"), #f72585ff, 10s, 1s);
+  let circle_b = showcase.solid(identifier("circle-b"), #7209b7ff, 10650ms, 1350ms);
+  let pixel_a = item(
+    identifier("pixel-a"), item_enabled(), during(12s, 1s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.5), vector(1.0, 0.5), [
+        gradient_stop(0%, #4361eeff), gradient_stop(50%, #3a0ca3ff),
+        gradient_stop(100%, #f72585ff)
+      ]
+    ))), source_timing_native()
+  );
+  let pixel_b = item(
+    identifier("pixel-b"), item_enabled(), during(12650ms, 1350ms),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.5, 0.0), vector(0.5, 1.0), [
+        gradient_stop(0%, #4cc9f0ff), gradient_stop(50%, #06d6a0ff),
+        gradient_stop(100%, #ffca3aff)
+      ]
+    ))), source_timing_native()
+  );
+  let scenes = visual_layer(
+    identifier("scenes"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(dissolve_a).with_item(dissolve_b).with_item(fade_a).with_item(fade_b)
+    .with_item(wipe_a).with_item(wipe_b).with_item(slide_a).with_item(slide_b)
+    .with_item(zoom_a).with_item(zoom_b).with_item(circle_a).with_item(circle_b)
+    .with_item(pixel_a).with_item(pixel_b);
+  let labels = visual_layer(
+    identifier("labels"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 14s),
+    source_text(
+      "转场画廊：叠化、黑场淡变、擦除、滑动、缩放、圆形展开、像素化",
+      showcase.caption_style(font, 34px, 980px)
+    ), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "七种类型化转场",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(scenes).with_layer(labels)
+    .with_relation(relation_transition(
+      identifier("dissolve"), dissolve_a, dissolve_b, transition_dissolve(350ms)
+    ))
+    .with_relation(relation_transition(
+      identifier("fade"), fade_a, fade_b, transition_fade(350ms, fade_black())
+    ))
+    .with_relation(relation_transition(
+      identifier("wipe"), wipe_a, wipe_b,
+      transition_wipe(350ms, direction_left(), 0deg, 10%)
+    ))
+    .with_relation(relation_transition(
+      identifier("slide"), slide_a, slide_b,
+      transition_slide(350ms, direction_up(), 1.0)
+    ))
+    .with_relation(relation_transition(
+      identifier("zoom"), zoom_a, zoom_b, transition_zoom(350ms, zoom_in(), 1.4)
+    ))
+    .with_relation(relation_transition(
+      identifier("circle"), circle_a, circle_b,
+      transition_circle(350ms, circle_open(), 10%)
+    ))
+    .with_relation(relation_transition(
+      identifier("pixelize"), pixel_a, pixel_b, transition_pixelize(350ms, 65%)
+    ));
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("transition-gallery"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

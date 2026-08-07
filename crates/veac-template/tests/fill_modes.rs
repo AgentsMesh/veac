@@ -75,6 +75,7 @@ fn image_fill_is_static_and_aspect_fills_the_canvas() {
     {
         veac_ir::Animatable::Constant { value } => *value,
         veac_ir::Animatable::Keyframes { .. } => panic!("template crop must be static"),
+        veac_ir::Animatable::Binding { .. } => panic!("template crop must not be temporal"),
     };
     assert_eq!(crop.width, 0.5625);
     assert_eq!(crop.x, 0.21875);

@@ -1,11 +1,11 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use veac_artifact::{artifact_key, ArtifactStore, MediaArtifactRequest, MediaArtifactSpec};
+use veac_artifact::{artifact_key, ArtifactStore, MediaArtifactRequest};
 
 use super::{
     cache, command, contract, launch_error, output, postflight, preflight, process, source, tool,
-    unsupported, GeneratedArtifact, MediaWorkflow, WorkflowResult,
+    GeneratedArtifact, MediaWorkflow, WorkflowResult,
 };
 
 impl MediaWorkflow {
@@ -18,9 +18,6 @@ impl MediaWorkflow {
         let deadline =
             Instant::now() + Duration::from_secs(self.limits.max_derivation_wall_seconds);
         contract(request.validate_with_limits(self.limits))?;
-        if matches!(request.spec, MediaArtifactSpec::Analysis(_)) {
-            return unsupported("analysis artifacts require explicit canonical analysis data");
-        }
         let descriptor = contract(request.descriptor())?;
         let source = source::SourceSnapshot::capture(
             input,

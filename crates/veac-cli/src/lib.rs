@@ -6,6 +6,7 @@ mod environment;
 mod error;
 mod frontend;
 mod fs;
+mod material_root;
 mod output;
 mod planning;
 
@@ -43,17 +44,33 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
         Command::Otio { command } => commands::otio(command),
         Command::Template { command } => commands::template(command, environment),
         Command::Derive(arguments) => commands::derive(arguments),
+        Command::IngestAnalysis(arguments) => commands::ingest_analysis(arguments),
         Command::ProviderRun(arguments) => commands::provider_run(arguments),
         Command::ProviderPropose(arguments) => commands::provider_propose(arguments),
         Command::Artifact { command } => commands::artifact(command),
         Command::PackageBindings(arguments) => commands::package_bindings(arguments),
         Command::Relink(arguments) => commands::relink(arguments),
-        Command::Compile {
+        Command::Build {
             source,
             emit_ir,
+            inputs,
+            inline_inputs,
+            material_root,
             revision,
-        } => commands::compile(&source, emit_ir.as_deref(), revision),
-        Command::Check { source, revision } => commands::check(&source, revision),
+        } => commands::build(
+            &source,
+            emit_ir.as_deref(),
+            inputs.as_deref(),
+            &inline_inputs,
+            material_root.as_deref(),
+            revision,
+        ),
+        Command::Check {
+            source,
+            inputs,
+            inline_inputs,
+            revision,
+        } => commands::check(&source, inputs.as_deref(), &inline_inputs, revision),
         Command::Fmt {
             source,
             check,
@@ -71,19 +88,31 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
         Command::SourceEdit {
             source,
             source_edit_batch,
+            inputs,
+            inline_inputs,
             output,
             dry_run,
-        } => commands::source_edit(&source, &source_edit_batch, output.as_deref(), dry_run),
+        } => commands::source_edit(
+            &source,
+            &source_edit_batch,
+            inputs.as_deref(),
+            &inline_inputs,
+            output.as_deref(),
+            dry_run,
+        ),
         Command::Schema { contract, format } => commands::schema(contract, format),
+        Command::LanguageSpec { schema } => commands::language_spec(schema),
         Command::Plan {
             project,
             config,
             bindings,
+            material_root,
             format,
         } => commands::plan(
             &project,
             config.as_deref(),
             bindings.as_deref(),
+            material_root.as_deref(),
             format,
             environment,
         ),
@@ -91,11 +120,13 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             project,
             config,
             bindings,
+            material_root,
             output,
         } => commands::manifest(
             &project,
             config.as_deref(),
             bindings.as_deref(),
+            material_root.as_deref(),
             output.as_deref(),
             environment,
         ),
@@ -103,11 +134,13 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             project,
             config,
             bindings,
+            material_root,
             destination,
         } => commands::package(
             &project,
             config.as_deref(),
             bindings.as_deref(),
+            material_root.as_deref(),
             &destination,
             environment,
         ),
@@ -115,19 +148,29 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             project,
             config,
             bindings,
+            material_root,
             destination,
             proxy_policy,
             render_segment_policy,
         } => commands::render(
             &project,
             config.as_deref(),
-            bindings.as_deref(),
+            planning::InputResolution::new(material_root.as_deref(), bindings.as_deref()),
             destination.as_deref(),
             proxy_policy,
             render_segment_policy,
             environment,
         ),
-        Command::Probe { media } => commands::probe(&media, environment),
+        Command::Probe {
+            input,
+            material,
+            material_root,
+        } => commands::probe(
+            &input,
+            material.as_deref(),
+            material_root.as_deref(),
+            environment,
+        ),
     };
     result.map_err(|error| error.with_diagnostic_format(format))
 }

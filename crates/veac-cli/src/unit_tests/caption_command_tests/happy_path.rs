@@ -31,7 +31,7 @@ fn caption_commands_round_trip_through_a_checked_edit_batch() {
         cue_ids: BTreeMap::from([(item_id, cue_id)]),
         language: captions.document.language,
         overlap_policy: captions.document.overlap_policy,
-        settings: captions.document.settings,
+        native: captions.document.native,
         styles: captions.document.styles,
     };
     let bindings = temp.path().join("extract-bindings.json");
@@ -60,7 +60,7 @@ fn caption_commands_round_trip_through_a_checked_edit_batch() {
         .contains("Hello VEAC"));
     let losses: veac_caption::LossReport =
         serde_json::from_str(&std::fs::read_to_string(losses).unwrap()).unwrap();
-    assert_eq!(losses.losses[0].field, "settings.srt.index");
+    assert!(losses.is_empty());
 }
 
 #[test]

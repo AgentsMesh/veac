@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
 check_delivery_mp3_contract() {
-  local canonical=$1
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
-    first($config.deliverables[] | select(.id == "dlv_podcast")) as $podcast |
+  local canonical=$1 config
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
+    first($config.deliverables[] | select(.kind.type == "audio_file" and
+      .target.name == "podcast.mp3")) as $podcast |
     $podcast.target == {"type":"file","name":"podcast.mp3"} and
     $podcast.kind.type == "audio_file" and
     $podcast.kind.settings.source == {"type":"master"} and

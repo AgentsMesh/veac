@@ -1,10 +1,10 @@
 use super::SourceEditError;
 
-pub const MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES: usize = 16 * 1024 * 1024;
+pub const MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_SOURCE_EDIT_OUTPUT_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_SOURCE_EDIT_WORKING_SET_BYTES: usize = 48 * 1024 * 1024;
 pub const MAX_SOURCE_EDIT_JSON_BYTES: usize = 64 * 1024 * 1024;
-pub const MAX_SOURCE_EDIT_SINGLE_EXPRESSION_BYTES: usize = 64 * 1024;
+pub const MAX_SOURCE_EDIT_SINGLE_FRAGMENT_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Copy)]
 struct Limits {
@@ -14,7 +14,7 @@ struct Limits {
 }
 
 const LIMITS: Limits = Limits {
-    replacement: MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES,
+    replacement: MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES,
     output: MAX_SOURCE_EDIT_OUTPUT_BYTES,
     working: MAX_SOURCE_EDIT_WORKING_SET_BYTES,
 };
@@ -24,13 +24,13 @@ pub(super) struct TextEditPlan {
     pub(super) output_bytes: usize,
 }
 
-pub(super) fn validate_expression_payload(
+pub(super) fn validate_fragment_payload(
     lengths: impl IntoIterator<Item = usize>,
 ) -> Result<(), SourceEditError> {
     let bytes = lengths.into_iter().try_fold(0usize, checked_add)?;
-    if bytes > MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES {
-        return Err(SourceEditError::ExpressionPayloadTooLarge {
-            limit: MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES,
+    if bytes > MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES {
+        return Err(SourceEditError::FragmentPayloadTooLarge {
+            limit: MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES,
         });
     }
     Ok(())

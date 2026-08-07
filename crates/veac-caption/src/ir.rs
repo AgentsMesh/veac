@@ -1,4 +1,4 @@
-mod metadata;
+pub(crate) mod semantics;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -10,8 +10,8 @@ use veac_ir::{
 };
 
 use crate::{
-    validate, CaptionCueId, CaptionDocument, CaptionEnvelope, CaptionError, CaptionStyle,
-    OverlapPolicy,
+    validate, CaptionCueId, CaptionDocument, CaptionDocumentNative, CaptionEnvelope, CaptionError,
+    CaptionStyle, OverlapPolicy,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -39,7 +39,7 @@ pub struct CaptionDocumentBindings {
     pub cue_ids: BTreeMap<ItemId, CaptionCueId>,
     pub language: Option<String>,
     pub overlap_policy: OverlapPolicy,
-    pub settings: BTreeMap<String, String>,
+    pub native: Option<CaptionDocumentNative>,
     pub styles: Vec<CaptionStyle>,
 }
 
@@ -69,6 +69,7 @@ pub fn to_caption_track(
                 source: ClipSource::Caption {
                     text: cue.text.plain.clone(),
                     speaker: cue.speaker.clone(),
+                    cue: Box::new(semantics::encode(cue)?),
                     style: bindings.text_style.clone(),
                 },
                 source_mapping: None,
@@ -77,7 +78,7 @@ pub fn to_caption_track(
                 effects: Vec::new(),
                 replaceable: None,
                 template_editable_text: false,
-                metadata: metadata::encode(cue)?,
+                authorship: None,
             })
         })
         .collect::<Result<Vec<_>, CaptionError>>()?;
@@ -109,18 +110,21 @@ pub fn from_caption_track(
         let id = bindings.cue_ids.get(&clip.id).cloned().ok_or_else(|| {
             CaptionError::ir(format!("missing cue ID binding for item {}", clip.id))
         })?;
-        let ClipSource::Caption { text, speaker, .. } = &clip.source else {
+        let ClipSource::Caption {
+            text, speaker, cue, ..
+        } = &clip.source
+        else {
             return Err(CaptionError::ir(format!(
                 "item {} is not a caption clip",
                 clip.id
             )));
         };
-        cues.push(metadata::decode(
+        cues.push(semantics::decode(
             id,
             clip.record_range,
             text,
             speaker.as_deref(),
-            &clip.metadata,
+            cue,
         )?);
     }
     let timescale = cues.first().map_or(1000, |cue| cue.range.start.timescale);
@@ -128,7 +132,7 @@ pub fn from_caption_track(
         timescale,
         language: bindings.language.clone(),
         overlap_policy: bindings.overlap_policy,
-        settings: bindings.settings.clone(),
+        native: bindings.native.clone(),
         styles: bindings.styles.clone(),
         cues,
     });

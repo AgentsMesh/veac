@@ -80,6 +80,24 @@ pub(crate) fn guarded_write_portable<'a>(
     Ok(candidate)
 }
 
+pub(crate) fn guarded_package_directory<'a>(
+    path: &Path,
+    protected: impl Iterator<Item = &'a Path>,
+) -> CliResult<PathBuf> {
+    let candidate = path::normalize_input(&path::package_destination(path)?);
+    let protected = protected.map(path::normalize_input).collect::<Vec<_>>();
+    if protected.iter().any(|input| input.starts_with(&candidate)) {
+        return Err(CliError::new(
+            "OUTPUT_CONTAINS_INPUT",
+            format!(
+                "package output {} contains a project input",
+                candidate.display()
+            ),
+        ));
+    }
+    Ok(candidate)
+}
+
 pub(crate) fn same_existing_or_equal(left: &Path, right: &Path) -> CliResult<bool> {
     let left = path::normalize_input(left);
     let right = path::normalize_input(right);

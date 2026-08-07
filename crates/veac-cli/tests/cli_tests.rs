@@ -1,7 +1,11 @@
+#[path = "integration/analysis_ingestion.rs"]
+mod analysis_ingestion;
 #[path = "integration/artifact_cache.rs"]
 mod artifact_cache;
 #[path = "integration/artifacts.rs"]
 mod artifacts;
+#[path = "integration/build.rs"]
+mod build;
 #[path = "integration/canonical.rs"]
 mod canonical;
 #[path = "integration/caption.rs"]
@@ -10,8 +14,24 @@ mod caption;
 mod edit;
 #[path = "integration/executable_example.rs"]
 mod executable_example;
+#[path = "integration/executable_relation.rs"]
+mod executable_relation;
+#[path = "integration/executable_temporal.rs"]
+mod executable_temporal;
+#[path = "integration/executable_transform.rs"]
+mod executable_transform;
+#[path = "integration/inline_inputs.rs"]
+mod inline_inputs;
+#[path = "integration/language_spec.rs"]
+mod language_spec;
+#[path = "integration/material_base.rs"]
+mod material_base;
+#[path = "integration/material_root.rs"]
+mod material_root;
 #[path = "integration/otio.rs"]
 mod otio;
+#[path = "integration/probe.rs"]
+mod probe;
 #[path = "integration/proxy_e2e.rs"]
 mod proxy_e2e;
 #[path = "integration/reachability.rs"]
@@ -24,8 +44,14 @@ mod render_delivery;
 mod render_segment_e2e;
 #[path = "integration/source.rs"]
 mod source;
+#[path = "integration/source_frontend.rs"]
+mod source_frontend;
+#[path = "integration/source_impl_edit.rs"]
+mod source_impl_edit;
 #[path = "integration/source_index.rs"]
 mod source_index;
+#[path = "integration/source_nominal_edit.rs"]
+mod source_nominal_edit;
 #[path = "integration/source_program.rs"]
 mod source_program;
 #[path = "integration/support/mod.rs"]

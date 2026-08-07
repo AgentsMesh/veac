@@ -1,10 +1,13 @@
 use std::{fs, path::PathBuf};
 
-use veac_ir::{decode_edit_batch_json, EditOperation, ItemId};
-use veac_lang::authoring::{lower_document, parse};
-use veac_lang::program::compile_path;
+use veac_ir::{decode_edit_batch_json, EditOperation, ItemId, MaterialKind};
+use veac_lang::program::{build_path_with_inputs, build_source, parse_build_input_manifest};
 use veac_lang::source_edit::{
     decode_source_edit_batch_json, SourceEditOperation, SourceNodeKind, SourceNodePath,
+};
+use veac_lang::vocabulary::{
+    language_spec, CanonicalRole, GrammarPosition, IdentifierPolicy, LanguageLayer,
+    VocabularyCategory, LANGUAGE_SPEC_SCHEMA_VERSION,
 };
 
 const EDIT_BATCH_FENCE: &str = "json,canonical-edit-batch";
@@ -32,23 +35,18 @@ fn documented_edit_batches_decode_with_the_production_contract() {
 }
 
 #[test]
-fn documented_complete_project_parses_lowers_and_validates() {
+fn documented_complete_project_builds_and_validates() {
     let relative = "docs/language-design/agent-authoring.md";
     let source = read(relative);
-    let projects: Vec<_> = fenced_blocks(&source, "veac")
-        .into_iter()
-        .filter(|block| block.trim_start().starts_with("project "))
-        .collect();
+    let projects = fenced_blocks(&source, "veac");
     assert_eq!(
         projects.len(),
         1,
-        "{relative} must contain one full project"
+        "{relative} must contain one executable source"
     );
-    let document =
-        parse(projects[0]).unwrap_or_else(|error| panic!("{relative} does not parse: {error:?}"));
-    let envelope = lower_document(&document)
-        .unwrap_or_else(|error| panic!("{relative} does not lower: {error:?}"));
-    veac_ir::validate(&envelope)
+    let built = build_source(projects[0])
+        .unwrap_or_else(|error| panic!("{relative} does not build: {error:?}"));
+    veac_ir::validate(built.envelope())
         .unwrap_or_else(|error| panic!("{relative} is invalid after lowering: {error:?}"));
 }
 
@@ -75,33 +73,110 @@ fn documented_source_edit_batch_uses_the_production_contract() {
             constant: "section_duration".to_owned()
         }
     );
+    for typed_body_token in ["`BodySite`", "`body_equals`", "`set_body`"] {
+        assert!(source.contains(typed_body_token));
+    }
 }
 
 #[test]
 fn programming_reference_points_to_an_executable_source_graph() {
     let relative = "examples/programming-language/main.veac";
     assert!(read("docs/language-reference/programming.md").contains(relative));
-    let compiled = compile_path(&workspace_root().join(relative))
-        .unwrap_or_else(|errors| panic!("{relative} does not compile: {errors}"));
+    let inputs =
+        parse_build_input_manifest(&read("examples/programming-language/build-inputs.json"))
+            .unwrap();
+    let built = build_path_with_inputs(&workspace_root().join(relative), &inputs)
+        .unwrap_or_else(|errors| panic!("{relative} does not build: {errors}"));
     assert_eq!(
-        compiled
+        built
             .sources()
             .keys()
             .map(String::as_str)
             .collect::<Vec<_>>(),
-        ["brand.veac", "main.veac"]
+        ["brand.veac", "main.veac", "showcase.veac"]
     );
-    assert!(compiled.expanded_source().contains("sequence first-card"));
-    assert!(compiled
-        .expanded_source()
-        .contains("item veac-h-10-first-card-5-title"));
-    assert!(compiled
-        .expanded_source()
-        .contains("item veac-h-11-second-card-5-title"));
-    let envelope = lower_document(compiled.document())
-        .unwrap_or_else(|errors| panic!("{relative} does not lower: {errors:?}"));
-    veac_ir::validate(&envelope)
+    let envelope = built.envelope();
+    assert_eq!(envelope.project.sequences.len(), 1);
+    assert_eq!(envelope.project.sequences[0].tracks.len(), 2);
+    assert!(envelope.project.sequences[0]
+        .tracks
+        .iter()
+        .all(|track| track.clips.len() == 2));
+    assert_eq!(envelope.project.materials.len(), 1);
+    assert_eq!(envelope.project.materials[0].kind, MaterialKind::Font);
+    veac_ir::validate(envelope)
         .unwrap_or_else(|errors| panic!("{relative} is invalid: {errors:?}"));
+}
+
+#[test]
+fn vocabulary_reference_tracks_the_public_contract() {
+    let relative = "docs/language-reference/vocabulary.md";
+    let source = read(relative);
+    let index = read("docs/language-reference/README.md");
+    assert!(index.contains("[Versioned language vocabulary](vocabulary.md)"));
+
+    let spec = language_spec();
+    spec.validate().unwrap();
+    assert!(source.contains(&format!(
+        "`schema_version` 为 `{LANGUAGE_SPEC_SCHEMA_VERSION}`"
+    )));
+    assert!(!source.contains("AST payload union"));
+    let use_count = spec
+        .vocabulary
+        .entries
+        .iter()
+        .map(|entry| entry.uses.len())
+        .sum::<usize>();
+    let totals = format!(
+        "`{}` 个不同 spelling 和 `{use_count}` 个精确 syntax use",
+        spec.vocabulary.entries.len()
+    );
+    assert!(
+        source.contains(&totals),
+        "missing vocabulary totals: {totals}"
+    );
+    for field in [
+        "`lexer_keywords`",
+        "`identifier_policy`",
+        "`uses`",
+        "`category`",
+        "`layer`",
+        "`position`",
+        "`canonical_role`",
+    ] {
+        assert!(source.contains(field), "missing v2 field {field}");
+    }
+    for category in VocabularyCategory::ALL {
+        assert!(source.contains(&format!("`{}`", json_name(category))));
+    }
+    for layer in LanguageLayer::ALL {
+        assert!(source.contains(&format!("`{}`", json_name(layer))));
+    }
+    for policy in IdentifierPolicy::ALL {
+        assert!(source.contains(&format!("`{}`", json_name(policy))));
+    }
+    for role in CanonicalRole::ALL {
+        assert!(source.contains(&format!("`{}`", json_name(role))));
+    }
+    for position in GrammarPosition::ALL {
+        let name = json_name(position);
+        assert!(
+            source.contains(&format!("`{name}`")),
+            "missing position {name}"
+        );
+    }
+    for count in spec.vocabulary.counts() {
+        let row = format!("| `{}` | {} |", json_name(count.category), count.count);
+        assert!(source.contains(&row), "missing vocabulary count row: {row}");
+    }
+}
+
+fn json_name(value: impl serde::Serialize) -> String {
+    serde_json::to_value(value)
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_owned()
 }
 
 fn fenced_blocks<'a>(source: &'a str, language: &str) -> Vec<&'a str> {

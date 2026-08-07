@@ -3,8 +3,8 @@ use veac_plan::ResolvedInput;
 
 use super::{MediaRole, SourceClock};
 use crate::{
-    ArtifactError, ArtifactErrorKind, ArtifactKind, ArtifactResult, ContentDigest,
-    MediaArtifactSpec, SourceClockSpec, VerifiedArtifact,
+    ArtifactDependencyRole, ArtifactError, ArtifactErrorKind, ArtifactKind, ArtifactParameters,
+    ArtifactResult, ContentDigest, SourceClockSpec, VerifiedArtifact,
 };
 
 pub(super) fn binding(
@@ -21,27 +21,19 @@ pub(super) fn binding(
         .descriptor()
         .dependencies
         .iter()
-        .filter(|dependency| dependency.role == "input")
+        .filter(|dependency| dependency.role == ArtifactDependencyRole::Input)
         .collect();
-    if artifact.descriptor().kind != expected_kind
+    if artifact.descriptor().kind() != expected_kind
         || dependencies.len() != 1
         || dependencies[0].identity != source
     {
         return invalid("verified proxy is not bound to the resolved input and media role");
     }
-    let spec: MediaArtifactSpec = serde_json::from_value(artifact.descriptor().parameters.clone())
-        .map_err(|error| {
-            ArtifactError::with_source(
-                ArtifactErrorKind::InvalidContract,
-                "verified proxy parameters do not match the media artifact contract",
-                error,
-            )
-        })?;
-    let (source_stream, clock) = match (role, spec) {
-        (MediaRole::Video, MediaArtifactSpec::ProxyVideo(value)) => {
+    let (source_stream, clock) = match (role, &artifact.descriptor().parameters) {
+        (MediaRole::Video, ArtifactParameters::ProxyVideo(value)) => {
             (value.source_stream, value.source_clock)
         }
-        (MediaRole::Audio, MediaArtifactSpec::ProxyAudio(value)) => {
+        (MediaRole::Audio, ArtifactParameters::ProxyAudio(value)) => {
             (value.source_stream, value.source_clock)
         }
         _ => return invalid("verified proxy parameters do not match its media role"),

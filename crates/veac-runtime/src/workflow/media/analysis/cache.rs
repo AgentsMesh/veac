@@ -1,6 +1,6 @@
 use veac_artifact::{
-    canonical_artifact_json_bounded, read_verified_source_bounded_while, validate_artifact_json,
-    ContentDigest, VerifiedArtifact,
+    read_verified_source_bounded_while, AnalysisResultEnvelope, ArtifactParameters, ContentDigest,
+    VerifiedArtifact,
 };
 use veac_ir::{HashAlgorithm, MediaIdentity};
 
@@ -26,24 +26,30 @@ pub(super) fn validate(
     )
     .map_err(artifact_error)?;
     super::active(guard)?;
-    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|error| {
+    let value: AnalysisResultEnvelope = serde_json::from_slice(&bytes).map_err(|error| {
         WorkflowError::with_source(
             WorkflowErrorKind::Artifact,
-            "cached analysis artifact is not valid JSON",
+            "cached analysis artifact is not a typed result envelope",
             error,
         )
     })?;
     super::active(guard)?;
-    if !value.is_object() || validate_artifact_json(&value).is_err() {
+    if value.validate().is_err() {
         return Err(WorkflowError::new(
             WorkflowErrorKind::Artifact,
-            "cached analysis artifact violates its JSON contract",
+            "cached analysis artifact violates its typed result contract",
         ));
     }
     super::active(guard)?;
-    let canonical = contract(canonical_artifact_json_bounded(&value, limit))?;
+    let canonical = contract(value.canonical_bytes(limit))?;
     super::active(guard)?;
-    if canonical != bytes {
+    let ArtifactParameters::Analysis(parameters) = &artifact.descriptor().parameters else {
+        return Err(WorkflowError::new(
+            WorkflowErrorKind::Artifact,
+            "cached analysis artifact has the wrong descriptor type",
+        ));
+    };
+    if canonical != bytes || ContentDigest::sha256(&bytes) != parameters.result_digest {
         return Err(WorkflowError::new(
             WorkflowErrorKind::Artifact,
             "cached analysis artifact is not canonical JSON",

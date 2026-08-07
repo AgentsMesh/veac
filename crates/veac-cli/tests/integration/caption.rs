@@ -41,7 +41,7 @@ fn caption_sidecar_round_trip_uses_a_checked_edit_batch() {
     let cue_id = captions.document.cues[0].id.clone();
     let item_id = veac_ir::ItemId::new("itm_imported_caption").unwrap();
     let bindings = veac_caption::CaptionTrackInsertionBindings {
-        sequence_id: veac_ir::SequenceId::new("seq_main").unwrap(),
+        sequence_id: envelope.project.sequences[0].id.clone(),
         track: veac_caption::CaptionTrackBindings {
             track_id: veac_ir::TrackId::new("trk_imported_captions").unwrap(),
             cue_item_ids: BTreeMap::from([(cue_id.clone(), item_id.clone())]),
@@ -76,7 +76,7 @@ fn caption_sidecar_round_trip_uses_a_checked_edit_batch() {
         cue_ids: BTreeMap::from([(item_id, cue_id)]),
         language: captions.document.language.clone(),
         overlap_policy: captions.document.overlap_policy,
-        settings: captions.document.settings.clone(),
+        native: captions.document.native.clone(),
         styles: captions.document.styles.clone(),
     };
     std::fs::write(
@@ -117,7 +117,7 @@ fn caption_sidecar_round_trip_uses_a_checked_edit_batch() {
         .contains("Hello VEAC"));
     let losses: veac_caption::LossReport =
         serde_json::from_str(&std::fs::read_to_string(export_losses).unwrap()).unwrap();
-    assert_eq!(losses.losses[0].field, "settings.srt.index");
+    assert!(losses.is_empty());
 }
 
 #[test]

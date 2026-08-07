@@ -9,14 +9,12 @@ pub(super) fn render(
     incoming: &str,
     transition: &ResolvedTransition,
 ) -> String {
-    let outgoing = ensure_window(context, outgoing, transition, "transitionoutboundv");
-    let incoming = ensure_window(context, incoming, transition, "transitioninboundv");
     let duration = time::seconds_at_least_one_frame(
         transition.record_window.duration,
         context.canvas.frame_rate,
     );
     let mixed = context.graph.filter(
-        &[&outgoing, &incoming],
+        &[outgoing, incoming],
         format!("{},format=rgba", kind::filter(&transition.kind, &duration)),
         "transitionv",
     );
@@ -38,22 +36,5 @@ pub(super) fn render(
             time::seconds(transition.record_window.start)
         ),
         "transitionoffsetv",
-    )
-}
-
-fn ensure_window(
-    context: &mut EmitContext<'_>,
-    input: &str,
-    transition: &ResolvedTransition,
-    role: &str,
-) -> String {
-    let duration = time::seconds(transition.record_window.duration);
-    context.graph.filter(
-        &[input],
-        format!(
-            "tpad=stop_mode=clone:stop_duration={duration},\
-             trim=duration={duration},setpts=PTS-STARTPTS"
-        ),
-        role,
     )
 }

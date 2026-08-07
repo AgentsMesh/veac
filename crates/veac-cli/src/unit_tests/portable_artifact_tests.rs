@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use tempfile::{tempdir, TempDir};
 
-use super::support::{canonical_project, FakeEnvironment, MEDIA_SOURCE};
+use super::support::{canonical_project, pin_first_material, FakeEnvironment, MEDIA_SOURCE};
 use crate::arguments::{PackageBindingsArgs, RelinkArgs};
 
 #[test]
@@ -163,8 +163,9 @@ impl PackageFixture {
         let project = canonical_project(&temp, MEDIA_SOURCE);
         let mut environment = FakeEnvironment::success();
         environment.observed = veac_runtime::asset::sha256_identity(&media).unwrap();
+        pin_first_material(&project, environment.observed.clone());
         let package = temp.path().join("package");
-        crate::commands::package(&project, None, None, &package, &environment).unwrap();
+        crate::commands::package(&project, None, None, None, &package, &environment).unwrap();
         let manifest =
             serde_json::from_slice(&std::fs::read(package.join("package.json")).unwrap()).unwrap();
         Self {

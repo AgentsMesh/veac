@@ -1,0 +1,50 @@
+import "./showcase.veac" as showcase;
+
+fn scene(key: identifier, fill: color, start: time, duration: time) -> Item {
+  showcase.solid(key, fill, start, duration)
+}
+
+fn label(
+  key: identifier, content: text, start: time, duration: time, font: Resource
+) -> Item {
+  item(
+    key, item_enabled(), during(start, duration),
+    source_text(content, showcase.caption_style(font, 40px, 600px)),
+    source_timing_native()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("example-font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let first = scene(identifier("scene-a"), #ef4444ff, 0s, 2s);
+  let second = scene(identifier("scene-b"), #2563ebff, 1600ms, 2400ms);
+  let centered = relation_transition(
+    identifier("scene-cut"), first, second, transition_dissolve(400ms)
+  );
+  let scenes = visual_layer(
+    identifier("scenes"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(first).with_item(second);
+  let labels = visual_layer(
+    identifier("labels"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(label(identifier("label-a"), "场景甲：红色", 0s, 1600ms, font))
+    .with_item(label(
+      identifier("label-mix"), "居中叠化：红色与蓝色同时存在", 1600ms, 400ms, font
+    ))
+    .with_item(label(identifier("label-b"), "场景乙：蓝色", 2s, 2s, font));
+  let timeline = sequence(
+    identifier("main"), "居中叠化",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(scenes).with_layer(labels).with_relation(centered);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("executable-centered-dissolve"), project_settings(600))
+    .with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
+}

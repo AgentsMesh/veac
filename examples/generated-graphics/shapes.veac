@@ -1,0 +1,66 @@
+module {
+  fn stops() -> list<GradientStop> {
+    [
+      gradient_stop(0%, #ef4444ff),
+      gradient_stop(50%, #facc15ff),
+      gradient_stop(100%, #22d3eeff)
+    ]
+  }
+
+  fn gradient() -> Gradient {
+    gradient_linear(vector(0.1, 0.2), vector(0.9, 0.8), stops())
+  }
+
+  fn fill() -> PaintChoice { paint_present(paint_gradient(gradient())) }
+
+  fn stroke() -> StrokeChoice {
+    stroke_present(paint_solid(#ffffffff), 4px)
+  }
+
+  export fn linear() -> Generator { generator_gradient(gradient()) }
+
+  export fn radial() -> Generator {
+    generator_gradient(gradient_radial(vector(0.4, 0.6), 0.75, stops()))
+  }
+
+  export fn rectangle() -> Generator {
+    vector_shape(
+      geometry_rectangle(rect(0.15, 0.2, 0.7, 0.6)), fill(), stroke()
+    )
+  }
+
+  export fn rounded() -> Generator {
+    vector_shape(
+      geometry_rounded_rectangle(rect(0.15, 0.2, 0.7, 0.6), 0.18),
+      paint_present(paint_solid(#10b981ff)),
+      stroke_present(paint_gradient(gradient()), 5px)
+    )
+  }
+
+  export fn ellipse() -> Generator {
+    vector_shape(
+      geometry_ellipse(rect(0.2, 0.15, 0.6, 0.7)), fill(), stroke()
+    )
+  }
+
+  export fn polygon() -> Generator {
+    vector_shape(
+      geometry_polygon([
+        vector(0.5, 0.08), vector(0.92, 0.75), vector(0.5, 0.92),
+        vector(0.08, 0.75)
+      ]),
+      fill(), stroke()
+    )
+  }
+
+  export fn path() -> Generator {
+    vector_shape(
+      geometry_path([
+        path_move_to(vector(0.1, 0.8)), path_line_to(vector(0.35, 0.2)),
+        path_line_to(vector(0.65, 0.8)), path_line_to(vector(0.9, 0.2)),
+        path_close()
+      ]),
+      paint_none(), stroke_present(paint_gradient(gradient()), 8px)
+    )
+  }
+}

@@ -3,27 +3,49 @@ use std::fmt;
 use schemars::schema_for;
 use sha2::{Digest, Sha256};
 
-use crate::ResolvedRenderPlan;
+use crate::{validate_render_plan, PlanValidationErrors, ResolvedRenderPlan};
 
 #[derive(Debug)]
-pub struct PlanSerializationError(serde_json::Error);
+pub enum PlanSerializationError {
+    Json(serde_json::Error),
+    Validation(PlanValidationErrors),
+}
 
 impl fmt::Display for PlanSerializationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "render plan serialization failed: {}", self.0)
+        match self {
+            Self::Json(error) => write!(formatter, "render plan serialization failed: {error}"),
+            Self::Validation(error) => write!(formatter, "render plan validation failed: {error}"),
+        }
     }
 }
 
 impl std::error::Error for PlanSerializationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
+        match self {
+            Self::Json(error) => Some(error),
+            Self::Validation(error) => Some(error),
+        }
     }
 }
 
 impl From<serde_json::Error> for PlanSerializationError {
     fn from(value: serde_json::Error) -> Self {
-        Self(value)
+        Self::Json(value)
     }
+}
+
+impl From<PlanValidationErrors> for PlanSerializationError {
+    fn from(value: PlanValidationErrors) -> Self {
+        Self::Validation(value)
+    }
+}
+
+pub fn decode_render_plan_json(input: &str) -> Result<ResolvedRenderPlan, PlanSerializationError> {
+    veac_ir::reject_duplicate_json_keys(input)?;
+    let plan: ResolvedRenderPlan = serde_json::from_str(input)?;
+    validate_render_plan(&plan)?;
+    Ok(plan)
 }
 
 pub fn canonical_plan_json(plan: &ResolvedRenderPlan) -> Result<String, PlanSerializationError> {
@@ -46,12 +68,13 @@ pub fn render_plan_json_schema() -> Result<serde_json::Value, PlanSerializationE
 }
 
 fn validate_json_round_trip(plan: &ResolvedRenderPlan) -> Result<(), PlanSerializationError> {
+    validate_render_plan(plan)?;
     let bytes = serde_json::to_vec(plan)?;
     serde_json::from_slice::<ResolvedRenderPlan>(&bytes)?;
     Ok(())
 }
 
-fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
+pub(crate) fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let bytes = bytes.as_ref();
     let mut output = String::with_capacity(bytes.len() * 2);

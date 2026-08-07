@@ -1,124 +1,91 @@
-project executable-mechanisms {
-  entry sequence main;
+import "./annotations.veac" as annotations;
+import "./showcase.veac" as showcase;
 
-  settings {
-    timebase 1/1000;
-    canvas 96px by 54px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
+fn badge_style() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+      transform_2d(
+        transform_motion(
+          point_keyframes([
+            point_keyframe(identifier("enter"), 0s, point(-533px, 0px), interpolation_linear()),
+            point_keyframe(identifier("settle"), 500ms, point(0px, 0px), interpolation_ease_out())
+          ]),
+          vector_constant(vector(0.65, 0.65)), angle_constant(12deg)
+        ),
+        transform_geometry(
+          vector(0.15, 0.0), flip_none(), vector(0.5, 0.5), crop_none()
+        )
+      )
+    ),
+    visual_surface(
+      percent_constant(82%), compositing(3, blend_screen()),
+      card_present(64px, shadow_present(24px, 45%, vector(20.0, 24.0), #07131dcc))
+    ),
+    [mask(
+      mask_circle(),
+      mask_motion(
+        vector_constant(vector(0.5, 0.5)), vector_constant(vector(0.9, 0.9)),
+        angle_constant(0deg)
+      ),
+      mask_edge(length_constant(20px), length_constant(0px)), false
+    )],
+    color_pipeline_none()
+  )
+}
 
-  sequence main {
-    layer visual background {
-      item warm {
-        source generated gradient linear {
-          from 0% 50%; to 100% 50%; stop 0% #ff0000ff; stop 100% #ffff00ff;
-        }
-        record { at 0s; duration 1s; }
-      }
-      item cool {
-        source generated gradient linear {
-          from 0% 50%; to 100% 50%; stop 0% #0000ffff; stop 100% #00ffffff;
-        }
-        record { at 1s; duration 1s; }
-      }
-    }
-
-    layer visual graphics {
-      item badge {
-        source generated shape {
-          geometry ellipse { bounds 0% 0% 100% 100%; }
-          fill solid #00ff00ff;
-        }
-        record { at 500ms; duration 1s; }
-        modifiers {
-          transform badge-motion {
-            position curve {
-              key enter { at 0s; value { x -8px; y 0px; } interpolation linear; }
-              key settle { at 500ms; value { x 0px; y 0px; } interpolation linear; }
-            }
-            scale { x 0.35; y 0.35; }
-          }
-          composite badge-composite { opacity 85%; z-index 10; blend screen; }
-          mask badge-mask {
-            shape circle;
-            position { x 50%; y 50%; }
-            scale { x 45%; y 45%; }
-            rotation 0deg;
-            feather 1px;
-            expansion 0px;
-          }
-        }
-      }
-    }
-
-    layer audio sound {
-      item silence { source generated silence; record { at 0s; duration 2s; } }
-    }
-
-    relation transition dissolve {
-      endpoints { from item warm; to item cool; }
-      timing { duration 400ms; alignment centered; }
-      style { dissolve; }
-    }
-  }
-
-  annotation marker ann-01-marker {
-    target project; span untimed; payload { label "代理标记"; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation language ann-02-language {
-    target sequence main; span untimed; payload { candidate "en" { confidence 1; } }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation scene-boundary ann-03-boundary {
-    target sequence main; span point { at 1s; } payload { confidence 1; hard-cut true; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation scene ann-04-scene {
-    target sequence main; span range { at 0s; duration 2s; } payload {}
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation beat ann-05-beat {
-    target sequence main; span point { at 1s; } payload { confidence 1; bar 1; beat-in-bar 1; tempo-bpm 120; meter 4; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation silence ann-06-silence {
-    target sequence main; span range { at 1s; duration 200ms; } payload { mean-db -60db; confidence 1; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation filler ann-07-filler {
-    target sequence main; span range { at 1.5s; duration 200ms; } payload { token "um"; confidence 1; suggestion tighten; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation highlight ann-08-highlight {
-    target sequence main; span range { at 0s; duration 2s; } payload { score 1; rationale "主要示例"; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-  annotation review ann-09-review {
-    target sequence main; span range { at 0s; duration 2s; } payload { action keep; rationale "审核通过"; confidence 1; }
-    provenance { producer "veac-example"; request-sha256 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; response-sha256 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; }
-  }
-
-  delivery main {
-    sequence main;
-    raster {
-      canvas 96px by 54px;
-      frame-rate 30fps;
-      captions discard;
-    }
-    artifact video main {
-      target file "executable-mechanisms.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 {
-          pixel-format yuv420p; alpha opaque; color-space source;
-          rate-control crf { value 23; }
-          gop automatic; b-frames automatic; profile automatic; level automatic;
-        }
-        audio aac { sample-rate 48khz; channel-layout mono; }
-        passes single; accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("example-font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let warm = item(
+    identifier("warm"), item_enabled(), during(0s, 1200ms),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.5), vector(1.0, 0.5),
+      [gradient_stop(0%, #ef4444ff), gradient_stop(100%, #facc15ff)]
+    ))), source_timing_native()
+  );
+  let cool = item(
+    identifier("cool"), item_enabled(), during(800ms, 1200ms),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.5), vector(1.0, 0.5),
+      [gradient_stop(0%, #2563ebff), gradient_stop(100%, #22d3eeff)]
+    ))), source_timing_native()
+  );
+  let badge = item(
+    identifier("badge"), item_enabled(), during(500ms, 1s),
+    source_generated(vector_shape(
+      geometry_ellipse(rect(0.0, 0.0, 1.0, 1.0)),
+      paint_present(paint_solid(#34d399ff)),
+      stroke_present(paint_solid(#ffffffff), 20px)
+    )), source_timing_native()
+  ).with_visual(badge_style());
+  let scenes = visual_layer(
+    identifier("scenes"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(warm).with_item(cool);
+  let graphics = visual_layer(
+    identifier("graphics"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(badge).with_item(item(
+    identifier("label"), item_enabled(), during(0s, 2s),
+    source_text(
+      "可执行变换与叠加",
+      showcase.caption_style(font, 48px, 600px)
+    ), source_timing_native()
+  ));
+  let dissolve = relation_transition(
+    identifier("centered"), warm, cool, transition_dissolve(400ms)
+  );
+  let timeline = sequence(
+    identifier("main"), "可执行变换与叠加",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(scenes).with_layer(graphics).with_relation(dissolve);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  let owner = project(identifier("executable-mechanisms"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output);
+  annotations.attach(owner, timeline, graphics, badge)
 }

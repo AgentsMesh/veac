@@ -1,52 +1,46 @@
-use std::collections::BTreeMap;
-
-use veac_plan::canonical::{ParameterValue, TimeRange};
+use veac_plan::canonical::{Effect, EffectDomain, EffectKind, EffectParameter, TimeRange};
 use veac_plan::{
     ResolvedApply, ResolvedApplyOperation, ResolvedApplyStage, ResolvedClip, ResolvedEffect,
 };
 
 use super::error::{diagnostic, CodegenErrorKind};
 use super::{animation, process_owner::ProcessOwner, time, CodegenErrors, EmitContext};
-
 mod alpha;
-mod catalog;
 mod dynamic;
 mod normalize;
-
-pub(super) use catalog::{effect_kind, supports_parameter, EffectKind};
 pub(super) use dynamic::{filter as dynamic_filter, RuntimeNumber};
 
 #[derive(Clone, Copy)]
 pub(super) struct EffectSpec<'a> {
     pub id: &'a str,
-    pub effect_type: &'a str,
     pub active_range: TimeRange,
-    pub parameters: &'a BTreeMap<String, ParameterValue>,
+    pub effect: &'a Effect,
+    pub owner: ProcessOwner<'a>,
 }
 
 impl<'a> EffectSpec<'a> {
-    fn clip(effect: &'a ResolvedEffect) -> Self {
+    fn clip(clip: &'a ResolvedClip, effect: &'a ResolvedEffect) -> Self {
         Self {
             id: effect.id.as_str(),
-            effect_type: &effect.effect_type,
             active_range: effect.active_range,
-            parameters: &effect.parameters,
+            effect: &effect.effect,
+            owner: ProcessOwner::clip(clip),
         }
     }
 
-    fn apply(stage: &'a ResolvedApplyStage, active_range: TimeRange) -> Option<Self> {
-        let ResolvedApplyOperation::Effect {
-            effect_type,
-            parameters,
-        } = &stage.operation
-        else {
+    fn apply(
+        apply: &'a ResolvedApply,
+        stage: &'a ResolvedApplyStage,
+        active_range: TimeRange,
+    ) -> Option<Self> {
+        let ResolvedApplyOperation::Effect { effect } = &stage.operation else {
             return None;
         };
         Some(Self {
             id: stage.id.as_str(),
-            effect_type: effect_type.as_str(),
             active_range,
-            parameters,
+            effect,
+            owner: ProcessOwner::apply(apply),
         })
     }
 }
@@ -57,12 +51,10 @@ pub(super) fn video(
     mut label: String,
 ) -> Result<String, CodegenErrors> {
     for effect in &clip.effects {
-        if veac_plan::canonical::effect_domain(&effect.effect_type)
-            == Some(veac_plan::canonical::EffectDomain::Audio)
-        {
+        if effect.effect.domain() == EffectDomain::Audio {
             continue;
         }
-        let effect = EffectSpec::clip(effect);
+        let effect = EffectSpec::clip(clip, effect);
         let enable = enable(effect);
         label = alpha::apply(context, effect, &label, |context, input| {
             super::effect_video::apply(context, ProcessOwner::clip(clip), effect, input, &enable)
@@ -78,7 +70,7 @@ pub(super) fn apply_stage(
     active_range: TimeRange,
     label: String,
 ) -> Result<String, CodegenErrors> {
-    let effect = EffectSpec::apply(stage, active_range).expect("effect stage requested");
+    let effect = EffectSpec::apply(apply, stage, active_range).expect("effect stage requested");
     let enable = enable(effect);
     alpha::apply(context, effect, &label, |context, input| {
         super::effect_video::apply(context, ProcessOwner::apply(apply), effect, input, &enable)
@@ -91,7 +83,7 @@ pub(super) fn audio(
     mut label: String,
 ) -> Result<String, CodegenErrors> {
     for effect in &clip.effects {
-        if effect_kind(&effect.effect_type) != Some(EffectKind::AudioNormalize) {
+        if effect.effect.kind() != EffectKind::AudioNormalize {
             continue;
         }
         label = normalize::apply(context, clip, effect, &label)?;
@@ -99,46 +91,54 @@ pub(super) fn audio(
     Ok(label)
 }
 
-pub(super) fn number_expression(effect: EffectSpec<'_>, name: &str, default: f64) -> String {
-    number_expression_at(effect, name, default, "t")
+pub(super) fn number_expression(
+    context: &EmitContext<'_>,
+    effect: EffectSpec<'_>,
+    parameter: EffectParameter,
+    default: f64,
+) -> String {
+    number_expression_at(context, effect, parameter, default, "t")
 }
 
 pub(super) fn number_expression_at(
+    context: &EmitContext<'_>,
     effect: EffectSpec<'_>,
-    name: &str,
+    parameter: EffectParameter,
     default: f64,
     clock: &str,
 ) -> String {
-    match effect.parameters.get(name) {
-        Some(ParameterValue::Number { value }) => time::number(*value),
-        Some(ParameterValue::NumberCurve { value }) => animation::number(value, clock),
+    match effect.effect.curve(parameter) {
+        Some(value) => animation::number(context.plan, effect.owner, value, clock),
         _ => time::number(default),
     }
 }
 
-pub(super) fn has_keyframes(effect: EffectSpec<'_>, name: &str) -> bool {
+pub(super) fn has_keyframes(effect: EffectSpec<'_>, parameter: EffectParameter) -> bool {
     matches!(
-        effect.parameters.get(name),
-        Some(ParameterValue::NumberCurve {
-            value: veac_plan::canonical::Animatable::Keyframes { .. }
-        })
+        effect.effect.curve(parameter),
+        Some(
+            veac_plan::canonical::Animatable::Keyframes { .. }
+                | veac_plan::canonical::Animatable::Binding { .. }
+        )
     )
 }
 
 pub(super) fn number(
     effect: &ResolvedEffect,
-    name: &str,
+    parameter: EffectParameter,
     default: f64,
     clip: &ResolvedClip,
 ) -> Result<String, CodegenErrors> {
-    match effect.parameters.get(name) {
-        Some(ParameterValue::NumberCurve { .. }) => Err(unsupported_clip(
+    if effect.effect.curve(parameter).is_some() {
+        return Err(unsupported_clip(
             clip,
             effect,
             "animated scalar backend parameter",
-        )),
-        _ => Ok(number_expression(EffectSpec::clip(effect), name, default)),
+        ));
     }
+    Ok(time::number(
+        effect.effect.number(parameter).unwrap_or(default),
+    ))
 }
 
 fn enable(effect: EffectSpec<'_>) -> String {
@@ -160,7 +160,7 @@ pub(super) fn unsupported(
         Some(effect.id.to_owned()),
         format!(
             "{} on {} {} is unsupported: {detail}",
-            effect.effect_type,
+            effect.effect.kind().type_name(),
             owner.kind(),
             owner.id()
         ),
@@ -178,7 +178,8 @@ pub(super) fn unsupported_clip(
         Some(effect.id.to_string()),
         format!(
             "{} on clip {} is unsupported: {detail}",
-            effect.effect_type, clip.id
+            effect.effect.kind().type_name(),
+            clip.id
         ),
     ))
 }

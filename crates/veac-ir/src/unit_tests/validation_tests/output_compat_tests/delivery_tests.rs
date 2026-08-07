@@ -33,7 +33,7 @@ fn two_pass_requires_supported_codec_bitrate_and_software() {
 }
 
 #[test]
-fn explicit_hardware_is_rejected_until_device_setup_is_modeled() {
+fn explicit_hardware_uses_the_closed_backend_codec_matrix() {
     let codecs = [
         VideoCodec::H264,
         VideoCodec::H265,
@@ -50,9 +50,21 @@ fn explicit_hardware_is_rejected_until_device_setup_is_modeled() {
         for codec in codecs {
             let mut value = delivery_for(codec);
             value.hardware = HardwareSelection::Explicit { backend };
-            assert!(
-                !video_delivery_valid(&value),
-                "accepted {backend:?}/{codec:?}"
+            let expected = match backend {
+                HardwareBackend::VideoToolbox => {
+                    matches!(codec, VideoCodec::H264 | VideoCodec::H265)
+                }
+                HardwareBackend::Nvenc => {
+                    matches!(codec, VideoCodec::H264 | VideoCodec::H265 | VideoCodec::Av1)
+                }
+                HardwareBackend::Qsv | HardwareBackend::Vaapi => {
+                    !matches!(codec, VideoCodec::ProRes)
+                }
+            };
+            assert_eq!(
+                video_delivery_valid(&value),
+                expected,
+                "{backend:?}/{codec:?}"
             );
         }
     }
@@ -76,13 +88,13 @@ fn auto_and_software_hardware_modes_accept_every_codec() {
 }
 
 #[test]
-fn x265_and_libaom_explicit_levels_fail_closed() {
-    for codec in [VideoCodec::H265, VideoCodec::Av1] {
-        let mut value = delivery_for(codec);
-        value.video.level = Some("5.1".to_owned());
-        assert!(!video_delivery_valid(&value));
-    }
-    for codec in [VideoCodec::H264, VideoCodec::Vp9] {
+fn explicit_levels_follow_the_closed_codec_level_contract() {
+    for codec in [
+        VideoCodec::H264,
+        VideoCodec::H265,
+        VideoCodec::Vp9,
+        VideoCodec::Av1,
+    ] {
         let mut value = delivery_for(codec);
         value.video.level = Some("5.1".to_owned());
         assert!(video_delivery_valid(&value));

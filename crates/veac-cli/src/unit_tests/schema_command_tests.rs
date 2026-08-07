@@ -10,10 +10,13 @@ fn schema_command_exposes_every_public_contract() {
         SchemaContract::EditBatch,
         SchemaContract::SourceEditBatch,
         SchemaContract::SourceIndex,
+        SchemaContract::BuildInputs,
         SchemaContract::EditOutcome,
         SchemaContract::RenderPlan,
         SchemaContract::Artifact,
         SchemaContract::MediaArtifactRequest,
+        SchemaContract::AnalysisIngestionRequest,
+        SchemaContract::AnalysisResult,
         SchemaContract::BuildManifest,
         SchemaContract::PackageManifest,
         SchemaContract::ExecutionBindings,
@@ -25,6 +28,7 @@ fn schema_command_exposes_every_public_contract() {
         SchemaContract::OtioImportBindings,
         SchemaContract::OtioEditProposal,
         SchemaContract::TemplateFillRequest,
+        SchemaContract::LanguageSpec,
     ];
     for contract in contracts {
         let json = crate::commands::schema_json(contract, SchemaFormat::JsonSchema).unwrap();

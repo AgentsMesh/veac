@@ -10,14 +10,17 @@ mod fake_environment;
 mod project;
 mod reachability;
 mod source;
+mod template;
 
 use capability::successful_filters;
-pub(crate) use project::{add_second_video, canonical_project, render};
+pub(crate) use project::{add_second_video, canonical_project, pin_first_material, render};
 pub(crate) use reachability::{
     accessed_names, assert_exact_inputs, assert_project_inputs, write_project,
 };
+pub(crate) use source::EXECUTABLE_SOURCE;
 pub(crate) use source::GENERATED_SOURCE;
 pub(crate) use source::MEDIA_SOURCE;
+pub(crate) use template::{MEDIA_TEMPLATE_SOURCE, TEXT_TEMPLATE_SOURCE};
 
 pub(super) fn identity(byte: u8) -> MediaIdentity {
     MediaIdentity {
@@ -63,6 +66,7 @@ pub(crate) struct FakeEnvironment {
     pub observed: MediaIdentity,
     pub identity_paths: RefCell<Vec<PathBuf>>,
     pub probe_paths: RefCell<Vec<PathBuf>>,
+    pub probe_intents: RefCell<Vec<StreamIntent>>,
     pub executed: RefCell<Vec<Vec<String>>>,
     pub consumed_inputs: RefCell<Vec<Vec<Vec<u8>>>>,
     pub fail_probe: bool,
@@ -84,6 +88,7 @@ impl FakeEnvironment {
             observed: identity(0x11),
             identity_paths: RefCell::new(Vec::new()),
             probe_paths: RefCell::new(Vec::new()),
+            probe_intents: RefCell::new(Vec::new()),
             executed: RefCell::new(Vec::new()),
             consumed_inputs: RefCell::new(Vec::new()),
             fail_probe: false,

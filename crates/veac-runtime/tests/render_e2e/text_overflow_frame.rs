@@ -130,6 +130,7 @@ fn caption_visible_overflow_respects_absolute_bottom_placement() {
     caption.source = ClipSource::Caption {
         text: "CAPTION".to_owned(),
         speaker: None,
+        cue: Box::default(),
         style,
     };
     let mut visual = full_visual();

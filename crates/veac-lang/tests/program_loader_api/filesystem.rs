@@ -8,15 +8,9 @@ use std::thread;
 use std::time::Duration;
 
 use tempfile::tempdir;
-use veac_lang::program::{compile_path, FileSystemLoader, SourceLoader};
+use veac_lang::program::{prepare_path, FileSystemLoader, SourceLoader};
 
-const PROJECT: &str = r#"project root {
-  settings {
-    timebase 1/1000; canvas 1px by 1px;
-    frame-rate 1fps; sample-rate 48000hz;
-  }
-  entry sequence main; sequence main {}
-}"#;
+use super::executable_entry;
 
 fn fifo(path: &Path) {
     assert!(Command::new("mkfifo").arg(path).status().unwrap().success());
@@ -25,7 +19,7 @@ fn fifo(path: &Path) {
 fn compile_quickly(path: PathBuf) -> (String, String) {
     let (sender, receiver) = mpsc::channel();
     let handle = thread::spawn(move || {
-        let error = compile_path(&path).unwrap_err();
+        let error = prepare_path(&path).unwrap_err();
         let diagnostic = &error.as_slice()[0];
         sender
             .send((diagnostic.code.to_owned(), diagnostic.message.clone()))
@@ -55,7 +49,7 @@ fn filesystem_import_fifo_is_rejected_without_blocking() {
     let module = temp.path().join("module.veac");
     fs::write(
         &entry,
-        format!("import \"./module.veac\" as module;\n{PROJECT}"),
+        executable_entry("import \"./module.veac\" as module;", "1s"),
     )
     .unwrap();
     fifo(&module);
@@ -72,12 +66,15 @@ fn filesystem_compile_rejects_hard_link_module_aliases() {
     let alias = temp.path().join("alias.veac");
     fs::write(
         &entry,
-        format!("import \"./first.veac\" as first;\nimport \"./alias.veac\" as alias;\n{PROJECT}"),
+        executable_entry(
+            "import \"./first.veac\" as first;\nimport \"./alias.veac\" as alias;",
+            "1s",
+        ),
     )
     .unwrap();
     fs::write(&first, "module {}").unwrap();
     fs::hard_link(&first, &alias).unwrap();
-    let error = compile_path(&entry).unwrap_err();
+    let error = prepare_path(&entry).unwrap_err();
     assert_eq!(error.as_slice()[0].code, "PROGRAM_IMPORT_LOAD");
     assert!(error.as_slice()[0].message.contains("same physical file"));
 }
@@ -88,7 +85,7 @@ fn filesystem_loader_clones_share_physical_identity_state() {
     let entry = temp.path().join("main.veac");
     let first = temp.path().join("first.veac");
     let alias = temp.path().join("alias.veac");
-    fs::write(&entry, PROJECT).unwrap();
+    fs::write(&entry, executable_entry("", "1s")).unwrap();
     fs::write(&first, "module {}").unwrap();
     fs::hard_link(&first, &alias).unwrap();
     let (loader, _) = FileSystemLoader::for_entry(&entry).unwrap();

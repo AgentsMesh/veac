@@ -1,6 +1,6 @@
 use crate::{
-    artifact_key, ArtifactDescriptor, ArtifactError, ArtifactErrorKind, ArtifactKind,
-    ArtifactResult, ArtifactStore, ContentDigest, VerifiedArtifact,
+    artifact_key, ArtifactDependencyRole, ArtifactDescriptor, ArtifactError, ArtifactErrorKind,
+    ArtifactKind, ArtifactResult, ArtifactStore, ContentDigest, VerifiedArtifact,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,9 +88,9 @@ fn validate_descriptor(
     let inputs: Vec<_> = descriptor
         .dependencies
         .iter()
-        .filter(|dependency| dependency.role == "input")
+        .filter(|dependency| dependency.role == ArtifactDependencyRole::Input)
         .collect();
-    if descriptor.kind != kind || inputs.len() != 1 || inputs[0].identity != *source {
+    if descriptor.kind() != kind || inputs.len() != 1 || inputs[0].identity != *source {
         return invalid("proxy descriptor is not bound to the requested source identity");
     }
     Ok(())

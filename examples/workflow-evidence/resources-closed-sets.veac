@@ -1,26 +1,23 @@
-project resource-closed-sets {
-  settings {
-    canvas 320px by 180px;
-    frame-rate 24fps;
-    sample-rate 48000hz;
-    timebase 1/1000;
-  }
-  entry sequence main;
-  resource font remote-font {
-    locator remote {
-      uri "https://example.invalid/veac-font.ttf";
-      identity sha256 "0000000000000000000000000000000000000000000000000000000000000000";
-    }
-  }
-  sequence main {
-    layer visual text {
-      item label {
-        source text {
-          content "Deterministic remote font evidence";
-          style { font resource remote-font; size 24px; fill #ffffffff; }
-        }
-        record { at 0s; duration 1s; }
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let remote_font = font_resource(
+    identifier("remote-font"),
+    resource_remote_http("https://example.invalid/veac-font.ttf"),
+    sha256("0000000000000000000000000000000000000000000000000000000000000000")
+  );
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let picture = visual_layer(
+    identifier("picture"), 0, placement_free(), state, track_routing_default()
+  ).with_item(item(
+    identifier("background"), item_enabled(), during(0s, 1s),
+    source_generated(generator_solid(#202020ff)), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "远程资源闭集验证",
+    sequence_settings(canvas(320px, 180px), frame_rate(24, 1), 48000)
+  ).with_layer(picture);
+  project(identifier("resource-closed-sets"), project_settings(600))
+    .with_resource(remote_font).with_sequence(timeline).entry(timeline)
 }

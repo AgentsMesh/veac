@@ -6,10 +6,10 @@ use super::*;
 fn overwrite_preserves_only_relations_on_surviving_outer_edges() {
     let mut project = video_project(&[
         ("itm_p", 0, 100),
-        ("itm_a", 100, 100),
-        ("itm_b", 200, 100),
-        ("itm_c", 300, 100),
-        ("itm_d", 400, 100),
+        ("itm_a", 80, 100),
+        ("itm_b", 160, 100),
+        ("itm_c", 240, 100),
+        ("itm_d", 320, 100),
     ]);
     for (from, to) in [
         ("itm_p", "itm_a"),
@@ -19,7 +19,7 @@ fn overwrite_preserves_only_relations_on_surviving_outer_edges() {
     ] {
         add_transition(&mut project, "seq_main", from, to, dissolve());
     }
-    let result = overwrite(&project, 150, 200, vec![]);
+    let result = overwrite(&project, 130, 160, vec![]);
     assert_eq!(result.project.relations.len(), 2);
     assert_edge(&result, "rel_transition_0", "itm_p", "itm_a");
     assert_edge(&result, "rel_transition_3", "itm_c", "itm_d");
@@ -29,8 +29,8 @@ fn overwrite_preserves_only_relations_on_surviving_outer_edges() {
 fn spanning_overwrite_moves_outgoing_to_the_right_fragment() {
     let mut project = video_project(&[
         ("itm_p", 0, 100),
-        ("itm_span", 100, 300),
-        ("itm_d", 400, 100),
+        ("itm_span", 80, 300),
+        ("itm_d", 360, 100),
     ]);
     add_transition(&mut project, "seq_main", "itm_p", "itm_span", dissolve());
     add_transition(&mut project, "seq_main", "itm_span", "itm_d", dissolve());

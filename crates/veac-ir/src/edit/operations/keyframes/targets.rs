@@ -26,31 +26,36 @@ pub(super) fn number<'a>(
         NumberCurveTarget::AudioGain => Ok((&mut audio(clip)?.gain, None)),
         NumberCurveTarget::AudioPan => Ok((&mut audio(clip)?.pan, None)),
         NumberCurveTarget::TextReveal => Ok((&mut text_animation(clip)?.reveal, None)),
+        NumberCurveTarget::TextHighlightProgress => {
+            let clip_id = clip.id.clone();
+            Ok((
+                &mut text_animation(clip)?
+                    .highlight
+                    .as_mut()
+                    .ok_or_else(|| {
+                        operation_error(clip_id.as_str(), "text has no highlight animation")
+                    })?
+                    .progress,
+                None,
+            ))
+        }
         NumberCurveTarget::TextOpacity => Ok((&mut text_animation(clip)?.opacity, None)),
         NumberCurveTarget::TextRotationDegrees => {
             Ok((&mut text_animation(clip)?.transform.rotation_degrees, None))
         }
-        NumberCurveTarget::EffectParameter { effect_id, name } => {
+        NumberCurveTarget::EffectParameter {
+            effect_id,
+            parameter,
+        } => {
             let effect = clip
                 .effects
                 .iter_mut()
                 .find(|value| value.id == *effect_id)
                 .ok_or_else(|| operation_error(effect_id.as_str(), "effect does not exist"))?;
-            let parameter = effect.parameters.get_mut(name).ok_or_else(|| {
-                operation_error(effect_id.as_str(), "effect parameter does not exist")
+            let value = effect.effect.curve_mut(*parameter).ok_or_else(|| {
+                operation_error(effect_id.as_str(), "effect parameter is not animatable")
             })?;
-            if let ParameterValue::Number { value } = parameter {
-                *parameter = ParameterValue::NumberCurve {
-                    value: Animatable::constant(*value),
-                };
-            }
-            match parameter {
-                ParameterValue::NumberCurve { value } => Ok((value, Some(effect_id.clone()))),
-                _ => Err(operation_error(
-                    effect_id.as_str(),
-                    "effect parameter is not numeric",
-                )),
-            }
+            Ok((value, Some(effect_id.clone())))
         }
     }
 }

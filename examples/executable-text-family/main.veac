@@ -1,0 +1,180 @@
+import "./preview.veac" as preview;
+
+fn metrics(fonts: FontStack, weight: FontWeight, face: FontStyle) -> TextMetrics {
+  text_metrics(fonts, weight, face, 42px, 1px, 1.2, #ffffffff)
+}
+
+fn state() -> TrackState {
+  track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  )
+}
+
+fn layout(box: TextBox, writing: TextWritingMode, orientation: TextOrientation) -> TextLayout {
+  text_layout(
+    box, text_wrap_word(), text_overflow_ellipsis(),
+    text_align_center(), text_align_middle(), writing, orientation
+  )
+}
+
+fn decoration() -> TextDecoration {
+  text_decoration(
+    text_background_present(#102030cc, 12px),
+    text_outline_present(#48d7caff, 2px),
+    shadow_present(8px, 55%, vector(4.0, 6.0), #000000cc)
+  )
+}
+
+fn reveal_motion(granularity: TextGranularity) -> TextAnimationChoice {
+  text_animation_present(text_animation(
+    granularity,
+    text_unit_transform(
+      point_keyframes([
+        point_keyframe(identifier("position-start"), 0s, point(0px, 20px), interpolation_ease_out()),
+        point_keyframe(identifier("position-end"), 800ms, point(0px, 0px), interpolation_linear())
+      ]),
+      vector_constant(vector(1.0, 1.0)),
+      angle_constant(0deg)
+    ),
+    percent_keyframes([
+      percent_keyframe(identifier("start"), 0s, 0%, interpolation_hold()),
+      percent_keyframe(identifier("reveal-1"), 100ms, 15%, interpolation_linear()),
+      percent_keyframe(identifier("reveal-2"), 200ms, 30%, interpolation_ease_in()),
+      percent_keyframe(identifier("reveal-3"), 300ms, 45%, interpolation_ease_out()),
+      percent_keyframe(identifier("reveal-4"), 400ms, 60%, interpolation_spring(3.0, 4.0, 0.0)),
+      percent_keyframe(identifier("reveal-5"), 500ms, 60%, interpolation_cubic_bezier(0.2, -0.4, 0.8, 1.4)),
+      percent_keyframe(identifier("reveal-6"), 600ms, 80%, interpolation_ease_in_out()),
+      percent_keyframe(identifier("end"), 800ms, 100%, interpolation_hold())
+    ]),
+    text_highlight_present(#ffe066ff, percent_constant(100%)),
+    percent_constant(100%),
+    60ms
+  ))
+}
+
+fn style(fonts: FontStack, granularity: TextGranularity) -> TextStyle {
+  text_style(
+    metrics(fonts, weight_bold(), font_style_normal()),
+    layout(text_box_fixed(520px, 120px), writing_horizontal_tb(), orientation_mixed()),
+    text_path_none(), decoration(),
+    [
+      text_span(0, 4, text_run_style(
+        font_family("sans-serif"), weight_extra_bold(), font_style_italic(), 48px, #ffe066ff
+      ))
+    ],
+    reveal_motion(granularity)
+  )
+}
+
+fn item_for(
+  key: identifier,
+  content: text,
+  start: time,
+  granularity: TextGranularity,
+  fonts: FontStack
+) -> Item {
+  item(
+    key, item_enabled(), during(start, 2s),
+    source_text(content, style(fonts, granularity)),
+    source_timing_native()
+  )
+}
+
+fn caption_for(key: identifier, content: text, start: time, fonts: FontStack) -> Item {
+  item(
+    key, item_enabled(), during(start, 2s),
+    source_caption(content, vertical_style(
+      fonts, text_grapheme(), writing_vertical_rl(), orientation_upright()
+    )),
+    source_timing_native()
+  )
+}
+
+fn speaker_for(key: identifier, content: text, start: time, fonts: FontStack) -> Item {
+  item(
+    key, item_enabled(), during(start, 2s),
+    source_caption_speaker(content, "VEAC", vertical_style(
+      fonts, text_line(), writing_vertical_lr(), orientation_mixed()
+    )),
+    source_timing_native()
+  )
+}
+
+fn vertical_style(
+  fonts: FontStack,
+  granularity: TextGranularity,
+  writing: TextWritingMode,
+  orientation: TextOrientation
+) -> TextStyle {
+  text_style(
+    metrics(fonts, weight_bold(), font_style_normal()),
+    text_layout(
+      text_box_fixed(160px, 260px), text_wrap_none(), text_overflow_clip(),
+      text_align_left(), text_align_top(), writing, orientation
+    ),
+    text_path_none(), decoration(), [], reveal_motion(granularity)
+  )
+}
+
+fn path_style(fonts: FontStack) -> TextStyle {
+  text_style(
+    metrics(fonts, weight_medium(), font_style_oblique()),
+    text_layout(
+      text_box_height(120px), text_wrap_none(), text_overflow_visible(),
+      text_align_right(), text_align_bottom(),
+      writing_horizontal_tb(), orientation_sideways()
+    ),
+    text_path_present(text_path(
+      [point(40px, 180px), point(320px, 120px), point(600px, 180px)],
+      286px, false, text_path_align_center()
+    )),
+    decoration(), [], reveal_motion(text_whole())
+  )
+}
+
+fn path_item(fonts: FontStack) -> Item {
+  item(
+    identifier("whole"), item_enabled(), during(6s, 2s),
+    source_text("整体动画：路径文字", path_style(fonts)),
+    source_timing_native()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("example-font"),
+    resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let fonts = font_stack(
+    font_resource_ref(font),
+    [font_family("PingFang SC"), font_family("Noto Sans CJK SC")]
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(), state(), track_routing_default()
+  ).with_item(item(
+    identifier("background"), item_enabled(), during(0s, 8s),
+    source_generated(generator_solid(#101827ff)), source_timing_native()
+  ));
+  let visual = visual_layer(
+    identifier("text"), 1, placement_free(), state(), track_routing_default()
+  )
+    .with_item(item_for(identifier("word"), "逐词动画：代码化视频", 0s, text_word(), fonts))
+    .with_item(path_item(fonts));
+  let captions = caption_layer(
+    identifier("captions"), 2, placement_free(), state(), track_routing_default()
+  )
+    .with_item(caption_for(identifier("grapheme"), "逐字动画：中文可观察", 2s, fonts))
+    .with_item(speaker_for(identifier("line"), "逐行动画：布局与装饰", 4s, fonts));
+  let sequence = sequence(
+    identifier("main"), "中文文本能力",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(visual).with_layer(captions);
+  let output = preview.video(sequence, canvas(640px, 360px), frame_rate(30, 1), true);
+  project(identifier("executable-text-family"), project_settings(600))
+    .with_resource(font)
+    .with_sequence(sequence)
+    .entry(sequence)
+    .with_delivery(output)
+}

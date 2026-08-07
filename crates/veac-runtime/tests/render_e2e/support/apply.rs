@@ -17,17 +17,13 @@ pub(crate) fn apply(
     }
 }
 
-pub(crate) fn effect_stage(
-    id: &str,
-    effect_type: &str,
-    parameters: BTreeMap<String, ParameterValue>,
-) -> ApplyStage {
+pub(crate) fn effect_stage(id: &str, effect: Effect) -> ApplyStage {
     ApplyStage {
         id: ApplyStageId::new(id).unwrap(),
         enabled: true,
         active_range: None,
         operation: ApplyOperation::Effect {
-            effect: video_effect(&format!("fx_{id}"), effect_type, parameters),
+            effect: video_effect(&format!("fx_{id}"), effect),
         },
     }
 }
@@ -44,8 +40,11 @@ pub(crate) fn color_stage(id: &str, pipeline: ColorPipeline) -> ApplyStage {
 pub(crate) fn brightness_stage(id: &str, value: f64) -> ApplyStage {
     effect_stage(
         id,
-        "video.color_adjust",
-        BTreeMap::from([("brightness".to_owned(), ParameterValue::Number { value })]),
+        Effect::VideoColorAdjust {
+            brightness: Animatable::constant(value),
+            contrast: Animatable::constant(1.0),
+            saturation: Animatable::constant(1.0),
+        },
     )
 }
 

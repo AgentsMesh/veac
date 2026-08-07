@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::*;
 
 use super::time;
@@ -38,7 +36,7 @@ pub(super) fn video_material() -> Material {
                 type_index: 0,
             }),
         }),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -55,7 +53,7 @@ pub(super) fn font_material() -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

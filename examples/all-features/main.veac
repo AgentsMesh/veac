@@ -1,122 +1,65 @@
-project all-features {
-  settings {
-    timebase 1/1000;
-    canvas 1920px by 1080px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video footage {
-    locator local { path "assets/footage.mp4"; }
-    streams { video auto; audio auto; }
-  }
-  resource audio music {
-    locator local { path "assets/music.wav"; }
-    streams { video disabled; audio auto; }
-  }
+import "./outputs.veac" as outputs;
+import "./styles.veac" as styles;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer video picture {
-      item shot {
-        source media resource footage;
-        record { at 0s; duration 8s; }
-        mapping linear { from 2s; to 10s; }
-        modifiers {
-          layout canvas-fill {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1920px; height 1080px; fit cover; }
-          }
-          color grade {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            basic {
-              exposure 0.1stops; temperature 6600k; tint 0;
-              highlights -0.04; shadows 0.06; fade 1%;
-            }
-          }
-        }
-      }
-    }
-    layer visual graphics {
-      item lower-third {
-        source generated solid { color #03045edd; }
-        record { at 1s; duration 5s; }
-        modifiers {
-          layout lower-third-frame {
-            placement anchor { at bottom; inset { x 0px; y 80px; } }
-            frame { width 1500px; height 180px; fit fill; }
-          }
-          transform lower-third-pivot { anchor { x 0.5; y 1; } }
-          composite top { opacity 95%; z-index 20; blend normal; }
-        }
-      }
-    }
-    layer audio score {
-      route bus music-bus;
-      item music-item {
-        source media resource music;
-        record { at 0s; duration 8s; }
-        mapping linear { from 0s; to 8s; }
-        modifiers {
-          audio mix {
-            gain -6db; pan 0; muted false; normalize true; pitch preserve;
-            crossfade { fade-in 250ms; fade-out 500ms; curve equal-power; }
-            processor limiter voice-limiter { ceiling -1db; attack 1ms; release 80ms; }
-          }
-        }
-      }
-    }
-    layer caption subtitles {
-      item cue {
-        source caption {
-          content "一种语言，一份类型化中间表示，一套渲染计划。";
-          style {
-            font family "Arial Unicode MS";
-            fallback-font family "Arial";
-            size 48px; fill #ffffffff;
-            background { color #000000cc; padding 20px; }
-          }
-        }
-        record { at 0s; duration 8s; }
-        modifiers {
-          layout caption-placement {
-            placement absolute { position { x 960px; y 850px; } }
-            frame { width 1500px; height 140px; fit contain; }
-          }
-        }
-      }
-    }
-    relation group edit-unit { members { item shot; item music-item; } }
-    relation av-link linked-av {
-      endpoints { video item shot; audio { item music-item; } }
-    }
-  }
-
-  delivery master {
-    sequence main;
-    raster { canvas 1920px by 1080px; frame-rate 30fps; captions burn-in; }
-    artifact video master {
-      target file "all-features.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio aac {
-          sample-rate 48khz;
-          channel-layout stereo;
-        }
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let footage = video_resource(
+    identifier("footage"), resource_file("assets/scene1.mp4"),
+    sha256("9f8cf7a52504cfaf9003bf4dbc850136d3ab320dd09a45fe78a1fbc3dc789fb7"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let music = audio_resource(
+    identifier("music"), resource_file("assets/bgm.m4a"),
+    sha256("b86576b294557828c34f5801448f34cd68e9daa3350aa464d84f8cd3e48040d5"),
+    stream_auto()
+  );
+  let shot = item(
+    identifier("shot"), item_enabled(), during(0s, 8s), source_media(footage),
+    source_timing_mapped(source_mapping(
+      source_time_linear(2s, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    ))
+  ).with_visual(styles.picture());
+  let picture = video_layer(
+    identifier("picture"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(shot);
+  let lower_third = showcase.solid(identifier("lower-third"), #03045edd, 1s, 5s)
+    .with_visual(styles.lower_third());
+  let graphics = visual_layer(
+    identifier("graphics"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(lower_third);
+  let music_item = item(
+    identifier("music-item"), item_enabled(), during(0s, 8s), source_media(music),
+    source_timing_mapped(source_mapping(
+      source_time_linear(0s, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    ))
+  ).with_audio(styles.music());
+  let bus = audio_bus(identifier("music-bus"));
+  let score = audio_layer(
+    identifier("score"), 2, placement_free(), showcase.state(), track_routing_bus(bus)
+  ).with_item(music_item);
+  let subtitles = caption_layer(
+    identifier("subtitles"), 3, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("cue"), item_enabled(), during(0s, 8s),
+    source_caption(
+      "一种语言，一份类型化中间表示，一套渲染计划。",
+      styles.caption_text(font)
+    ), source_timing_native()
+  ).with_visual(styles.caption()));
+  let timeline = sequence(
+    identifier("main"), "跨机制集成",
+    sequence_settings(canvas(1920px, 1080px), frame_rate(30, 1), 48000)
+  ).with_layer(picture).with_layer(graphics).with_layer(score).with_layer(subtitles)
+    .with_relation(relation_group(identifier("edit-unit"), [shot, music_item]))
+    .with_relation(relation_av_link(identifier("linked-av"), shot, [music_item]));
+  let output = outputs.master(timeline);
+  project(identifier("all-features"), project_settings(600))
+    .with_resource(font).with_resource(footage).with_resource(music)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

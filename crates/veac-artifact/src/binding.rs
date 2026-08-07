@@ -119,8 +119,8 @@ fn canonical_verified(path: &Path, identity: &MediaIdentity) -> ArtifactResult<P
 }
 
 fn validate_path(path: &Path) -> ArtifactResult<()> {
-    if path.as_os_str().is_empty() {
-        invalid("execution binding path cannot be empty")
+    if !path.is_absolute() {
+        invalid("execution binding path must be absolute")
     } else {
         Ok(())
     }

@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use serde_json::json;
-use veac_artifact::{artifact_key, ArtifactKind, ArtifactRecord, ContentDigest};
+use veac_artifact::{
+    artifact_key, ArtifactKind, ArtifactParameters, ArtifactRecord, ContentDigest,
+    ProviderResultParameters,
+};
 use veac_ir::{Rational, RationalTime, TimeRange};
 use veac_provider::*;
 
@@ -47,12 +49,16 @@ pub(super) fn fixture() -> ProviderFixture {
         }),
     )
     .unwrap();
-    let descriptor = provider_artifact_descriptor(
+    let parameters = ArtifactParameters::provider_result(
         ArtifactKind::Speech,
+        ProviderResultParameters::new("speech").unwrap(),
+    )
+    .unwrap();
+    let descriptor = provider_artifact_descriptor(
         &fingerprint,
         request_hash(&request).unwrap(),
         Vec::new(),
-        json!({"format": "raw-test"}),
+        parameters,
     )
     .unwrap();
     let record = ArtifactRecord {
@@ -64,7 +70,7 @@ pub(super) fn fixture() -> ProviderFixture {
         &request,
         ProviderOutput::TextToSpeech(SpeechResult {
             audio: ProviderArtifact {
-                role: "speech".into(),
+                role: ProviderArtifactSlot::new("speech").unwrap(),
                 descriptor,
                 record: record.clone(),
             },

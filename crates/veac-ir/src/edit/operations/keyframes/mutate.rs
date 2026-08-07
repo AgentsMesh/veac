@@ -10,6 +10,10 @@ pub(super) fn upsert<T: Clone + PartialEq>(
     keyframe: Keyframe<T>,
 ) -> Result<bool, Diagnostic> {
     match curve {
+        Animatable::Binding { binding_id } => Err(operation_error(
+            binding_id.as_str(),
+            "a temporal binding cannot be mutated as a keyframe curve",
+        )),
         Animatable::Constant { .. } => {
             *curve = Animatable::Keyframes {
                 keyframes: vec![keyframe],

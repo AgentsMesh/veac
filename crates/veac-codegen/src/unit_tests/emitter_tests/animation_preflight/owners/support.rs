@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 use veac_plan::{EffectiveAudioProperties, ResolvedClipSource, ResolvedEffect, ResolvedRenderPlan};
 
@@ -66,14 +64,14 @@ pub(super) fn mask() -> Mask {
 pub(super) fn effect(duration: RationalTime, value: Animatable<f64>) -> ResolvedEffect {
     ResolvedEffect {
         id: EffectId::new("fx_curve_preflight").unwrap(),
-        effect_type: "video.color_adjust".to_owned(),
         active_range: TimeRange {
             start: time(0),
             duration,
         },
-        parameters: BTreeMap::from([(
-            "brightness".to_owned(),
-            ParameterValue::NumberCurve { value },
-        )]),
+        effect: Effect::VideoColorAdjust {
+            brightness: value,
+            contrast: Animatable::constant(1.0),
+            saturation: Animatable::constant(1.0),
+        },
     }
 }

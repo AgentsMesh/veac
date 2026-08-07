@@ -80,8 +80,13 @@ fn auxiliary_deliverables_enforce_their_authored_file_contracts() {
 fn mismatched_auxiliary_extension_is_rejected_before_render() {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     let deliverable = &mut prepared.plan.output.deliverables[0];
     deliverable.target = veac_ir::DeliverableTarget::File {
         name: "captions.json".into(),
@@ -97,8 +102,13 @@ fn mismatched_auxiliary_extension_is_rejected_before_render() {
 fn assert_bound(name: &str, kind: DeliverableKind) {
     let temp = tempdir().unwrap();
     let project = canonical_project(&temp, GENERATED_SOURCE);
-    let mut prepared =
-        crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap();
+    let mut prepared = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap();
     let deliverable = &mut prepared.plan.output.deliverables[0];
     deliverable.target = match kind {
         DeliverableKind::ImageSequence(_) => veac_ir::DeliverableTarget::ImageSequence {

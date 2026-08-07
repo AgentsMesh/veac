@@ -1,43 +1,24 @@
-use super::{SourceNodePath, SourceNodeRef};
+use super::{SourceNodePath, SourceNodeRef, SourceTemporalProperty};
 
-mod definition;
+mod nominal;
 
 impl SourceNodeRef {
-    pub fn project(module: impl Into<String>, project: impl Into<String>) -> Self {
-        Self::new(
-            module,
-            SourceNodePath::Project {
-                project: project.into(),
-            },
-        )
-    }
-
-    pub fn sequence(
-        module: impl Into<String>,
-        project: impl Into<String>,
-        sequence: impl Into<String>,
-    ) -> Self {
-        Self::new(
-            module,
-            SourceNodePath::Sequence {
-                project: project.into(),
-                sequence: sequence.into(),
-            },
-        )
-    }
-
-    pub fn layer(
+    pub fn temporal(
         module: impl Into<String>,
         project: impl Into<String>,
         sequence: impl Into<String>,
         layer: impl Into<String>,
+        item: impl Into<String>,
+        property: SourceTemporalProperty,
     ) -> Self {
         Self::new(
             module,
-            SourceNodePath::Layer {
+            SourceNodePath::Temporal {
                 project: project.into(),
                 sequence: sequence.into(),
                 layer: layer.into(),
+                item: item.into(),
+                property,
             },
         )
     }
@@ -60,56 +41,96 @@ impl SourceNodeRef {
         )
     }
 
-    pub fn modifier(
+    pub fn temporal_clip_mask(
         module: impl Into<String>,
-        project: impl Into<String>,
-        sequence: impl Into<String>,
-        layer: impl Into<String>,
-        item: impl Into<String>,
-        modifier: impl Into<String>,
+        path: [&str; 4],
+        mask_index: u32,
+        property: SourceTemporalProperty,
     ) -> Self {
         Self::new(
             module,
-            SourceNodePath::Modifier {
-                project: project.into(),
-                sequence: sequence.into(),
-                layer: layer.into(),
-                item: item.into(),
-                modifier: modifier.into(),
+            SourceNodePath::TemporalClipMask {
+                project: path[0].to_owned(),
+                sequence: path[1].to_owned(),
+                layer: path[2].to_owned(),
+                item: path[3].to_owned(),
+                mask_index,
+                property,
             },
         )
     }
 
-    pub fn apply(
+    pub fn temporal_clip_effect(
         module: impl Into<String>,
-        project: impl Into<String>,
-        sequence: impl Into<String>,
-        apply: impl Into<String>,
+        path: [&str; 4],
+        effect: impl Into<String>,
+        parameter: impl Into<String>,
+        property: SourceTemporalProperty,
     ) -> Self {
         Self::new(
             module,
-            SourceNodePath::Apply {
-                project: project.into(),
-                sequence: sequence.into(),
-                apply: apply.into(),
+            SourceNodePath::TemporalClipEffect {
+                project: path[0].to_owned(),
+                sequence: path[1].to_owned(),
+                layer: path[2].to_owned(),
+                item: path[3].to_owned(),
+                effect: effect.into(),
+                parameter: parameter.into(),
+                property,
             },
         )
     }
 
-    pub fn stage(
+    pub fn temporal_apply(
         module: impl Into<String>,
-        project: impl Into<String>,
-        sequence: impl Into<String>,
-        apply: impl Into<String>,
-        stage: impl Into<String>,
+        path: [&str; 3],
+        property: SourceTemporalProperty,
     ) -> Self {
         Self::new(
             module,
-            SourceNodePath::Stage {
-                project: project.into(),
-                sequence: sequence.into(),
-                apply: apply.into(),
-                stage: stage.into(),
+            SourceNodePath::TemporalApply {
+                project: path[0].to_owned(),
+                sequence: path[1].to_owned(),
+                apply: path[2].to_owned(),
+                property,
+            },
+        )
+    }
+
+    pub fn temporal_apply_mask(
+        module: impl Into<String>,
+        path: [&str; 3],
+        mask_index: u32,
+        property: SourceTemporalProperty,
+    ) -> Self {
+        Self::new(
+            module,
+            SourceNodePath::TemporalApplyMask {
+                project: path[0].to_owned(),
+                sequence: path[1].to_owned(),
+                apply: path[2].to_owned(),
+                mask_index,
+                property,
+            },
+        )
+    }
+
+    pub fn temporal_apply_effect(
+        module: impl Into<String>,
+        path: [&str; 3],
+        tail: [&str; 3],
+        property: SourceTemporalProperty,
+    ) -> Self {
+        Self::new(
+            module,
+            SourceNodePath::TemporalApplyEffect {
+                project: path[0].to_owned(),
+                sequence: path[1].to_owned(),
+                apply: path[2].to_owned(),
+                stage: tail[0].to_owned(),
+                effect: tail[1].to_owned(),
+                parameter: tail[2].to_owned(),
+                property,
             },
         )
     }

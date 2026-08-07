@@ -152,7 +152,7 @@ fn interpreter_and_io_helpers_report_exact_failure_context() {
         .contains("cannot validate executable interpreter"));
 
     let io_error = io_result(
-        Err(std::io::Error::new(std::io::ErrorKind::Other, "failed")),
+        Err(std::io::Error::other("failed")),
         "exercise test operation",
     )
     .unwrap_err();

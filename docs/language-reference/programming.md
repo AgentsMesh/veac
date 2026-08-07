@@ -1,53 +1,120 @@
-# Compile-Time Programming
+# VEAC 编程模型
 
-VEAC's programming layer is a static authoring system. It resolves a confined source graph,
-evaluates pure expressions, and expands presets and components before the core authoring
-`Document` is parsed. No module, expression, preset, component, or instance survives in canonical
-JSON IR.
+VEAC 在一个受限 source graph 中提供 module、强类型函数、closure、immutable collection、nominal
+value 和静态 method。生产语言只有一条 executable pipeline：
 
 ```text
-entry .veac + imported modules
-  -> resolve names and exports
-  -> type-check and evaluate expressions
-  -> expand typed presets and sequence components
-  -> core authoring Document
-  -> canonical JSON IR
+Surface -> typed HIR -> verified Core v10 -> bounded evaluator
+        -> frozen graph + temporal residualization -> canonical ProjectEnvelope
 ```
 
-The executable example links its [`entry`](../../examples/programming-language/main.veac), [`brand module`](../../examples/programming-language/brand.veac), and revision-bound [`source edit batch`](../../examples/programming-language/source-edit.json).
-Its preview publishes the matching revision, semantic index, and dry-run outcome without rewriting either `.veac` module.
+入口必须提供 root-local `fn main(context: Context) -> Project`。完整执行、graph transaction 与直接
+lowering 合同见[可执行 Build](executable-build.md)。模块只提供可导入声明，不能代替入口。
+需要由 host 提供的数据必须使用强类型 [`input` 声明](build-inputs.md)，不能读取环境变量、文件系统、
+网络、时钟或随机数，也不能把 `Context` 当作字符串 property bag。
 
-## Modules
+[`programming-language/main.veac`](../../examples/programming-language/main.veac) 与
+[`brand.veac`](../../examples/programming-language/brand.veac) 展示跨模块 struct/enum、method、
+closure、`GraphEmit` map 和直接 Project construction；source edit batch 从 `.veac` source of truth
+按稳定语义路径替换完整局部 statement，并重建 canonical IR。
 
-An entry owns declarations plus exactly one `project`. An imported file owns one `module`:
+## 模块
+
+imported file 使用匿名 `module {}` kind marker，不声明第二份 module 名字：
 
 ```veac,fragment
-import "./brand.veac" as brand;
-
+// timing.veac
 module {
-  export const length title_size = 64px;
+  fn twice(value: time) -> time { value * 2 }
+
+  export fn intro(value: time) -> time {
+    twice(value) + 250ms
+  }
 }
 ```
 
-`module` is a file-kind marker, not a second identity declaration. It is deliberately written as
-`module {}`: the canonical module identity is the loader-provided root-relative source ID, while the
-caller chooses its local namespace with `import ... as <alias>`. There is no self-name that can drift
-away from either identity.
+调用方以 `import "./timing.veac" as timing;` 选择 local alias，并通过
+`timing.intro(1s)` 访问 exported declaration。canonical module identity 是 loader 提供的
+root-relative source ID；private helper 不跨 module boundary，但 exported function/method 可以调用它。
 
-Only `export` declarations cross the module boundary. References are qualified through the import
-alias, such as `brand.title_size` or `brand.title_card`. Imports must be relative and form an
-acyclic graph. VEAC opens every path segment relative to an already-open source-root descriptor and
-does not follow symlinks. Absolute paths, `..`, symlinks, root escape, duplicate aliases, project
-files used as modules, and import cycles are errors.
+import 必须相对 source root 且无环。absolute path、`..`、symlink、root escape、重复 alias、把 entry
+当 module 和 import cycle 都会失败。canonical source ID 是不超过 4,096 bytes 的 UTF-8 `/` 路径；
+empty/`.`/`..` segment、`:`、`\`、control character 和 `.veac-source.lock` 不合法。filesystem
+loader 只接受 regular file，并拒绝不同 lexical ID 指向同一物理文件。
 
-Canonical source IDs are UTF-8, root-relative `/`-separated paths of at most 4,096 bytes. Empty,
-`.` and `..` segments, `:`, `\`, control characters, and the reserved transaction path
-`.veac-source.lock` are rejected at the compile boundary. Filesystem loading accepts only regular
-files opened with nonblocking type inspection. Two lexical IDs may not resolve to the same physical
-`(device, inode)` file; revisions and source edits therefore cannot diverge through case-folding,
-Unicode-normalization, or hard-link aliases.
+## 函数、Block 与 Closure
 
-## Constants And Pure Expressions
+```veac,fragment
+fn pad(base: time, extra: time) -> time { base + extra }
+
+fn intro(value: time) -> time {
+  var padded: time = pad(value, 250ms);
+  if padded < 2s { set padded = 2s; padded } else { padded }
+}
+
+fn apply(value: int, operation: fn(int) -> int effect pure) -> int {
+  operation(value)
+}
+```
+
+signature 固定为 `fn name(param: type, ...) -> type { ... }`。参数不可变；block 由零个或多个以
+分号结束的 `let`、`var`、`set` statement 和一个无分号 tail expression 组成，tail 决定返回值。
+`let` 不可变，`var` 为每次 function/closure activation 创建独立 typed slot，`set` 只能以 exact
+type 更新已声明的 `var`。mutable local 不能保存 function value、被 closure capture 或跨 activation
+逃逸；失败的 activation 丢弃 slot state，并与 graph transaction 一起 fail closed。`if` 必须带
+`else`，两支都 type-check，但只执行选中分支。argument 从左到右各执行一次，无 truthiness 或
+implicit cast。
+
+typed closure 写作 `fn(value: int) -> int effect pure { value + offset }`。closure 必须显式声明
+`pure`、`local`、`emit` 或 `any` effect contract；编译器仍根据 Core evidence 复核声明，不能用宽松或
+伪造的 contract 隐藏实际副作用。它只能 capture 外层 immutable local、
+parameter 或 capture；不能 capture ambient external、function declaration、graph builder 或 temporal
+topology control。capture 顺序由第一次 resolved use 固定。任意 expression 都能 postfix call，
+function/method/closure 最终都以 resolved ID 进入 Core，不在 runtime 按字符串查找。
+
+`pure` 只接收 `Pure`；`local` 接收 `Pure | LocalMutation`；`emit` 接收不含 local mutation 的
+`Pure | GraphEmit`；`any` 接收全部 evidence。`filter`/`fold` 要求实际 `Pure`，`map`/`for` 还可
+接收不含 `LocalMutation` 的 `GraphEmit`。effect contract 属于 function type identity，但 verifier
+始终以 body 和 callable metadata 的实际 evidence 为准。`LocalMutation` 不进入 Temporal residualization。
+
+完整 call graph 支持 forward call，unused body 也必须 parse、resolve、type/effect-check 和 verify。
+direct/indirect recursion 均拒绝；call depth、node、value 与 allocation 共享 source-graph budget。
+
+## 类型与值
+
+十种 primitive type 为：
+
+```text
+int | scalar | time | length | percent | angle | text | color | bool | identifier
+```
+
+结构 type 为 `list<T>`、`range<int>`、`map<text, V>`、`map<identifier, V>`、至少二元的 tuple 和
+`fn(T, ...) -> R effect E`。function type 的 effect 是类型 identity 的一部分，嵌套 function type
+逐层携带 contract。用户可以声明 module-qualified `struct` 与 closed `enum`。没有 `number`、
+`string`、`boolean` 或 `resource` alias，也没有 implicit numeric widening。Domain type 是版本化
+standard-library symbol，不属于 primitive spelling 或 lexer keyword。
+
+```veac,fragment
+struct Card { title: text, duration: time, }
+
+enum Placement {
+  Center,
+  Corner { x: length, y: length, },
+}
+
+const Card card = Card { duration: 2s, title: "片头", };
+```
+
+struct initializer 使用 named field，且 missing、unknown、duplicate 或 wrong-type field 都失败。
+closed enum 通过 `match` 穷尽处理；`impl Type` method 是 immutable、nominal、static dispatch，没有
+inheritance、prototype、reflection 或 runtime method table。详见
+[Nominal value 与 method](programming-nominal.md)。
+
+list/map/tuple literal 分别写作 `[1, 2]`、`#{"intro": 0s}`、`(1920, 1080)`。空 list/map 必须从
+expected type 推导。map key 按原始 UTF-8 bytes canonical 排序；结构 equality 递归且类型精确，
+function 与 Domain handle 不支持 equality。
+
+## 纯表达式与数值
 
 ```veac,fragment
 const time duration = clamp(base + 500ms, 2s, 3s);
@@ -55,145 +122,38 @@ const time base = 2500ms;
 const text title = "同一组件" + "，再次实例化";
 ```
 
-Constants may refer forward to other constants. Resolution uses a dependency graph and rejects
-cycles. Values have one compile-time type:
+constant 可 forward reference，dependency cycle 会失败。无后缀 integer 是 checked signed i64
+`int`，无后缀 decimal 是 exact `scalar`，unit literal 保持对应 dimension；`1`、`1.0` 与 `1s`
+类型不同。算术、comparison、equality、`min`/`max`/`clamp` 要求合同允许的 exact type，不会静默
+round。constant 是 module-static reusable declaration，可被 function、method、`main` 和 temporal body
+引用；resolver 会闭合穿过 pure function 的 constant dependency 并拒绝间接 cycle，随后把值作为 literal
+写入最终 verified Core。所有值直接进入 typed Core，不会先格式化成源码再重解析。
 
-```text
-scalar | time | length | percent | angle | text | color | bool | identifier
-```
+semantic name 为 1 到 128 个 ASCII bytes，匹配
+`[A-Za-z_][A-Za-z0-9_]*(-[A-Za-z0-9_]+)*`；`true`/`false` 是 reserved literal。构造
+identifier value 使用 `identifier("cover-art")`。因为 `-` 可属于 name，subtraction 写成
+`duration - offset`。quoted text 支持 Unicode，evaluated text 上限是 1 MiB。
 
-Every declaration name, expression symbol segment, import alias, and source-edit target name uses
-one lexical contract: 1 to 128 ASCII bytes matching
-`[A-Za-z_][A-Za-z0-9_]*(-[A-Za-z0-9_]+)*`. `true` and `false`
-are reserved boolean literals, not legal names. A qualified reference joins canonical segments with
-one dot, for example `brand.title-card`; a declaration name itself never contains a dot. Unicode is
-fully supported inside quoted text, but not in semantic names. This makes every accepted declaration
-directly referenceable by an expression and addressable by a source edit.
+程序不能读取 ambient filesystem、environment、clock、network、process 或 implicit random state。
+所有失败都是 source-located diagnostic，并且不能发布 partial IR。
 
-Bare identifiers resolve names from the lexical environment. Use `identifier("cover-art")` when an
-expression must construct an identifier value, including a resource reference. It enforces the same
-name contract, and its result is emitted as syntax rather than text. The nine type names above are
-the only accepted spellings; aliases such as `number`, `string`, `boolean`, and `resource` are not
-part of the language. `resource(...)` is likewise not a function alias.
+## 集合与有界迭代
 
-Arithmetic is exact rational arithmetic. `+` and `-` require matching numeric dimensions; text
-supports `text + text` concatenation. Every evaluated text value, whether it came from a literal,
-an environment binding, or concatenation, is limited to 1 MiB and deterministically rejected with
-`EXPRESSION_TEXT_LIMIT` above that bound. Multiplication and division require a scalar or percent
-according to the dimensional rules, and dividing equal dimensions yields a scalar. Parentheses and
-unary `+`/`-` are supported. `min(a, b)`, `max(a, b)`, and `clamp(value, min, max)` require one
-numeric type. `${expression}` injects a type-safe source literal into a component or project body.
-Line comments (`// ...`) and block comments (`/* ... */`) are accepted anywhere expression
-whitespace is accepted. Because `-` is legal inside a name, subtraction after a symbol is written
-with whitespace (`duration - offset`); maximal-munch `title-card` is one symbol.
-Trailing or repeated dashes are rejected, so `foo--bar` remains the unambiguous expression
-`foo - -bar`.
+range 写作 `start .. end` 或 `start .. end by step`，类型固定为 `range<int>`，是 finite、lazy、
+half-open sequence。zero step 和 count/overflow 会失败，方向背离产生 empty range。
 
-Numbers remain exact rationals throughout parsing, type checking, dependency resolution, and
-evaluation. Injection into core authoring syntax is the explicit materialization boundary: scalar,
-length, percent, and angle values become deterministic decimal literals because their core fields
-use floating-point numbers. Time remains exact and must be representable as an integer `s`, `ms`,
-or `us` literal. A value such as `1s / 3` is rejected with
-`PROGRAM_EXPRESSION_MATERIALIZATION` instead of being silently rounded.
+`map`、`filter`、`fold` 与 `for value in iterable { body }` 接受 list/range/map；map element 是
+`(key, value)` tuple。它们按 canonical order 单次、顺序执行并共享 iteration/collection budget。
+executable topology 中 `map`/`for` callback 可为 `GraphEmit`；`filter`/`fold` callback 必须 `Pure`。
+精确 effect、empty inference 与预算见[有界集合与迭代](programming-collections.md)。
 
-Expressions cannot read files, environment variables, clocks, probes, networks, or random state.
-They cannot mutate state or invoke user code. Evaluation and expansion are bounded.
+## Typed Component Pattern
 
-## Typed Presets
+静态组件由 module、typed factory function、nominal configuration value 和 immutable method 组合，
+合同见[组件与复用](programming-components.md)。组件返回普通 Domain value，并在调用点通过明确
+owner method 接入 graph。factory/method 内可用 owner-relative `animate` attachment 复用 Pure 动画
+closure，freeze 后解析为 canonical absolute sink；没有 source injection、宏展开、字符串 path、隐式
+ID 拼接或独立 component runtime。
 
-Presets reuse a coherent semantic block, not a flat property map:
-
-```veac,fragment
-preset text-style readable { fill #ffffffff; }
-export preset text-style title {
-  use text-style readable;
-  size 64px;
-}
-```
-
-The closed kinds are `text-style`, `text-layout`, `modifier-stack`, `effect-pipeline`,
-`color-pipeline`, `audio-processors`, and `delivery-profile`. `use <kind> <name>;` is legal only at
-a matching site. Presets may compose presets of the same declared kind. The enclosing declaration,
-the `use` kind, and the referenced preset kind must all match; an empty preset body cannot bypass
-this check. Kind mismatches, missing names, and cycles fail before core parsing.
-
-## Sequence Components
-
-The first component primitive produces a sequence:
-
-```veac,fragment
-export component sequence title_card {
-  param text title;
-  param time duration default 3s;
-  param time accent_duration default duration / 3;
-  slot visual backdrop;
-  instance sequence @visuals from card_visuals {
-    bind duration duration; bind accent_duration accent_duration; fill backdrop { source slot backdrop; }
-  }
-  body {
-    layer visual @copy {
-      item @title {
-        source text { content ${title}; style { use text-style title; } }
-        record { at 0s; duration ${duration}; }
-      }
-    }
-  }
-}
-
-instance sequence opener from brand.title_card {
-  bind title "可复用标题";
-  fill backdrop { source generated solid { color #123047ff; } }
-}
-```
-
-Parameters are typed. Defaults may refer to constants or other parameters and are dependency
-resolved. Every declared slot must be filled once with a compatible source; unknown, missing, or
-wrong-kind fills are errors. A fill contains exactly one complete source declaration. Additional
-item members such as `record`, `state`, or `modifiers`, and a second source declaration, are rejected
-before injection. Slot kinds are `video`, `audio`, `visual`, `text`, `caption`, and `sequence`.
-
-Component bodies and parameter defaults use the component's definition scope. `bind` expressions
-and `fill` bodies use the instance caller's scope. A fill may therefore use caller constants and
-qualified imported presets, but it cannot see component parameters or private declarations from the
-component's module. VEAC fully expands and type-checks each fill in the caller scope before injecting
-the resulting source into the component body. Caller-local `@id` references are hygienized against
-that caller instance before injection, so a nested child fill can refer to a sibling without being
-captured by an identically named child local. Component definitions cannot capture project resources
-or sequences by name; expose those dependencies as typed parameters or slots.
-Definition checking runs against two identity-disjoint synthetic projects, so success cannot depend
-on a fixture name that happens to match a caller-owned resource, sequence, or component instance.
-
-A component may own `instance sequence @local from component { ... }` declarations before its
-`body`. The `@` marks a compile-time local sequence, not a project-owned runtime construct. Its
-component reference resolves in the parent's definition scope, so an exported component may compose
-a private sibling component or a qualified import without exporting that implementation detail.
-The nested `bind` and `fill` caller scope is the currently expanded parent: it contains the parent's
-bound parameters plus declarations captured at the parent definition. The child's defaults and body
-still use the child's own definition scope. This separation prevents the top-level caller from
-accidentally leaking names through the parent while allowing explicit parameter forwarding.
-
-`fill child_slot { source slot parent_slot; }` explicitly forwards a parent's already type-checked
-slot fill to a child. After binding and filling, VEAC recursively emits each child as a top-level core
-sequence and rewrites `source sequence sequence @local;` in the parent body to that exact sequence
-ID. The expanded `Document` therefore contains only ordinary sequences and references: no component,
-instance, closure, script, or deferred evaluation reaches canonical JSON IR.
-
-The top-level instance ID becomes its generated sequence ID. Component-local paths expand to
-`veac-h-<root-byte-count>-<root>-<local-byte-count>-<local>...`, adding one length-framed segment at
-each composition or local-declaration level. This encoding is injective even when names contain
-delimiters. `veac-h-` is reserved: an explicit source ID may not claim a generated name. Generated
-IDs must fit the 128-byte identifier bound; VEAC never silently hashes an oversized ID. Agents should
-edit `@name` and use provenance's `get_local(root, name)` or
-`get_local_path(root, &[child, local])` lookup instead of synthesizing generated IDs.
-
-## Resource Budgets
-
-All public compilation paths enforce the deterministic limits in the focused
-[programming resource budget](programming-limits.md).
-
-## Static Boundary
-
-Expansion must produce valid core authoring syntax. VEAC then parses and lowers that `Document`
-through the same canonical validator used for a non-program source. Planner and backend layers only
-consume the expanded canonical project. This keeps execution deterministic and prevents runtime
-scripts, hidden I/O, or agent-specific behavior from entering the IR.
+当前 opset v7 的 214 个 DomainType 与 581 个 operation 覆盖公开编辑机制。所有 public path 仍受
+[编程资源预算](programming-limits.md)约束。

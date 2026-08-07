@@ -1,15 +1,15 @@
 use super::support::*;
-use veac_lang::program::{SourceIndexInventory, SOURCE_INDEX_SCHEMA, SOURCE_INDEX_SCHEMA_VERSION};
-use veac_lang::source_edit::{ExpressionSite, SourceNodeRef, SourceRevision};
+use veac_lang::program::{
+    SourceIndexBuildInputType, SourceIndexInventory, SOURCE_INDEX_SCHEMA,
+    SOURCE_INDEX_SCHEMA_VERSION,
+};
+use veac_lang::source_edit::{BodySite, ExpressionSite, SourceNodeRef, SourceRevision};
 
 fn indexed_source() -> String {
     format!(
-        r#"component sequence card {{
-  param time duration default 100ms + 100ms;
-  body {{}}
-}}
-instance sequence card-one from card {{ bind duration 300ms; }}
-{GENERATED_SOURCE}"#
+        "const time duration = 100ms + 100ms;\n\
+         fn twice(value: time) -> time {{ value + value }}\n{}",
+        EXECUTABLE_SOURCE
     )
 }
 
@@ -21,7 +21,7 @@ fn output(source: &std::path::Path) -> std::process::Output {
 }
 
 #[test]
-fn source_index_is_deterministic_and_discovers_every_editable_site_kind() {
+fn source_index_is_deterministic_and_discovers_executable_edit_sites() {
     let temp = tempdir().unwrap();
     let source_text = indexed_source();
     let source = source_file(&temp, &source_text);
@@ -40,40 +40,24 @@ fn source_index_is_deterministic_and_discovers_every_editable_site_kind() {
         .nodes
         .windows(2)
         .all(|pair| pair[0].target < pair[1].target));
-    assert!(
-        node(&inventory, SourceNodeRef::project("main.veac", "cli-e2e"))
-            .expressions
-            .is_empty()
-    );
-    assert_site(
+    assert_expression(
         &inventory,
-        &source_text,
-        SourceNodeRef::component("main.veac", "card"),
-        ExpressionSite::ComponentParameterDefault {
-            parameter: "duration".into(),
-        },
+        SourceNodeRef::constant("main.veac", "duration"),
+        ExpressionSite::ConstantValue,
         "100ms + 100ms",
-    );
-    assert_site(
-        &inventory,
         &source_text,
-        SourceNodeRef::component_instance("main.veac", "card-one"),
-        ExpressionSite::ComponentInstanceArgument {
-            parameter: "duration".into(),
-        },
-        "300ms",
     );
-    assert_site(
-        &inventory,
-        &source_text,
-        SourceNodeRef::item("main.veac", "cli-e2e", "main", "base", "background"),
-        ExpressionSite::ItemRecordDuration,
-        "200ms",
-    );
+    let body = node(&inventory, SourceNodeRef::function("main.veac", "twice"))
+        .bodies
+        .iter()
+        .find(|value| value.site == BodySite::FunctionBody)
+        .unwrap();
+    assert_eq!(body.source, "{ value + value }");
+    assert_eq!(&source_text[body.range.start..body.range.end], body.source);
 }
 
 #[test]
-fn source_index_revision_and_schema_match_the_public_contracts() {
+fn source_revision_and_index_share_one_public_contract() {
     let temp = tempdir().unwrap();
     let source = source_file(&temp, &indexed_source());
     let inventory: SourceIndexInventory = serde_json::from_slice(&output(&source).stdout).unwrap();
@@ -90,11 +74,37 @@ fn source_index_revision_and_schema_match_the_public_contracts() {
         .assert()
         .success()
         .stdout(predicate::str::contains("SourceIndexInventory"));
-    veac()
-        .args(["source-index", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("agent-readable inventory"));
+}
+
+#[test]
+fn source_index_discovers_enum_inputs_without_runtime_bindings() {
+    let temp = tempdir().unwrap();
+    let source = source_file(
+        &temp,
+        &format!(
+            "enum Locale {{ en, pt-BR, zh-Hans, }}\n\
+             input parameter locale: Locale;\n{EXECUTABLE_SOURCE}"
+        ),
+    );
+    let inventory: SourceIndexInventory = serde_json::from_slice(&output(&source).stdout).unwrap();
+    let [input] = inventory.build_inputs.as_slice() else {
+        panic!("expected one discoverable Build input")
+    };
+    assert_eq!(input.name, "locale");
+    assert_eq!(input.role, veac_lang::program::BuildInputRole::Parameter);
+    let SourceIndexBuildInputType::Enum {
+        name,
+        type_id,
+        definition_sha256,
+        variants,
+    } = &input.value_type
+    else {
+        panic!("locale input must expose its payloadless enum interface")
+    };
+    assert_eq!(name, "Locale");
+    assert_eq!(type_id.len(), 64);
+    assert_eq!(definition_sha256.len(), 64);
+    assert_eq!(variants, &["en", "pt-BR", "zh-Hans"]);
 }
 
 fn node(
@@ -108,12 +118,12 @@ fn node(
         .unwrap()
 }
 
-fn assert_site(
+fn assert_expression(
     inventory: &SourceIndexInventory,
-    source: &str,
     target: SourceNodeRef,
     site: ExpressionSite,
     expected: &str,
+    source: &str,
 ) {
     let expression = node(inventory, target)
         .expressions

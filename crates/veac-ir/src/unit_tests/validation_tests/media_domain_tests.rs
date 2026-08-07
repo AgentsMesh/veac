@@ -7,13 +7,7 @@ fn effects_require_a_compatible_authored_media_domain() {
     let mut audio_without_stream = sample_project();
     let clip = &mut audio_without_stream.project.sequences[0].tracks[0].clips[0];
     clip.audio = None;
-    clip.effects[0].effect_type = "audio.normalize".into();
-    clip.effects[0].parameters = [(
-        "target_lufs".into(),
-        ParameterValue::Number { value: -16.0 },
-    )]
-    .into_iter()
-    .collect();
+    clip.effects[0].effect = Effect::neutral(EffectKind::AudioNormalize);
     assert_code(
         &validation_codes(&audio_without_stream),
         "EFFECT_MEDIA_TYPE",

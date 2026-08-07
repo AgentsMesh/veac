@@ -10,6 +10,9 @@ pub(super) fn render(
     height: u32,
     bindings: &ExecutionBindings,
 ) -> Result<String, Failure> {
+    for cue in cues {
+        super::semantics::validate(format, cue)?;
+    }
     match format {
         CaptionSidecarFormat::Srt | CaptionSidecarFormat::WebVtt => plain::render(format, cues),
         CaptionSidecarFormat::Ass => ass::render(cues, width, height, bindings),

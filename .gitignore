@@ -13,12 +13,16 @@ Thumbs.db
 
 # Miscellaneous build artifacts
 demo-mix/
+*.profraw
+__pycache__/
+*.py[cod]
 
 # Rendered output
 /output.*
 /examples-preview/
 /examples-preview.staging.*/
 /examples-preview.previous.*/
+/examples/**/.inspect*.json
 .veac-source.lock
 
 # IDE

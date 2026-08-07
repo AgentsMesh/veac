@@ -9,7 +9,7 @@ fn public_contract_schemas_are_strict_deterministic_objects() {
     for (schema, required) in [
         (
             artifact_descriptor_json_schema().unwrap(),
-            &["kind", "producer", "parameters"][..],
+            &["producer", "parameters"][..],
         ),
         (
             build_manifest_json_schema().unwrap(),

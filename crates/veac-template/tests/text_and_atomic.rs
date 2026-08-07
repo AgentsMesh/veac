@@ -33,6 +33,7 @@ fn text_override_and_all_template_flags_clear_atomically() {
         original_scale
     );
     assert_eq!(media.replaceable, None);
+    assert_eq!(title.replaceable, None);
     assert!(!title.template_editable_text);
     assert!(matches!(&title.source, ClipSource::Text { text, .. } if text == "Published title"));
     assert!(project.project.materials[0].source != output.project.materials[0].source);
@@ -51,6 +52,7 @@ fn omitted_optional_text_keeps_default_but_clears_the_flag() {
     let output = apply(&project, &batch);
     let title = clip(&output, "itm_title");
     assert!(matches!(&title.source, ClipSource::Text { text, .. } if text == "Default title"));
+    assert_eq!(title.replaceable, None);
     assert!(!title.template_editable_text);
 }
 
@@ -94,5 +96,20 @@ fn text_only_template_is_a_valid_atomic_proposal() {
     );
     let title = clip(&output, "itm_title");
     assert!(matches!(&title.source, ClipSource::Text { text, .. } if text == "Text only"));
+    assert_eq!(title.replaceable, None);
     assert!(!title.template_editable_text);
+}
+
+#[test]
+fn locked_text_slot_is_not_a_fill_target() {
+    let mut project = project(FillMode::FitDuration, true);
+    project.project.sequences[0].tracks[0].clips[0].replaceable = None;
+    project.project.sequences[0].tracks[1].clips[0].template_editable_text = false;
+    validate(&project).unwrap();
+    let mut request = request(&project, video(six_seconds(), 1080, 1920));
+    request.media_bindings.clear();
+    assert_eq!(
+        error_kind(&project, &request),
+        veac_template::TemplateErrorKind::NoTemplateTargets
+    );
 }

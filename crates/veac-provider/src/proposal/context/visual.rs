@@ -72,6 +72,6 @@ pub struct RetouchEffectApplication {
 pub struct RetouchControlApplication {
     pub control: String,
     pub effect_id: veac_ir::EffectId,
-    pub effect_parameter: String,
+    pub effect_parameter: veac_ir::EffectParameter,
     pub keyframe_id_prefix: String,
 }

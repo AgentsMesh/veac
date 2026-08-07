@@ -7,7 +7,8 @@ prepare_preview_fixture_dirs() {
   mkdir -p "$entry/project" "$entry/rendered" "$(example_preview_plan_dir "$entry")"
   source=$(example_authoring_source "$entry")
   if [[ ! -f $source ]]; then
-    printf 'project fixture {}\n' >"$source"
+    printf '%s\n' 'fn main(context: Context) -> Project {' \
+      '  project(identifier("fixture"), project_settings(600))' '}' >"$source"
   fi
 }
 

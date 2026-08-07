@@ -1,15 +1,34 @@
+mod body;
+mod declaration;
+mod expression;
+mod fragment;
 mod payload;
+mod precondition;
+mod statement;
+mod structural;
 
 use super::{
-    valid_sha256, validate_module_path, ExpressionSite, SourceEditBatch, SourceEditError,
-    SourceEditOperation, SourceNodeRef, SourcePrecondition, SourceRevision,
-    MAX_SOURCE_EDIT_OPERATIONS, MAX_SOURCE_EDIT_PRECONDITIONS,
-    MAX_SOURCE_EDIT_SINGLE_EXPRESSION_BYTES, SOURCE_EDIT_SCHEMA, SOURCE_EDIT_SCHEMA_VERSION,
+    valid_sha256, validate_module_path, BodySite, DeclarationSite, ExpressionSite, SourceEditBatch,
+    SourceEditError, SourceEditOperation, SourceNodeRef, SourceRevision, StatementSite,
+    MAX_SOURCE_EDIT_OPERATIONS, MAX_SOURCE_EDIT_PRECONDITIONS, SOURCE_EDIT_SCHEMA,
+    SOURCE_EDIT_SCHEMA_VERSION,
 };
 
 pub trait SourceSnapshot {
     fn node_exists(&self, target: &SourceNodeRef) -> bool;
     fn expression_source(&self, target: &SourceNodeRef, site: &ExpressionSite) -> Option<&str>;
+    fn statement_source(&self, target: &SourceNodeRef, site: &StatementSite) -> Option<&str>;
+    fn body_source(&self, target: &SourceNodeRef, site: BodySite) -> Option<&str>;
+    fn declaration_source(&self, target: &SourceNodeRef, site: DeclarationSite) -> Option<&str>;
+    fn top_level_declaration_source(&self, _target: &SourceNodeRef) -> Option<&str> {
+        None
+    }
+    fn import_exists(&self, _target: &super::SourceImportRef) -> bool {
+        false
+    }
+    fn import_path(&self, _target: &super::SourceImportRef) -> Option<&str> {
+        None
+    }
 }
 
 pub fn validate_source_edit_contract(batch: &SourceEditBatch) -> Result<(), SourceEditError> {
@@ -44,7 +63,7 @@ pub fn validate_source_edit_contract(batch: &SourceEditBatch) -> Result<(), Sour
     }
     validate_digest(&batch.base_revision)?;
     for precondition in &batch.preconditions {
-        validate_precondition(precondition)?;
+        precondition::validate(precondition)?;
     }
     for operation in &batch.operations {
         validate_operation(operation)?;
@@ -66,34 +85,7 @@ pub fn validate_source_edit_batch(
             actual: current.source_graph_sha256.clone(),
         });
     }
-    for (index, precondition) in batch.preconditions.iter().enumerate() {
-        let satisfied = match precondition {
-            SourcePrecondition::NodeExists { target } => snapshot.node_exists(target),
-            SourcePrecondition::NodeAbsent { target } => !snapshot.node_exists(target),
-            SourcePrecondition::ExpressionEquals {
-                target,
-                site,
-                expression,
-            } => snapshot.expression_source(target, site) == Some(expression.source.as_str()),
-        };
-        if !satisfied {
-            return Err(SourceEditError::PreconditionFailed { index });
-        }
-    }
-    Ok(())
-}
-
-fn validate_precondition(value: &SourcePrecondition) -> Result<(), SourceEditError> {
-    match value {
-        SourcePrecondition::NodeExists { target } | SourcePrecondition::NodeAbsent { target } => {
-            validate_target(target)
-        }
-        SourcePrecondition::ExpressionEquals {
-            target,
-            site,
-            expression,
-        } => validate_expression_target(target, site, &expression.source),
-    }
+    precondition::require_satisfied(batch, snapshot)
 }
 
 pub(super) fn validate_operation(value: &SourceEditOperation) -> Result<(), SourceEditError> {
@@ -102,67 +94,45 @@ pub(super) fn validate_operation(value: &SourceEditOperation) -> Result<(), Sour
             target,
             site,
             expression,
-        } => validate_expression_target(target, site, &expression.source),
+        } => expression::validate(target, site, &expression.source),
+        SourceEditOperation::SetStatement {
+            target,
+            site,
+            statement,
+        } => statement::validate(target, site, &statement.source),
+        SourceEditOperation::SetBody { target, site, body } => {
+            body::validate(target, *site, &body.source)
+        }
+        SourceEditOperation::SetDeclaration {
+            target,
+            site,
+            declaration,
+        } => declaration::validate(target, *site, &declaration.source),
+        SourceEditOperation::SetTopLevelDeclaration {
+            target,
+            declaration,
+        } => structural::validate_declaration_target(target)
+            .and_then(|_| structural::validate_declaration_source(&declaration.source)),
+        SourceEditOperation::InsertDeclaration {
+            module,
+            anchor,
+            declaration,
+        } => structural::validate_module_anchor(module, anchor)
+            .and_then(|_| structural::validate_declaration_source(&declaration.source)),
+        SourceEditOperation::RemoveDeclaration { target } => {
+            structural::validate_declaration_target(target)
+        }
+        SourceEditOperation::InsertImport {
+            module,
+            anchor,
+            import,
+        } => structural::validate_module_anchor(module, anchor)
+            .and_then(|_| structural::validate_import_source(import)),
+        SourceEditOperation::RemoveImport { target } => structural::validate_import_target(target),
     }
 }
 
-fn validate_expression_target(
-    target: &SourceNodeRef,
-    site: &ExpressionSite,
-    expression: &str,
-) -> Result<(), SourceEditError> {
-    validate_target(target)?;
-    if !site.accepts_target(target) {
-        return Err(SourceEditError::IncompatibleExpressionSite);
-    }
-    if site
-        .name()
-        .is_some_and(|value| !crate::name::is_name(value))
-    {
-        return Err(SourceEditError::InvalidNodeId(
-            site.name().unwrap_or_default().to_owned(),
-        ));
-    }
-    if expression.trim().is_empty() || expression.len() > MAX_SOURCE_EDIT_SINGLE_EXPRESSION_BYTES {
-        return Err(SourceEditError::InvalidExpression(
-            "source must contain 1..65536 bytes".to_owned(),
-        ));
-    }
-    if expression.contains('\0') {
-        return Err(SourceEditError::InvalidExpression(
-            "source must not contain NUL".to_owned(),
-        ));
-    }
-    if matches!(
-        site,
-        ExpressionSite::PresetTextStyleField { .. }
-            | ExpressionSite::PresetTextLayoutField { .. }
-            | ExpressionSite::PresetColorField { .. }
-            | ExpressionSite::PresetAudioProcessorField { .. }
-            | ExpressionSite::PresetAudioEqBandField { .. }
-            | ExpressionSite::PresetDeliveryField { .. }
-    ) {
-        crate::program::validate_expression_fragment(expression)
-            .map_err(SourceEditError::InvalidExpression)?;
-    } else {
-        validate_pure_expression(expression)?;
-    }
-    Ok(())
-}
-
-fn validate_pure_expression(source: &str) -> Result<(), SourceEditError> {
-    let source = source.trim();
-    let expression = source
-        .strip_prefix("${")
-        .and_then(|value| value.strip_suffix('}'))
-        .unwrap_or(source)
-        .trim();
-    crate::program::expression::referenced_symbols(expression)
-        .map(|_| ())
-        .map_err(|error| SourceEditError::InvalidExpression(error.to_string()))
-}
-
-fn validate_target(target: &SourceNodeRef) -> Result<(), SourceEditError> {
+pub(super) fn validate_target(target: &SourceNodeRef) -> Result<(), SourceEditError> {
     validate_module_path(&target.module)?;
     if let Some(value) = target
         .path

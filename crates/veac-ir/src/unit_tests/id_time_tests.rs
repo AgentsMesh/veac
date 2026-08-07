@@ -50,6 +50,37 @@ fn typed_ids_reject_wrong_prefix_empty_invalid_and_long_suffixes() {
 }
 
 #[test]
+fn typed_ids_construct_fixed_digest_identities_infallibly() {
+    macro_rules! assert_digest {
+        ($type:ty, $prefix:literal) => {{
+            let id = <$type>::from_digest([0xab; 32]);
+            assert_eq!(id.as_str(), format!("{}{}", $prefix, "ab".repeat(32)));
+            assert!(id.is_valid());
+        }};
+    }
+    assert_digest!(ProjectId, "prj_");
+    assert_digest!(MaterialId, "med_");
+    assert_digest!(SequenceId, "seq_");
+    assert_digest!(TrackId, "trk_");
+    assert_digest!(ItemId, "itm_");
+    assert_digest!(ApplyId, "apl_");
+    assert_digest!(ApplyStageId, "aps_");
+    assert_digest!(MulticamGroupId, "mcg_");
+    assert_digest!(MulticamAngleId, "ang_");
+    assert_digest!(EffectId, "fx_");
+    assert_digest!(AudioProcessorId, "aud_");
+    assert_digest!(EqBandId, "eqb_");
+    assert_digest!(KeyframeId, "kf_");
+    assert_digest!(RenderConfigId, "out_");
+    assert_digest!(DeliverableId, "dlv_");
+    assert_digest!(HlsRenditionId, "rnd_");
+    assert_digest!(OperationId, "op_");
+    assert_digest!(AnnotationId, "ann_");
+    assert_digest!(RelationId, "rel_");
+    assert_digest!(BusId, "bus_");
+}
+
+#[test]
 fn rational_time_arithmetic_and_order_are_exact() {
     let half = RationalTime::new(300, 600).unwrap();
     let same_half = RationalTime::new(1, 2).unwrap();

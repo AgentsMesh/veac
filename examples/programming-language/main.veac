@@ -1,72 +1,83 @@
 import "./brand.veac" as brand;
+import "./showcase.veac" as showcase;
 
-const time section_duration = brand.card_duration;
-const text second_title = "同一组件" + "，再次实例化";
+input parameter base_span: time;
+input parameter locale: brand.Locale;
+input asset_metadata canvas_width: length;
+input analysis accent_color: color;
 
-instance sequence first-card from brand.title_card {
-  bind title "模块、表达式与组件";
-  fill backdrop {
-    source generated gradient linear {
-      from 0% 0%; to 100% 100%;
-      stop 0% #123047ff; stop 100% #2b6574ff;
-    }
+struct LabelFormatter {
+  operation: fn(text) -> text effect pure,
+}
+
+// 候选时长符合预览窗口时，短路逻辑不会执行零除路径。
+fn timeline_span(base: time) -> time {
+  let span = brand.card_span(base, 500ms);
+  let supported = span >= 2s && span <= 3s;
+  {
+    let span = if supported || ratio_is_visible(base, 0s) { span } else { 2s };
+    span
   }
 }
 
-instance sequence second-card from brand.title_card {
-  bind title second_title;
-  bind duration max(2s, section_duration);
-  fill backdrop {
-    source generated gradient radial {
-      center 50% 50%; radius 72%;
-      stop 0% #7b315dff; stop 100% #25182dff;
-    }
-  }
+fn ratio_is_visible(value: time, divisor: time) -> bool { value / divisor >= 1.0 }
+
+fn cards(duration: time, accent: color) -> list<brand.Card> {
+  [brand.first_card(duration), brand.second_card(duration, accent)]
 }
 
-project programming-language {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+fn format_label(value: text, locale: brand.Locale) -> text {
+  let formatters = [LabelFormatter {
+    operation: fn(label: text) -> text effect pure { brand.component_prefix(locale) + label },
+  }];
+  fold(formatters, value, fn(total: text, formatter: LabelFormatter) -> text effect pure {
+    formatter.operation(total)
+  })
+}
 
-  sequence main {
-    layer visual cards {
-      item first {
-        source sequence sequence first-card;
-        record { at 0s; duration ${section_duration}; }
-      }
-      item second {
-        source sequence sequence second-card;
-        record { at ${section_duration}; duration ${section_duration}; }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("example-font"),
+    resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let duration = timeline_span(base_span);
+  let first = brand.first_card(duration);
+  var first_label = first.title("：");
+  set first_label = format_label(first_label, locale);
+  let formatted_first_label = first_label;
+  let titles = map(cards(duration, accent_color), fn(card: brand.Card) -> text effect pure {
+    card.title("：")
+  });
+  let summary = fold(titles, "", fn(total: text, value: text) -> text effect pure {
+    if total == "" { value } else { total + " / " + value }
+  });
+  let backdrops = map(
+    cards(duration, accent_color),
+    fn(card: brand.Card) -> Item effect emit { brand.animated(card) }
+  );
+  let copies = map(cards(duration, accent_color), fn(card: brand.Card) -> Item effect emit {
+    let label = if card.at == 0s { formatted_first_label } else { card.title("：") };
+    brand.copy(card, font, label)
+  });
+  let backdrop_layer = visual_layer(
+    identifier("backdrops"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_items(backdrops);
+  let title_layer = visual_layer(
+    identifier("titles"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_items(copies);
+  let timeline = sequence(
+    identifier("main"), "可编程语言能力：" + summary,
+    sequence_settings(canvas(canvas_width, 720px), frame_rate(30, 1), 48000)
+  ).with_layers([backdrop_layer, title_layer]);
+  let output = showcase.video(
+    timeline, canvas(canvas_width, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("programming-language"), project_settings(600))
+    .with_resources([font])
+    .with_sequences([timeline])
+    .entry(timeline)
+    .with_deliveries([output])
 }

@@ -69,15 +69,9 @@ fn validate_one(
             ResolvedApplyOperation::Color { pipeline } => {
                 color::validate_pipeline(check, plan, &apply.id.to_string(), pipeline);
             }
-            ResolvedApplyOperation::Effect {
-                effect_type,
-                parameters,
-            } => effects::validate_apply_effect(
-                check,
-                &apply.id.to_string(),
-                effect_type,
-                parameters,
-            ),
+            ResolvedApplyOperation::Effect { effect } => {
+                effects::validate_apply_effect(check, &apply.id.to_string(), effect)
+            }
         }
     }
 }

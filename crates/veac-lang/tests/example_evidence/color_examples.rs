@@ -1,12 +1,17 @@
-use veac_ir::{Clip, ClipSource, ColorStage, Generator, Gradient, LutInterpolation};
+use veac_ir::{
+    Clip, ClipSource, ColorStage, Generator, Gradient, LutInterpolation, MaterialId, MaterialKind,
+    ProjectEnvelope,
+};
 
-use crate::support::{clips, lower_example};
+use crate::support::{clip_by_key, lower_example};
 
 #[test]
 fn basic_color_grade_compares_the_same_source_before_and_after() {
     let envelope = lower_example("color-grade/main.veac");
-    let clips: Vec<_> = clips(&envelope).collect();
-    assert_eq!(clips.len(), 2);
+    let clips = [
+        clip_by_key(&envelope, "reference"),
+        clip_by_key(&envelope, "balanced"),
+    ];
     assert_eq!(clips[0].source, clips[1].source);
     assert!(clips[0]
         .visual
@@ -28,27 +33,8 @@ fn basic_color_grade_compares_the_same_source_before_and_after() {
 #[test]
 fn advanced_color_segments_are_independently_attributable() {
     let envelope = lower_example("advanced-color/main.veac");
-    let main = sequence(&envelope, "seq_main");
-    let segments = &main
-        .tracks
-        .iter()
-        .find(|track| track.id.as_str() == "trk_comparisons")
-        .expect("advanced-color comparison track")
-        .clips;
-    assert_eq!(
-        segments
-            .iter()
-            .map(|clip| clip.id.as_str())
-            .collect::<Vec<_>>(),
-        vec![
-            "itm_reference",
-            "itm_hsl-only",
-            "itm_curves-only",
-            "itm_wheels-only",
-            "itm_full-grade",
-            "itm_tone-curve",
-        ]
-    );
+    let segments = ["reference", "hsl", "curves", "wheels", "full", "tone"]
+        .map(|key| clip_by_key(&envelope, key));
     assert_eq!(
         segments
             .iter()
@@ -58,16 +44,15 @@ fn advanced_color_segments_are_independently_attributable() {
             ))
             .collect::<Vec<_>>(),
         vec![
-            (0, 1_000),
-            (1_000, 1_000),
-            (2_000, 1_000),
-            (3_000, 1_000),
-            (4_000, 2_000),
-            (6_000, 2_000),
+            (0, 600),
+            (600, 600),
+            (1_200, 600),
+            (1_800, 600),
+            (2_400, 1_200),
+            (3_600, 1_200),
         ]
     );
-    assert!(matches!(&segments[0].source,
-        ClipSource::Sequence { sequence_id } if sequence_id.as_str() == "seq_color-card"));
+    assert!(matches!(&segments[0].source, ClipSource::Generated { .. }));
     assert!(segments
         .iter()
         .all(|clip| clip.source == segments[0].source));
@@ -79,23 +64,23 @@ fn advanced_color_segments_are_independently_attributable() {
         .is_none());
 
     assert!(
-        matches!(stages(&segments[1]), [ColorStage::Hsl { adjustment }]
+        matches!(stages(segments[1]), [ColorStage::Hsl { adjustment }]
         if adjustment.hue_degrees != 0.0
             && adjustment.saturation != 0.0
             && adjustment.lightness != 0.0)
     );
     assert!(
-        matches!(stages(&segments[2]), [ColorStage::Curves { curves }]
+        matches!(stages(segments[2]), [ColorStage::Curves { curves }]
         if curves.luma.is_some() && curves.red.is_some())
     );
     assert!(
-        matches!(stages(&segments[3]), [ColorStage::Wheels { wheels }]
+        matches!(stages(segments[3]), [ColorStage::Wheels { wheels }]
         if wheels.lift.blue != 0.0
             && wheels.gamma.red != 0.0
             && wheels.gain.red != 0.0)
     );
 
-    let full = stages(&segments[4]);
+    let full = stages(segments[4]);
     assert_eq!(full.len(), 6);
     assert!(matches!(&full[0], ColorStage::Basic { adjustment }
         if adjustment.exposure_stops != 0.0
@@ -111,11 +96,11 @@ fn advanced_color_segments_are_independently_attributable() {
     assert!(matches!(&full[3], ColorStage::Curves { .. }));
     assert!(matches!(&full[4], ColorStage::Wheels { .. }));
     assert!(matches!(&full[5], ColorStage::Lut { application }
-        if application.material_id.as_str() == "med_cinematic"
+        if material_kind(&envelope, &application.material_id) == MaterialKind::Lut3d
             && application.interpolation == LutInterpolation::Tetrahedral));
     assert!(
-        matches!(stages(&segments[5]), [ColorStage::Lut { application }]
-        if application.material_id.as_str() == "med_tone-curve"
+        matches!(stages(segments[5]), [ColorStage::Lut { application }]
+        if material_kind(&envelope, &application.material_id) == MaterialKind::Lut1d
             && application.interpolation == LutInterpolation::Linear)
     );
 }
@@ -123,23 +108,10 @@ fn advanced_color_segments_are_independently_attributable() {
 #[test]
 fn advanced_color_places_translucent_input_over_a_contrast_reference() {
     let envelope = lower_example("advanced-color/main.veac");
-    let card = sequence(&envelope, "seq_color-card");
-    let card_stops = linear_stops(&card.tracks[0].clips[0]);
+    let card_stops = linear_stops(clip_by_key(&envelope, "reference"));
     assert!(card_stops.iter().all(|stop| stop.color.alpha == 179));
 
-    let main = sequence(&envelope, "seq_main");
-    let background = &main
-        .tracks
-        .iter()
-        .find(|track| track.id.as_str() == "trk_background")
-        .expect("alpha contrast background")
-        .clips;
-    assert_eq!(
-        background.len(),
-        1,
-        "alpha proof must use one background source"
-    );
-    let stops = linear_stops(&background[0]);
+    let stops = linear_stops(clip_by_key(&envelope, "alpha-check"));
     assert!(stops.iter().all(|stop| stop.color.alpha == 255));
     assert!(stops.iter().map(|stop| stop.color.red).min().unwrap() <= 5);
     assert!(stops.iter().map(|stop| stop.color.red).max().unwrap() >= 250);
@@ -156,13 +128,14 @@ fn stages(clip: &Clip) -> &[ColorStage] {
         .stages
 }
 
-fn sequence<'a>(envelope: &'a veac_ir::ProjectEnvelope, id: &str) -> &'a veac_ir::Sequence {
+fn material_kind(envelope: &ProjectEnvelope, id: &MaterialId) -> MaterialKind {
     envelope
         .project
-        .sequences
+        .materials
         .iter()
-        .find(|sequence| sequence.id.as_str() == id)
-        .unwrap_or_else(|| panic!("missing sequence {id}"))
+        .find(|material| material.id == *id)
+        .unwrap_or_else(|| panic!("missing color material {id}"))
+        .kind
 }
 
 fn linear_stops(clip: &Clip) -> &[veac_ir::GradientStop] {

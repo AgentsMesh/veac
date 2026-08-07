@@ -49,9 +49,6 @@ fn structure_edits_cover_insert_set_relink_and_reference_safe_remove() {
     assert_eq!(inserted.project.materials[0].id, material.id);
     assert_eq!(inserted.project.render_configs[0].id, output.id);
 
-    material
-        .metadata
-        .insert("role".to_owned(), serde_json::json!("ui"));
     output.raster.as_mut().unwrap().width = 720;
     let settings = SequenceSettings {
         width: 720,

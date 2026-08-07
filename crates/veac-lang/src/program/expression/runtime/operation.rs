@@ -1,27 +1,33 @@
 use std::ops::Range;
 
-use crate::program::expression::ast::BinaryOperator;
+use crate::program::expression::core::ArithmeticOperator;
 use crate::program::expression::{
-    ExactNumber, ExpressionError, Value, ValueKind, MAX_TEXT_VALUE_BYTES,
+    ExactNumber, ExecutionBudget, ExpressionError, PrimitiveType, Value, MAX_TEXT_VALUE_BYTES,
 };
 
 pub(super) fn apply(
-    operator: BinaryOperator,
+    execution: &ExecutionBudget,
+    operator: ArithmeticOperator,
     left: Value,
     right: Value,
     span: Range<usize>,
 ) -> Result<Value, ExpressionError> {
     match operator {
-        BinaryOperator::Add => add(left, right, span),
-        BinaryOperator::Subtract => same_kind(left, right, span, ExactNumber::checked_sub),
-        BinaryOperator::Multiply => multiply(left, right, span),
-        BinaryOperator::Divide => divide(left, right, span),
+        ArithmeticOperator::Add => add(execution, left, right, span),
+        ArithmeticOperator::Subtract => same_kind(left, right, span, ExactNumber::checked_sub),
+        ArithmeticOperator::Multiply => multiply(left, right, span),
+        ArithmeticOperator::Divide => divide(left, right, span),
     }
 }
 
-fn add(left: Value, right: Value, span: Range<usize>) -> Result<Value, ExpressionError> {
+fn add(
+    execution: &ExecutionBudget,
+    left: Value,
+    right: Value,
+    span: Range<usize>,
+) -> Result<Value, ExpressionError> {
     match (left, right) {
-        (Value::Text(mut left), Value::Text(right)) => {
+        (Value::Text(left), Value::Text(right)) => {
             let length = left
                 .len()
                 .checked_add(right.len())
@@ -33,12 +39,19 @@ fn add(left: Value, right: Value, span: Range<usize>) -> Result<Value, Expressio
                     span,
                 ));
             }
-            left.push_str(&right);
-            Ok(Value::Text(left))
+            execution.reserve_value_bytes(length, span.clone())?;
+            let mut joined = String::with_capacity(length);
+            joined.push_str(&left);
+            joined.push_str(&right);
+            Ok(Value::Text(joined.into()))
         }
         (left, right) => same_kind(left, right, span, ExactNumber::checked_add),
     }
 }
+
+#[cfg(test)]
+#[path = "operation/tests.rs"]
+mod tests;
 
 fn same_kind(
     left: Value,
@@ -47,21 +60,35 @@ fn same_kind(
     operation: fn(ExactNumber, ExactNumber) -> Option<ExactNumber>,
 ) -> Result<Value, ExpressionError> {
     let (left_number, right_number) = numeric_pair(&left, &right, span.clone())?;
-    if left.kind() != right.kind() {
+    let left_kind = left.primitive_kind().expect("numeric values are primitive");
+    let right_kind = right
+        .primitive_kind()
+        .expect("numeric values are primitive");
+    if left_kind != right_kind {
         return Err(type_error(
             format!("cannot combine {} and {}", left.kind(), right.kind()),
             span,
         ));
     }
-    finish(left.kind(), operation(left_number, right_number), span)
+    finish(left_kind, operation(left_number, right_number), span)
 }
 
 fn multiply(left: Value, right: Value, span: Range<usize>) -> Result<Value, ExpressionError> {
     let (left_number, right_number) = numeric_pair(&left, &right, span.clone())?;
-    let kind = match (left.kind(), right.kind()) {
-        (ValueKind::Scalar, kind) | (kind, ValueKind::Scalar) => kind,
-        (ValueKind::Percent, ValueKind::Percent) => ValueKind::Percent,
-        (ValueKind::Percent, kind) | (kind, ValueKind::Percent) if kind.is_numeric() => kind,
+    let left_kind = left.primitive_kind().expect("numeric values are primitive");
+    let right_kind = right
+        .primitive_kind()
+        .expect("numeric values are primitive");
+    if (left_kind == PrimitiveType::Integer) != (right_kind == PrimitiveType::Integer) {
+        return Err(type_error("int arithmetic requires two int operands", span));
+    }
+    let kind = match (left_kind, right_kind) {
+        (PrimitiveType::Integer, PrimitiveType::Integer) => PrimitiveType::Integer,
+        (PrimitiveType::Scalar, kind) | (kind, PrimitiveType::Scalar) => kind,
+        (PrimitiveType::Percent, PrimitiveType::Percent) => PrimitiveType::Percent,
+        (PrimitiveType::Percent, kind) | (kind, PrimitiveType::Percent) if kind.is_numeric() => {
+            kind
+        }
         _ => {
             return Err(type_error(
                 "multiplication requires a scalar or percent",
@@ -70,8 +97,8 @@ fn multiply(left: Value, right: Value, span: Range<usize>) -> Result<Value, Expr
         }
     };
     let mut result = left_number.checked_mul(right_number);
-    if left.kind() == ValueKind::Percent && right.kind() != ValueKind::Scalar
-        || right.kind() == ValueKind::Percent && left.kind() != ValueKind::Scalar
+    if left_kind == PrimitiveType::Percent && right_kind != PrimitiveType::Scalar
+        || right_kind == PrimitiveType::Percent && left_kind != PrimitiveType::Scalar
     {
         result = result.and_then(|value| value.checked_div(ExactNumber::integer(100)));
     }
@@ -87,13 +114,20 @@ fn divide(left: Value, right: Value, span: Range<usize>) -> Result<Value, Expres
             span,
         ));
     }
-    let (kind, divisor) = if left.kind() == right.kind() {
-        (ValueKind::Scalar, right_number)
-    } else if right.kind() == ValueKind::Scalar {
-        (left.kind(), right_number)
-    } else if right.kind() == ValueKind::Percent {
+    let left_kind = left.primitive_kind().expect("numeric values are primitive");
+    let right_kind = right
+        .primitive_kind()
+        .expect("numeric values are primitive");
+    if (left_kind == PrimitiveType::Integer) != (right_kind == PrimitiveType::Integer) {
+        return Err(type_error("int arithmetic requires two int operands", span));
+    }
+    let (kind, divisor) = if left_kind == right_kind {
+        (PrimitiveType::Scalar, right_number)
+    } else if right_kind == PrimitiveType::Scalar {
+        (left_kind, right_number)
+    } else if right_kind == PrimitiveType::Percent {
         let ratio = right_number.checked_div(ExactNumber::integer(100));
-        (left.kind(), ratio.ok_or_else(|| overflow(span.clone()))?)
+        (left_kind, ratio.ok_or_else(|| overflow(span.clone()))?)
     } else {
         return Err(type_error(
             format!("cannot divide {} by {}", left.kind(), right.kind()),
@@ -121,7 +155,7 @@ fn numeric_pair(
 }
 
 fn finish(
-    kind: ValueKind,
+    kind: PrimitiveType,
     value: Option<ExactNumber>,
     span: Range<usize>,
 ) -> Result<Value, ExpressionError> {

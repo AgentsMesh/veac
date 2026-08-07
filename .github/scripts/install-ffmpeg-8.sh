@@ -24,6 +24,7 @@ trap - EXIT
 
 for command in ffmpeg ffprobe; do
   wrapper="$BIN/$command"
+  # shellcheck disable=SC2016 # The generated wrapper expands these variables at runtime.
   {
     printf '%s\n' '#!/bin/bash' 'set -euo pipefail'
     printf '%s\n' 'root="${RUNNER_TEMP:?RUNNER_TEMP is required}/ffmpeg-8-root"'

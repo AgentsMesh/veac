@@ -17,7 +17,7 @@ pub(crate) fn material(
         identity: None,
         stream_intent: StreamIntent { video, audio },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

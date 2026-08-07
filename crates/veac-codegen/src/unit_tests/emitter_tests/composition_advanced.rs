@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use veac_codegen::emitter::CodegenErrorKind;
@@ -138,11 +137,9 @@ pub(super) fn blur_stage(id: &str, range: TimeRange) -> ResolvedApplyStage {
         id: ApplyStageId::new(id).unwrap(),
         active_range: range,
         operation: ResolvedApplyOperation::Effect {
-            effect_type: "video.blur".to_owned(),
-            parameters: BTreeMap::from([(
-                "radius".to_owned(),
-                ParameterValue::Number { value: 2.0 },
-            )]),
+            effect: Effect::VideoBlur {
+                radius: Animatable::constant(2.0),
+            },
         },
     }
 }

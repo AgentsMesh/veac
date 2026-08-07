@@ -1,29 +1,22 @@
-use super::{NumberLiteral, Span, Spanned};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TemplateSlotDecl {
-    Media {
-        accepts: Spanned<TemplateMediaKindDecl>,
-        fill: Spanned<TemplateFillDecl>,
-        label: Spanned<String>,
-        minimum_source_duration: Option<NumberLiteral>,
-        span: Span,
-    },
-    Text {
-        span: Span,
-    },
+super::define_syntax_tokens! {
+    pub enum TemplateSlotKindDecl {
+        Text => "text",
+        Media => "media",
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TemplateMediaKindDecl {
-    Video,
-    Image,
-    VideoOrImage,
+super::define_syntax_tokens! {
+    pub enum TemplateMediaKindDecl {
+        Video => "video",
+        Image => "image",
+        VideoOrImage => "video-or-image",
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TemplateFillDecl {
-    FitDuration,
-    TakeHead,
-    TakeCenter,
+super::define_syntax_tokens! {
+    pub enum TemplateFillDecl {
+        FitDuration => "fit-duration",
+        TakeHead => "take-head",
+        TakeCenter => "take-center",
+    }
 }

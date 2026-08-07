@@ -10,6 +10,10 @@ fn every_structural_dimension_has_a_stable_diagnostic() {
         keyframes: MAX_TOTAL_KEYFRAMES + 1,
         source_curve_segments: MAX_TOTAL_SOURCE_CURVE_SEGMENTS + 1,
         caption_cues: MAX_TOTAL_CAPTION_CUES + 1,
+        temporal_programs: MAX_TOTAL_TEMPORAL_PROGRAMS + 1,
+        temporal_bindings: MAX_TOTAL_TEMPORAL_BINDINGS + 1,
+        temporal_nodes: MAX_TOTAL_TEMPORAL_NODES + 1,
+        temporal_provenance: MAX_TOTAL_TEMPORAL_PROVENANCE + 1,
     };
     let mut validator = Validator::default();
 
@@ -30,6 +34,10 @@ fn every_structural_dimension_has_a_stable_diagnostic() {
             "BUDGET_KEYFRAMES",
             "BUDGET_SOURCE_CURVE_SEGMENTS",
             "BUDGET_CAPTION_CUES",
+            "BUDGET_TEMPORAL_PROGRAMS",
+            "BUDGET_TEMPORAL_BINDINGS",
+            "BUDGET_TEMPORAL_NODES",
+            "BUDGET_TEMPORAL_PROVENANCE",
         ]
     );
 }
@@ -37,13 +45,14 @@ fn every_structural_dimension_has_a_stable_diagnostic() {
 #[test]
 fn usage_counts_all_animation_owners_with_saturating_totals() {
     let project = crate::test_support::sample_project();
-    let actual = usage(&project.project);
+    let actual = usage(&project.project, &project.temporal);
     assert_eq!(actual.tracks, 2);
     assert_eq!(actual.clips, 2);
     assert_eq!(actual.effects, 1);
     assert_eq!(actual.masks, 1);
     assert_eq!(actual.keyframes, 2);
     assert_eq!(actual.caption_cues, 1);
+    assert_eq!(actual.temporal_programs, 0);
 
     let mut saturated = RenderStructureUsage {
         tracks: u64::MAX,

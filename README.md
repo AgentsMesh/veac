@@ -5,43 +5,45 @@
 
 **Let AI agents edit videos by writing code, not clicking buttons.**
 
-VEAC is a declarative video-editing compiler designed for AI agents. The authoring language captures
-intent with closed primitives and source spans; canonical JSON is the execution IR. Historical source
+VEAC is a strongly typed, executable video-editing language designed for AI agents. `.veac` keeps
+programmable intent and source spans; canonical JSON is the backend/interchange IR. Historical source
 compatibility is not a design constraint.
 
 ```
-.veac -> typed authoring AST -> canonical JSON IR
-      -> ResolvedRenderPlan -> BackendBundle
-      -> BundleExecutor (FFmpeg/write actions)
+executable .veac -> typed HIR -> verified Core v10 -> bounded graph build
+                 -> frozen graph + temporal residualization -> canonical JSON IR
+canonical IR -> ResolvedRenderPlan -> BackendBundle -> verified execution
 ```
-
-By abstracting video editing into a simple, declarative text format, any AI agent with file I/O capabilities can become a video editor — no mouse, no timeline UI, just code.
 
 ## Quick Example
 
-```veac,compile
-project hello {
-  settings {
-    timebase 1/1000;
-    canvas 1920px by 1080px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+```veac
+animate visual-opacity on clip(@hello, @main, @picture, @background) {
+  clamp(progress * 2.0, 0.0, 1.0)
+}
 
-  sequence main {
-    layer visual picture {
-      item title {
-        source text {
-          content "Hello, VEAC";
-          style { font family "Inter"; size 72px; fill #ffffffff; }
-        }
-        record { at 0s; duration 4s; }
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let background = item(
+    identifier("background"), item_enabled(), during(0s, 4s),
+    source_generated(generator_solid(#0f766eff)), source_timing_native()
+  );
+  let state = track_state(
+    track_playback_enabled(), track_audio_audible(),
+    track_isolation_normal(), track_editing_unlocked()
+  );
+  let picture = visual_layer(
+    identifier("picture"), 0, placement_free(), state, track_routing_default()
+  ).with_item(background);
+  let timeline = sequence(
+    identifier("main"), "Hello, VEAC",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(picture);
+  project(identifier("hello"), project_settings(600))
+    .with_sequence(timeline).entry(timeline)
 }
 ```
+
+`main(Context) -> Project` is the only entry ABI; root `animate` declarations residualize approved dynamic leaves.
 
 ## Features
 
@@ -58,11 +60,13 @@ project hello {
   separation, TTS, and dubbing applications
 - Ordered color-space/HSL/curve/wheel/LUT/RGB-matrix processing, scopes, and evidence-bound color match
 - Stable typed IDs, separate record/source timing, rational project time, and canonical formatting
+- Executable modules, typed functions/closures, immutable collections, nominal structs/enums,
+  static methods, inferred Effect/Stage, and transactional Project graph construction
 - Strict canonical JSON, generated JSON Schema, reproducible hashes, and atomic typed edit batches
 - Typed replaceable video/image slots and editable text fields with identity-bound probes, exact
   duration/crop policies, complete versioned fill requests, and reviewable atomic edit proposals
-- Deterministic material identity/probe hydration with before/after observation checks and
-  backend-neutral resolved render plans
+- Deterministic material identity/probe hydration with an explicit `--material-root` execution
+  contract that keeps IR portable, before/after checks, and backend-neutral resolved render plans
 - Reproducible build manifests, identity-addressed packages, verified artifact caching, and relink
 - Typed multi-deliverable output for alpha/HDR and MXF/DNxHR video, PNG/JPEG/TIFF/EXR sequences,
   SRT/WebVTT/ASS sidecars, PCM/compressed stems, scopes, portable execution policy, and one/two-pass
@@ -95,7 +99,7 @@ curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | s
 Specify version:
 
 ```bash
-VEAC_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac/main/install.sh | env VEAC_VERSION=v0.1.0 sh
 ```
 
 ### Build from Source
@@ -104,28 +108,28 @@ VEAC_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/AgentsMesh/veac
 # Validated baseline: Rust 1.85.0 and FFmpeg/ffprobe 8.0
 git clone https://github.com/AgentsMesh/veac.git
 cd veac
-cargo install --path crates/veac-cli
+make install
 ```
 
 ## Quick Start
 
 ```bash
-veac check main.veac                              # Validate authoring source
-veac fmt main.veac --check                        # Enforce canonical formatting
-veac compile main.veac --emit-ir project.json     # Lower to canonical IR
+veac check main.veac                              # Execute and validate without media I/O
+veac fmt main.veac --check                        # Check canonical syntax-aware formatting
+mkdir -p build && veac build main.veac --material-root . --emit-ir build/project.json # Detached IR
 veac check-ir project.json                        # Validate canonical IR
 veac edit project.json edit-batch.json --dry-run  # Preview one atomic typed edit
 veac template propose project.json fill-request.json -o fill-edit.json # Fill typed slots
 veac caption import captions.srt --format srt -o captions.json # Loss-aware sidecar import
 veac otio export project.json -o timeline.otio --allow-lossy --loss-report otio-loss.json
-veac plan project.json --format json              # Inspect resolved plan
+veac plan build/project.json --material-root . --format json # Inspect detached IR
 veac manifest project.json -o build.json          # Capture reproducible dependencies
 veac package project.json --destination bundle    # Package reachable verified inputs
 veac package-bindings bundle -o bindings.json     # Restore verified package bindings
 veac relink project.json --search assets -o bindings.json     # Find SHA-256 matches
 veac artifact inspect .veac-artifacts <key>        # Revalidate one cache entry
 veac artifact materialize .veac-artifacts <key> artifact.bin # Copy verified payload
-veac render project.json                           # Render every authored deliverable
+veac render build/project.json --material-root .   # Resolve assets without relocating the IR
 veac probe assets/intro.mp4                       # Normalize media facts
 veac schema --contract project > project.schema.json # Emit a public contract schema
 ```
@@ -150,8 +154,7 @@ exact-delivery media postflight used for cache hits.
 
 ## Repository commands
 
-The root Makefile keeps the pinned development, test, coverage, and preview
-entrypoints in one place:
+The root Makefile keeps pinned development, test, coverage, and preview entrypoints in one place:
 
 ```bash
 make help
@@ -168,30 +171,26 @@ make serve-examples
 - [Getting Started](docs/getting-started.md)
 - [CLI Reference](docs/cli-reference.md)
 - [Language Reference](docs/language-reference/)
+- [Executable Build](docs/language-reference/executable-build.md)
 - [Architecture](docs/architecture.md)
 - [Editing Capability Matrix and Roadmap](docs/capability-matrix-roadmap.md)
 
 ## Examples
 
-Every checked-in example uses the current authoring language and passes format,
-lowering, and canonical validation. The [example catalog](examples/README.md)
-is the source of truth for mechanisms and generated previews; rendered artifacts
-live only in the ignored `examples-preview/` directory.
+Every example uses executable VEAC and passes build/canonical validation. The
+[example catalog](examples/README.md) owns mechanism coverage; rendered previews live only in the
+ignored `examples-preview/` directory.
 
 ## Why VEAC?
 
 AI agents excel at file processing — reading, writing, and transforming text. But video editing has traditionally required GUI interaction that agents simply cannot perform. VEAC solves this by turning video editing into a **file-processing problem**:
 
-- **Agent-first design**: The target syntax is typed, structured, declarative, and non-Turing-complete;
+- **Agent-first design**: The syntax is typed, structured, deterministic, and resource-bounded;
   stable IDs and checked edit batches let agents make small changes without rewriting a timeline
-- **Declarative**: Describe *what* the video should be, not *how* to process it — agents describe the desired outcome, VEAC handles the FFmpeg complexity
+- **Programmable**: Functions and domain primitives construct intent; VEAC owns canonical validation and backend lowering
 - **Verifiable**: `veac check` validates the file before rendering, giving agents fast feedback loops without waiting for video output
 - **Single source format**: `.veac` files are plain text — agents can read, write, diff, and version-control them with standard file tools
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
+MIT — see [LICENSE](LICENSE). Contributions follow [CONTRIBUTING.md](CONTRIBUTING.md).

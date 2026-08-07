@@ -1,0 +1,76 @@
+module {
+  fn h264() -> VideoOutput {
+    video_output(
+      video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+      video_crf(23), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_h264_high()), video_level_auto()
+    )
+  }
+
+  fn master() -> Deliverable {
+    deliverable_video(
+      identifier("master"), delivery_file("master.mp4"),
+      video_delivery(
+        container_mp4(), h264(),
+        embedded_audio_present(audio_output(audio_aac(), 48000, 2)),
+        true, pass_single(), hardware_software()
+      )
+    )
+  }
+
+  fn hd() -> HlsRendition {
+    hls_rendition(
+      identifier("hd"), canvas(1280px, 720px), 3000000, 3210000, 6000000,
+      hls_profile_present(hls_profile_high()), video_level_auto(),
+      video_color_unspecified(), b_frames_auto()
+    )
+  }
+
+  fn mobile() -> HlsRendition {
+    hls_rendition(
+      identifier("mobile"), canvas(640px, 360px), 1000000, 1100000, 2000000,
+      hls_profile_present(hls_profile_main()), video_level_auto(),
+      video_color_unspecified(), b_frames_auto()
+    )
+  }
+
+  export fn all(timeline: Sequence, captions: Layer) -> Delivery {
+    delivery(
+      identifier("master"), timeline,
+      raster_settings(canvas(1280px, 720px), frame_rate(30, 1), caption_burn_in()), [
+        master(),
+        deliverable_image_frames(
+          identifier("frames"), delivery_image_sequence("frame-%04d.png"), image_png(), 1
+        ),
+        deliverable_caption_sidecar(
+          identifier("transcript"), delivery_file("captions.vtt"),
+          caption_webvtt(), [captions]
+        ),
+        deliverable_audio_stem(
+          identifier("master-audio"), delivery_file("master.wav"), stem_wav(),
+          audio_output(audio_pcm_s24le(), 48000, 2), mix_master()
+        ),
+        deliverable_scope(
+          identifier("video-waveform"), delivery_file("video-waveform.png"),
+          scope_waveform(), 1s, canvas(1280px, 720px), image_png()
+        ),
+        deliverable_mp3(
+          identifier("podcast"), delivery_file("podcast.mp3"), mix_master(),
+          192000, 48000, channel_stereo()
+        ),
+        deliverable_gif(
+          identifier("loop-preview"), delivery_file("loop-preview.gif"),
+          gif_forever(), gif_dither_sierra2()
+        ),
+        deliverable_still(
+          identifier("cover"), delivery_file("cover.png"), 2s, image_png()
+        ),
+        deliverable_hls(
+          identifier("stream"), delivery_package("stream"), 1s,
+          hls_audio_aac(mix_master(), 128000, 48000, channel_stereo()),
+          [hd(), mobile()]
+        )
+      ]
+    )
+  }
+}

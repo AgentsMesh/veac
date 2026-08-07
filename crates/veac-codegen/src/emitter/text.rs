@@ -28,8 +28,14 @@ pub(super) fn prepare(
     content: &ResolvedText,
     visual: &EffectiveVisualProperties,
 ) -> Result<visual_pipeline::PreparedLayer, CodegenErrors> {
-    let rendered = backend::build(content, clip, context.bindings, context.canvas)
-        .map_err(|failure| error::codegen(clip, failure))?;
+    let rendered = backend::build(
+        context.plan,
+        content,
+        clip,
+        context.bindings,
+        context.canvas,
+    )
+    .map_err(|failure| error::codegen(clip, failure))?;
     let duration = time::seconds(clip.record_range.duration);
     let canvas = transparent_canvas(
         context,

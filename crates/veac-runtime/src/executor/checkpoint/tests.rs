@@ -1,3 +1,4 @@
+mod backend_identity_contracts;
 mod cache_contracts;
 mod identity_contracts;
 mod manifest_contracts;

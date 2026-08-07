@@ -5,6 +5,8 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/example-preview-layout.sh"
 source "$SCRIPT_DIR/example-preview-provenance.sh"
 source "$SCRIPT_DIR/example-source-edit-evidence.sh"
+source "$SCRIPT_DIR/example-preview-delivery.sh"
+source "$SCRIPT_DIR/example-workflow-evidence.sh"
 
 OUTPUT=${1:?output directory is required}
 EXPECTED=${2:?expected example count is required}
@@ -53,10 +55,11 @@ while IFS= read -r name; do
   verify_example_preview_layout "$dir" || fail "invalid preview layout for $name"
   require_preview_regular_file "$dir/build.log" "build log" || exit 1
   primary_delivery=$(jq -er '
-    [.expected_artifacts[] | select(.kind == "authoring_delivery") | .id]
-    | if length == 1 then .[0] else error("expected one authoring delivery") end
+    [.expected_artifacts[] | select(.kind == "delivery") | .logical_key]
+    | if length == 1 then .[0] else error("expected one delivery") end
   ' <<<"$target") || fail "missing primary delivery for $name"
-  primary_config="out_$primary_delivery"
+  primary_config=$(delivery_config_id "$(example_preview_canonical "$dir")" \
+    "$primary_delivery") || fail "cannot resolve primary delivery for $name"
   primary_plan=$(example_preview_plan "$dir" "$primary_config") ||
     fail "unsafe primary preview config for $name"
   require_preview_regular_file "$primary_plan" "primary preview plan" || exit 1
@@ -100,6 +103,20 @@ source.index.json	源码索引
 source-edit.json	源码编辑批次
 source-edit.outcome.json	源码编辑预演结果
 ARTIFACTS
+    fi
+    if edit_evidence_requested "$target"; then
+      while IFS=$'\t' read -r file label; do
+        require_preview_regular_file "$dir/project/$file" "$label" || exit 1
+        printf '<a href="%s/project/%s">%s</a>' "$name_html" "$file" "$label"
+      done <<'ARTIFACTS'
+edit.batch.json	规范编辑批次
+edit.outcome.json	规范编辑结果
+edit.replay.outcome.json	幂等重放结果
+ARTIFACTS
+    fi
+    if probe_evidence_requested "$target"; then
+      require_preview_regular_file "$dir/project/probe.snapshot.json" "素材探测快照" || exit 1
+      printf '<a href="%s/project/probe.snapshot.json">素材探测快照</a>' "$name_html"
     fi
     printf '<a href="%s/project/project.veac.json">创作 canonical IR</a>' "$name_html"
     printf '<a href="%s/project/project.preview.veac.json">预览派生 IR</a>' "$name_html"

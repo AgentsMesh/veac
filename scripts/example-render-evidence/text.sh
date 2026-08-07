@@ -82,71 +82,83 @@ check_text_layout() {
   require_file "$authoring"
   require_file "$preview"
   jq -e '
-    def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_paragraph") as $p |
-    $p.source.type == "text" and $p.source.text == "中文排版 · مرحبا · VEAC" and
-    $p.source.style.font == {"type":"family","family":"Arial Unicode MS"} and
-    $p.source.style.fallback_fonts == [{"type":"family","family":"Arial"}] and
-    clip("itm_vertical-label").source.style.layout.writing_mode == "vertical-rl" and
-    clip("itm_vertical-label").visual.placement.anchor == "top_right" and
-    clip("itm_vertical-label").visual.transform.anchor == {"x":1,"y":0} and
-    clip("itm_vertical-left-label").source.style.layout.writing_mode == "vertical-lr" and
-    clip("itm_vertical-left-label").visual.placement.anchor == "bottom_left" and
-    clip("itm_vertical-left-label").visual.transform.anchor == {"x":0,"y":1} and
-    clip("itm_path-label").source.style.path.start_offset == {"unit":"percent","value":50} and
-    (clip("itm_path-label").source.style.path.points | length) == 3
+    def clip($key): first(.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
+    clip("horizontal") as $p |
+    $p.source.type == "text" and $p.source.text == "中文排版 / مرحبا / VEAC" and
+    $p.source.style.font.type == "material" and $p.source.style.fallback_fonts == [] and
+    ($p.source.style.spans | map(.font.family)) == ["Noto Sans SC","Noto Sans Arabic"] and
+    $p.source.style.layout.wrap == "character" and $p.source.style.layout.overflow == "ellipsis" and
+    $p.visual.placement == {"anchor":"top_left","inset":{"x":32,"y":32},"type":"anchor"} and
+    clip("vertical-rl").source.style.color == {"alpha":255,"blue":238,"green":211,"red":34} and clip("vertical-rl").source.style.layout.writing_mode == "vertical-rl" and
+    clip("vertical-rl").source.style.layout.wrap == "none" and
+    clip("vertical-rl").visual.placement ==
+      {"anchor":"top_right","inset":{"x":48,"y":48},"type":"anchor"} and
+    clip("vertical-rl").visual.transform.anchor == {"x":1,"y":0} and
+    clip("vertical-lr").source.style.color == {"alpha":255,"blue":91,"green":138,"red":255} and clip("vertical-lr").source.style.layout.writing_mode == "vertical-lr" and
+    clip("vertical-lr").visual.placement ==
+      {"anchor":"top_left","inset":{"x":48,"y":48},"type":"anchor"} and
+    clip("vertical-lr").visual.transform.anchor == {"x":0,"y":0} and
+    clip("word-wrap").source.style.layout.wrap == "word" and
+    clip("word-wrap").source.style.layout.overflow == "clip" and
+    clip("word-wrap").source.style.layout.writing_mode == "horizontal-tb" and
+    clip("word-wrap").visual.placement == {"anchor":"bottom","inset":{"x":0,"y":32},"type":"anchor"} and
+    clip("path").source.style.color == {"alpha":255,"blue":21,"green":204,"red":250} and clip("path").source.style.layout.wrap == "none" and
+    clip("path").source.style.path.start_offset == {"unit":"pixels","value":300} and
+    (clip("path").source.style.path.points | length) == 3
   ' "$authoring" >/dev/null || fail "text-layout authoring semantics contract failed"
   jq -e '
-    def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
+    def clip($key): first(.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
     def material($id): first(.project.materials[] | select(.id == $id));
-    clip("itm_paragraph").source.style as $style |
-    $style.font.material_id as $primary |
-    first($style.fallback_fonts[] | select(.material_id != $primary)) as $fallback |
-    material($primary).source.uri == "assets/preview-font.ttf" and
-    material($fallback.material_id).source.uri == "assets/preview-arabic-font.ttf"
+    clip("horizontal").source.style.spans as $spans |
+    material($spans[0].font.material_id).source.uri == "assets/preview-font.ttf" and
+    material($spans[1].font.material_id).source.uri == "assets/preview-arabic-font.ttf"
   ' "$preview" >/dev/null || fail "text-layout preview font adaptation contract failed"
   fallback="$dir/project/assets/preview-arabic-font.ttf"
   require_file "$fallback"
   command -v fc-query >/dev/null 2>&1 || fail "fc-query is required for Arabic font evidence"
   langs=$(fc-query -i 0 --format='%{lang}\n' "$fallback") || fail "Arabic fallback font cannot be queried"
   tr '|' '\n' <<<"$langs" | grep -qx ar || fail "text-layout fallback font does not cover Arabic"
-  check_text_media "$video" 6 480 480 "text-layout"
-  read -r paragraph _ < <(text_stats "$video" 1 0 0 480 480 0 cyan)
-  read -r arabic _ < <(text_stats "$video" 1 0 0 480 480 0 yellow)
-  read -r latin _ < <(text_stats "$video" 1 0 0 480 480 680 bright)
-  read -r left_orange _ < <(text_stats "$video" 3 0 0 220 480 0 orange)
-  read -r left_cyan _ < <(text_stats "$video" 3 0 0 220 480 0 cyan)
-  read -r right_cyan _ < <(text_stats "$video" 3 260 0 220 480 0 cyan)
-  read -r right_orange _ < <(text_stats "$video" 3 260 0 220 480 0 orange)
+  check_text_media "$video" 6 480 270 "text-layout"
+  read -r paragraph _ < <(text_stats "$video" 1 0 0 480 270 0 cyan)
+  read -r arabic _ < <(text_stats "$video" 1 0 0 480 270 0 yellow)
+  read -r latin _ < <(text_stats "$video" 1 0 0 480 270 680 bright)
+  read -r left_orange _ < <(text_stats "$video" 3 70 0 100 270 0 orange)
+  read -r left_cyan _ < <(text_stats "$video" 3 70 0 100 270 0 cyan)
+  read -r right_cyan _ < <(text_stats "$video" 3 380 0 100 270 0 cyan)
+  read -r right_orange _ < <(text_stats "$video" 3 380 0 100 270 0 orange)
   ((paragraph >= 40 && arabic >= 40 && latin >= 20)) ||
     fail "text-layout paragraph scripts are missing: Chinese=$paragraph Arabic=$arabic Latin=$latin"
   ((left_orange >= 40 && right_cyan >= 40 && left_cyan <= 15 && right_orange <= 15)) ||
-    fail "text-layout vertical blocks overlap or use the wrong side"
-  read -r path_count path_width path_height _ _ < <(text_stats "$video" 5 0 0 480 480 0 yellow)
+    fail "text-layout vertical blocks mismatch: left=$left_orange/$left_cyan right=$right_cyan/$right_orange"
+  read -r path_count path_width path_height _ _ < <(text_stats "$video" 5 0 0 480 270 0 yellow)
   ((path_count >= 40 && path_width >= 140 && path_height >= 50)) ||
-    fail "text-layout path text is missing or remains horizontal"
+    fail "text-layout path text mismatch: pixels=$path_count size=${path_width}x${path_height}"
 }
 
 check_caption_text() {
-  local example_dir=$1 video=$2 first_count first_width second_count second_width sidecar expected canonical first_panel second_panel
+  local example_dir=$1 video=$2 first_count second_count third_count sidecar expected canonical panel
   canonical="$example_dir/project/project.veac.json"; require_file "$canonical"
   jq -e '
     . as $root |
-    def clip($id): first($root.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_opening").source.style.background == {"color":{"alpha":170,"blue":0,"green":0,"red":0},"padding_pixels":12} and
-    clip("itm_closing").source.style.background == null and all("itm_opening", "itm_closing";
-      clip(.).visual.placement == {"anchor":"bottom","inset":{"x":0,"y":48},"type":"anchor"})
+    def clip($key): first($root.project.sequences[].tracks[].clips[] |
+      select(.authorship.logical_path[-1] == $key));
+    all("speaker", "timing", "sidecar";
+      clip(.).source.style.background == {"color":{"alpha":170,"blue":0,"green":0,"red":0},"padding_pixels":12} and clip(.).source.style.outline == null and
+      clip(.).visual.placement == {"anchor":"bottom","inset":{"x":0,"y":48},"type":"anchor"}) and
+    clip("speaker").source.speaker == "讲述者"
   ' "$canonical" >/dev/null || fail "caption items must use the declared bottom placement"
   check_text_media "$video" 6 480 270 "captions-and-sidecars"
-  read -r first_count first_width _ _ _ < <(text_stats "$video" 1.5 0 170 480 100 500)
-  read -r second_count second_width _ _ _ < <(text_stats "$video" 4.5 0 170 480 100 500)
-  ((first_count >= 120 && second_count >= 120 && second_width > first_width + 20)) ||
-    fail "caption cue regions are incorrect: first=${first_count}px/${first_width}w second=${second_count}px/${second_width}w"
-  first_panel=$(region_color_count "$video" 1.5 '280:60:100:210' black)
-  second_panel=$(region_color_count "$video" 4.5 '280:60:100:210' black)
-  ((first_panel > second_panel + 500)) || fail "opening caption background is missing: first=$first_panel second=$second_panel"
+  read -r first_count _ < <(text_stats "$video" 1 0 170 480 100 500)
+  read -r second_count _ < <(text_stats "$video" 3 0 170 480 100 500)
+  read -r third_count _ < <(text_stats "$video" 5 0 170 480 100 500)
+  ((first_count >= 120 && second_count >= 120 && third_count >= 120)) ||
+    fail "caption cue regions are incomplete: $first_count/$second_count/$third_count"
+  panel=$(region_color_count "$video" 3 '320:60:80:200' black)
+  ((panel > 500)) || fail "caption background is missing: black=$panel"
   sidecar="$example_dir/rendered/captions.vtt"; require_file "$sidecar"
-  expected=$'WEBVTT\n\n00:00:00.000 --> 00:00:03.000\n<v 旁白>字幕是时间线中的类型化源。</v>\n\n00:00:03.000 --> 00:00:06.000\n<v 旁白>伴随文件从类型化字幕图层中选择内容。</v>\n\n'
+  expected=$'WEBVTT\n\n00:00:00.000 --> 00:00:02.000\n<v 讲述者>字幕既能烧录，也能独立交付</v>\n\n00:00:02.000 --> 00:00:04.000\n每条字幕都有明确的半开时间范围\n\n00:00:04.000 --> 00:00:06.000\n同一字幕轨输出 WebVTT 边车文件\n\n'
   cmp -s <(printf '%s' "$expected") "$sidecar" || fail "captions.vtt cues differ from the declared caption layer"
 }
 
@@ -177,7 +189,7 @@ check_text_render_contract() {
   local name=$1 example_dir=$2 video=$3
   case "$name" in
     text-layout) check_text_layout "$example_dir" "$video" ;;
-    text-animation) check_text_animation "$video" ;;
+    text-animation) check_text_animation "$example_dir" "$video" ;;
     text-overlay) check_text_overlay "$example_dir" "$video" ;;
     captions-and-sidecars) check_caption_text "$example_dir" "$video" ;;
     agentsmesh-intro-15s) check_agentsmesh_intro "$video" ;;

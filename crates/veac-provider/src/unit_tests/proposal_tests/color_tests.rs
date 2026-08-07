@@ -1,4 +1,4 @@
-use veac_ir::{ColorStage, EditOperation, VisualProperty};
+use veac_ir::{ColorStage, EditOperation, EffectKind, VisualProperty};
 
 use crate::*;
 
@@ -20,7 +20,7 @@ fn color_match_builds_a_pipeline_stage_and_typed_effect() {
         &proposal.batch.operations[1],
         EditOperation::AddEffect { effect, .. }
             if effect.id.as_str() == "fx_provider_color"
-                && effect.effect_type == "video.color_adjust"
+                && effect.kind() == EffectKind::VideoColorAdjust
     ));
     assert!(matches!(
         &proposal.evidence[1],

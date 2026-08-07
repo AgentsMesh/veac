@@ -8,10 +8,34 @@ fn imports_vtt_identifiers_settings_speaker_and_rich_text() {
     assert_eq!(result.document.cues.len(), 2);
     let cue = &result.document.cues[0];
     assert_eq!(cue.speaker.as_deref(), Some("Alice"));
-    assert_eq!(cue.settings["webvtt.identifier"], "cue-alpha");
-    assert_eq!(cue.settings["webvtt.settings"], "line:80% align:center");
+    let Some(CaptionNativeCue::WebVtt {
+        identifier,
+        settings,
+    }) = &cue.native
+    else {
+        panic!("expected typed WebVTT cue semantics")
+    };
+    assert_eq!(
+        identifier.as_ref().map(|value| value.0.as_str()),
+        Some("cue-alpha")
+    );
+    assert_eq!(
+        settings.as_ref().and_then(|value| value.line.as_deref()),
+        Some("80%")
+    );
+    assert_eq!(
+        settings.as_ref().and_then(|value| value.align),
+        Some(WebVttTextAlign::Center)
+    );
     assert!(cue.text.spans.iter().any(|span| span.style.bold));
-    assert!(result.document.settings["webvtt.header"].contains("WEBVTT"));
+    assert!(matches!(
+        result.document.native,
+        Some(CaptionDocumentNative::WebVtt {
+            header: WebVttHeader {
+                description: Some(ref value)
+            }
+        }) if value == "demo"
+    ));
     assert_eq!(result.loss_report.losses[0].field, "text.spans");
 }
 
@@ -25,6 +49,11 @@ fn validates_vtt_structure_and_timestamps() {
     let empty = "WEBVTT\n\nNOTE only\n";
     assert!(matches!(
         import_caption(empty, CaptionFormat::WebVtt, &ImportOptions::default()),
+        Err(CaptionError::Parse { .. })
+    ));
+    let unknown = "WEBVTT\n\n00:00:00.000 --> 00:00:01.000 custom:value\nx\n";
+    assert!(matches!(
+        import_caption(unknown, CaptionFormat::WebVtt, &ImportOptions::default()),
         Err(CaptionError::Parse { .. })
     ));
 }

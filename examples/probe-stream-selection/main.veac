@@ -1,0 +1,54 @@
+import "./showcase.veac" as showcase;
+
+fn fit() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(640px, 360px, fit_contain()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+          angle_constant(0deg)
+        ),
+        transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+      )
+    ),
+    visual_surface(percent_constant(100%), compositing(0, blend_normal()), card_none()),
+    [], color_pipeline_none()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let source = video_resource(
+    identifier("source"), resource_file("assets/source.mp4"),
+    sha256("e84a03487d8694861c9a579fd7ec4bb83ee3fd70e793187cad3c0447fe8b2d5b"),
+    stream_intent(stream_global(0), stream_disabled())
+  );
+  let video = video_layer(
+    identifier("video"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("selected-stream"), item_enabled(), during(0s, 3s),
+    source_media(source), source_timing_native()
+  ).with_visual(fit()));
+  let labels = visual_layer(
+    identifier("labels"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 3s),
+    source_text(
+      "探测快照后显式选择全局零号视频流，并禁用音频流",
+      showcase.caption_style(font, 32px, 600px)
+    ), source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "素材探测与流选择",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(video).with_layer(labels);
+  let output = showcase.video(timeline, canvas(640px, 360px), frame_rate(30, 1), false, false);
+  project(identifier("probe-stream-selection"), project_settings(600))
+    .with_resource(font).with_resource(source)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
+}

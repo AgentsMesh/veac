@@ -1,12 +1,18 @@
 use super::error;
-use crate::program::expression::{evaluate, Environment};
+use crate::program::expression::{evaluate, Environment, ExpressionError};
+
+#[test]
+fn error_keeps_optional_function_metadata_out_of_line() {
+    assert!(std::mem::size_of::<ExpressionError>() <= 64);
+}
 
 #[test]
 fn lexer_errors_are_stable_and_located() {
     for (source, code) in [
         ("$", "EXPRESSION_LEX_CHARACTER"),
-        ("1..2", "EXPRESSION_NUMBER_LITERAL"),
-        ("foo.", "EXPRESSION_SYMBOL"),
+        (".", "EXPRESSION_EXPECTED_VALUE"),
+        ("1.0_", "EXPRESSION_NUMBER_LITERAL"),
+        ("foo.", "EXPRESSION_FIELD_NAME"),
         ("1 + /* open", "EXPRESSION_BLOCK_COMMENT"),
         (r#""unterminated"#, "EXPRESSION_STRING_LITERAL"),
         (r#""bad\q""#, "EXPRESSION_STRING_ESCAPE"),
@@ -17,7 +23,7 @@ fn lexer_errors_are_stable_and_located() {
         ("#abcd", "EXPRESSION_COLOR_LITERAL"),
     ] {
         let error = error(source);
-        assert_eq!(error.code(), code);
+        assert_eq!(error.code(), code, "{source}");
         assert!(error.span().end <= source.len());
         assert!(!error.message().is_empty());
         assert!(error.to_string().contains(code));
@@ -41,9 +47,11 @@ fn parser_and_resolution_errors_are_fail_closed() {
         ("min(1,)", "EXPRESSION_EXPECTED_VALUE"),
         ("watts", "EXPRESSION_UNKNOWN_SYMBOL"),
         ("1fortnight", "EXPRESSION_UNIT"),
+        ("1db", "EXPRESSION_UNIT"),
+        ("30fps", "EXPRESSION_UNIT"),
         ("mystery(1)", "EXPRESSION_UNKNOWN_FUNCTION"),
-        ("min(1)", "EXPRESSION_ARITY"),
-        ("clamp(1, 2)", "EXPRESSION_ARITY"),
+        ("min(1)", "EXPRESSION_CALL_ARITY"),
+        ("clamp(1, 2)", "EXPRESSION_CALL_ARITY"),
     ] {
         assert_eq!(error(source).code(), code, "{source}");
     }
@@ -53,16 +61,16 @@ fn parser_and_resolution_errors_are_fail_closed() {
 fn arithmetic_errors_do_not_wrap_or_approximate() {
     assert_eq!(error("1 / 0").code(), "EXPRESSION_DIVIDE_BY_ZERO");
     assert_eq!(
-        error("170141183460469231731687303715884105727 * 2").code(),
+        error("170141183460469231731687303715884105727.0 * 2.0").code(),
         "EXPRESSION_OVERFLOW"
     );
     assert_eq!(
-        error("170141183460469231731687303715884105728").code(),
+        error("170141183460469231731687303715884105728.0").code(),
         "EXPRESSION_NUMBER_LITERAL"
     );
     let tiny = format!("0.{}1ms", "0".repeat(37));
     assert_eq!(error(&tiny).code(), "EXPRESSION_OVERFLOW");
-    let tiny_percent = format!("1 / 0.{}1%", "0".repeat(37));
+    let tiny_percent = format!("1.0 / 0.{}1%", "0".repeat(37));
     assert_eq!(error(&tiny_percent).code(), "EXPRESSION_OVERFLOW");
 
     let mut environment = Environment::new();
@@ -88,27 +96,6 @@ fn syntax_and_evaluation_budgets_are_enforced() {
 
     let large = vec!["1"; 600].join(" + ");
     assert_eq!(error(&large).code(), "EXPRESSION_NODE_LIMIT");
-
-    use crate::program::expression::ast::{Expression, ExpressionKind};
-    let literal = Expression {
-        kind: ExpressionKind::Literal(crate::program::expression::Value::Scalar(
-            crate::program::expression::ExactNumber::integer(1),
-        )),
-        span: 0..1,
-    };
-    let oversized = Expression {
-        kind: ExpressionKind::Call {
-            function: "max".to_owned(),
-            arguments: vec![literal; crate::program::expression::MAX_EXPRESSION_NODES],
-        },
-        span: 0..1,
-    };
-    assert_eq!(
-        crate::program::expression::runtime::evaluate(&oversized, &Environment::new())
-            .unwrap_err()
-            .code(),
-        "EXPRESSION_NODE_LIMIT"
-    );
 }
 
 #[test]

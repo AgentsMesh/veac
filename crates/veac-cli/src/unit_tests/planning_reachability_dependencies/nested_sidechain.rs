@@ -23,6 +23,7 @@ fn nested_sidechain_fixpoint_hydrates_only_the_projected_child_window() {
     let mut envelope = crate::canonical::load(&project).unwrap();
     envelope.project.materials[0].stream_intent.audio = StreamChoice::Auto;
     let base_material = envelope.project.materials[0].clone();
+    let base_material_id = base_material.id.to_string();
     envelope.project.materials.extend([
         audio_material(&base_material, "med_child_hit", "child-hit.wav"),
         audio_material(
@@ -108,7 +109,7 @@ fn nested_sidechain_fixpoint_hydrates_only_the_projected_child_window() {
     assert_project_inputs(
         &project,
         &envelope,
-        &["med_child_hit", "med_footage"],
+        &["med_child_hit", base_material_id.as_str()],
         &[],
         &["child-hit.wav", "clip.mp4"],
     );
@@ -116,7 +117,13 @@ fn nested_sidechain_fixpoint_hydrates_only_the_projected_child_window() {
     clips[0].source = media("med_child_miss");
     clips[1].source = media("med_child_hit");
     write_project(&project, &envelope);
-    let error = crate::planning::prepare(&project, None, &FakeEnvironment::success()).unwrap_err();
+    let error = crate::planning::prepare_with_material_root(
+        &project,
+        None,
+        None,
+        &FakeEnvironment::success(),
+    )
+    .unwrap_err();
     assert!(error.to_string().contains("PATH_UNAVAILABLE"));
 }
 

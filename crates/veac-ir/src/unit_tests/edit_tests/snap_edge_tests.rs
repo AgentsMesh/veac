@@ -1,6 +1,5 @@
-use std::collections::BTreeMap;
-
 use super::*;
+use crate::test_support::{empty_temporal, executable_manifest};
 
 #[test]
 fn snap_rejects_each_timebase_mismatch_and_an_unsafe_grid_ceil() {
@@ -55,46 +54,50 @@ fn snap_rejects_a_frame_step_outside_the_render_budget() {
 
 fn huge_frame_step_project() -> ProjectEnvelope {
     let sequence_id = SequenceId::new("seq_huge_grid").unwrap();
-    ProjectEnvelope::new(Project {
-        id: ProjectId::new("prj_huge_grid").unwrap(),
-        revision: 0,
-        timebase: u32::MAX,
-        entry_sequence_id: sequence_id.clone(),
-        render_configs: vec![RenderConfig {
-            id: RenderConfigId::new("out_huge_grid").unwrap(),
-            sequence_id: sequence_id.clone(),
-            raster: Some(RasterSettings {
-                width: 16,
-                height: 16,
-                frame_rate: Rational::new(1, 1).unwrap(),
-                captions: CaptionOutput::Discard,
-            }),
-            deliverables: vec![Deliverable {
-                id: DeliverableId::new("dlv_huge_grid").unwrap(),
-                target: DeliverableTarget::File {
-                    name: "huge.mp4".to_owned(),
-                },
-                kind: DeliverableKind::Video(VideoDeliverable::default()),
+    ProjectEnvelope::new(
+        Project {
+            id: ProjectId::new("prj_huge_grid").unwrap(),
+            revision: 0,
+            timebase: u32::MAX,
+            entry_sequence_id: sequence_id.clone(),
+            render_configs: vec![RenderConfig {
+                id: RenderConfigId::new("out_huge_grid").unwrap(),
+                sequence_id: sequence_id.clone(),
+                raster: Some(RasterSettings {
+                    width: 16,
+                    height: 16,
+                    frame_rate: Rational::new(1, 1).unwrap(),
+                    captions: CaptionOutput::Discard,
+                }),
+                deliverables: vec![Deliverable {
+                    id: DeliverableId::new("dlv_huge_grid").unwrap(),
+                    target: DeliverableTarget::File {
+                        name: "huge.mp4".to_owned(),
+                    },
+                    kind: DeliverableKind::Video(VideoDeliverable::default()),
+                }],
             }],
-        }],
-        materials: vec![],
-        multicam_groups: vec![],
-        annotations: vec![],
-        relations: vec![],
-        sequences: vec![Sequence {
-            id: sequence_id,
-            name: "Huge grid".to_owned(),
-            settings: SequenceSettings {
-                width: 16,
-                height: 16,
-                frame_rate: Rational::new(1, u32::MAX).unwrap(),
-                sample_rate: 48_000,
-            },
-            tracks: vec![],
-            applies: vec![],
-            metadata: BTreeMap::new(),
-        }],
-        applied_operations: vec![],
-        metadata: BTreeMap::new(),
-    })
+            materials: vec![],
+            multicam_groups: vec![],
+            annotations: vec![],
+            relations: vec![],
+            sequences: vec![Sequence {
+                id: sequence_id,
+                name: "Huge grid".to_owned(),
+                settings: SequenceSettings {
+                    width: 16,
+                    height: 16,
+                    frame_rate: Rational::new(1, u32::MAX).unwrap(),
+                    sample_rate: 48_000,
+                },
+                tracks: vec![],
+                applies: vec![],
+                authorship: None,
+            }],
+            applied_operations: vec![],
+            authorship: None,
+        },
+        executable_manifest(),
+        empty_temporal(),
+    )
 }

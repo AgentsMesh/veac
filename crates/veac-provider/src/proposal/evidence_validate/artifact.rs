@@ -81,7 +81,7 @@ pub(super) fn stem(
         stem.kind == kind
             && stem.label == label
             && stem.audio.record.key == *key
-            && stem.audio.role == role
+            && stem.audio.role.as_str() == role
     }) && inserted_clip(operation, material_id)
 }
 
@@ -135,5 +135,5 @@ fn find<'a>(
     source
         .artifacts()
         .into_iter()
-        .find(|artifact| artifact.record.key == *key && artifact.role == role)
+        .find(|artifact| artifact.record.key == *key && artifact.role.as_str() == role)
 }

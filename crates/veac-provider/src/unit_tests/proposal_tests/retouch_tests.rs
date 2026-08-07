@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 use crate::*;
@@ -28,8 +26,8 @@ fn retouch_builds_artifact_matte_and_item_set_apply() {
         panic!("expected effect stage");
     };
     assert!(matches!(
-        effect.parameters.get("radius"),
-        Some(ParameterValue::NumberCurve { .. })
+        effect.effect.curve(EffectParameter::Radius),
+        Some(Animatable::Keyframes { .. })
     ));
     let EditOperation::EditStructure {
         edit: StructureEdit::InsertRelation { relation },
@@ -78,8 +76,12 @@ fn retouch_rejects_curve_tampering_after_rebind() {
         unreachable!()
     };
     effect
-        .parameters
-        .insert("radius".into(), ParameterValue::Number { value: 12.0 });
+        .effect
+        .set_parameter(
+            EffectParameter::Radius,
+            EffectParameterValue::Curve(Animatable::constant(12.0)),
+        )
+        .unwrap();
     let ProposalEvidence::RetouchApply { operation, .. } = &mut proposal.evidence[2] else {
         unreachable!()
     };
@@ -133,12 +135,12 @@ pub(super) fn multi_control_fixture() -> (
     let mut context = retouch_context(result);
     let application = retouch_mut(&mut context);
     application.effects = vec![
-        effect_application("blur", "video.blur"),
-        effect_application("exposure", "video.color_adjust"),
+        effect_application("blur", EffectKind::VideoBlur),
+        effect_application("exposure", EffectKind::VideoColorAdjust),
     ];
     application.controls = vec![
-        control_application("exposure", "exposure", "brightness"),
-        control_application("radius", "blur", "radius"),
+        control_application("exposure", "exposure", EffectParameter::Brightness),
+        control_application("radius", "blur", EffectParameter::Radius),
     ];
     (project, request, response, context)
 }
@@ -159,25 +161,28 @@ pub(super) fn retouch_mut(context: &mut ApplicationContext) -> &mut RetouchAppli
     value
 }
 
-fn effect_application(name: &str, effect_type: &str) -> RetouchEffectApplication {
+fn effect_application(name: &str, kind: EffectKind) -> RetouchEffectApplication {
     RetouchEffectApplication {
         stage_id: ApplyStageId::new(format!("aps_provider_{name}")).unwrap(),
         active_range: None,
         effect: EffectInstance {
             id: EffectId::new(format!("fx_provider_{name}")).unwrap(),
-            effect_type: effect_type.into(),
             enabled: true,
             enable_range: None,
-            parameters: BTreeMap::new(),
+            effect: Effect::neutral(kind),
         },
     }
 }
 
-fn control_application(control: &str, effect: &str, parameter: &str) -> RetouchControlApplication {
+fn control_application(
+    control: &str,
+    effect: &str,
+    parameter: EffectParameter,
+) -> RetouchControlApplication {
     RetouchControlApplication {
         control: control.into(),
         effect_id: EffectId::new(format!("fx_provider_{effect}")).unwrap(),
-        effect_parameter: parameter.into(),
+        effect_parameter: parameter,
         keyframe_id_prefix: format!("kf_provider_{control}"),
     }
 }

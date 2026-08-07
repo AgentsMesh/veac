@@ -1,8 +1,8 @@
 use std::time::Instant;
 
 use veac_artifact::{
-    select_proxy_while, verify_source_bounded_while, MediaArtifactSpec, ProxyBinding,
-    ProxySelectionRequest, VerifiedArtifact,
+    select_proxy_while, verify_source_bounded_while, ArtifactParameters, MediaArtifactSpec,
+    ProxyBinding, ProxySelectionRequest, VerifiedArtifact,
 };
 use veac_ir::{HashAlgorithm, MediaIdentity, StreamChoice, StreamIntent};
 
@@ -50,7 +50,6 @@ pub(super) fn select(
     )?;
     Ok(selection)
 }
-
 fn role(
     artifact: Option<VerifiedArtifact>,
     role: Role,
@@ -73,7 +72,6 @@ fn role(
         Err(error) => Err(error),
     }
 }
-
 fn validate(
     artifact: &VerifiedArtifact,
     role: Role,
@@ -81,8 +79,11 @@ fn validate(
     deadline: Instant,
 ) -> CliResult {
     check_deadline(deadline)?;
-    let spec: MediaArtifactSpec = serde_json::from_value(artifact.descriptor().parameters.clone())
-        .map_err(|error| postflight_error(error.to_string()))?;
+    let spec = match &artifact.descriptor().parameters {
+        ArtifactParameters::ProxyVideo(value) => MediaArtifactSpec::ProxyVideo(value.clone()),
+        ArtifactParameters::ProxyAudio(value) => MediaArtifactSpec::ProxyAudio(value.clone()),
+        _ => return Err(postflight_error("artifact is not a proxy media spec")),
+    };
     if !role_matches(role, &spec) {
         return Err(postflight_error("proxy role and media spec differ"));
     }
@@ -103,7 +104,6 @@ fn validate(
     verify_payload(artifact, &expected, deadline)?;
     Ok(())
 }
-
 fn verify_payload(
     artifact: &VerifiedArtifact,
     expected: &MediaIdentity,

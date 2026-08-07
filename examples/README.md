@@ -28,6 +28,7 @@ make clean-examples
 ```
 
 它还会校验能力元数据、画廊目标归属、工作流证据、入口注册唯一性，以及源码图的本地模块路径与符号链接安全约束。
+格式化检查在内存快照上覆盖全部 38 个入口和所有可达模块，校验注释与非 trivia token 保真、二次格式化幂等，并用格式化后的完整源码图重新执行构建；该过程不会写回仓库示例。
 
 `build-examples` 会把目录中的全部示例编译并渲染到已忽略的 `examples-preview/` 目录。构建过程会在该目录中准备生成式测试媒体和确定性预览字体，使用真实 CLI 与 FFmpeg 完成计划和渲染，验证声明的交付物，并生成 `examples-preview/index.html`。预览交付默认将最长边限制为 480 像素；可以通过 `PREVIEW_MAX_EDGE` 测试其他交付尺寸。
 
@@ -61,7 +62,8 @@ examples-preview/<id>/
 ## 能力覆盖
 
 - `minimal`、`hello-world`：项目骨架，以及基础生成源和文本源。
-- `programming-language`：模块、前向常量、纯表达式、类型化预设、可递归组合的静态序列组件、参数默认值、插槽转发、多层卫生化标识，以及以源码为唯一事实源的带版本编辑。
+- `programming-language`：跨模块 `struct`、闭合 `enum`、payloadless enum Build input、穷尽 `match` 和实例方法直接生成可见标题与配色，并结合 `let`、可观察的 `var/set`、显式 effect contract、嵌套 callable 的名义值与集合传递、`if/else`、短路逻辑、私有辅助函数、静态序列组件，以及以完整局部语句、函数体和方法体为源码事实源的带版本编辑。
+- `executable-local-image`：函数创建 Project-owned 本地图片 Resource，媒体 Source 以非所有权方式引用它；不可变 Transform 原语组合锚点、缩放、旋转、翻转和平移，并输出可见中文确认标签。
 - `timeline-source-time`、`speed-demo`：裁剪、变速、曲线和定格映射。
 - `nested-and-multicam`：嵌套序列和类型化多机位切换程序。
 - `generated-graphics`：透明、静音、纯色、渐变和图形源。

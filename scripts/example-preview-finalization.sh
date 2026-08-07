@@ -2,6 +2,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-graph.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-edit-evidence.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-workflow-evidence.sh"
 
 preview_finalization_error() {
   echo "examples preview: $*" >&2
@@ -43,7 +44,7 @@ example_source_graph_oid() {
 }
 
 capture_example_publication_guard() {
-  local source_root=$1 entry=$2 target=$3 graph_oid evidence_oid=none
+  local source_root=$1 entry=$2 target=$3 graph_oid evidence_oid=none workflow_oid
   reject_preview_source_symlinks "$source_root" "$entry" || return 1
   verify_example_source_graph "$source_root" "$entry/project" || return 1
   graph_oid=$(example_source_graph_oid "$source_root") || return 1
@@ -53,7 +54,9 @@ capture_example_publication_guard() {
   else
     reject_undeclared_source_edit_evidence "$entry" || return 1
   fi
-  printf 'source-graph:%s;source-edit:%s\n' "$graph_oid" "$evidence_oid"
+  workflow_oid=$(workflow_evidence_oid "$target" "$entry") || return 1
+  printf 'source-graph:%s;source-edit:%s;workflow:%s\n' \
+    "$graph_oid" "$evidence_oid" "$workflow_oid"
 }
 
 verify_example_publication_guard() {

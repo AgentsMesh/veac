@@ -17,24 +17,23 @@ fn animated_blur_sharpen_vignette_and_grain_change_real_frames() {
         StreamChoice::Disabled,
     ));
     let cases = [
-        ("blur", "video.blur", "radius", 10.0),
-        ("sharpen", "video.sharpen", "amount", 10.0),
-        ("vignette", "video.vignette", "amount", 1.0),
-        ("grain", "video.grain", "amount", 1.0),
+        ("blur", EffectKind::VideoBlur, 10.0),
+        ("sharpen", EffectKind::VideoSharpen, 10.0),
+        ("vignette", EffectKind::VideoVignette, 1.0),
+        ("grain", EffectKind::VideoGrain, 1.0),
     ];
     let mut clips = vec![effect_clip("baseline", 0, None)];
     clips.extend(
         cases
             .into_iter()
             .enumerate()
-            .map(|(index, (name, kind, parameter, end))| {
+            .map(|(index, (name, kind, end))| {
                 effect_clip(
                     name,
                     (index as i64 + 1) * 1_000,
                     Some(video_effect(
                         &format!("fx_{name}"),
-                        kind,
-                        BTreeMap::from([(parameter.to_owned(), curve(name, 0.00001, end))]),
+                        animated(kind, curve(name, 0.00001, end)),
                     )),
                 )
             }),
@@ -67,24 +66,32 @@ fn effect_clip(id: &str, start: i64, effect: Option<EffectInstance>) -> Clip {
     clip
 }
 
-fn curve(id: &str, start: f64, end: f64) -> ParameterValue {
-    ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
-            keyframes: vec![
-                Keyframe {
-                    id: KeyframeId::new(format!("kf_{id}_start")).unwrap(),
-                    time: time(0),
-                    value: start,
-                    interpolation: Interpolation::EaseInOut,
-                },
-                Keyframe {
-                    id: KeyframeId::new(format!("kf_{id}_end")).unwrap(),
-                    time: time(1_000),
-                    value: end,
-                    interpolation: Interpolation::Linear,
-                },
-            ],
-        },
+fn curve(id: &str, start: f64, end: f64) -> Animatable<f64> {
+    Animatable::Keyframes {
+        keyframes: vec![
+            Keyframe {
+                id: KeyframeId::new(format!("kf_{id}_start")).unwrap(),
+                time: time(0),
+                value: start,
+                interpolation: Interpolation::EaseInOut,
+            },
+            Keyframe {
+                id: KeyframeId::new(format!("kf_{id}_end")).unwrap(),
+                time: time(1_000),
+                value: end,
+                interpolation: Interpolation::Linear,
+            },
+        ],
+    }
+}
+
+fn animated(kind: EffectKind, value: Animatable<f64>) -> Effect {
+    match kind {
+        EffectKind::VideoBlur => Effect::VideoBlur { radius: value },
+        EffectKind::VideoSharpen => Effect::VideoSharpen { amount: value },
+        EffectKind::VideoVignette => Effect::VideoVignette { amount: value },
+        EffectKind::VideoGrain => Effect::VideoGrain { amount: value },
+        _ => unreachable!("fixture only covers four effects"),
     }
 }
 

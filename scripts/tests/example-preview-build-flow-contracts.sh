@@ -23,7 +23,7 @@ pad_preview_audio() { :; }
 verify_expected_preview_artifacts() {
   [[ $2 == */project/project.veac.json ]] || return 1
   [[ $3 == */project/project.preview.veac.json ]] || return 1
-  [[ $4 == */plans/preview/out_preview.json ]] || return 1
+  [[ $4 == */plans/preview/out_4a4f4ce03f87.json ]] || return 1
   [[ $5 == */rendered ]] || return 1
 }
 run_example_preview_process() {
@@ -48,36 +48,48 @@ run_example_preview_process() {
 }
 
 cat >"$GALLERY" <<'JSON'
-{"targets":[{"id":"demo","preview_window":null,"expected_artifacts":[
+{"targets":[{"id":"demo","frontend":"executable","preview_window":null,"expected_artifacts":[
   {"kind":"canonical_project"},{"kind":"preview_canonical_project"},
   {"kind":"preview_resolved_plan"},
   {"kind":"source_revision"},{"kind":"source_index"},
   {"kind":"source_edit_batch"},{"kind":"source_edit_outcome"},
-  {"kind":"authoring_delivery","id":"preview","artifact_ids":["preview"]}]}]}
+  {"kind":"delivery","logical_key":"preview","artifacts":[
+    {"kind":"video","target_type":"file","target":"preview.mp4"}]}]}]}
 JSON
 cat >"$VEAC_FAKE_CANONICAL" <<'JSON'
-{"project":{"id":"prj_demo","materials":[],"sequences":[{"id":"seq_main","settings":{"frame_rate":{"numerator":30,"denominator":1}},"tracks":[],"applies":[]}],"relations":[],"annotations":[{"style":{"font":{"type":"family","family":"Arial"},"fallback_fonts":[{"type":"family","family":"Noto Sans Arabic"}]}}],"render_configs":[{"id":"out_preview","sequence_id":"seq_main","raster":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"deliverables":[{"id":"dlv_preview","target":{"type":"file","name":"preview.mp4"},"kind":{"type":"video","settings":{"hardware":{"type":"auto"}}}}]}]}}
+{"project":{"id":"prj_demo","materials":[],"authorship":{"entity":{"logical_path":["demo"],"events":[]},"multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":"out_4a4f4ce03f87","entity":{"logical_path":["demo","preview"],"events":[]}}]},"sequences":[{"id":"seq_main","settings":{"frame_rate":{"numerator":30,"denominator":1}},"tracks":[],"applies":[]}],"relations":[],"annotations":[{"style":{"font":{"type":"family","family":"Arial"},"fallback_fonts":[{"type":"family","family":"Noto Sans Arabic"}]}}],"render_configs":[{"id":"out_4a4f4ce03f87","sequence_id":"seq_main","raster":{"width":1280,"height":720,"frame_rate":{"numerator":30,"denominator":1}},"deliverables":[{"id":"dlv_92f3","target":{"type":"file","name":"preview.mp4"},"kind":{"type":"video","settings":{"hardware":{"type":"auto"}}}}]}]}}
 JSON
 mkdir -p "$TMP/source/demo"
 cat >"$TMP/source/demo/main.veac" <<'VEAC'
+language "veac" version 6;
 import "./brand.veac" as brand;
-project demo {
-  font family "Arial";
-  sequence main {}
+fn main(context: Context) -> Project {
+  let duration = 1s;
+  project(identifier("demo"), project_settings(1))
 }
 VEAC
 cat >"$TMP/source/demo/brand.veac" <<'VEAC'
-module {
-  export const time duration = 1s;
-}
+language "veac" version 6;
+pub let duration: Time = 1s;
 VEAC
 cat >"$TMP/source/demo/source-edit.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-edit","schema_version":1,
+{"schema":"https://veac.dev/schemas/source-edit","schema_version":6,
 "operation_id":"op_demo_source_edit",
 "base_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
-"atomic":true,"preconditions":[],"operations":[{"type":"set_expression",
-"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},
-"site":{"type":"constant_value"},"expression":{"source":"2s"}}]}
+"atomic":true,"preconditions":[],"operations":[
+{"type":"insert_import","module":"main.veac","anchor":{"type":"after_import",
+"target":{"module":"main.veac","alias":"brand"}},
+"import":{"path":"./brand.veac","alias":"brand"}},
+{"type":"remove_import","target":{"module":"main.veac","alias":"brand"}},
+{"type":"insert_declaration","module":"brand.veac","anchor":{"type":"after_declaration",
+"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}}},
+"declaration":{"source":"pub let replacement: Time = 2s;"}},
+{"type":"remove_declaration","target":{"module":"brand.veac",
+"path":{"kind":"constant","constant":"duration"}}},
+{"type":"set_statement","target":{"module":"main.veac",
+"path":{"kind":"function","function":"main"}},"site":{"type":"body_statement",
+"path":{"steps":[{"step":"local_value","operation":"let","binding":"duration",
+"ordinal":0}]}},"statement":{"source":"let duration = 2s;"}}]}
 JSON
 cat >"$TMP/fake-veac" <<'SH'
 #!/usr/bin/env bash
@@ -87,10 +99,11 @@ case $1 in
   source-revision)
     printf '{"source_graph_sha256":"%064d"}\n' 0 | tr '0' 'a' ;;
   source-index)
-    printf '%s\n' '{"schema":"https://veac.dev/schemas/source-index","schema_version":1,"revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"nodes":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"range":{"start":0,"end":1},"expressions":[{"site":{"type":"constant_value"},"source":"1s","range":{"start":0,"end":1}}]}]}' ;;
+    printf '%s\n' '{"schema":"https://veac.dev/schemas/source-index","schema_version":7,"revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"modules":[{"module":"brand.veac","range":{"start":0,"end":40},"imports":[],"declarations":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"source":"pub let duration: Time = 1s;","range":{"start":0,"end":29}}]},{"module":"main.veac","range":{"start":0,"end":140},"imports":[{"target":{"module":"main.veac","alias":"brand"},"path":"./brand.veac","source":"import \"./brand.veac\" as brand;","range":{"start":0,"end":31}}],"declarations":[]}],"nodes":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"range":{"start":0,"end":29},"expressions":[{"site":{"type":"constant_value"},"source":"1s","range":{"start":26,"end":28}}],"statements":[],"bodies":[],"declarations":[]},{"target":{"module":"main.veac","path":{"kind":"function","function":"main"}},"range":{"start":60,"end":140},"expressions":[],"statements":[{"site":{"type":"body_statement","path":{"steps":[{"step":"local_value","operation":"let","binding":"duration","ordinal":0}]}},"source":"let duration = 1s;","range":{"start":90,"end":109}}],"bodies":[],"declarations":[]}]}' ;;
   source-edit)
-    printf '%s\n' '{"module":"brand.veac","previous_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"new_revision":{"source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"destination":null,"dry_run":true}' ;;
-  compile) cp "$VEAC_FAKE_CANONICAL" "$3" ;;
+    : >"$(dirname "$2")/.veac-source.lock"
+    printf '%s\n' '{"modules":["brand.veac","main.veac"],"previous_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"new_revision":{"source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"destinations":[],"dry_run":true}' ;;
+  build) cp "$VEAC_FAKE_CANONICAL" "$3" ;;
   plan)
     printf '{"output":{"render_config_id":"%s"}}\n' "$3" ;;
   render)
@@ -115,6 +128,8 @@ cmp -s "$TMP/source/demo/brand.veac" "$ENTRY/project/brand.veac" ||
   fail "imported module bytes changed"
 cmp -s "$TMP/source/demo/source-edit.json" "$ENTRY/project/source-edit.json" ||
   fail "source edit batch bytes changed"
+[[ -f $ENTRY/project/.veac-source.lock && ! -L $ENTRY/project/.veac-source.lock ]] ||
+  fail "source edit lock contract drifted"
 [[ ! -e $ENTRY/project/main.preview.veac ]] || fail "derived preview source was published"
 jq -e '.project.render_configs[0].raster.width == 1280 and
   .project.render_configs[0].raster.frame_rate.numerator == 30' \
@@ -127,10 +142,11 @@ jq -e '.project.annotations[0].style.font.material_id == "med_preview-font" and
     "med_preview-arabic-font" and (.project.materials | length) == 2' \
   "$ENTRY/project/project.preview.veac.json" >/dev/null ||
   fail "expanded source graph fonts were not adapted in preview IR"
-[[ $(rg -c '^compile ' "$VEAC_FAKE_LOG") == 1 ]] || fail "source graph was compiled more than once"
-[[ $(rg -c '^source-revision ' "$VEAC_FAKE_LOG") == 1 ]] || fail "source revision was not emitted once"
-[[ $(rg -c '^source-index ' "$VEAC_FAKE_LOG") == 1 ]] || fail "source index was not emitted once"
-[[ $(rg -c '^source-edit .* --dry-run$' "$VEAC_FAKE_LOG") == 1 ]] || fail "source edit dry-run was not emitted once"
+[[ $(rg -c '^build ' "$VEAC_FAKE_LOG") == 1 ]] || fail "source graph was not built once"
+rg -q '^source-revision .*main.veac$' "$VEAC_FAKE_LOG" || fail "source revision command drifted"
+rg -q '^source-index .*main.veac$' "$VEAC_FAKE_LOG" || fail "source index command drifted"
+rg -q '^source-edit .*source-edit.json --dry-run$' "$VEAC_FAKE_LOG" ||
+  fail "source edit command drifted"
 rg -q "^plan .*project.preview.veac.json$" "$VEAC_FAKE_LOG" ||
   fail "plan did not consume preview canonical"
 rg -q "^render .*project.preview.veac.json$" "$VEAC_FAKE_LOG" ||

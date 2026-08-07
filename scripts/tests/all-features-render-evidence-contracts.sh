@@ -155,8 +155,8 @@ json_variant missing_normalize project/project.veac.json \
 json_variant missing_limiter project/project.veac.json \
   '(.. | objects | select(.id? == "itm_music-item") | .audio.processors) = []' \
   check_all_features_audio_evidence 'authoring audio-chain contract failed'
-json_variant wrong_limiter_id project/project.veac.json \
-  '(.. | objects | select(.id? == "itm_music-item") | .audio.processors[0].id) = "aud_wrong"' \
+json_variant wrong_limiter_settings project/project.veac.json \
+  '(.. | objects | select(.id? == "itm_music-item") | .audio.processors[0].kind.ceiling_db) = -3' \
   check_all_features_audio_evidence 'authoring audio-chain contract failed'
 json_variant wrong_plan_fade plans/preview/out_master.json \
   '(.. | objects | select(.id? == "itm_music-item") | .audio.crossfade.fade_out.value) = 0' \

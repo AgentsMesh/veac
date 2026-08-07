@@ -1,5 +1,7 @@
 use super::{Interpolation, SpringCoefficients};
 
+mod extrema;
+
 const SPRING_EPSILON: f64 = 1e-9;
 const MAX_SPRING_FREQUENCY: f64 = 16.0;
 const MAX_SPRING_DECAY: f64 = 64.0;

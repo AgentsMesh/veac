@@ -9,10 +9,16 @@ pub(crate) fn run(
     project: &Path,
     config: Option<&str>,
     bindings: Option<&Path>,
+    material_root: Option<&Path>,
     output: Option<&Path>,
     environment: &dyn Environment,
 ) -> CliResult {
-    let prepared = crate::planning::prepare_with_bindings(project, config, bindings, environment)?;
+    let prepared = crate::planning::prepare_with_input_resolution(
+        project,
+        config,
+        crate::planning::InputResolution::new(material_root, bindings),
+        environment,
+    )?;
     let fingerprint = environment.ffmpeg_fingerprint()?;
     let tools = vec![ToolFingerprint {
         name: "ffmpeg".to_owned(),

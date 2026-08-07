@@ -2,24 +2,17 @@ use crate::{test_support::time, *};
 
 #[test]
 fn built_in_registry_is_closed_and_discoverable() {
-    assert_eq!(built_in_effects().len(), 10);
-    for effect in [
-        "video.color_adjust",
-        "video.blur",
-        "video.sharpen",
-        "video.vignette",
-        "video.grain",
-        "video.chroma_key",
-        "video.luma_key",
-        "video.chroma_spill",
-        "video.stabilize",
-        "audio.normalize",
-    ] {
-        let specification = built_in_effect(effect).unwrap();
-        assert_eq!(specification.effect_type, effect);
+    assert_eq!(built_in_effects().len(), EffectKind::BUILT_IN.len());
+    for kind in EffectKind::BUILT_IN {
+        let specification = built_in_effect(kind).unwrap();
+        assert_eq!(specification.kind, kind);
+        assert_eq!(specification.effect_type, kind.type_name());
         assert!(!specification.parameters.is_empty());
     }
-    assert_eq!(built_in_effect("video.typo"), None);
+    assert_eq!(
+        built_in_effect(EffectKind::VideoPluginReferenceMonochromeV1),
+        None
+    );
     assert!(transition_parameters_valid(&TransitionKind::Wipe {
         direction: CardinalDirection::Left,
         angle_degrees: 15.0,
@@ -31,87 +24,63 @@ fn built_in_registry_is_closed_and_discoverable() {
 }
 
 #[test]
-fn parameter_schema_checks_types_curves_and_ranges() {
-    let color = ParameterValue::Color {
-        value: Color {
-            red: 1,
-            green: 2,
-            blue: 3,
-            alpha: 4,
-        },
-    };
-    let boolean = ParameterValue::Boolean { value: true };
-    let number = ParameterValue::Number { value: 0.5 };
-    let curve = ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
-            keyframes: vec![Keyframe {
-                id: KeyframeId::new("kf_registry").unwrap(),
-                time: time(0),
-                value: 0.5,
-                interpolation: Interpolation::Hold,
-            }],
-        },
-    };
-    let specs = [
-        ParameterSpec {
-            name: "number",
-            value_type: ParameterType::Number,
-            minimum: Some(0.0),
-            maximum: Some(1.0),
-            supports_curve: true,
-        },
-        ParameterSpec {
-            name: "bool",
-            value_type: ParameterType::Boolean,
-            minimum: None,
-            maximum: None,
-            supports_curve: false,
-        },
-        ParameterSpec {
-            name: "color",
-            value_type: ParameterType::Color,
-            minimum: None,
-            maximum: None,
-            supports_curve: false,
-        },
-    ];
-    assert!(parameter_matches(specs[0], &number));
-    assert!(parameter_matches(specs[0], &curve));
-    assert!(parameter_matches(specs[1], &boolean));
-    assert!(parameter_matches(specs[2], &color));
-    assert!(!parameter_matches(specs[0], &boolean));
-    assert!(!parameter_matches(
-        specs[0],
-        &ParameterValue::Number { value: 2.0 },
+fn parameter_schema_checks_typed_values_and_ranges() {
+    let blur = built_in_effect(EffectKind::VideoBlur).unwrap().parameters[0];
+    assert!(parameter_matches(
+        blur,
+        EffectParameterRef::Curve(&Animatable::constant(0.5))
     ));
-    let normalize = built_in_effect("audio.normalize").unwrap().parameters[0];
+    assert!(!parameter_matches(blur, EffectParameterRef::Boolean(true)));
+    assert!(!parameter_matches(
+        blur,
+        EffectParameterRef::Curve(&Animatable::constant(101.0))
+    ));
+    let normalize = built_in_effect(EffectKind::AudioNormalize)
+        .unwrap()
+        .parameters[0];
     assert!(!normalize.supports_curve);
-    assert!(!parameter_matches(normalize, &curve));
+    assert!(parameter_matches(
+        normalize,
+        EffectParameterRef::Number(-16.0)
+    ));
 }
 
 #[test]
-fn number_curve_schema_checks_spring_extrema_against_parameter_bounds() {
-    let threshold = built_in_effect("video.luma_key").unwrap().parameters[0];
-    let curve = ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
-            keyframes: vec![
-                spring_key("kf_threshold_start", 0, 0.1),
-                spring_key("kf_threshold_end", 600, 0.9),
-            ],
-        },
+fn spring_and_cubic_extrema_stay_inside_parameter_bounds() {
+    let threshold = built_in_effect(EffectKind::VideoLumaKey)
+        .unwrap()
+        .parameters[0];
+    let curve = |interpolation| Animatable::Keyframes {
+        keyframes: vec![
+            Keyframe {
+                id: KeyframeId::new("kf_threshold_start").unwrap(),
+                time: time(0),
+                value: 0.1,
+                interpolation,
+            },
+            Keyframe {
+                id: KeyframeId::new("kf_threshold_end").unwrap(),
+                time: time(600),
+                value: 0.9,
+                interpolation: Interpolation::Linear,
+            },
+        ],
     };
-    assert!(!parameter_matches(threshold, &curve));
-}
-
-fn spring_key(id: &str, at: i64, value: f64) -> Keyframe<f64> {
-    Keyframe {
-        id: KeyframeId::new(id).unwrap(),
-        time: time(at),
-        value,
-        interpolation: Interpolation::Spring {
+    assert!(!parameter_matches(
+        threshold,
+        EffectParameterRef::Curve(&curve(Interpolation::Spring {
             frequency: 1.5,
             decay: 6.0,
             initial_velocity: 0.0,
-        },
-    }
+        }))
+    ));
+    assert!(parameter_matches(
+        threshold,
+        EffectParameterRef::Curve(&curve(Interpolation::CubicBezier {
+            x1: 0.2,
+            y1: 0.0,
+            x2: 0.8,
+            y2: 1.0,
+        }))
+    ));
 }

@@ -78,6 +78,8 @@ jq '.mechanism_catalogs[0] = "examples/catalog/missing-mechanisms.json"' \
 expect_failure missing-mechanisms "$tmp/missing-mechanisms.json"
 
 expect_gallery_failure legacy-schema '.schema_version = 1'
+expect_gallery_failure missing-source-frontend 'del(.targets[0].frontend)'
+expect_gallery_failure unknown-source-frontend '.targets[0].frontend = "dynamic"'
 expect_gallery_failure missing-presentation-language 'del(.presentation_language)'
 expect_gallery_failure English-presentation-title '.examples[0].title = "English title"'
 expect_gallery_failure English-presentation-summary '.examples[0].summary = "English summary"'
@@ -90,8 +92,8 @@ expect_gallery_failure missing-delivery-capability \
   '(.targets[] | select(.id == "delivery-formats") | .capability_ids) = ["P1-30"]'
 expect_gallery_failure missing-delivery-artifact \
   '(.targets[] | select(.id == "delivery-formats") |
-    .expected_artifacts[] | select(.kind == "authoring_delivery") |
-    .artifact_ids) |= map(select(. != "stream"))'
+    .expected_artifacts[] | select(.kind == "delivery") |
+    .artifacts) |= map(select(.target != "stream"))'
 expect_gallery_failure missing-delivery-presentation \
   '(.examples[] | select(.id == "delivery-formats") | .checks) |= .[:-1]'
 expect_gallery_failure legacy-artifacts \
@@ -102,18 +104,19 @@ expect_gallery_failure legacy-deliverable-artifact \
   '.targets[0].expected_artifacts[3].kind = "deliverable"'
 expect_gallery_failure legacy-render-config-artifact \
   '.targets[0].expected_artifacts[3].kind = "render_config"'
-expect_gallery_failure untyped-authoring-delivery \
-  'del(.targets[0].expected_artifacts[3].id)'
-expect_gallery_failure missing-artifact-ids \
-  'del(.targets[0].expected_artifacts[3].artifact_ids)'
-expect_gallery_failure duplicate-artifact-ids \
-  '.targets[0].expected_artifacts[3].artifact_ids = ["preview", "preview"]'
+expect_gallery_failure untyped-delivery \
+  'del(.targets[0].expected_artifacts[3].logical_key)'
+expect_gallery_failure missing-artifact-descriptors \
+  'del(.targets[0].expected_artifacts[3].artifacts)'
+expect_gallery_failure duplicate-artifact-descriptors \
+  '.targets[0].expected_artifacts[3].artifacts +=
+    [.targets[0].expected_artifacts[3].artifacts[0]]'
 expect_gallery_failure artifact-extra-key \
   '.targets[0].expected_artifacts[0].label = "legacy"'
 expect_gallery_failure nonzero-window \
   '.targets[0].preview_window.start_seconds = 1'
 expect_gallery_failure cue-outside-preview \
-  '.targets[0].preview_window.duration_seconds = 17.9'
+  '.examples[0].checks[0].cue = "99-100 秒 - 线性裁剪"'
 expect_gallery_failure missing-preview-canonical \
   '.targets[0].expected_artifacts |= map(select(.kind != "preview_canonical_project"))'
 expect_gallery_failure missing-preview-plan \
@@ -149,11 +152,12 @@ printf '%s\n' '{"examples":[{"source":"examples/demo/main.veac"}]}' \
   > "$presentation_root/gallery.json"
 write_presentation_example() {
   local content=$1
-  printf '%s\n' 'project demo {' '  sequence main {' \
-    '    layer visual copy {' '      item title {' \
-    "        source text { content \"$content\"; }" \
-    '        record { at 0s; duration 1s; }' '      }' '    }' '  }' '}' \
+  printf '%s\n' \
+    'import "./visible.veac" as visible;' 'fn main(context: Context) -> Project {' \
+    '  project(identifier("demo"), project_settings(600))' '}' \
     > "$presentation_root/examples/demo/main.veac"
+  printf '%s\n' "fn visible(style: TextStyle) -> Source { source_text(\"$content\", style) }" \
+    > "$presentation_root/examples/demo/visible.veac"
 }
 write_presentation_example '中文排版 · مرحبا · VEAC'
 LC_ALL=C "$PRESENTATION_CHECKER" "$presentation_root" \
@@ -182,5 +186,14 @@ if "$REGISTRY_CHECKER" "$tmp/extra-registry-key.json" >/dev/null 2>&1; then
   echo "expected extra registry key failure" >&2
   exit 1
 fi
+
+for id in mask.star animation.interpolation-spring audio.high-pass generator.shape.path \
+  delivery.video-codec.av1; do
+  jq --arg id "$id" 'map(select(.id != $id))' "$tmp/mechanisms.json" > "$tmp/missing-family.json"
+  if "$REGISTRY_CHECKER" "$tmp/missing-family.json" >/dev/null 2>&1; then
+    echo "expected closed registry family failure: $id" >&2
+    exit 1
+  fi
+done
 
 echo "Example capability checker tests passed."

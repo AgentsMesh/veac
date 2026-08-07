@@ -1,4 +1,6 @@
-use std::collections::BTreeMap;
+use veac_ir::AssCueSettings;
+
+use crate::{CaptionError, CaptionFormat};
 
 pub(crate) fn vtt_ids(input: &str) -> Vec<Option<String>> {
     let normalized = input.replace("\r\n", "\n");
@@ -26,7 +28,7 @@ pub(crate) fn vtt_ids(input: &str) -> Vec<Option<String>> {
         .collect()
 }
 
-pub(crate) fn ass_extras(input: &str) -> Vec<BTreeMap<String, String>> {
+pub(crate) fn ass_extras(input: &str) -> Result<Vec<AssCueSettings>, CaptionError> {
     input
         .lines()
         .filter_map(|line| {
@@ -36,30 +38,40 @@ pub(crate) fn ass_extras(input: &str) -> Vec<BTreeMap<String, String>> {
                 .or_else(|| line.trim().strip_prefix("Comment:"))?
                 .trim();
             let fields: Vec<_> = value.splitn(10, ',').collect();
-            if fields.len() != 10 {
-                return Some(BTreeMap::new());
-            }
-            let mut settings = BTreeMap::new();
-            insert_nondefault(&mut settings, "ass.layer", fields[0], "0");
-            insert_nondefault(&mut settings, "ass.margin_left", fields[5], "0");
-            insert_nondefault(&mut settings, "ass.margin_right", fields[6], "0");
-            insert_nondefault(&mut settings, "ass.margin_vertical", fields[7], "0");
-            insert_nondefault(&mut settings, "ass.effect", fields[8], "");
-            Some(settings)
+            Some(parse_ass_fields(&fields))
         })
         .collect()
 }
 
-fn insert_nondefault(
-    settings: &mut BTreeMap<String, String>,
-    key: &str,
-    value: &str,
-    default: &str,
-) {
-    let value = value.trim();
-    if value != default {
-        settings.insert(key.to_owned(), value.to_owned());
+fn parse_ass_fields(fields: &[&str]) -> Result<AssCueSettings, CaptionError> {
+    if fields.len() != 10 {
+        return Err(ass_error("event does not contain ten fields"));
     }
+    Ok(AssCueSettings {
+        comment: false,
+        layer: nonzero_u32(fields[0], "layer")?,
+        margin_left: nonzero_u32(fields[5], "left margin")?,
+        margin_right: nonzero_u32(fields[6], "right margin")?,
+        margin_vertical: nonzero_u32(fields[7], "vertical margin")?,
+        effect: nonempty(fields[8]),
+    })
+}
+
+fn nonzero_u32(value: &str, field: &str) -> Result<Option<u32>, CaptionError> {
+    let value = value
+        .trim()
+        .parse::<u32>()
+        .map_err(|_| ass_error(&format!("invalid {field}")))?;
+    Ok((value != 0).then_some(value))
+}
+
+fn nonempty(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_owned())
+}
+
+fn ass_error(message: &str) -> CaptionError {
+    CaptionError::parse(CaptionFormat::Ass, message)
 }
 
 pub(crate) fn has_unsupported_vtt_markup(input: &str) -> bool {

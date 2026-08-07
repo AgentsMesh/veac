@@ -5,12 +5,12 @@ fn exact_public_text_edit_boundaries_are_accepted() {
     let plan = text_edit_plan(
         MAX_SOURCE_EDIT_OUTPUT_BYTES,
         MAX_SOURCE_EDIT_OUTPUT_BYTES,
-        MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES,
+        MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES,
     )
     .unwrap();
     assert_eq!(plan.output_bytes, MAX_SOURCE_EDIT_OUTPUT_BYTES);
     assert_eq!(
-        MAX_SOURCE_EDIT_OUTPUT_BYTES * 2 + MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES,
+        MAX_SOURCE_EDIT_OUTPUT_BYTES * 2 + MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES,
         MAX_SOURCE_EDIT_WORKING_SET_BYTES
     );
 }
@@ -18,7 +18,7 @@ fn exact_public_text_edit_boundaries_are_accepted() {
 #[test]
 fn each_text_edit_budget_rejects_the_first_byte_over_its_limit() {
     assert!(matches!(
-        text_edit_plan(0, 0, MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES + 1),
+        text_edit_plan(0, 0, MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES + 1),
         Err(SourceEditError::ReplacementPayloadTooLarge { .. })
     ));
     assert!(matches!(
@@ -52,7 +52,7 @@ fn size_arithmetic_overflow_fails_closed() {
         SourceEditError::SourceEditSizeOverflow
     );
     assert_eq!(
-        validate_expression_payload([usize::MAX, 1]),
+        validate_fragment_payload([usize::MAX, 1]),
         Err(SourceEditError::SourceEditSizeOverflow)
     );
 }

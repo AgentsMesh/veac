@@ -51,6 +51,9 @@ fn animation(
     }
     for animation in target.iter().chain(value) {
         changed_tree::curve(&animation.reveal, changed);
+        if let Some(highlight) = &animation.highlight {
+            changed_tree::curve(&highlight.progress, changed);
+        }
         changed_tree::curve(&animation.opacity, changed);
         changed_tree::curve(&animation.transform.position_offset, changed);
         changed_tree::curve(&animation.transform.scale, changed);

@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use veac_lang::program::{compile_with_loader, LoadedSource, SourceLoader};
+use veac_lang::program::{build_with_loader, prepare_with_loader, LoadedSource, SourceLoader};
+
+#[path = "program_functions/support.rs"]
+mod support;
 
 #[path = "program_loader_api/budgets.rs"]
 mod budgets;
@@ -28,34 +31,23 @@ impl SourceLoader for Loader {
 #[test]
 fn external_loaders_can_compile_virtual_source_graphs() {
     let module = r#"module {
-  export const time duration = 1s;
+  export fn duration() -> time { 1s }
 }"#;
-    let entry = r#"import "./timing.veac" as timing;
-project virtual {
-  settings {
-    timebase 1/1000; canvas 640px by 360px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  sequence main { layer visual content { item sample {
-    source generated transparent;
-    record { at 0s; duration ${timing.duration}; }
-  } } }
-}"#;
+    let entry = executable_entry("import \"./timing.veac\" as timing;", "timing.duration()");
     let loader = Loader {
         sources: BTreeMap::from([("timing.veac".to_owned(), module.to_owned())]),
     };
-    let compiled = compile_with_loader(
+    let built = build_with_loader(
         LoadedSource {
             id: "main.veac".to_owned(),
-            source: entry.to_owned(),
+            source: entry,
         },
         &loader,
     )
     .unwrap();
-    assert_eq!(compiled.root_module(), "main.veac");
-    assert!(compiled.expanded_source().contains("duration 1s;"));
-    assert_eq!(compiled.sources().len(), 2);
+    assert_eq!(built.root_module(), "main.veac");
+    assert_eq!(support::result_duration(&built), "1s");
+    assert_eq!(built.sources().len(), 2);
 }
 
 struct InvalidIdLoader;
@@ -71,21 +63,18 @@ impl SourceLoader for InvalidIdLoader {
 
 #[test]
 fn public_loaders_cannot_return_escaping_source_ids() {
-    let entry = r#"import "./module.veac" as module;
-project root {
-  settings {
-    timebase 1/1000; canvas 1px by 1px;
-    frame-rate 1fps; sample-rate 48000hz;
-  }
-  entry sequence main; sequence main {}
-}"#;
-    let error = compile_with_loader(
+    let entry = executable_entry("import \"./module.veac\" as module;", "1s");
+    let error = prepare_with_loader(
         LoadedSource {
             id: "main.veac".to_owned(),
-            source: entry.to_owned(),
+            source: entry,
         },
         &InvalidIdLoader,
     )
     .unwrap_err();
     assert_eq!(error.as_slice()[0].code, "PROGRAM_SOURCE_ID");
+}
+
+fn executable_entry(declarations: &str, duration: &str) -> String {
+    support::project_with(declarations, duration)
 }

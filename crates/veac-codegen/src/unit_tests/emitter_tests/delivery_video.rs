@@ -50,7 +50,7 @@ fn two_pass_video_has_exact_phases_and_shared_passlog() {
 }
 
 #[test]
-fn explicit_hardware_fails_before_emission_without_device_setup() {
+fn explicit_hardware_emits_the_closed_encoder_and_requirement() {
     let mut plan = resolved(&fixture());
     plan.output
         .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
@@ -58,11 +58,32 @@ fn explicit_hardware_fails_before_emission_without_device_setup() {
         .hardware = HardwareSelection::Explicit {
         backend: HardwareBackend::VideoToolbox,
     };
-    let error = emit_all(&plan, &bindings(&plan)).unwrap_err();
-    assert!(error
-        .diagnostics()
-        .iter()
-        .any(|value| value.code == "PLAN_VIDEO_SETTINGS_INVALID"));
+    let emitted = emit_all(&plan, &bindings(&plan)).unwrap();
+    let task = &emitted.tasks()[0];
+    assert!(pair(
+        &command(task).output_args,
+        "-c:v",
+        "h264_videotoolbox"
+    ));
+    assert!(emitted.requirements().iter().any(|value| {
+        value.kind() == BackendCapabilityKind::Encoder && value.name() == "h264_videotoolbox"
+    }));
+}
+
+#[test]
+fn av1_authored_level_is_compiled_to_ffmpeg_level_index() {
+    let mut plan = resolved(&fixture());
+    let video = plan
+        .output
+        .video_deliverable_mut(&DeliverableId::new("dlv_main").unwrap())
+        .unwrap();
+    video.video.codec = VideoCodec::Av1;
+    video.video.profile = Some(VideoProfile::Av1Main);
+    video.video.level = Some("5.1".to_owned());
+    let emitted = emit_all(&plan, &bindings(&plan)).unwrap();
+    let arguments = &command(&emitted.tasks()[0]).output_args;
+    assert!(pair(arguments, "-c:v", "libaom-av1"));
+    assert!(pair(arguments, "-level:v", "13"));
 }
 
 #[test]

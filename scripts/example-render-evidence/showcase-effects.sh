@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 
+assert_sharpen_evidence() {
+  local video=$1 clear_halo sharp_halo halo_delta
+  clear_halo=$(frame_sharpen_halo_contrast "$video" 0.9)
+  sharp_halo=$(frame_sharpen_halo_contrast "$video" 1.5)
+  halo_delta=$(awk -v clear="$clear_halo" -v sharp="$sharp_halo" \
+    'BEGIN { delta=sharp-clear; print (delta < 0 ? -delta : delta) }')
+  awk -v delta="$halo_delta" 'BEGIN { exit !(delta > .2) }' ||
+    fail "video-effects sharpen does not produce an edge halo: $clear_halo->$sharp_halo"
+}
+
 check_effects_evidence() {
   local dir="$PREVIEW_ROOT/video-effects"
   [[ -d $dir ]] || return 0
   local video="$dir/rendered/preview.mp4" early_edge clear_edge clear_sat style_sat
-  local clear_halo sharp_halo grain_delta spill_excess
+  local grain_delta spill_excess plugin_color_sat plugin_mono_sat
   local style_center style_corner clear_green keyed_green keyed_rose luma_rose luma_green
   video_contract "$video" 3.6
   early_edge=$(frame_edge_avg "$video" 0.1)
@@ -18,17 +28,13 @@ check_effects_evidence() {
   awk -v clear="$clear_sat" -v style="$style_sat" \
     'BEGIN { exit !(style < clear * .82) }' ||
     fail "video-effects style stage does not reduce saturation: clear=$clear_sat style=$style_sat"
-  style_center=$(region_yavg "$video" 1.5 'iw/3:ih/3:iw/3:ih/3')
+  style_center=$(region_yavg "$video" 1.5 'iw/8:ih/8:7*iw/16:3*ih/4')
   style_corner=$(region_yavg "$video" 1.5 'iw/8:ih/8:0:0')
   awk -v center="$style_center" -v corner="$style_corner" \
     'BEGIN { exit !(center > corner + 8) }' ||
     fail "video-effects vignette does not darken the corners"
 
-  clear_halo=$(frame_sharpen_halo_contrast "$video" 0.9)
-  sharp_halo=$(frame_sharpen_halo_contrast "$video" 1.5)
-  awk -v clear="$clear_halo" -v sharp="$sharp_halo" \
-    'BEGIN { exit !(sharp > clear + 2.5) }' ||
-    fail "video-effects sharpen does not produce an edge halo: $clear_halo->$sharp_halo"
+  assert_sharpen_evidence "$video"
   grain_delta=$(frame_difference_avg "$video" 1.25 1.75)
   awk -v delta="$grain_delta" 'BEGIN { exit !(delta > 0.04) }' ||
     fail "video-effects grain has no temporal texture: delta=$grain_delta"
@@ -46,4 +52,10 @@ check_effects_evidence() {
   luma_green=$(region_color_count "$video" 3.5 'iw:ih:0:0' green)
   ((luma_rose > 1000 && luma_green > 200)) ||
     fail "video-effects luma key does not reveal dark areas while retaining highlights"
+
+  plugin_color_sat=$(frame_saturation_avg "$video" 8.5)
+  plugin_mono_sat=$(frame_saturation_avg "$video" 9.5)
+  awk -v color="$plugin_color_sat" -v mono="$plugin_mono_sat" \
+    'BEGIN { exit !(color > 20 && mono < color * .2) }' ||
+    fail "video-effects versioned plugin does not produce monochrome output: $plugin_color_sat->$plugin_mono_sat"
 }

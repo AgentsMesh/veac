@@ -1,91 +1,87 @@
 module {
-  // 前向引用由依赖图解析，不依赖声明顺序。
-  export const length title_size = base_size + 8px;
-  export const time card_duration = clamp(base_duration + 500ms, 2s, 3s);
-  const length base_size = 56px;
-  const time base_duration = 2s /* 表达式内的块注释不会改变求值结果。 */ + 500ms;
+  import "./showcase.veac" as showcase;
 
-  preset text-style readable {
-    font family "Arial";
-    fill #ffffffff;
-    background { color #00000099; padding 18px; }
-    outline { color #123047ff; width 2px; }
+  export enum Mood {
+    Calm,
+    Accent { color: color, },
   }
 
-  export preset text-style title {
-    use text-style readable;
-    size ${title_size};
-    weight bold;
+  export enum Locale {
+    zh-Hans,
+    zh-Hant,
   }
 
-  export preset text-layout centered {
-    box-width 1040px;
-    box-height 180px;
-    wrap word;
-    overflow clip;
-    horizontal-align center;
-    vertical-align middle;
+  export struct Card {
+    key: identifier,
+    at: time,
+    duration: time,
+    topic: text,
+    detail: text,
+    mood: Mood,
   }
 
-  // 私有子组件接收父组件转发的背景，同时管理完整卡面与开场强调条。
-  component sequence card_visuals {
-    param time duration;
-    param time accent_duration;
-    slot visual backdrop;
-    body {
-      layer visual @background-layer {
-        item @backdrop {
-          source slot backdrop;
-          record { at 0s; duration ${duration}; }
-        }
-      }
-      layer visual @accent-layer {
-        item @accent {
-          source generated solid { color #38d6b5ff; }
-          record { at 0s; duration ${accent_duration}; }
-          modifiers {
-            layout accent-layout {
-              placement absolute { position { x 640px; y 500px; } }
-              frame { width 320px; height 12px; fit fill; }
-            }
-          }
-        }
+  impl Card @presentation {
+    export fn title(self, separator: text) -> text {
+      self.topic + separator + self.detail
+    }
+
+    export fn background(self) -> color {
+      match self.mood {
+        Mood.Calm => #2b6574ff,
+        Mood.Accent { color } => color,
       }
     }
   }
 
-  export component sequence title_card {
-    param text title;
-    param time duration default card_duration;
-    param time accent_duration default duration / 3;
-    slot visual backdrop;
+  export fn card_span(base: time, padding: time) -> time {
+    clamp(add_padding(base, padding), 2s, 3s)
+  }
 
-    // 父 slot 通过 fill 显式转发；子组件不会捕获顶层调用者。
-    instance sequence @visuals from card_visuals {
-      bind duration duration;
-      bind accent_duration accent_duration;
-      fill backdrop {
-        source slot backdrop;
-      }
+  export fn component_prefix(locale: Locale) -> text {
+    match locale {
+      Locale.zh-Hans => "组件化：",
+      Locale.zh-Hant => "元件化：",
     }
+  }
 
-    body {
-      layer visual @visual-composition-layer {
-        item @visual-composition {
-          source sequence sequence @visuals;
-          record { at 0s; duration ${duration}; }
-        }
-      }
-      layer visual @copy-layer {
-        item @title {
-          source text {
-            content ${title};
-            style { use text-style title; }
-            layout { use text-layout centered; }
-          }
-          record { at 0s; duration ${duration}; }
-        }
-      }
+  fn add_padding(base: time, padding: time) -> time { base + padding }
+
+  export fn first_card(duration: time) -> Card {
+    Card {
+      key: identifier("first"), at: 0s, duration: duration,
+      topic: "结构与方法", detail: "静态类型组件", mood: Mood.Calm,
     }
+  }
+
+  export fn second_card(duration: time, accent: color) -> Card {
+    Card {
+      key: identifier("second"), at: duration, duration: duration,
+      topic: "枚举与控制流", detail: "穷尽匹配生成",
+      mood: Mood.Accent { color: accent, },
+    }
+  }
+
+  export fn backdrop(card: Card) -> Item {
+    item(
+      card.key, item_enabled(), during(card.at, card.duration),
+      source_generated(generator_solid(card.background())), source_timing_native()
+    )
+  }
+
+  export fn animated(card: Card) -> Item {
+    let visual = backdrop(card);
+    animate visual-opacity on clip(visual) {
+      sample_curve_ease_in_out(
+        clamp(progress * 1.5, 0.0, 1.0), [(0.0, 0.0), (1.0, 1.0)]
+      )
+    }
+  }
+
+  export fn copy(card: Card, font: Resource, label: text) -> Item {
+    item(
+      card.key, item_enabled(), during(card.at, card.duration),
+      source_text(label, showcase.caption_style(font, 52px, 1100px)),
+      source_timing_native()
+    )
   }
 }

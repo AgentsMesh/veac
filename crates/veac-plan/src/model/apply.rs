@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use veac_ir::{ApplyId, ApplyMix, ApplyStageId, ItemId, ParameterValue, TimeRange, TrackId};
+use veac_ir::{ApplyId, ApplyMix, ApplyStageId, Effect, ItemId, TimeRange, TrackId};
 
 use super::{ResolvedColorPipeline, ResolvedMatte};
 
@@ -57,11 +55,6 @@ pub struct ResolvedApplyStage {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ResolvedApplyOperation {
-    Color {
-        pipeline: ResolvedColorPipeline,
-    },
-    Effect {
-        effect_type: String,
-        parameters: BTreeMap<String, ParameterValue>,
-    },
+    Color { pipeline: ResolvedColorPipeline },
+    Effect { effect: Effect },
 }

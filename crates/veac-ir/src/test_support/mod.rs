@@ -7,7 +7,7 @@ mod visual;
 
 pub(crate) use clips::media_clip;
 pub(crate) use multicam::multicam_project;
-pub(crate) use project::{linked_project, sample_project};
+pub(crate) use project::{empty_temporal, executable_manifest, linked_project, sample_project};
 pub(crate) use relations::{add_transition, transition_from, transition_mut};
 pub(crate) use visual::{identity_layout_visual, visual};
 

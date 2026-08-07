@@ -26,7 +26,7 @@ fn relation_project() -> ProjectEnvelope {
     };
     let mut next = sequence.tracks[0].clips[0].clone();
     next.id = item_id("itm_next");
-    next.record_range = range(600, 600);
+    next.record_range = range(540, 600);
     next.effects.clear();
     next.visual.as_mut().unwrap().opacity = Animatable::constant(1.0);
     sequence.tracks[0].clips.push(next);

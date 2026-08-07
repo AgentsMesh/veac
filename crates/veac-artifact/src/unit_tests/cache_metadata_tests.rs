@@ -21,7 +21,7 @@ fn verified_open_rejects_a_descriptor_from_another_key() {
     let (temp, store, record) = stored();
     let directory = cache_directory(temp.path(), &record.key);
     let mut other = descriptor();
-    other.parameters = serde_json::json!({"codec": "h265", "height": 720});
+    change_parameters(&mut other);
     fs::write(
         directory.join("descriptor.json"),
         canonical_descriptor_bytes(&other).unwrap(),
@@ -35,7 +35,7 @@ fn cache_get_rejects_a_descriptor_or_record_from_another_key() {
     let (temp, store, record) = stored();
     let directory = cache_directory(temp.path(), &record.key);
     let mut other = descriptor();
-    other.parameters = serde_json::json!({"codec": "h265", "height": 720});
+    change_parameters(&mut other);
     fs::write(
         directory.join("descriptor.json"),
         canonical_descriptor_bytes(&other).unwrap(),
@@ -114,4 +114,11 @@ fn cache_directory(root: &std::path::Path, key: &ContentDigest) -> std::path::Pa
     root.join("sha256")
         .join(&key.value[..2])
         .join(&key.value[2..])
+}
+
+fn change_parameters(value: &mut ArtifactDescriptor) {
+    let ArtifactParameters::ProxyVideo(parameters) = &mut value.parameters else {
+        unreachable!()
+    };
+    parameters.crf = 25;
 }

@@ -3,6 +3,7 @@ mod report;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use sha2::{Digest, Sha256};
 use veac_ir::*;
 
 use crate::{
@@ -70,7 +71,10 @@ pub(super) fn import(
     );
     report::timeline(timeline, &mut context.losses);
     report::annotations(timeline, &mut context.losses);
-    let metadata = BTreeMap::from([("otio.timeline".to_owned(), serde_json::to_value(timeline)?)]);
+    let document_sha256 = Sha256Digest::new(format!(
+        "{:x}",
+        Sha256::digest(serde_json_canonicalizer::to_vec(timeline)?)
+    ));
     Ok(OtioImportResult {
         sequence: Sequence {
             id: bindings.sequence_id.clone(),
@@ -78,7 +82,7 @@ pub(super) fn import(
             settings: bindings.settings.clone(),
             tracks,
             applies: vec![],
-            metadata,
+            authorship: Some(SequenceAuthorship::Otio { document_sha256 }),
         },
         relations: vec![],
         materials: bindings

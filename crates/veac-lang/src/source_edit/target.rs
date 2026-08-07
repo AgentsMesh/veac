@@ -1,5 +1,6 @@
 mod constructors;
-mod definition;
+mod declaration;
+mod expression_path;
 mod path;
 mod schema;
 mod site;
@@ -7,8 +8,11 @@ mod site;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub use definition::*;
-pub use path::{SourceNodeKind, SourceNodePath};
+pub use declaration::*;
+pub use expression_path::*;
+pub use path::kind::SourceNodeKind;
+pub use path::SourceNodePath;
+pub use site::StatementSite;
 
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
@@ -27,6 +31,15 @@ impl SourceNodeRef {
         }
     }
 
+    pub fn input(module: impl Into<String>, input: impl Into<String>) -> Self {
+        Self::new(
+            module,
+            SourceNodePath::Input {
+                input: input.into(),
+            },
+        )
+    }
+
     pub fn constant(module: impl Into<String>, constant: impl Into<String>) -> Self {
         Self::new(
             module,
@@ -36,29 +49,39 @@ impl SourceNodeRef {
         )
     }
 
-    pub fn component(module: impl Into<String>, component: impl Into<String>) -> Self {
+    pub fn function(module: impl Into<String>, function: impl Into<String>) -> Self {
         Self::new(
             module,
-            SourceNodePath::Component {
-                component: component.into(),
+            SourceNodePath::Function {
+                function: function.into(),
             },
         )
     }
 
-    pub fn component_instance(module: impl Into<String>, instance: impl Into<String>) -> Self {
+    pub fn method(
+        module: impl Into<String>,
+        receiver: impl Into<String>,
+        method: impl Into<String>,
+    ) -> Self {
         Self::new(
             module,
-            SourceNodePath::ComponentInstance {
-                instance: instance.into(),
+            SourceNodePath::Method {
+                receiver: receiver.into(),
+                method: method.into(),
             },
         )
     }
 
-    pub fn resource(module: impl Into<String>, resource: impl Into<String>) -> Self {
+    pub fn implementation(
+        module: impl Into<String>,
+        receiver: impl Into<String>,
+        implementation: impl Into<String>,
+    ) -> Self {
         Self::new(
             module,
-            SourceNodePath::Resource {
-                resource: resource.into(),
+            SourceNodePath::Implementation {
+                receiver: receiver.into(),
+                implementation: implementation.into(),
             },
         )
     }
@@ -74,44 +97,48 @@ impl SourceNodeRef {
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ExpressionSite {
     ConstantValue,
-    ComponentParameterDefault {
-        #[schemars(with = "schema::CanonicalNameSchema")]
-        parameter: String,
+    BodyExpression { path: SourceExpressionPath },
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum BodySite {
+    FunctionBody,
+    MethodBody,
+    TemporalAnimation {
+        property: SourceTemporalProperty,
     },
-    ComponentInstanceArgument {
-        #[schemars(with = "schema::CanonicalNameSchema")]
-        parameter: String,
+    ComponentAnimation {
+        ordinal: u32,
+        property: SourceTemporalProperty,
     },
-    ComponentLocalInstanceArgument {
-        #[schemars(with = "schema::CanonicalNameSchema")]
-        parameter: String,
-    },
-    ItemRecordStart,
-    ItemRecordDuration,
-    ItemEnabled,
-    TextContent,
-    ResourceLocator,
-    ModifierParameter {
-        #[schemars(with = "schema::CanonicalNameSchema")]
-        parameter: String,
-    },
-    PresetTextStyleField {
-        field: SourceTextStyleField,
-    },
-    PresetTextLayoutField {
-        field: SourceTextLayoutField,
-    },
-    PresetColorField {
-        field: SourceColorField,
-    },
-    PresetAudioProcessorField {
-        processor_kind: SourceAudioProcessorKind,
-        field: SourceAudioProcessorField,
-    },
-    PresetAudioEqBandField {
-        field: SourceAudioEqBandField,
-    },
-    PresetDeliveryField {
-        field: SourceDeliveryField,
-    },
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceTemporalProperty {
+    VisualPosition,
+    VisualScale,
+    VisualRotation,
+    VisualCrop,
+    VisualOpacity,
+    AudioGain,
+    AudioPan,
+    MaskPosition,
+    MaskScale,
+    MaskRotation,
+    MaskFeather,
+    MaskExpansion,
+    TextPosition,
+    TextScale,
+    TextRotation,
+    TextReveal,
+    TextHighlightProgress,
+    TextOpacity,
+    EffectParameter,
+    ApplyOpacity,
 }

@@ -5,6 +5,7 @@ mod lookup;
 mod operation;
 mod operations;
 mod preconditions;
+mod provenance;
 mod snapping;
 mod transaction;
 mod types;

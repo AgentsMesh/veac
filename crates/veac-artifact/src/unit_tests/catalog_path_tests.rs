@@ -47,10 +47,10 @@ fn catalog_rejects_non_utf8_entry_names() {
 fn query() -> ArtifactCatalogQuery {
     ArtifactCatalogQuery::new(
         ArtifactKind::ProxyVideo,
-        vec![crate::ArtifactDependency {
-            role: "source".into(),
-            identity: crate::ContentDigest::sha256(b"source"),
-        }],
+        vec![crate::ArtifactDependency::new(
+            crate::ArtifactDependencyRole::Source,
+            crate::ContentDigest::sha256(b"source"),
+        )],
     )
     .unwrap()
 }

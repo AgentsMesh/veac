@@ -58,6 +58,7 @@ fn values<T>(value: &Animatable<T>) -> Box<dyn Iterator<Item = &T> + '_> {
     match value {
         Animatable::Constant { value } => Box::new(std::iter::once(value)),
         Animatable::Keyframes { keyframes } => Box::new(keyframes.iter().map(|key| &key.value)),
+        Animatable::Binding { .. } => Box::new(std::iter::empty()),
     }
 }
 

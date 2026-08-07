@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use veac_ir::{Generator, ItemId, RationalTime, SequenceId, StreamSelection, TimeRange};
+use veac_ir::{
+    CaptionCueSemantics, Generator, ItemId, RationalTime, SequenceId, StreamSelection, TimeRange,
+};
 
 use super::{
     EffectiveAudioProperties, EffectiveVisualProperties, PlanInputId, ResolvedEffect,
@@ -46,6 +48,7 @@ pub enum ResolvedClipSource {
     Caption {
         content: ResolvedText,
         speaker: Option<String>,
+        cue: CaptionCueSemantics,
     },
     Generated {
         generator: Generator,

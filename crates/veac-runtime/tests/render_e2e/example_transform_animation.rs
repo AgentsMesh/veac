@@ -4,19 +4,42 @@ use std::process::Command;
 
 use super::support::*;
 use tempfile::TempDir;
-use veac_ir::ProjectEnvelope;
-use veac_lang::{lower_document, parse};
+use veac_ir::{Animatable, ProjectEnvelope};
+use veac_lang::program::build_path;
 
-const SOURCE: &str = include_str!("../../../../examples/transforms-and-animation/main.veac");
-
-fn example_project() -> ProjectEnvelope {
-    let document = parse(SOURCE).expect("example must parse");
-    lower_document(&document).expect("example must lower")
+fn example_root() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/transforms-and-animation")
 }
 
-fn final_frame(path: &Path) -> Vec<u8> {
+fn example_project() -> ProjectEnvelope {
+    let built = build_path(&example_root().join("main.veac")).expect("example must execute");
+    let envelope = built.envelope();
+    let badge = envelope.project.sequences[0].tracks[1]
+        .clips
+        .iter()
+        .find(|clip| {
+            clip.authorship
+                .as_ref()
+                .and_then(|value| value.logical_path.last())
+                .map(|value| value.as_str())
+                == Some("badge")
+        })
+        .expect("authored badge");
+    assert!(matches!(
+        badge.visual.as_ref().unwrap().opacity,
+        Animatable::Binding { .. }
+    ));
+    assert!(envelope
+        .temporal
+        .provenance
+        .iter()
+        .any(|value| value.origin.function == "animate"));
+    envelope.clone()
+}
+
+fn frame_at(path: &Path, seconds: &str) -> Vec<u8> {
     let output = Command::new("ffmpeg")
-        .args(["-hide_banner", "-loglevel", "error", "-ss", "3.0", "-i"])
+        .args(["-hide_banner", "-loglevel", "error", "-ss", seconds, "-i"])
         .arg(path)
         .args([
             "-frames:v",
@@ -32,6 +55,13 @@ fn final_frame(path: &Path) -> Vec<u8> {
     assert!(output.status.success(), "ffmpeg frame extraction failed");
     assert_eq!(output.stdout.len(), 1280 * 720 * 3);
     output.stdout
+}
+
+fn coral_count(frame: &[u8]) -> usize {
+    frame
+        .chunks_exact(3)
+        .filter(|value| is_coral([value[0], value[1], value[2]]))
+        .count()
 }
 
 fn pixel(frame: &[u8], x: usize, y: usize) -> [u8; 3] {
@@ -50,17 +80,17 @@ fn is_coral([r, g, b]: [u8; 3]) -> bool {
 #[test]
 fn transform_example_renders_crop_flip_and_shear() {
     let mut plan = example_project();
-    let mut render_config = project(false).project.render_configs.remove(0);
-    render_config.sequence_id = plan.project.sequences[0].id.clone();
-    let raster = render_config.raster.as_mut().expect("raster fixture");
-    raster.width = 1280;
-    raster.height = 720;
-    raster.frame_rate = ratio(1, 1);
-    plan.project.sequences[0].settings.frame_rate = ratio(1, 1);
-    plan.project.render_configs.push(render_config);
+    plan.project.render_configs[0]
+        .raster
+        .as_mut()
+        .unwrap()
+        .frame_rate = ratio(10, 1);
+    plan.project.sequences[0].settings.frame_rate = ratio(10, 1);
     let temp = TempDir::new().expect("temp dir");
     let output = temp.path().join("transform-example.mkv");
-    let rendered = render(plan, &BTreeMap::new(), &output);
+    let font = example_root().join("assets/veac-example-zh.ttf");
+    let assets = BTreeMap::from([(plan.project.materials[0].id.to_string(), font)]);
+    let rendered = render(plan, &assets, &output);
     let graph = rendered
         .command
         .filter_graph
@@ -70,14 +100,9 @@ fn transform_example_renders_crop_flip_and_shear() {
     assert!(graph.contains("hflip"), "graph={graph}");
     assert!(graph.contains("shear=shx=0.22:shy=-0.08"), "graph={graph}");
 
-    let frame = final_frame(&output);
+    let frame = frame_at(&output, "2.65");
     assert!(is_background(pixel(&frame, 0, 0)));
     assert!(is_background(pixel(&frame, 1270, 710)));
-    assert!(is_coral(pixel(&frame, 880, 500)));
-    assert!(is_background(pixel(&frame, 880, 560)));
-    assert!(is_coral(pixel(&frame, 1190, 480)));
-    assert!(is_background(pixel(&frame, 1190, 550)));
-    assert!(is_coral(pixel(&frame, 1170, 570)));
 
     let coral: Vec<_> = frame
         .chunks_exact(3)
@@ -85,11 +110,14 @@ fn transform_example_renders_crop_flip_and_shear() {
         .filter(|(_, value)| is_coral([value[0], value[1], value[2]]))
         .map(|(index, _)| (index % 1280, index / 1280))
         .collect();
+    assert!(coral.len() > 1_000, "the transformed badge must be visible");
+    let min_x = coral.iter().map(|point| point.0).min().unwrap();
+    let min_y = coral.iter().map(|point| point.1).min().unwrap();
     let max_x = coral.iter().map(|point| point.0).max().unwrap();
     let max_y = coral.iter().map(|point| point.1).max().unwrap();
     assert!(
-        max_x < 1240 && max_y < 640,
-        "unsafe bounds: {max_x}x{max_y}"
+        min_x > 500 && min_y > 250 && max_x < 1240 && max_y < 640,
+        "unexpected transformed bounds: {min_x},{min_y}..{max_x},{max_y}"
     );
     assert!(
         frame
@@ -98,5 +126,13 @@ fn transform_example_renders_crop_flip_and_shear() {
             .count()
             > 100,
         "the light outline must remain visible"
+    );
+
+    let early = coral_count(&frame_at(&output, "0.0"));
+    let full = coral_count(&frame_at(&output, "0.3"));
+    let late = coral_count(&frame_at(&output, "3.9"));
+    assert!(
+        full > early.saturating_mul(3) && full > late.saturating_mul(3),
+        "authored opacity did not change rendered pixels: {early}/{full}/{late}"
     );
 }

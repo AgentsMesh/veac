@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 
 use super::time;
@@ -88,7 +86,7 @@ pub fn font_material(id: &str) -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -106,7 +104,7 @@ pub fn remote_material(id: &str) -> Material {
             audio: StreamChoice::Auto,
         },
         probe: Some(video_probe(identity)),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -138,7 +136,7 @@ pub fn audio_material(id: &str) -> Material {
                 type_index: 0,
             }),
         }),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -173,7 +171,7 @@ pub fn image_material(id: &str) -> Material {
             }),
             selected_audio_stream: None,
         }),
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

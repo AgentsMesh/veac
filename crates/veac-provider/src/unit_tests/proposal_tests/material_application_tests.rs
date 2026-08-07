@@ -1,4 +1,7 @@
-use veac_artifact::{artifact_key, ArtifactKind, ContentDigest};
+use veac_artifact::{
+    artifact_key, ArtifactParameters, ContentDigest, ProducedArtifactParameters,
+    ProviderResultParameters,
+};
 use veac_ir::{ItemId, MaterialId, MaterialKind, MaterialSource};
 
 use crate::*;
@@ -10,7 +13,10 @@ fn material_application_rejects_wrong_artifact_kind_identity_kind_and_uri() {
     let (request, mut wrong_artifact) = exchange(Capability::TextToSpeech);
     let artifact = match &mut wrong_artifact.output {
         ProviderOutput::TextToSpeech(result) => {
-            result.audio.descriptor.kind = ArtifactKind::AudioStem;
+            result.audio.descriptor.parameters =
+                ArtifactParameters::AudioStem(ProducedArtifactParameters::Provider(
+                    ProviderResultParameters::new("wrong-audio-stem").unwrap(),
+                ));
             result.audio.record.key = artifact_key(&result.audio.descriptor).unwrap();
             result.audio.clone()
         }
@@ -97,7 +103,7 @@ fn artifact_evidence_rejects_key_role_and_operation_tampering() {
     let ProviderOutput::TextToSpeech(result) = &mut role.source_output else {
         unreachable!()
     };
-    result.audio.role = "tampered-role".into();
+    result.audio.role = ProviderArtifactSlot::new("tampered-role").unwrap();
     assert!(canonical_edit_proposal_bytes(&role).is_err());
 
     let mut operation = proposal;

@@ -106,10 +106,13 @@ fn precommit_failure_removes_all_fresh_checkpoints_and_preserves_hits() {
     let callback = Rc::clone(&observed);
     let mut executor = BundleExecutor::new(FakeFfmpeg::default());
     executor.checkpoint_stored_observer = Box::new(move |deadline| {
-        callback.set(callback.get() + 1);
-        (callback.get() < 2)
-            .then_some(deadline)
-            .unwrap_or_else(Instant::now)
+        let stored_count = callback.get() + 1;
+        callback.set(stored_count);
+        if stored_count < 2 {
+            deadline
+        } else {
+            Instant::now()
+        }
     });
     let tasks = outputs
         .iter()

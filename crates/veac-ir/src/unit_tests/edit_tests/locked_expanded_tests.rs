@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::test_support::time;
 
 use super::*;
@@ -13,10 +11,11 @@ fn locked_tracks_reject_all_extended_timeline_and_stack_operations() {
     inserted.record_range = range(600, 60);
     let blur = EffectInstance {
         id: EffectId::new("fx_locked_blur").unwrap(),
-        effect_type: "video.blur".to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([("radius".to_owned(), ParameterValue::Number { value: 2.0 })]),
+        effect: Effect::VideoBlur {
+            radius: Animatable::constant(2.0),
+        },
     };
     let id = ItemId::new("itm_video").unwrap();
     let operations = vec![

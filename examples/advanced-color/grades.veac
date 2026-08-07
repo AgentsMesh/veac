@@ -1,0 +1,81 @@
+module {
+  fn input() -> ColorSpace {
+    color_space(primaries_bt709(), transfer_bt709(), matrix_bt709(), range_limited())
+  }
+
+  fn working() -> ColorSpace {
+    color_space(primaries_bt709(), transfer_linear(), matrix_rgb(), range_full())
+  }
+
+  fn style(stages: list<ColorStage>) -> VisualStyle {
+    visual_style(
+      visual_layout(
+        placement_anchor(anchor_center(), vector(0.0, 0.0)), frame_none(),
+        transform_2d(
+          transform_motion(
+            point_constant(point(0px, 0px)), vector_constant(vector(1.0, 1.0)),
+            angle_constant(0deg)
+          ),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none())
+        )
+      ),
+      visual_surface(percent_constant(100%), compositing(1, blend_normal()), card_none()),
+      [], color_pipeline_present(color_pipeline(input(), working(), input(), stages))
+    )
+  }
+
+  fn luma_curve() -> ToneCurve {
+    tone_curve([
+      curve_point(0%, 3%), curve_point(45%, 52%), curve_point(100%, 96%)
+    ], tone_monotonic())
+  }
+
+  fn red_curve() -> ToneCurve {
+    tone_curve([
+      curve_point(0%, 0%), curve_point(50%, 56%), curve_point(100%, 100%)
+    ], tone_monotonic())
+  }
+
+  fn wheel_values() -> LiftGammaGain {
+    lift_gamma_gain(
+      color_wheel(0.0, 0.0, 0.04), color_wheel(0.03, 0.0, 0.0),
+      color_wheel(0.05, 0.02, -0.01)
+    )
+  }
+
+  export fn hsl() -> VisualStyle {
+    style([color_stage_hsl(hsl_adjustment(hue_red(), 18deg, 0.3, 0.06))])
+  }
+
+  export fn curves() -> VisualStyle {
+    style([color_stage_curves(color_curves(
+      tone_channel_present(luma_curve()), tone_channel_present(red_curve()),
+      tone_channel_none(), tone_channel_none()
+    ))])
+  }
+
+  export fn wheels() -> VisualStyle {
+    style([color_stage_wheels(wheel_values())])
+  }
+
+  export fn full(lut: Resource) -> VisualStyle {
+    style([
+      color_stage_basic(basic_color(0.35, 4800.0, 0.08, -0.2, 0.18, 0.04)),
+      color_stage_matrix(rgb_matrix(
+        [1.08, 0.02, 0.0, 0.01, 0.96, 0.03, 0.0, 0.04, 0.9],
+        [0.01, 0.0, 0.02]
+      )),
+      color_stage_hsl(hsl_adjustment(hue_red(), 12deg, 0.18, 0.04)),
+      color_stage_curves(color_curves(
+        tone_channel_present(luma_curve()), tone_channel_none(),
+        tone_channel_none(), tone_channel_none()
+      )),
+      color_stage_wheels(wheel_values()),
+      color_stage_lut(lut_application(lut, lut_tetrahedral()))
+    ])
+  }
+
+  export fn lut1d(lut: Resource) -> VisualStyle {
+    style([color_stage_lut(lut_application(lut, lut_linear()))])
+  }
+}

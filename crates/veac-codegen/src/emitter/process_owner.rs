@@ -1,17 +1,17 @@
 use veac_plan::{ResolvedApply, ResolvedClip};
 
 #[derive(Clone, Copy)]
-pub(super) enum ProcessOwner<'a> {
+pub(crate) enum ProcessOwner<'a> {
     Clip(&'a ResolvedClip),
     Apply(&'a ResolvedApply),
 }
 
 impl<'a> ProcessOwner<'a> {
-    pub(super) fn clip(value: &'a ResolvedClip) -> Self {
+    pub(crate) fn clip(value: &'a ResolvedClip) -> Self {
         Self::Clip(value)
     }
 
-    pub(super) fn apply(value: &'a ResolvedApply) -> Self {
+    pub(crate) fn apply(value: &'a ResolvedApply) -> Self {
         Self::Apply(value)
     }
 

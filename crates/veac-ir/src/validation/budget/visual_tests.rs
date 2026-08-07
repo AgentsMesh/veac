@@ -96,6 +96,7 @@ fn caption_visible_overflow_has_the_same_budget_extent_as_text() {
     clip.source = ClipSource::Caption {
         text: "字幕".to_owned(),
         speaker: None,
+        cue: Box::default(),
         style,
     };
     assert_eq!(base_extent(&clip, &visual, settings), text);

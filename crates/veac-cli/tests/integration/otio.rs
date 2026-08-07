@@ -132,6 +132,9 @@ fn target_project(temp: &TempDir, source: &std::path::Path) -> std::path::PathBu
     target.project.id = veac_ir::ProjectId::new("prj_target").unwrap();
     target.project.entry_sequence_id = sequence.id.clone();
     target.project.render_configs[0].sequence_id = sequence.id.clone();
+    sequence.authorship = None;
+    sequence.tracks[0].clips[0].authorship = None;
+    target.project.authorship = None;
     let path = temp.path().join("target.json");
     std::fs::write(&path, veac_ir::canonical_json(&target).unwrap()).unwrap();
     path

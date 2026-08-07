@@ -1,6 +1,8 @@
+mod contract;
+
 use std::collections::BTreeSet;
 
-use veac_plan::canonical::{BlendMode, RationalTime, TransitionAlignment};
+use veac_plan::canonical::BlendMode;
 use veac_plan::{ResolvedClip, ResolvedSequence, ResolvedTransition};
 
 use super::Check;
@@ -15,13 +17,7 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence, timebase:
                     && clips[1].id == transition.incoming_clip_id
             });
             if track.state.visual_enabled
-                && endpoints.is_some_and(|clips| {
-                    clips.iter().any(|clip| {
-                        clip.visual.as_ref().is_some_and(|visual| {
-                            visual.compositing.blend_mode != BlendMode::Normal
-                        })
-                    })
-                })
+                && endpoints.is_some_and(|clips| clips.iter().any(incompatible_blend))
             {
                 check.push(
                     "PLAN_TRANSITION_BLEND_UNSUPPORTED",
@@ -30,16 +26,7 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence, timebase:
                 );
             }
             if track.state.visual_enabled
-                && endpoints.is_some_and(|clips| {
-                    clips[0]
-                        .visual
-                        .as_ref()
-                        .map(|visual| visual.compositing.z_index)
-                        != clips[1]
-                            .visual
-                            .as_ref()
-                            .map(|visual| visual.compositing.z_index)
-                })
+                && endpoints.is_some_and(|clips| endpoint_z(&clips[0]) != endpoint_z(&clips[1]))
             {
                 check.push(
                     "PLAN_TRANSITION_Z_ORDER_UNSUPPORTED",
@@ -49,12 +36,13 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence, timebase:
             }
             if !pairs.insert(pair)
                 || endpoints.is_none_or(|clips| {
-                    !valid(
+                    !contract::valid(
                         transition,
                         &clips[0],
                         &clips[1],
+                        &track.clips,
+                        track.kind,
                         track.state.visual_enabled,
-                        track.state.audio_enabled,
                         timebase,
                         sequence.duration,
                     )
@@ -63,7 +51,7 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence, timebase:
                 check.push(
                     "PLAN_TRANSITION_INVALID",
                     Some(transition.outgoing_clip_id.to_string()),
-                    "transition topology, timing, or endpoint handles are invalid",
+                    "transition topology or exact overlap ranges are invalid",
                 );
             }
         }
@@ -71,77 +59,29 @@ pub(super) fn validate(check: &mut Check, sequence: &ResolvedSequence, timebase:
     }
 }
 
-fn valid(
-    value: &ResolvedTransition,
-    outgoing: &ResolvedClip,
-    incoming: &ResolvedClip,
-    visual: bool,
-    audio: bool,
-    timebase: u32,
-    sequence_duration: RationalTime,
-) -> bool {
-    let duration = value.record_window.duration;
-    if !positive(duration, timebase)
-        || !nonnegative(value.cut_time, timebase)
-        || !nonnegative(value.record_window.start, timebase)
-        || !nonnegative(value.outgoing_handle.offset, timebase)
-        || !nonnegative(value.outgoing_handle.duration, timebase)
-        || !nonnegative(value.incoming_handle.offset, timebase)
-        || !nonnegative(value.incoming_handle.duration, timebase)
-    {
-        return false;
-    }
-    let outgoing_duration = match value.alignment {
-        TransitionAlignment::BeforeCut => duration.value,
-        TransitionAlignment::Centered => duration.value / 2,
-        TransitionAlignment::AfterCut => 0,
-    };
-    let incoming_duration = duration.value - outgoing_duration;
-    let expected_window = value.cut_time.value.checked_sub(outgoing_duration);
-    let expected_offset = outgoing
-        .record_range
-        .duration
-        .value
-        .checked_sub(outgoing_duration);
-    ((visual && outgoing.visual.is_some() && incoming.visual.is_some())
-        || (audio && outgoing.audio.is_some() && incoming.audio.is_some()))
-        && outgoing.record_range.end().ok() == Some(value.cut_time)
-        && incoming.record_range.start == value.cut_time
-        && expected_window == Some(value.record_window.start.value)
-        && expected_offset == Some(value.outgoing_handle.offset.value)
-        && value.outgoing_handle.duration.value == outgoing_duration
-        && value.incoming_handle.offset.value == 0
-        && value.incoming_handle.duration.value == incoming_duration
-        && value.incoming_handle.duration <= incoming.record_range.duration
-        && value
-            .record_window
-            .end()
-            .is_ok_and(|end| end <= sequence_duration)
-}
-
 fn validate_window_overlap(check: &mut Check, transitions: &[ResolvedTransition]) {
     for pair in transitions.windows(2) {
         if pair[0].incoming_clip_id != pair[1].outgoing_clip_id {
             continue;
         }
-        let overlaps = pair[0]
-            .record_window
-            .end()
-            .is_ok_and(|end| end > pair[1].record_window.start);
-        if overlaps {
+        if contract::intersects(pair[0].record_window, pair[1].record_window) {
             check.push(
                 "PLAN_TRANSITION_WINDOW_OVERLAP",
                 Some(pair[0].incoming_clip_id.to_string()),
-                "incoming and outgoing transition windows overlap on the same clip",
+                "transition windows overlap on the shared middle clip",
             );
         }
     }
 }
 
-fn positive(value: RationalTime, timebase: u32) -> bool {
-    value.is_valid() && value.timescale == timebase && value.value > 0
+fn incompatible_blend(clip: &ResolvedClip) -> bool {
+    clip.visual
+        .as_ref()
+        .is_some_and(|visual| visual.compositing.blend_mode != BlendMode::Normal)
 }
 
-fn nonnegative(value: RationalTime, timebase: u32) -> bool {
-    value.is_valid() && value.timescale == timebase && value.value >= 0
+fn endpoint_z(clip: &ResolvedClip) -> i32 {
+    clip.visual
+        .as_ref()
+        .map_or(0, |visual| visual.compositing.z_index)
 }

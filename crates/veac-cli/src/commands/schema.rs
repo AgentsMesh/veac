@@ -28,6 +28,9 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
         (SchemaContract::SourceIndex, SchemaFormat::JsonSchema) => {
             convert(veac_lang::program::source_index_json_schema())
         }
+        (SchemaContract::BuildInputs, SchemaFormat::JsonSchema) => {
+            convert(veac_lang::program::build_input_manifest_json_schema())
+        }
         (SchemaContract::EditOutcome, SchemaFormat::JsonSchema) => {
             convert(veac_ir::edit_outcome_json_schema())
         }
@@ -39,6 +42,12 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
         }
         (SchemaContract::MediaArtifactRequest, SchemaFormat::JsonSchema) => {
             convert(veac_artifact::media_artifact_request_json_schema())
+        }
+        (SchemaContract::AnalysisIngestionRequest, SchemaFormat::JsonSchema) => {
+            convert(veac_artifact::analysis_ingestion_request_json_schema())
+        }
+        (SchemaContract::AnalysisResult, SchemaFormat::JsonSchema) => {
+            convert(veac_artifact::analysis_result_json_schema())
         }
         (SchemaContract::BuildManifest, SchemaFormat::JsonSchema) => {
             convert(veac_artifact::build_manifest_json_schema())
@@ -73,12 +82,17 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
         (SchemaContract::TemplateFillRequest, SchemaFormat::JsonSchema) => {
             convert(veac_template::template_fill_request_json_schema())
         }
+        (SchemaContract::LanguageSpec, SchemaFormat::JsonSchema) => {
+            convert(veac_lang::vocabulary::language_spec_json_schema())
+        }
     };
     let schema = schema?;
-    let mut json = match serde_json::to_string_pretty(&schema) {
-        Ok(json) => json,
-        Err(error) => return Err(CliError::new("SCHEMA_ENCODE", error.to_string())),
+    let encoded = if contract == SchemaContract::LanguageSpec {
+        serde_json_canonicalizer::to_string(&schema)
+    } else {
+        serde_json::to_string_pretty(&schema)
     };
+    let mut json = encoded.map_err(|error| CliError::new("SCHEMA_ENCODE", error.to_string()))?;
     json.push('\n');
     Ok(json)
 }

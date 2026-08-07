@@ -1,13 +1,11 @@
-use std::collections::BTreeMap;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::{
-    Animatable, Apply, AudioCrossfade, AudioProcessor, BusId, EffectInstance, FontRef, Generator,
-    ItemId, MaterialId, MulticamGroupId, MulticamSwitch, Rational, RationalTime, SequenceId,
-    SlotConstraint, SourceMapping, TextStyle, TimeRange, TrackId, VisualProperties,
+    Animatable, Apply, AudioCrossfade, AudioProcessor, BusId, CaptionCueSemantics, EffectInstance,
+    EntityAuthorship, FontRef, Generator, ItemId, MaterialId, MulticamGroupId, MulticamSwitch,
+    Rational, RationalTime, SequenceAuthorship, SequenceId, SlotConstraint, SourceMapping,
+    TextStyle, TimeRange, TrackId, VisualProperties,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -18,7 +16,7 @@ pub struct Sequence {
     pub settings: SequenceSettings,
     pub tracks: Vec<Track>,
     pub applies: Vec<Apply>,
-    pub metadata: BTreeMap<String, Value>,
+    pub authorship: Option<SequenceAuthorship>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -89,7 +87,7 @@ pub struct Clip {
     #[schemars(with = "Option<SlotConstraint>", required)]
     pub replaceable: Option<SlotConstraint>,
     pub template_editable_text: bool,
-    pub metadata: BTreeMap<String, Value>,
+    pub authorship: Option<EntityAuthorship>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -116,6 +114,7 @@ pub enum ClipSource {
     Caption {
         text: String,
         speaker: Option<String>,
+        cue: Box<CaptionCueSemantics>,
         style: TextStyle,
     },
     Generated {

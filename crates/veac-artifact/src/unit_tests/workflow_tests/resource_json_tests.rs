@@ -4,39 +4,61 @@ use super::request;
 use crate::*;
 
 #[test]
-fn analysis_metadata_rejects_excessive_strings_depth_and_nodes() {
-    assert_limit(json!({"value": "x".repeat(MAX_ARTIFACT_JSON_STRING_BYTES + 1)}));
+fn typed_analysis_envelope_is_strict_canonical_and_identity_bound() {
+    let source = ContentDigest::sha256(b"source");
+    let result = envelope(vec![boundary(4, 900_000)]);
+    let request = ingestion(source.clone(), result.clone());
+    let first = request.descriptor().unwrap();
+    assert_eq!(first.kind(), ArtifactKind::Analysis);
+    assert_eq!(
+        result.canonical_bytes(4_096).unwrap(),
+        result.canonical_bytes(4_096).unwrap()
+    );
+    let mut changed = request.clone();
+    changed.result = envelope(vec![boundary(5, 900_000)]);
+    assert_ne!(
+        artifact_key(&first).unwrap(),
+        artifact_key(&changed.descriptor().unwrap()).unwrap()
+    );
+    changed = request;
+    changed.source_identity = ContentDigest::sha256(b"other");
+    assert_ne!(
+        artifact_key(&first).unwrap(),
+        artifact_key(&changed.descriptor().unwrap()).unwrap()
+    );
 
-    let mut deep = json!(null);
-    for _ in 0..MAX_ARTIFACT_JSON_DEPTH {
-        deep = json!([deep]);
-    }
-    assert_limit(json!({"value": deep}));
-
-    let nodes = vec![serde_json::Value::Null; MAX_ARTIFACT_JSON_NODES];
-    assert_limit(json!({"value": nodes}));
+    let mut unknown = serde_json::to_value(result).unwrap();
+    unknown["unexpected"] = json!(true);
+    assert!(serde_json::from_value::<AnalysisResultEnvelope>(unknown).is_err());
 }
 
 #[test]
-fn canonical_descriptor_bytes_are_bounded_before_key_generation() {
-    let mut descriptor = request(MediaArtifactSpec::Analysis(AnalysisSpec {
-        analysis_type: "scene".into(),
-        configuration: json!({}),
-    }))
-    .descriptor()
-    .unwrap();
-    descriptor.dependencies = (0..MAX_ARTIFACT_DEPENDENCIES)
-        .map(|index| ArtifactDependency {
-            role: format!("{index:04}-{}", "x".repeat(300)),
-            identity: ContentDigest::sha256(b"dependency"),
-        })
-        .collect();
+fn typed_analysis_rejects_mismatch_order_ranges_and_budgets() {
+    let mut mismatch = envelope(vec![]);
+    mismatch.result = AnalysisResult::BeatMarkers(BeatMarkerAnalysisResult { markers: vec![] });
     assert_eq!(
-        canonical_descriptor_bytes(&descriptor).unwrap_err().kind,
+        mismatch.validate().unwrap_err().kind,
+        ArtifactErrorKind::InvalidContract
+    );
+    let mut result = envelope(vec![boundary(4, 900_000), boundary(3, 800_000)]);
+    assert_eq!(
+        result.validate().unwrap_err().kind,
+        ArtifactErrorKind::InvalidContract
+    );
+    result = envelope(vec![boundary(4, 1_000_001)]);
+    assert_eq!(
+        result.validate().unwrap_err().kind,
+        ArtifactErrorKind::InvalidContract
+    );
+    let result = envelope(vec![boundary(4, 900_000)]);
+    assert_eq!(
+        result.canonical_bytes(1).unwrap_err().kind,
         ArtifactErrorKind::ResourceLimit
     );
+    let mut request = ingestion(ContentDigest::sha256(b"source"), result);
+    request.producer.name = "x".repeat(MAX_ARTIFACT_JSON_STRING_BYTES + 1);
     assert_eq!(
-        artifact_key(&descriptor).unwrap_err().kind,
+        request.descriptor().unwrap_err().kind,
         ArtifactErrorKind::ResourceLimit
     );
 }
@@ -76,13 +98,31 @@ fn invalid_backend_time_precision_is_rejected_instead_of_rounded() {
     );
 }
 
-fn assert_limit(configuration: serde_json::Value) {
-    let spec = MediaArtifactSpec::Analysis(AnalysisSpec {
-        analysis_type: "scene".into(),
-        configuration,
-    });
-    assert_eq!(
-        request(spec).descriptor().unwrap_err().kind,
-        ArtifactErrorKind::ResourceLimit
-    );
+fn ingestion(
+    source_identity: ContentDigest,
+    result: AnalysisResultEnvelope,
+) -> AnalysisIngestionRequest {
+    AnalysisIngestionRequest {
+        source_identity,
+        producer: crate::test_support::producer(),
+        result,
+    }
+}
+
+fn envelope(boundaries: Vec<SceneBoundary>) -> AnalysisResultEnvelope {
+    AnalysisResultEnvelope {
+        schema: ANALYSIS_RESULT_SCHEMA_ID.into(),
+        schema_version: ANALYSIS_RESULT_CONTRACT_VERSION,
+        descriptor: AnalysisDescriptor::SceneBoundaries(SceneBoundaryAnalysisDescriptor {
+            sensitivity_millionths: 500_000,
+        }),
+        result: AnalysisResult::SceneBoundaries(SceneBoundaryAnalysisResult { boundaries }),
+    }
+}
+
+fn boundary(value: i64, confidence_millionths: u32) -> SceneBoundary {
+    SceneBoundary {
+        at: veac_ir::RationalTime::new(value, 10).unwrap(),
+        confidence_millionths,
+    }
 }

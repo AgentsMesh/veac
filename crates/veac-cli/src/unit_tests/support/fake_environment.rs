@@ -18,6 +18,7 @@ impl Environment for FakeEnvironment {
 
     fn probe(&self, path: &Path, intent: StreamIntent) -> CliResult<MediaProbeSnapshot> {
         self.probe_paths.borrow_mut().push(path.to_owned());
+        self.probe_intents.borrow_mut().push(intent.clone());
         if self.fail_probe {
             return Err(CliError::new("FAKE_PROBE", "probe failed"));
         }

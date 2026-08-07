@@ -1,0 +1,63 @@
+import "./showcase.veac" as showcase;
+
+fn image_style() -> VisualStyle {
+  visual_style(
+    visual_layout(
+      placement_anchor(anchor_center(), vector(0.0, 0.0)),
+      frame_sized(56px, 30px, fit_contain()),
+      transform_2d(
+        transform_motion(
+          point_constant(point(0px, -1px)),
+          vector_constant(vector(0.72, 0.72)), angle_constant(8deg)
+        ),
+        transform_geometry(
+          vector(0.0, 0.0), flip_horizontal(), vector(0.25, 0.5), crop_none()
+        )
+      )
+    ),
+    visual_surface(
+      percent_constant(100%), compositing(1, blend_normal()), card_none()
+    ),
+    [], color_pipeline_none()
+  )
+}
+
+fn main(context: Context) -> Project {
+  let poster = image_resource(
+    identifier("poster"), resource_file("assets/executable-local-image.png"),
+    sha256("e8e9cbd056dda50d6ef53b8b73946e0d238d9dead67be2a2259113bbf9e043e5")
+  );
+  let font = font_resource(
+    identifier("example-font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("background"), #18384fff, 0s, 3s));
+  let image = visual_layer(
+    identifier("image"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("poster"), item_enabled(), during(0s, 3s),
+    source_media(poster), source_timing_native()
+  ).with_visual(image_style()));
+  let label = visual_layer(
+    identifier("label"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("label"), item_enabled(), during(0s, 3s),
+    source_text("图片资源：类型化锚点、缩放、旋转与翻转", showcase.caption_style(font, 5px, 60px)),
+    source_timing_native()
+  ));
+  let timeline = sequence(
+    identifier("main"), "本地图片与变换",
+    sequence_settings(canvas(64px, 36px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(image).with_layer(label);
+  let output = showcase.video(
+    timeline, canvas(64px, 36px), frame_rate(30, 1), false, false
+  );
+  project(identifier("executable-local-image"), project_settings(600))
+    .with_resource(poster).with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
+}

@@ -3,6 +3,8 @@
 # shellcheck source=example-preview-package.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-preview-package.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-source-edit-evidence.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-preview-delivery.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/example-workflow-evidence.sh"
 
 preview_artifact_error() {
   echo "examples preview: $*" >&2
@@ -112,7 +114,7 @@ verify_expected_preview_artifacts() {
   local preview=$3
   local plan=$4
   local rendered=$5
-  local artifact kind id canonical_id matches expected actual entry count=0
+  local artifact kind logical_key config expected actual entry count=0
   entry=$(dirname "$(dirname "$authoring")")
   while IFS= read -r artifact; do
     kind=$(jq -r '.kind' <<<"$artifact")
@@ -122,41 +124,31 @@ verify_expected_preview_artifacts() {
       preview_resolved_plan) verify_preview_json "$plan" "preview resolved plan" || return 1 ;;
       source_revision|source_index|source_edit_batch|source_edit_outcome)
         verify_example_source_edit_evidence "$entry" || return 1 ;;
-      authoring_delivery)
-        id=$(jq -r '.id' <<<"$artifact")
-        if [[ ! "$id" =~ ^[a-z][a-z0-9-]*$ ]]; then
-          preview_artifact_error "unsafe authoring delivery ID: $id"
-          return 1
-        fi
+      edit_batch|edit_outcome|edit_replay_outcome|probe_snapshot) ;;
+      delivery)
+        logical_key=$(jq -r '.logical_key' <<<"$artifact")
         if ! jq -e '
-          .artifact_ids | type == "array" and length > 0 and
-          all(.[]; type == "string" and test("^[a-z][a-z0-9-]*$")) and
-          length == (unique | length)
+          .artifacts | type == "array" and length > 0 and
+          all(.[];
+            keys == ["kind", "target", "target_type"] and
+            (.kind | type == "string") and (.target_type | type == "string") and
+            (.target | type == "string" and length > 0))
         ' <<<"$artifact" >/dev/null; then
-          preview_artifact_error "invalid artifact IDs for authoring delivery '$id'"
+          preview_artifact_error "invalid artifact descriptors for delivery '$logical_key'"
           return 1
         fi
-        canonical_id="out_$id"
-        matches=$(jq -r --arg id "$canonical_id" '
-          [.project.render_configs[] | select(.id == $id)] | length
-        ' "$authoring")
-        if [[ "$matches" != 1 ]]; then
-          preview_artifact_error "expected one canonical config for authoring delivery '$id'"
-          return 1
-        fi
-        expected=$(jq -c '.artifact_ids | map("dlv_" + .) | sort' <<<"$artifact")
-        actual=$(jq -c --arg id "$canonical_id" '
-          [.project.render_configs[] | select(.id == $id) | .deliverables[].id] | sort
-        ' "$authoring")
+        config=$(delivery_config_id "$authoring" "$logical_key") || return 1
+        expected=$(jq -c '.artifacts | sort_by(.kind, .target_type, .target)' <<<"$artifact")
+        actual=$(canonical_delivery_artifacts "$authoring" "$config") || return 1
         if [[ "$actual" != "$expected" ]]; then
-          preview_artifact_error "artifact IDs do not match authoring delivery '$id'"
+          preview_artifact_error "artifacts do not match delivery '$logical_key'"
           return 1
         fi
-        actual=$(jq -c --arg id "$canonical_id" '
-          [.project.render_configs[] | select(.id == $id) | .deliverables[].id] | sort
-        ' "$preview")
+        [[ $(delivery_config_id "$preview" "$logical_key") == "$config" ]] ||
+          { preview_artifact_error "preview delivery provenance drifted: $logical_key"; return 1; }
+        actual=$(canonical_delivery_artifacts "$preview" "$config") || return 1
         if [[ "$actual" != "$expected" ]]; then
-          preview_artifact_error "preview artifact IDs do not match authoring delivery '$id'"
+          preview_artifact_error "preview artifacts do not match delivery '$logical_key'"
           return 1
         fi
         ;;
@@ -168,5 +160,6 @@ verify_expected_preview_artifacts() {
     preview_artifact_error "target declares no expected artifacts"
     return 1
   fi
+  verify_example_workflow_evidence "$target" "$entry" "$authoring" "$plan" || return 1
   verify_all_preview_deliverables "$preview" "$rendered" || return 1
 }

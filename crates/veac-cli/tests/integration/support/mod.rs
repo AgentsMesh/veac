@@ -1,78 +1,14 @@
 use std::path::{Path, PathBuf};
 use std::process::Command as ProcessCommand;
 
+mod executable;
+pub(crate) use executable::{EXECUTABLE_SOURCE, MEDIA_SOURCE};
+
 pub(crate) use assert_cmd::Command;
 pub(crate) use predicates::prelude::*;
 pub(crate) use tempfile::{tempdir, TempDir};
 
-pub(crate) const GENERATED_SOURCE: &str = r#"
-project cli-e2e {
-  settings {
-    timebase 1/600;
-    canvas 32px by 24px;
-    frame-rate 10fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  sequence main {
-    layer visual base {
-      item background {
-        source generated solid { color #ff0000ff; }
-        record { at 0s; duration 200ms; }
-      }
-    }
-  }
-  delivery main {
-    sequence main;
-    raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
-    artifact video main {
-      target file "render.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; }
-        audio none; passes single; accelerator auto;
-      }
-    }
-  }
-}
-"#;
-
-pub(crate) const MEDIA_SOURCE: &str = r#"
-project media-e2e {
-  settings {
-    timebase 1/600;
-    canvas 32px by 24px;
-    frame-rate 10fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video footage {
-    locator local { path "clip.mp4"; }
-    streams { video auto; audio disabled; }
-  }
-  sequence main {
-    layer video base {
-      item footage-1 {
-        source media resource footage;
-        record { at 0s; duration 200ms; }
-        mapping linear { from 0s; to 200ms; }
-      }
-    }
-  }
-  delivery main {
-    sequence main;
-    raster { canvas 32px by 24px; frame-rate 10fps; captions discard; }
-    artifact video main {
-      target file "media-render.mp4";
-      mux mp4 {
-        layout fast-start;
-        video h264 { pixel-format yuv420p; alpha opaque; color-space source; rate-control crf { value 23; } gop automatic; b-frames automatic; profile automatic; level automatic; }
-        audio none; passes single; accelerator auto;
-      }
-    }
-  }
-}
-"#;
+pub(crate) const GENERATED_SOURCE: &str = EXECUTABLE_SOURCE;
 
 pub(crate) fn veac() -> Command {
     Command::new(assert_cmd::cargo::cargo_bin!("veac"))
@@ -85,17 +21,22 @@ pub(crate) fn source_file(temp: &TempDir, source: &str) -> PathBuf {
 }
 
 pub(crate) fn compile_ir(temp: &TempDir, source: &str) -> PathBuf {
-    let source = source_file(temp, source);
+    let source = if source == MEDIA_SOURCE && temp.path().join("clip.mp4").is_file() {
+        let identity = veac_runtime::asset::sha256_identity(&temp.path().join("clip.mp4")).unwrap();
+        source.replace(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            &identity.digest,
+        )
+    } else {
+        source.to_owned()
+    };
+    let source_path = source_file(temp, &source);
     let project = temp.path().join("project.json");
-    veac()
-        .args([
-            "compile",
-            source.to_str().unwrap(),
-            "--emit-ir",
-            project.to_str().unwrap(),
-        ])
-        .assert()
-        .success();
+    let envelope = veac_lang::program::build_path(&source_path)
+        .unwrap()
+        .envelope()
+        .clone();
+    std::fs::write(&project, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
     project
 }
 

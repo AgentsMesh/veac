@@ -78,7 +78,7 @@ fn trim_in_preserves_the_remaining_asymmetric_bezier_curve() {
 }
 
 #[test]
-fn noncanonical_overshoot_easing_rejects_the_atomic_batch() {
+fn unrepresentable_overshoot_slice_rejects_the_atomic_batch() {
     let mut project = sample_project();
     set_curve(
         &mut project,
@@ -89,6 +89,11 @@ fn noncanonical_overshoot_easing_rejects_the_atomic_batch() {
             y2: -4.0 / 3.0,
         },
     );
+    let Animatable::Keyframes { keyframes } = curve_mut(&mut project) else {
+        panic!("keyframe curve")
+    };
+    keyframes[0].value = 0.4;
+    keyframes[1].value = 0.6;
     let before = project.clone();
     let edit = batch(
         "op_unrepresentable_easing",
@@ -100,7 +105,7 @@ fn noncanonical_overshoot_easing_rejects_the_atomic_batch() {
             relation_fragments: vec![],
         }],
     );
-    assert_rejected(apply_edit_batch(&project, &edit), "BEZIER");
+    assert_rejected(apply_edit_batch(&project, &edit), "EDIT_REJECTED");
     assert_eq!(project, before);
 }
 
@@ -129,6 +134,14 @@ fn set_curve(project: &mut ProjectEnvelope, interpolation: Interpolation) {
 
 fn curve(project: &ProjectEnvelope) -> &Animatable<f64> {
     curve_on(&project.project.sequences[0].tracks[0].clips[0])
+}
+
+fn curve_mut(project: &mut ProjectEnvelope) -> &mut Animatable<f64> {
+    &mut project.project.sequences[0].tracks[0].clips[0]
+        .visual
+        .as_mut()
+        .unwrap()
+        .opacity
 }
 
 fn curve_on(clip: &Clip) -> &Animatable<f64> {

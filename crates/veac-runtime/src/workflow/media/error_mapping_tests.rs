@@ -24,9 +24,14 @@ fn invalid_artifact_descriptors_map_to_contract_errors() {
             version: "1".into(),
             configuration: ContentDigest::sha256(b"config"),
         },
-        spec: MediaArtifactSpec::Analysis(veac_artifact::AnalysisSpec {
-            analysis_type: "scene".into(),
-            configuration: serde_json::json!({}),
+        spec: MediaArtifactSpec::Thumbnail(veac_artifact::ThumbnailSpec {
+            source_stream: veac_ir::StreamSelection {
+                global_index: 0,
+                type_index: 0,
+            },
+            at: veac_ir::RationalTime::zero(1).unwrap(),
+            width: 1,
+            height: 1,
         }),
     };
     assert_eq!(

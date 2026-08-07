@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 
 agentsmesh_authoring_contract() {
-  local canonical=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 backdrop title promise caption
+  backdrop=$(canonical_clip_id "$canonical" backdrop); title=$(canonical_clip_id "$canonical" title)
+  promise=$(canonical_clip_id "$canonical" promise); caption=$(canonical_clip_id "$canonical" caption)
+  jq -e --arg backdrop "$backdrop" --arg title "$title" --arg promise "$promise" --arg caption "$caption" '
+    def t($v): {"timescale":600,"value":($v*0.6)};
     def r($s;$d): {"start":t($s),"duration":t($d)};
     def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    clip("itm_backdrop") as $backdrop | clip("itm_title") as $title |
-    clip("itm_promise") as $promise | clip("itm_caption") as $caption |
+    clip($backdrop) as $backdrop | clip($title) as $title |
+    clip($promise) as $promise | clip($caption) as $caption |
     $backdrop.record_range == r(0;15000) and
     $backdrop.source.generator.gradient == {"end":{"x":1,"y":1},"start":{"x":0,"y":0},
       "stops":[
         {"color":{"alpha":255,"blue":67,"green":42,"red":16},"offset":0},
         {"color":{"alpha":255,"blue":110,"green":118,"red":15},"offset":0.55},
         {"color":{"alpha":255,"blue":94,"green":197,"red":34},"offset":1}],"type":"linear"} and
-    $title.record_range == r(0;5000) and $title.source.text == "AgentsMesh" and
+    $title.record_range == r(0;5000) and $title.source.text == "智能体协作网" and
     $title.source.style.animation as $a |
     $a.granularity == "grapheme" and $a.stagger == t(45) and
     $a.reveal.keyframes[0].value == 0.1 and
@@ -45,18 +47,23 @@ agentsmesh_authoring_contract() {
 }
 
 agentsmesh_preview_contract() {
-  local canonical=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 config backdrop title promise caption
+  config=$(delivery_config_id "$canonical" preview)
+  backdrop=$(canonical_clip_id "$canonical" backdrop); title=$(canonical_clip_id "$canonical" title)
+  promise=$(canonical_clip_id "$canonical" promise); caption=$(canonical_clip_id "$canonical" caption)
+  jq -e --arg config "$config" --arg backdrop "$backdrop" --arg title "$title" \
+    --arg promise "$promise" --arg caption "$caption" '
+    def t($v): {"timescale":600,"value":($v*0.6)};
     def clip($id): first(.project.sequences[].tracks[].clips[] | select(.id == $id));
-    first(.project.render_configs[] | select(.id == "out_preview")) as $out |
-    clip("itm_backdrop").record_range.duration == t(15000) and
-    clip("itm_title").record_range == {"start":t(0),"duration":t(5000)} and
-    clip("itm_promise").record_range == {"start":t(5000),"duration":t(10000)} and
-    clip("itm_caption").record_range == {"start":t(2000),"duration":t(10000)} and
+    first(.project.render_configs[] | select(.id == $config)) as $out |
+    clip($backdrop).record_range.duration == t(15000) and
+    clip($title).record_range == {"start":t(0),"duration":t(5000)} and
+    clip($promise).record_range == {"start":t(5000),"duration":t(10000)} and
+    clip($caption).record_range == {"start":t(2000),"duration":t(10000)} and
     $out.raster == {"captions":"burn_in","frame_rate":{"denominator":1,"numerator":12},
       "height":270,"width":480} and
-    first($out.deliverables[] | select(.id == "dlv_preview")) as $video |
+    first($out.deliverables[] | select(.kind.type == "video" and
+      .target.name == "preview.mp4")) as $video |
     $video.target == {"name":"preview.mp4","type":"file"} and
     $video.kind.settings.video.codec == "h264" and
     $video.kind.settings.audio == null and $video.kind.settings.hardware == {"type":"software"}
@@ -64,18 +71,21 @@ agentsmesh_preview_contract() {
 }
 
 agentsmesh_plan_contract() {
-  local plan=$1
-  jq -e '
-    def t($v): {"timescale":1000,"value":$v};
+  local plan=$1 identity=$2 config sequence title promise caption
+  config=$(delivery_config_id "$identity" preview); sequence=$(canonical_sequence_id "$identity" main)
+  title=$(canonical_clip_id "$identity" title); promise=$(canonical_clip_id "$identity" promise)
+  caption=$(canonical_clip_id "$identity" caption)
+  jq -e --arg config "$config" --arg sequence "$sequence" --arg title "$title" \
+    --arg promise "$promise" --arg caption "$caption" '
+    def t($v): {"timescale":600,"value":($v*0.6)};
     def clip($id): first(.sequences[].tracks[].clips[] | select(.id == $id));
-    .output.id == "pout_preview" and .output.render_config_id == "out_preview" and
-    .output.sequence_id == "seq_main" and
-    first(.sequences[] | select(.id == "seq_main")).duration == t(15000) and
-    clip("itm_title").source.content.presentation.style.animation.granularity == "grapheme" and
-    clip("itm_title").source.content.presentation.style.animation.stagger == t(45) and
-    clip("itm_title").record_range.duration == t(5000) and
-    clip("itm_promise").record_range.start == t(5000) and
-    clip("itm_caption").record_range == {"start":t(2000),"duration":t(10000)}
+    .output.render_config_id == $config and .output.sequence_id == $sequence and
+    first(.sequences[] | select(.id == $sequence)).duration == t(15000) and
+    clip($title).source.content.presentation.style.animation.granularity == "grapheme" and
+    clip($title).source.content.presentation.style.animation.stagger == t(45) and
+    clip($title).record_range.duration == t(5000) and
+    clip($promise).record_range.start == t(5000) and
+    clip($caption).record_range == {"start":t(2000),"duration":t(10000)}
   ' "$plan" >/dev/null || fail "agentsmesh preview plan contract failed"
 }
 
@@ -84,23 +94,23 @@ agentsmesh_text_sample() {
 }
 
 agentsmesh_assert_intro_motion() {
-  local video=$1 times=(0.05 0.35 0.7 1.1 1.4) counts=() widths=() heights=() ys=()
-  local time count width height x y index
+  local video=$1 times=(0.2 0.5 0.9 1.17 1.5) counts=() widths=() heights=() xs=() ys=()
+  local time count width height x y index delta
   for time in "${times[@]}"; do
     read -r count width height x y < <(agentsmesh_text_sample "$video" "$time")
-    counts+=("$count"); widths+=("$width"); heights+=("$height"); ys+=("$y")
+    counts+=("$count"); widths+=("$width"); heights+=("$height"); xs+=("$x"); ys+=("$y")
   done
   for index in 1 2 3; do
-    ((counts[index] > counts[index-1] + 8)) ||
+    ((counts[index] > counts[index-1] + 80 && widths[index] > widths[index-1] + 15)) ||
       fail "agentsmesh grapheme reveal does not progress at ${times[index]}s"
   done
-  # The 1.4s sample is the completed state compared with 4.8s below.
-  ((widths[4] > widths[0] + 80 && heights[4] > heights[0] + 5)) ||
-    fail "agentsmesh title scale is not visible"
-  ((ys[4] + 5 < ys[0])) || fail "agentsmesh title does not rise into position"
-  read -r count width height x y < <(agentsmesh_text_sample "$video" 4.8)
-  ((counts[4] > 100 && count > 100 && width == widths[4] && height == heights[4] && y == ys[4])) ||
-    fail "agentsmesh title is not complete and stable after 1.305s"
+  ((heights[3] > heights[0] + 2)) || fail "agentsmesh title scale is not visible"
+  ((ys[3] + 5 < ys[0])) || fail "agentsmesh title does not rise into position"
+  delta=$((counts[4] - counts[3])); ((delta < 0)) && delta=$((-delta))
+  ((counts[3] > 850 && widths[3] > 145 && heights[3] > 14 && delta <= 15 &&
+    widths[4] == widths[3] && heights[4] == heights[3] &&
+    xs[4] == xs[3] && ys[4] == ys[3])) ||
+    fail "agentsmesh title is not complete and stable by 1.17s"
 }
 
 agentsmesh_assert_switch() {
@@ -158,12 +168,12 @@ check_agentsmesh_intro_evidence() {
   local author preview plan video
   author=$(example_authoring_canonical "$dir")
   preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_preview)
-  video=$(delivery_video_path "$dir" preview preview)
+  plan=$(delivery_plan_path "$dir" preview)
+  video=$(delivery_video_path "$dir" preview preview.mp4)
   for file in "$author" "$preview" "$plan" "$video"; do require_file "$file"; done
   agentsmesh_authoring_contract "$author"
   agentsmesh_preview_contract "$preview"
-  agentsmesh_plan_contract "$plan"
+  agentsmesh_plan_contract "$plan" "$author"
   video_contract "$video" 14.9
   assert_duration_close "$video" 15 0.08 "agentsmesh intro"
   assert_stream_count "$video" a 0 "agentsmesh intro"

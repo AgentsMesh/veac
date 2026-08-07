@@ -1,11 +1,9 @@
-use std::collections::BTreeMap;
-
 use veac_ir::*;
 
 pub(super) fn project() -> ProjectEnvelope {
     let sequence_id = SequenceId::new("seq_main").unwrap();
     let material = material("med_video", "media/video.mp4", MaterialKind::Video);
-    ProjectEnvelope::new(Project {
+    envelope(Project {
         id: ProjectId::new("prj_otio").unwrap(),
         revision: 3,
         timebase: 600,
@@ -29,11 +27,33 @@ pub(super) fn project() -> ProjectEnvelope {
                 clips: vec![clip()],
             }],
             applies: vec![],
-            metadata: BTreeMap::new(),
+            authorship: None,
         }],
         applied_operations: vec![],
-        metadata: BTreeMap::new(),
+        authorship: None,
     })
+}
+
+fn envelope(project: Project) -> ProjectEnvelope {
+    ProjectEnvelope::new(
+        project,
+        ExecutableManifest::current(
+            "0.1.0",
+            ExecutableDigests {
+                domain_registry_sha256: "a".repeat(64),
+                main_core_sha256: "b".repeat(64),
+                source_graph_sha256: "c".repeat(64),
+                declared_inputs_sha256: "d".repeat(64),
+                compiler_sha256: "e".repeat(64),
+            },
+        ),
+        TemporalProgramLibrary {
+            opset_version: TEMPORAL_OPSET_VERSION,
+            programs: vec![],
+            bindings: vec![],
+            provenance: vec![],
+        },
+    )
 }
 
 pub(super) fn settings() -> SequenceSettings {
@@ -58,7 +78,7 @@ pub(super) fn material(id: &str, uri: &str, kind: MaterialKind) -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 
@@ -79,7 +99,7 @@ pub(super) fn clip() -> Clip {
         effects: vec![],
         replaceable: None,
         template_editable_text: false,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

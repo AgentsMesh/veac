@@ -10,6 +10,13 @@ pub(crate) struct DeriveArgs {
 }
 
 #[derive(Debug)]
+pub(crate) struct IngestAnalysisArgs {
+    pub input: PathBuf,
+    pub request: PathBuf,
+    pub store: PathBuf,
+}
+
+#[derive(Debug)]
 pub(crate) struct ProviderRunArgs {
     pub request: PathBuf,
     pub program: PathBuf,

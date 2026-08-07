@@ -1,0 +1,80 @@
+import "./showcase.veac" as showcase;
+
+fn output(timeline: Sequence) -> Delivery {
+  let picture = video_output(
+    video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+    video_crf(20), gop_auto(), b_frames_auto(),
+    video_profile_present(profile_h264_high()), video_level_auto()
+  );
+  delivery(
+    identifier("main"), timeline,
+    raster_settings(canvas(640px, 360px), frame_rate(30, 1), caption_discard()),
+    [deliverable_video(
+      identifier("main"), delivery_file("main.mp4"),
+      video_delivery(
+        container_mp4(), picture,
+        embedded_audio_present(audio_output(audio_aac(), 48000, 2)),
+        true, pass_single(), hardware_software()
+      )
+    )]
+  )
+}
+
+fn audio_style_value(gain: scalar, pan: scalar) -> AudioStyle {
+  audio_style(
+    scalar_constant(gain), scalar_constant(pan),
+    audio_playback(false, false, pitch_preserve()), [],
+    audio_crossfade_present(150ms, 150ms, audio_fade_equal_power())
+  )
+}
+
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let tone = audio_resource(
+    identifier("tone"), resource_file("assets/tone.wav"),
+    sha256("5c3aaa006e4c341feddf589f9eb0ba3b215c60353e491abf8f06f4bee4478cfc"),
+    stream_auto()
+  );
+  let music = item(
+    identifier("music"), item_enabled(), during(0s, 2s),
+    source_media(tone), source_timing_native()
+  ).with_audio(audio_style_value(0.75, -0.25));
+  let key = item(
+    identifier("key"), item_enabled(), during(0s, 2s),
+    source_media(tone), source_timing_native()
+  ).with_audio(audio_style_value(0.5, 0.25));
+  let bus = audio_bus(identifier("music-bus"));
+  let music_track = audio_layer(
+    identifier("music"), 0, placement_free(), showcase.state(), track_routing_bus(bus)
+  ).with_item(music);
+  let key_track = audio_layer(
+    identifier("key"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(key);
+  let background = visual_layer(
+    identifier("background"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("canvas"), #183c36ff, 0s, 2s));
+  let label = visual_layer(
+    identifier("label"), 3, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("explanation"), item_enabled(), during(0s, 2s),
+    source_text(
+      "音频总线路由与侧链压低进入解析计划",
+      showcase.caption_style(font, 32px, 560px)
+    ), source_timing_native()
+  ));
+  let ducking = relation_sidechain_track(
+    identifier("ducking"), key_track, music,
+    sidechain_settings(-24.0, 4.0, 10.0, 120.0, sidechain_window_full())
+  );
+  let timeline = sequence(
+    identifier("main"), "音频路由与侧链压低",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(music_track).with_layer(key_track).with_layer(background).with_layer(label)
+    .with_relation(ducking);
+  project(identifier("audio-routing-ducking"), project_settings(600))
+    .with_resource(font).with_resource(tone)
+    .with_sequence(timeline).entry(timeline).with_delivery(output(timeline))
+}

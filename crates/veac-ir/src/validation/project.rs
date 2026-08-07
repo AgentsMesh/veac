@@ -24,8 +24,7 @@ impl Validator {
                 Some("regenerate the project with a supported schema"),
             );
         }
-        if envelope.min_reader_version > CURRENT_SCHEMA_VERSION || envelope.min_reader_version == 0
-        {
+        if envelope.min_reader_version != MIN_READER_VERSION {
             self.push(
                 "MIN_READER_VERSION",
                 None,
@@ -34,10 +33,12 @@ impl Validator {
                 None,
             );
         }
-        self.project(&envelope.project);
+        self.executable_manifest(&envelope.executable, &envelope.temporal);
+        self.project(&envelope.project, &envelope.temporal);
+        self.temporal_contract(&envelope.temporal, &envelope.project);
     }
 
-    fn project(&mut self, project: &Project) {
+    fn project(&mut self, project: &Project, temporal: &TemporalProgramLibrary) {
         self.check_id(project.id.is_valid(), project.id.as_str(), "/project/id");
         if project.timebase == 0 {
             self.push(
@@ -51,18 +52,18 @@ impl Validator {
         if !crate::time::safe_u64(project.revision) {
             self.value_error("REVISION_RANGE", "/project/revision", project.id.as_str());
         }
-        self.metadata(&project.metadata, "/project/metadata", project.id.as_str());
-        self.structural_render_budget(project);
+        self.structural_render_budget(project, temporal);
         self.collect_materials(project);
         self.collect_multicam_groups(project);
         self.collect_sequences(project);
+        self.project_authorship(project);
         self.templates(project);
 
         for output in &project.render_configs {
             self.render_config(output, project);
         }
         for sequence in &project.sequences {
-            self.sequence(sequence, project.timebase);
+            self.sequence(sequence, project.timebase, &project.relations);
         }
         self.relations(project);
         self.annotations(project);

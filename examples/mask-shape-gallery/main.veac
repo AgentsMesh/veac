@@ -1,159 +1,52 @@
-project mask-shape-gallery {
-  entry sequence main;
+import "./masks.veac" as masks;
+import "./showcase.veac" as showcase;
 
-  settings {
-    timebase 1/1000;
-    canvas 640px by 360px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-
-  sequence main {
-    layer visual background {
-      item canvas {
-        source generated gradient linear {
-          from 0% 0%;
-          to 100% 100%;
-          stop 0% #101820ff;
-          stop 100% #314158ff;
-        }
-        record {
-          at 0s;
-          duration 4s;
-        }
-      }
-    }
-
-    layer visual shapes {
-      item heart {
-        source generated solid {
-          color #ff477eff;
-        }
-        record {
-          at 0s;
-          duration 1s;
-        }
-        modifiers {
-          mask heart-window {
-            shape heart;
-            position {
-              x 50%;
-              y 47%;
-            }
-            scale {
-              x 65%;
-              y 65%;
-            }
-            feather 8px;
-          }
-        }
-      }
-
-      item star {
-        source generated solid {
-          color #ffd166ff;
-        }
-        record {
-          at 1s;
-          duration 1s;
-        }
-        modifiers {
-          mask star-window {
-            shape star;
-            position {
-              x 50%;
-              y 48%;
-            }
-            scale {
-              x 65%;
-              y 65%;
-            }
-            rotation 8deg;
-            feather 8px;
-          }
-        }
-      }
-
-      item linear {
-        source generated solid {
-          color #2dd4bfff;
-        }
-        record {
-          at 2s;
-          duration 1s;
-        }
-        modifiers {
-          mask linear-window {
-            shape linear;
-            position {
-              x 50%;
-              y 50%;
-            }
-            scale {
-              x 60%;
-              y 60%;
-            }
-            rotation 20deg;
-            feather 8px;
-          }
-        }
-      }
-
-      item mirror {
-        source generated solid {
-          color #7aa2f7ff;
-        }
-        record {
-          at 3s;
-          duration 1s;
-        }
-        modifiers {
-          mask mirror-window {
-            shape mirror;
-            position {
-              x 50%;
-              y 50%;
-            }
-            scale {
-              x 60%;
-              y 60%;
-            }
-            rotation -12deg;
-            feather 8px;
-          }
-        }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster {
-      canvas 640px by 360px;
-      frame-rate 30fps;
-      captions discard;
-    }
-
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf {
-            value 23;
-          }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("canvas"), item_enabled(), during(0s, 4s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.0), vector(1.0, 1.0),
+      [gradient_stop(0%, #101820ff), gradient_stop(100%, #314158ff)]
+    ))), source_timing_native()
+  ));
+  let shapes = visual_layer(
+    identifier("shapes"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(masks.sample(
+      identifier("heart"), 0s, #ff477eff, mask_heart(), vector(0.65, 0.65), 0deg
+    ))
+    .with_item(masks.sample(
+      identifier("star"), 1s, #ffd166ff, mask_star(), vector(0.65, 0.65), 8deg
+    ))
+    .with_item(masks.sample(
+      identifier("linear"), 2s, #2dd4bfff, mask_linear(), vector(0.6, 0.6), 20deg
+    ))
+    .with_item(masks.sample(
+      identifier("mirror"), 3s, #7aa2f7ff, mask_mirror(), vector(0.6, 0.6), 0deg
+    ));
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(masks.label(font, identifier("heart-label"), 0s, "心形蒙版"))
+    .with_item(masks.label(font, identifier("star-label"), 1s, "五角星蒙版"))
+    .with_item(masks.label(font, identifier("linear-label"), 2s, "旋转线性蒙版"))
+    .with_item(masks.label(font, identifier("mirror-label"), 3s, "镜像对称蒙版"));
+  let timeline = sequence(
+    identifier("main"), "特殊形状蒙版画廊",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(shapes).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("mask-shape-gallery"), project_settings(600))
+    .with_resource(font).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

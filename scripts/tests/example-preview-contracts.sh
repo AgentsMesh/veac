@@ -34,6 +34,13 @@ jq -e '
     .width == 240 and .height == 134 and
     .frame_rate == {"numerator": 12, "denominator": 1})
 ' "$tmp/preview.json" >/dev/null || fail "preview changed spatial authoring dimensions"
+jq '.project.render_configs[0].raster.width = 320 |
+  .project.render_configs[0].raster.height = 180' "$tmp/project.json" >"$tmp/small.json"
+jq --argjson edge 480 --argjson fps 12 --argjson window null \
+  -f "$FILTER" "$tmp/small.json" >"$tmp/small-preview.json"
+jq -e '.project.render_configs[0].raster | .width == 320 and .height == 180 and
+  .frame_rate == {"numerator":12,"denominator":1}' "$tmp/small-preview.json" \
+  >/dev/null || fail "preview policy upscaled a smaller delivery"
 jq -e '
   (.project.sequences[0].applies | length) == 1 and
   .project.sequences[0].applies[0].target.item_ids == ["keep"] and
@@ -62,7 +69,8 @@ jq -e '
 jq '.project.annotations = [{style: {
   font: {type:"family", family:"Inter"},
   fallback_fonts: [{type:"family", family:"Noto Sans Arabic"}],
-  spans: [{font:{type:"family", family:"Arial"}}]
+  spans: [{font:{type:"family", family:"Arial"}},
+    {font:{type:"family", family:"Noto Sans Arabic"}}]
 }}]' "$tmp/project.json" >"$tmp/font-authoring.json"
 jq --argjson edge 240 --argjson fps 12 --argjson window null \
   -f "$FILTER" "$tmp/font-authoring.json" >"$tmp/font-preview.json"
@@ -71,13 +79,17 @@ jq -e '
     {type:"material", material_id:"med_preview-font"} and
   .project.annotations[0].style.spans[0].font ==
     {type:"material", material_id:"med_preview-font"} and
+  .project.annotations[0].style.spans[1].font ==
+    {type:"material", material_id:"med_preview-arabic-font"} and
   .project.annotations[0].style.fallback_fonts == [
     {type:"material", material_id:"med_preview-arabic-font"}] and
   ([.project.materials[] | {id, uri:.source.uri}] | sort_by(.id)) == [
     {id:"med_preview-arabic-font", uri:"assets/preview-arabic-font.ttf"},
-    {id:"med_preview-font", uri:"assets/preview-font.ttf"}]
+    {id:"med_preview-font", uri:"assets/preview-font.ttf"}] and
+  ([.project.materials[] | select(.id | startswith("med_preview-"))] |
+    all(.authorship == null and (has("metadata") | not)))
 ' "$tmp/font-preview.json" >/dev/null || fail "canonical family fonts were not adapted"
-jq -e '[.. | objects | select(.type? == "family" and has("family"))] | length == 3' \
+jq -e '[.. | objects | select(.type? == "family" and has("family"))] | length == 4' \
   "$tmp/font-authoring.json" >/dev/null || fail "preview adaptation mutated authoring IR"
 jq '.project.materials = [{id:"med_preview-font"}]' "$tmp/font-authoring.json" \
   >"$tmp/font-collision.json"
@@ -89,22 +101,28 @@ fi
 mkdir -p "$tmp/rendered"
 printf '{}\n' > "$tmp/canonical.json"
 printf '{}\n' > "$tmp/preview.json"
-printf '{"output":{"render_config_id":"out_captions"}}\n' > "$tmp/plan.json"
+config=out_4a4f4ce03f87
+printf '{"output":{"render_config_id":"%s"}}\n' "$config" > "$tmp/plan.json"
 printf 'WEBVTT\n' > "$tmp/rendered/captions.vtt"
-jq '.project = {"render_configs":[{"id":"out_captions","deliverables":[
-  {"id":"dlv_captions","target":{"type":"file","name":"captions.vtt"},"kind":{"type":"caption_sidecar"}}
-]}]}' "$tmp/canonical.json" > "$tmp/canonical.next"
+jq --arg config "$config" '.project = {
+  "authorship":{"entity":{"logical_path":["demo"],"events":[]},
+    "multicam_groups":[],"annotations":[],"deliveries":[{"render_config_id":$config,
+    "entity":{"logical_path":["demo","captions"],"events":[]}}]},
+  "render_configs":[{"id":$config,"deliverables":[
+    {"id":"dlv_92f3","target":{"type":"file","name":"captions.vtt"},
+     "kind":{"type":"caption_sidecar"}}
+  ]}]}' "$tmp/canonical.json" > "$tmp/canonical.next"
 mv "$tmp/canonical.next" "$tmp/canonical.json"
 cp "$tmp/canonical.json" "$tmp/preview.json"
-target='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"captions","artifact_ids":["captions"]}]}'
+target='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"delivery","logical_key":"captions","artifacts":[{"kind":"caption_sidecar","target_type":"file","target":"captions.vtt"}]}]}'
 verify_expected_preview_artifacts "$target" "$tmp/canonical.json" \
   "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" || fail "valid artifacts were rejected"
-missing_config='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"missing","artifact_ids":["captions"]}]}'
+missing_config='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"delivery","logical_key":"missing","artifacts":[{"kind":"caption_sidecar","target_type":"file","target":"captions.vtt"}]}]}'
 if verify_expected_preview_artifacts "$missing_config" "$tmp/canonical.json" \
   "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
-  fail "missing authoring delivery was accepted"
+  fail "missing delivery was accepted"
 fi
-missing_artifact='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"authoring_delivery","id":"captions","artifact_ids":["missing"]}]}'
+missing_artifact='{"expected_artifacts":[{"kind":"canonical_project"},{"kind":"preview_canonical_project"},{"kind":"preview_resolved_plan"},{"kind":"delivery","logical_key":"captions","artifacts":[{"kind":"caption_sidecar","target_type":"file","target":"missing.vtt"}]}]}'
 if verify_expected_preview_artifacts "$missing_artifact" "$tmp/canonical.json" \
   "$tmp/preview.json" "$tmp/plan.json" "$tmp/rendered" >/dev/null 2>&1; then
   fail "missing delivery artifact was accepted"

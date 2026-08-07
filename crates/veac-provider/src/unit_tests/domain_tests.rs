@@ -77,7 +77,9 @@ fn every_output_rejects_a_domain_specific_invalid_value() {
             ProviderOutput::Asr(value) => value.language.clear(),
             ProviderOutput::LanguageDetection(value) => value.languages[0].confidence = 2.0,
             ProviderOutput::Translation(value) => value.units[0].id.clear(),
-            ProviderOutput::TextToSpeech(value) => value.audio.role.clear(),
+            ProviderOutput::TextToSpeech(value) => {
+                value.audio.role = ProviderArtifactSlot::new("wrong-role").unwrap()
+            }
             ProviderOutput::Dubbing(value) => {
                 value.turns[0].timing_scale = Rational {
                     numerator: 1,
@@ -86,7 +88,7 @@ fn every_output_rejects_a_domain_specific_invalid_value() {
             }
             ProviderOutput::MotionTracking(value) => {
                 value.track = artifact(
-                    ArtifactKind::Analysis,
+                    ArtifactKind::Speech,
                     "wrong-track",
                     &request.provider,
                     request_hash(&request).unwrap(),
@@ -95,7 +97,7 @@ fn every_output_rejects_a_domain_specific_invalid_value() {
             ProviderOutput::Stabilization(value) => value.crops[0].rect.width = 2.0,
             ProviderOutput::Segmentation(value) => {
                 value.matte = artifact(
-                    ArtifactKind::Analysis,
+                    ArtifactKind::Speech,
                     "wrong-matte",
                     &request.provider,
                     request_hash(&request).unwrap(),
@@ -114,7 +116,7 @@ fn every_output_rejects_a_domain_specific_invalid_value() {
             ProviderOutput::AutoReframe(value) => value.movements[0].end = value.movements[0].start,
             ProviderOutput::Retouch(value) => {
                 value.masks[0] = artifact(
-                    ArtifactKind::Analysis,
+                    ArtifactKind::Speech,
                     "wrong-mask",
                     &request.provider,
                     request_hash(&request).unwrap(),

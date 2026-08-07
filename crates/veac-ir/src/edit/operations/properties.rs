@@ -89,45 +89,30 @@ fn effect(
     edit: &EffectParameterEdit,
     changed: &mut ChangeSet,
 ) -> Result<(), Diagnostic> {
-    let (clip_id, effect_id, name) = match edit {
-        EffectParameterEdit::Set {
-            clip_id,
-            effect_id,
-            name,
-            ..
-        }
-        | EffectParameterEdit::Remove {
-            clip_id,
-            effect_id,
-            name,
-        } => (clip_id, effect_id, name),
-    };
+    let EffectParameterEdit::Set {
+        clip_id,
+        effect_id,
+        parameter,
+        value,
+    } = edit;
     let clip = mutable_clip(project, clip_id)?;
     let effect = clip
         .effects
         .iter_mut()
         .find(|value| value.id == *effect_id)
         .ok_or_else(|| operation_error(effect_id.as_str(), "effect does not exist on the clip"))?;
-    let did_change = match edit {
-        EffectParameterEdit::Set { value, .. } => match effect.parameters.get(name) {
-            Some(current) if current == value => false,
-            _ => {
-                if let Some(old) = effect.parameters.insert(name.clone(), value.clone()) {
-                    mark_parameter(&old, changed);
-                }
-                mark_parameter(value, changed);
-                true
-            }
-        },
-        EffectParameterEdit::Remove { .. } => {
-            let old = effect.parameters.remove(name).ok_or_else(|| {
-                operation_error(effect_id.as_str(), "effect parameter does not exist")
-            })?;
-            mark_parameter(&old, changed);
-            true
-        }
-    };
+    let old_curve = effect.effect.curve(*parameter).cloned();
+    let did_change = effect
+        .effect
+        .set_parameter(*parameter, value.clone())
+        .ok_or_else(|| operation_error(effect_id.as_str(), "effect parameter type mismatch"))?;
     if did_change {
+        if let Some(old) = old_curve.as_ref() {
+            changed_tree::curve(old, changed);
+        }
+        if let Some(new) = effect.effect.curve(*parameter) {
+            changed_tree::curve(new, changed);
+        }
         changed.item(clip_id.clone());
         changed.effect(effect_id.clone());
     }
@@ -171,10 +156,4 @@ fn masks(target: &mut Vec<Mask>, value: &[Mask], changed: &mut ChangeSet) -> boo
     }
     *target = value.to_vec();
     true
-}
-
-fn mark_parameter(value: &ParameterValue, changed: &mut ChangeSet) {
-    if let ParameterValue::NumberCurve { value } = value {
-        changed_tree::curve(value, changed);
-    }
 }

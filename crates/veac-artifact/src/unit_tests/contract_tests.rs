@@ -23,6 +23,15 @@ fn digest_and_descriptor_are_deterministic() {
     let mut unknown: serde_json::Value = serde_json::from_slice(&second).unwrap();
     unknown["unknown"] = json!(true);
     assert!(serde_json::from_value::<ArtifactDescriptor>(unknown).is_err());
+    let mut unknown_role: serde_json::Value = serde_json::from_slice(&second).unwrap();
+    unknown_role["dependencies"] = json!([{
+        "role": "provider_magic",
+        "identity": ContentDigest::sha256(b"dependency")
+    }]);
+    assert!(serde_json::from_value::<ArtifactDescriptor>(unknown_role).is_err());
+    let mut unknown_type: serde_json::Value = serde_json::from_slice(&second).unwrap();
+    unknown_type["parameters"]["type"] = json!("extension_property_bag");
+    assert!(serde_json::from_value::<ArtifactDescriptor>(unknown_type).is_err());
 }
 
 #[test]
@@ -41,7 +50,7 @@ fn malformed_digests_and_descriptor_headers_are_rejected() {
     value.schema = "other".to_owned();
     assert_invalid(&value);
     value = descriptor();
-    value.schema_version = 2;
+    value.schema_version = 1;
     assert_invalid(&value);
 }
 
@@ -58,10 +67,10 @@ fn descriptor_requires_valid_producer_parameters_and_dependencies() {
     value.producer.configuration.value = "bad".to_owned();
     cases.push(value);
     let mut value = descriptor();
-    value.parameters = json!([1, 2]);
-    cases.push(value);
-    let mut value = descriptor();
-    value.dependencies[0].role.clear();
+    let ArtifactParameters::ProxyVideo(parameters) = &mut value.parameters else {
+        unreachable!()
+    };
+    parameters.width = 0;
     cases.push(value);
     let mut value = descriptor();
     value.dependencies[0].identity.value = "bad".to_owned();
@@ -81,10 +90,10 @@ fn dependencies_must_be_strictly_sorted() {
     let mut descending = descriptor();
     descending.dependencies.insert(
         0,
-        ArtifactDependency {
-            role: "z-source".to_owned(),
-            identity: ContentDigest::sha256(b"z"),
-        },
+        ArtifactDependency::new(
+            ArtifactDependencyRole::Resources,
+            ContentDigest::sha256(b"z"),
+        ),
     );
     assert_invalid(&descending);
 }
@@ -99,7 +108,8 @@ fn descriptor_and_json_shape_budgets_fail_with_resource_limits() {
     );
 
     let mut dependency = descriptor();
-    dependency.dependencies[0].role = "x".repeat(MAX_ARTIFACT_JSON_STRING_BYTES + 1);
+    dependency.dependencies =
+        vec![dependency.dependencies[0].clone(); MAX_ARTIFACT_DEPENDENCIES + 1];
     assert_eq!(
         dependency.validate().unwrap_err().kind,
         ArtifactErrorKind::ResourceLimit

@@ -16,10 +16,6 @@ impl Validator {
         if !self.effect_ids.insert(effect.id.to_string()) {
             self.duplicate("DUPLICATE_EFFECT_ID", effect.id.as_str(), &effect_path);
         }
-        let specification = built_in_effect(&effect.effect_type);
-        if specification.is_none() {
-            self.value_error("UNKNOWN_EFFECT", &effect_path, item_id);
-        }
         if let Some(range) = effect.enable_range {
             self.time_range(
                 range,
@@ -32,58 +28,53 @@ impl Validator {
                 self.value_error("EFFECT_RANGE", &effect_path, item_id);
             }
         }
-        let context = EffectContext {
-            duration,
-            timebase,
-            path: &effect_path,
-            item_id,
-        };
-        for (name, value) in &effect.parameters {
-            self.effect_parameter(specification, name, value, context);
-        }
+        self.effect_parameters(effect, duration, timebase, &effect_path, item_id);
+        self.plugin_effect(effect, &effect_path, item_id);
     }
 
-    fn effect_parameter(
+    fn effect_parameters(
         &mut self,
-        specification: Option<EffectSpec>,
-        name: &str,
-        value: &ParameterValue,
-        context: EffectContext<'_>,
+        effect: &EffectInstance,
+        duration: RationalTime,
+        timebase: u32,
+        path: &str,
+        item_id: &str,
     ) {
-        if let Some(specification) = specification {
-            match specification
-                .parameters
-                .iter()
-                .find(|parameter| parameter.name == name)
-            {
-                None => self.value_error("UNKNOWN_EFFECT_PARAMETER", context.path, context.item_id),
-                Some(parameter) if !parameter_matches(*parameter, value) => {
-                    self.value_error("EFFECT_PARAMETER_TYPE", context.path, context.item_id);
-                }
-                Some(_) => {}
+        let specification = registered_effect(effect.kind()).expect("closed effect registry");
+        for parameter in specification.parameters {
+            let Some(value) = effect.effect.parameter(parameter.parameter) else {
+                self.value_error("EFFECT_PARAMETER_SCHEMA", path, item_id);
+                continue;
+            };
+            if !parameter_matches(*parameter, value) {
+                self.value_error("EFFECT_PARAMETER_RANGE", path, item_id);
             }
-        }
-        match value {
-            ParameterValue::Number { value } if !value.is_finite() => {
-                self.value_error("EFFECT_PARAMETER", context.path, context.item_id)
+            if let EffectParameterRef::Curve(value) = value {
+                self.animatable(
+                    value,
+                    duration,
+                    timebase,
+                    &format!("{path}/effect/{}", parameter.parameter.name()),
+                    item_id,
+                    |number| number.is_finite(),
+                );
             }
-            ParameterValue::NumberCurve { value } => self.animatable(
-                value,
-                context.duration,
-                context.timebase,
-                context.path,
-                context.item_id,
-                |number| number.is_finite(),
-            ),
-            _ => {}
         }
     }
-}
 
-#[derive(Clone, Copy)]
-struct EffectContext<'a> {
-    duration: RationalTime,
-    timebase: u32,
-    path: &'a str,
-    item_id: &'a str,
+    fn plugin_effect(&mut self, effect: &EffectInstance, path: &str, item_id: &str) {
+        let Effect::VideoPluginReferenceMonochromeV1 {
+            descriptor_digest, ..
+        } = &effect.effect
+        else {
+            return;
+        };
+        let descriptor = plugin_effect(effect.kind()).expect("closed plugin effect registry");
+        if !descriptor_digest.is_valid()
+            || descriptor_digest.as_str() != descriptor.digest
+            || !descriptor.digest_matches()
+        {
+            self.value_error("PLUGIN_EFFECT_DESCRIPTOR_DIGEST", path, item_id);
+        }
+    }
 }

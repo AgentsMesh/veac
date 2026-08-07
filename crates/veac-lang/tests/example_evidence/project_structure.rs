@@ -2,10 +2,12 @@ use std::{collections::BTreeSet, fs, path::Path};
 
 use serde_json::Value;
 use veac_ir::{
-    AnnotationPayload, ApplyTarget, ClipSource, ProjectEnvelope, RelationKind, SequenceId,
+    AnnotationPayload, ApplyTarget, ClipSource, ProjectEnvelope, RelationKind, SlotKind,
 };
 
-use crate::support::{assert_preview_evidence, clips, entry_sequence, lower_example};
+use crate::support::{
+    assert_preview_evidence, clips, entry_sequence, lower_example, sequence_by_key,
+};
 
 #[test]
 fn project_structure_preview_rows_have_entry_sequence_evidence() {
@@ -28,7 +30,7 @@ fn project_structure_workflow_rows_match_typed_examples() {
 #[test]
 fn non_entry_sequence_structure_is_not_preview_evidence() {
     let mut envelope = lower_example("nested-and-multicam/main.veac");
-    envelope.project.entry_sequence_id = SequenceId::new("seq_intro").unwrap();
+    envelope.project.entry_sequence_id = sequence_by_key(&envelope, "intro").id.clone();
     let actual = preview_evidence(&envelope);
     assert!(actual.is_empty(), "non-entry evidence leaked: {actual:?}");
 }
@@ -56,11 +58,13 @@ fn preview_evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
             }
             _ => {}
         }
-        if clip.replaceable.is_some() {
-            found.insert("template.slot.media".to_owned());
-        }
-        if clip.template_editable_text {
-            found.insert("template.slot.text".to_owned());
+        if let Some(slot) = &clip.replaceable {
+            if slot.kind != SlotKind::Text {
+                found.insert("template.slot.media".to_owned());
+            } else if clip.template_editable_text && matches!(clip.source, ClipSource::Text { .. })
+            {
+                found.insert("template.slot.text".to_owned());
+            }
         }
     }
     for relation in envelope

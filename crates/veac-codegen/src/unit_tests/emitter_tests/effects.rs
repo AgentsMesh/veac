@@ -1,4 +1,3 @@
-use veac_codegen::emitter::CodegenErrorKind;
 use veac_plan::canonical::*;
 use veac_plan::ResolvedEffect;
 
@@ -7,6 +6,7 @@ use super::support::{
 };
 
 mod animated;
+mod plugin;
 
 #[test]
 fn emits_every_registered_video_effect_and_parameter_form() {
@@ -14,41 +14,57 @@ fn emits_every_registered_video_effect_and_parameter_form() {
     clip(&mut plan).effects = vec![
         effect(
             "fx_color",
-            "video.color_adjust",
-            [("brightness", curve(0.2)), ("contrast", number(1.3))],
+            Effect::VideoColorAdjust {
+                brightness: curve(0.2),
+                contrast: constant(1.3),
+                saturation: constant(1.0),
+            },
         ),
-        effect("fx_blur", "video.blur", [("radius", number(2.0))]),
-        effect("fx_sharp", "video.sharpen", [("amount", number(2.0))]),
-        effect("fx_vignette", "video.vignette", [("amount", number(0.4))]),
-        effect("fx_grain", "video.grain", [("amount", number(0.2))]),
+        effect(
+            "fx_blur",
+            Effect::VideoBlur {
+                radius: constant(2.0),
+            },
+        ),
+        effect(
+            "fx_sharp",
+            Effect::VideoSharpen {
+                amount: constant(2.0),
+            },
+        ),
+        effect(
+            "fx_vignette",
+            Effect::VideoVignette {
+                amount: constant(0.4),
+            },
+        ),
+        effect(
+            "fx_grain",
+            Effect::VideoGrain {
+                amount: constant(0.2),
+            },
+        ),
         effect(
             "fx_key_custom",
-            "video.chroma_key",
-            [
-                (
-                    "color",
-                    ParameterValue::Color {
-                        value: Color {
-                            red: 1,
-                            green: 2,
-                            blue: 3,
-                            alpha: 255,
-                        },
-                    },
-                ),
-                ("similarity", number(0.2)),
-            ],
+            Effect::VideoChromaKey {
+                color: Color {
+                    red: 1,
+                    green: 2,
+                    blue: 3,
+                    alpha: 255,
+                },
+                similarity: constant(0.2),
+                blend: constant(0.0),
+            },
         ),
-        effect("fx_key_default", "video.chroma_key", []),
         effect(
-            "fx_stabilize",
-            "video.stabilize",
-            [("enabled", ParameterValue::Boolean { value: true })],
+            "fx_key_default",
+            Effect::neutral(EffectKind::VideoChromaKey),
         ),
+        effect("fx_stabilize", Effect::VideoStabilize { enabled: true }),
         effect(
             "fx_stabilize_off",
-            "video.stabilize",
-            [("enabled", ParameterValue::Boolean { value: false })],
+            Effect::VideoStabilize { enabled: false },
         ),
     ];
     let graph = graph(&plan);
@@ -82,21 +98,21 @@ fn emits_every_registered_video_effect_and_parameter_form() {
 }
 
 #[test]
-fn unknown_effects_fail_closed() {
-    let mut plan = resolved(&fixture());
-    clip(&mut plan).effects = vec![effect("fx_unknown", "video.unknown", [])];
-    assert_effect_error(&plan, "PLAN_EFFECT_UNKNOWN");
+fn closed_effect_schema_rejects_unknown_discriminators() {
+    let value = effect("fx_schema", Effect::neutral(EffectKind::VideoBlur));
+    let mut json = serde_json::to_value(value).unwrap();
+    json["effect"]["type"] = serde_json::json!("video_unknown");
+    assert!(serde_json::from_value::<ResolvedEffect>(json).is_err());
 }
 
 #[test]
-fn audio_normalize_splices_partial_ranges_and_rejects_curved_target() {
+fn audio_normalize_splices_partial_ranges_and_has_a_strict_scalar_schema() {
     let mut partial = audio_plan();
     clip(&mut partial).effects = vec![ResolvedEffect {
         active_range: TimeRange::new(time(100), time(300)).unwrap(),
         ..effect(
             "fx_partial_norm",
-            "audio.normalize",
-            [("target_lufs", number(-18.0))],
+            Effect::AudioNormalize { target_lufs: -18.0 },
         )
     }];
     let graph = graph(&partial);
@@ -105,13 +121,13 @@ fn audio_normalize_splices_partial_ranges_and_rejects_curved_target() {
     assert!(graph.contains("loudnorm=I=-18:LRA=11:TP=-1.5"));
     assert!(graph.contains("concat=n=3:v=0:a=1"));
 
-    let mut curved = audio_plan();
-    clip(&mut curved).effects = vec![effect(
-        "fx_curved_norm",
-        "audio.normalize",
-        [("target_lufs", curve(-18.0))],
-    )];
-    assert_effect_error(&curved, "PLAN_EFFECT_PARAMETER_INVALID");
+    let value = effect(
+        "fx_norm_schema",
+        Effect::AudioNormalize { target_lufs: -18.0 },
+    );
+    let mut json = serde_json::to_value(value).unwrap();
+    json["effect"]["target_lufs"] = serde_json::json!({"type": "constant", "value": -18.0});
+    assert!(serde_json::from_value::<ResolvedEffect>(json).is_err());
 }
 
 fn audio_plan() -> veac_plan::ResolvedRenderPlan {
@@ -136,43 +152,33 @@ fn audio_plan() -> veac_plan::ResolvedRenderPlan {
     resolved(&project)
 }
 
-fn effect<const N: usize>(
-    id: &str,
-    kind: &str,
-    values: [(&str, ParameterValue); N],
-) -> ResolvedEffect {
+fn effect(id: &str, effect: Effect) -> ResolvedEffect {
     ResolvedEffect {
         id: EffectId::new(id).unwrap(),
-        effect_type: kind.to_owned(),
         active_range: TimeRange::new(time(0), time(600)).unwrap(),
-        parameters: values
-            .into_iter()
-            .map(|(key, value)| (key.to_owned(), value))
-            .collect(),
+        effect,
     }
 }
 
-fn number(value: f64) -> ParameterValue {
-    ParameterValue::Number { value }
+fn constant(value: f64) -> Animatable<f64> {
+    Animatable::constant(value)
 }
-fn curve(value: f64) -> ParameterValue {
-    ParameterValue::NumberCurve {
-        value: Animatable::Keyframes {
-            keyframes: vec![
-                Keyframe {
-                    id: KeyframeId::new("kf_curve_a").unwrap(),
-                    time: time(0),
-                    value: 0.0,
-                    interpolation: Interpolation::Linear,
-                },
-                Keyframe {
-                    id: KeyframeId::new("kf_curve_b").unwrap(),
-                    time: time(600),
-                    value,
-                    interpolation: Interpolation::Linear,
-                },
-            ],
-        },
+fn curve(value: f64) -> Animatable<f64> {
+    Animatable::Keyframes {
+        keyframes: vec![
+            Keyframe {
+                id: KeyframeId::new("kf_curve_a").unwrap(),
+                time: time(0),
+                value: 0.0,
+                interpolation: Interpolation::Linear,
+            },
+            Keyframe {
+                id: KeyframeId::new("kf_curve_b").unwrap(),
+                time: time(600),
+                value,
+                interpolation: Interpolation::Linear,
+            },
+        ],
     }
 }
 fn clip(plan: &mut veac_plan::ResolvedRenderPlan) -> &mut veac_plan::ResolvedClip {
@@ -183,9 +189,4 @@ fn graph(plan: &veac_plan::ResolvedRenderPlan) -> String {
         .unwrap()
         .filter_graph
         .unwrap()
-}
-fn assert_effect_error(plan: &veac_plan::ResolvedRenderPlan, code: &str) {
-    let error = emit_video_command(plan, &bindings(plan)).unwrap_err();
-    assert_eq!(error.diagnostics()[0].kind, CodegenErrorKind::InvalidPlan);
-    assert_eq!(error.diagnostics()[0].code, code);
 }

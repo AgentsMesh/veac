@@ -1,4 +1,4 @@
-use veac_ir::{ColorStage, EditOperation, ParameterValue, VisualProperty};
+use veac_ir::{Animatable, ColorStage, EditOperation, Effect, VisualProperty};
 
 use crate::ProviderOutput;
 
@@ -42,15 +42,13 @@ pub(super) fn effect(source: &ProviderOutput, operation: &EditOperation) -> bool
     let EditOperation::AddEffect { effect, .. } = operation else {
         return false;
     };
-    effect.effect_type == "video.color_adjust"
-        && number(effect, "brightness") == Some(0.0)
-        && number(effect, "contrast") == Some(result.adjustment.contrast)
-        && number(effect, "saturation") == Some(result.adjustment.saturation)
-}
-
-fn number(effect: &veac_ir::EffectInstance, name: &str) -> Option<f64> {
-    match effect.parameters.get(name) {
-        Some(ParameterValue::Number { value }) => Some(*value),
-        _ => None,
-    }
+    matches!(
+        &effect.effect,
+        Effect::VideoColorAdjust {
+            brightness: Animatable::Constant { value: 0.0 },
+            contrast: Animatable::Constant { value: contrast },
+            saturation: Animatable::Constant { value: saturation },
+        } if *contrast == result.adjustment.contrast
+            && *saturation == result.adjustment.saturation
+    )
 }

@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
-
 use veac_plan::canonical::*;
 
-use super::support::{add_transition, bindings, emit_video_command, fixture, resolved, visual};
+use super::support::{
+    add_transition, bindings, emit_video_command, fixture, resolved, transition_visual, visual,
+};
 
 #[test]
 fn emits_common_visual_pipeline_and_ordered_effects() {
@@ -10,8 +10,20 @@ fn emits_common_visual_pipeline_and_ordered_effects() {
     let clip = &mut project.project.sequences[0].tracks[0].clips[0];
     clip.visual = Some(visual());
     clip.effects = vec![
-        effect("fx_color", "video.color_adjust", "brightness", 0.2),
-        effect("fx_blur", "video.blur", "radius", 2.0),
+        effect(
+            "fx_color",
+            Effect::VideoColorAdjust {
+                brightness: Animatable::constant(0.2),
+                contrast: Animatable::constant(1.0),
+                saturation: Animatable::constant(1.0),
+            },
+        ),
+        effect(
+            "fx_blur",
+            Effect::VideoBlur {
+                radius: Animatable::constant(2.0),
+            },
+        ),
     ];
     let plan = resolved(&project);
     let graph = emit_video_command(&plan, &bindings(&plan))
@@ -82,8 +94,10 @@ fn emits_real_audio_source_timing_automation_and_mix() {
         panic!("linear mapping");
     };
     *rate = Rational::new(2, 1).unwrap();
-    clip.effects
-        .push(effect("fx_norm", "audio.normalize", "target_lufs", -18.0));
+    clip.effects.push(effect(
+        "fx_norm",
+        Effect::AudioNormalize { target_lufs: -18.0 },
+    ));
     let plan = resolved(&project);
     let graph = emit_video_command(&plan, &bindings(&plan))
         .unwrap()
@@ -111,6 +125,7 @@ fn materializes_centered_video_transition_and_audio_edge_fades() {
         channels: 2,
     });
     let track = &mut project.project.sequences[0].tracks[0];
+    track.clips[0].visual = Some(transition_visual());
     track.clips[0].audio = Some(default_audio());
     let transition = Transition {
         kind: TransitionKind::Dissolve,
@@ -119,7 +134,7 @@ fn materializes_centered_video_transition_and_audio_edge_fades() {
     };
     let mut incoming = track.clips[0].clone();
     incoming.id = ItemId::new("itm_incoming").unwrap();
-    incoming.record_range.start = RationalTime::new(600, 600).unwrap();
+    incoming.record_range.start = RationalTime::new(480, 600).unwrap();
     track.clips.push(incoming);
     add_transition(
         &mut project,
@@ -134,11 +149,11 @@ fn materializes_centered_video_transition_and_audio_edge_fades() {
         .unwrap()
         .filter_graph
         .unwrap();
-    assert!(graph.contains("tpad=stop_mode=clone:stop_duration=0.1"));
-    assert!(graph.contains("tpad=start_mode=clone:start_duration=0.1"));
+    assert!(!graph.contains("tpad=stop_mode=clone:stop_duration=0.1"));
+    assert!(!graph.contains("tpad=start_mode=clone:start_duration=0.1"));
     assert!(graph.contains("xfade=transition=fade:duration=0.2:offset=0"));
-    assert!(graph.contains("afade=t=out:st=0.9:d=0.1"));
-    assert!(graph.contains("afade=t=in:st=0:d=0.1"));
+    assert!(graph.contains("afade=t=out:st=0.8:d=0.2"));
+    assert!(graph.contains("afade=t=in:st=0:d=0.2"));
 }
 
 fn default_audio() -> AudioProperties {
@@ -153,12 +168,11 @@ fn default_audio() -> AudioProperties {
     }
 }
 
-fn effect(id: &str, kind: &str, parameter: &str, value: f64) -> EffectInstance {
+fn effect(id: &str, effect: Effect) -> EffectInstance {
     EffectInstance {
         id: EffectId::new(id).unwrap(),
-        effect_type: kind.to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([(parameter.to_owned(), ParameterValue::Number { value })]),
+        effect,
     }
 }

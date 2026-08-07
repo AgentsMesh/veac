@@ -1,14 +1,25 @@
+mod component_animation;
 mod contract;
-mod definition;
-mod definition_identity;
+mod declaration_validation_branches;
 mod error;
+mod expression_path;
+mod function;
+mod implementation_target;
 mod json;
+mod method;
+mod nominal_declaration;
 mod revision;
+mod statement;
+mod strict_json_branches;
+mod structural;
+mod structural_errors;
+mod target_identity_branches;
 mod text_edit;
 mod text_edit_limits;
 mod validation;
 mod validation_budget;
 mod validation_errors;
+mod validation_snapshot_branches;
 
 use super::*;
 
@@ -19,13 +30,13 @@ fn revision(value: char) -> SourceRevision {
 }
 
 fn target() -> SourceNodeRef {
-    SourceNodeRef::item("timeline/main.veac", "timeline", "main", "visual", "hero")
+    SourceNodeRef::constant("timeline/main.veac", "duration")
 }
 
 fn operation(source: &str) -> SourceEditOperation {
     SourceEditOperation::SetExpression {
         target: target(),
-        site: ExpressionSite::ItemRecordDuration,
+        site: ExpressionSite::ConstantValue,
         expression: ExpressionSource {
             source: source.to_owned(),
         },

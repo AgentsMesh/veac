@@ -27,7 +27,6 @@ pub enum MediaArtifactSpec {
     Waveform(WaveformSpec),
     Thumbnail(ThumbnailSpec),
     OpticalFlow(OpticalFlowSpec),
-    Analysis(AnalysisSpec),
     SourceSegment(SourceSegmentSpec),
 }
 
@@ -96,13 +95,6 @@ pub enum OpticalFlowMethod {
     MotionCompensated,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct AnalysisSpec {
-    pub analysis_type: String,
-    pub configuration: serde_json::Value,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SourceSegmentSpec {
@@ -132,7 +124,6 @@ impl MediaArtifactSpec {
             Self::Waveform(_) => ArtifactKind::Waveform,
             Self::Thumbnail(_) => ArtifactKind::Thumbnail,
             Self::OpticalFlow(_) => ArtifactKind::OpticalFlow,
-            Self::Analysis(_) => ArtifactKind::Analysis,
             Self::SourceSegment(_) => ArtifactKind::SourceSegment,
         }
     }
@@ -142,7 +133,6 @@ impl MediaArtifactSpec {
             Self::ProxyVideo(_) | Self::OpticalFlow(_) | Self::SourceSegment(_) => "mp4",
             Self::ProxyAudio(_) => "wav",
             Self::Waveform(_) | Self::Thumbnail(_) => "png",
-            Self::Analysis(_) => "json",
         }
     }
 }

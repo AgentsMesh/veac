@@ -28,8 +28,8 @@ pub(super) fn remove(clip: &mut Clip, id: &KeyframeId) -> Result<Option<EffectId
         return Ok(None);
     }
     for effect in &mut clip.effects {
-        for parameter in effect.parameters.values_mut() {
-            if let ParameterValue::NumberCurve { value } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(value) = effect.effect.curve_mut(parameter) {
                 if mutate::remove(value, id)? {
                     return Ok(Some(effect.id.clone()));
                 }
@@ -66,8 +66,8 @@ pub(super) fn move_keyframe(
         });
     }
     for effect in &mut clip.effects {
-        for parameter in effect.parameters.values_mut() {
-            if let ParameterValue::NumberCurve { value } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(value) = effect.effect.curve_mut(parameter) {
                 if let Some(changed) = mutate::move_time(value, id, time)? {
                     return Ok(MoveResult {
                         changed,
@@ -105,8 +105,11 @@ fn clip_has(clip: &Clip, id: &KeyframeId) -> bool {
         || audio
         || text
         || clip.effects.iter().any(|effect| {
-            effect.parameters.values().any(|parameter| {
-                matches!(parameter, ParameterValue::NumberCurve { value } if curve_has(value, id))
+            EffectParameter::ALL.into_iter().any(|parameter| {
+                effect
+                    .effect
+                    .curve(parameter)
+                    .is_some_and(|value| curve_has(value, id))
             })
         })
 }

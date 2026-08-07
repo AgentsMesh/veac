@@ -1,138 +1,168 @@
-use veac_plan::canonical::{
-    Animatable, Interpolation, Keyframe, Length, LengthUnit, Point, Rect, Vec2,
-};
+mod keyframes;
 
-use super::time;
+use veac_plan::canonical::{Animatable, Length, LengthUnit, Point, Rect, Vec2};
+use veac_plan::ResolvedRenderPlan;
+
+use super::{process_owner::ProcessOwner, temporal, time};
 
 #[cfg(test)]
 #[path = "animation_tests.rs"]
 mod tests;
+#[cfg(test)]
+use keyframes::easing;
 
-pub(crate) fn number(value: &Animatable<f64>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(*value))
-}
-
-pub(crate) fn vec_x(value: &Animatable<Vec2>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.x))
-}
-
-pub(crate) fn vec_y(value: &Animatable<Vec2>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.y))
-}
-
-pub(crate) fn point_x(value: &Animatable<Point>, clock: &str, extent: &str) -> String {
-    expression(value, clock, |value| length(value.x, extent))
-}
-
-pub(crate) fn point_y(value: &Animatable<Point>, clock: &str, extent: &str) -> String {
-    expression(value, clock, |value| length(value.y, extent))
-}
-
-pub(crate) fn rect_x(value: &Animatable<Rect>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.x))
-}
-
-pub(crate) fn rect_y(value: &Animatable<Rect>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.y))
-}
-
-pub(crate) fn rect_width(value: &Animatable<Rect>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.width))
-}
-
-pub(crate) fn rect_height(value: &Animatable<Rect>, clock: &str) -> String {
-    expression(value, clock, |value| time::number(value.height))
-}
-
-fn expression<T>(value: &Animatable<T>, clock: &str, render: impl Fn(&T) -> String) -> String {
-    match value {
-        Animatable::Constant { value } => render(value),
-        Animatable::Keyframes { keyframes } => curve(keyframes, clock, render),
-    }
-}
-
-fn curve<T>(keyframes: &[Keyframe<T>], clock: &str, render: impl Fn(&T) -> String) -> String {
-    let Some(first) = keyframes.first() else {
-        return "0".to_owned();
-    };
-    let first_value = render(&first.value);
-    if keyframes
-        .iter()
-        .skip(1)
-        .all(|keyframe| render(&keyframe.value) == first_value)
-    {
-        return first_value;
-    }
-    let mut result = render(&keyframes.last().expect("first keyframe exists").value);
-    for pair in keyframes.windows(2).rev() {
-        let left = &pair[0];
-        let right = &pair[1];
-        let start = time::seconds(left.time);
-        let duration = time::seconds_delta(left.time, right.time);
-        let progress = format!("clip(({clock}-{start})/{duration}\\,0\\,1)");
-        let eased = easing(&progress, &left.interpolation);
-        let value = lerp(&render(&left.value), &render(&right.value), &eased);
-        result = format!(
-            "if(lt({clock}\\,{})\\,{value}\\,{result})",
-            time::seconds(right.time)
-        );
-    }
-    format!(
-        "if(lte({clock}\\,{})\\,{}\\,{result})",
-        time::seconds(first.time),
-        render(&first.value)
+pub(crate) fn number(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<f64>,
+    clock: &str,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| time::number(*value),
+        |value| value.number_expression(),
     )
 }
 
-fn lerp(left: &str, right: &str, progress: &str) -> String {
-    format!("({left})+(({right})-({left}))*({progress})")
+pub(crate) fn vec_x(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Vec2>,
+    clock: &str,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| time::number(value.x),
+        |value| value.vector_expression(0),
+    )
 }
 
-fn easing(progress: &str, interpolation: &Interpolation) -> String {
-    match interpolation {
-        Interpolation::Hold => "0".to_owned(),
-        Interpolation::Linear => progress.to_owned(),
-        Interpolation::EaseIn => format!("pow({progress}\\,2)"),
-        Interpolation::EaseOut => format!("1-pow(1-({progress})\\,2)"),
-        Interpolation::EaseInOut => {
-            format!("pow({progress}\\,2)*(3-2*({progress}))")
-        }
-        Interpolation::Spring { decay, .. } => {
-            let coefficients = interpolation
-                .spring_coefficients()
-                .expect("validated spring interpolation");
-            let decay = spring_number(*decay);
-            let frequency = spring_number(coefficients.angular_frequency);
-            let equilibrium = spring_number(coefficients.equilibrium);
-            let sine = spring_number(coefficients.sine);
-            let phase = format!("{frequency}*({progress})");
-            format!(
-                "({equilibrium})+exp(-{decay}*({progress}))*\
-                 (-({equilibrium})*cos({phase})+({sine})*sin({phase}))"
-            )
-        }
-        Interpolation::CubicBezier { x1, y1, x2, y2 } => cubic_bezier(progress, *x1, *y1, *x2, *y2),
+pub(crate) fn vec_y(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Vec2>,
+    clock: &str,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| time::number(value.y),
+        |value| value.vector_expression(1),
+    )
+}
+
+pub(crate) fn point_x(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Point>,
+    clock: &str,
+    extent: &str,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| length(value.x, extent),
+        |value| value.point_expression(0, extent),
+    )
+}
+
+pub(crate) fn point_y(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Point>,
+    clock: &str,
+    extent: &str,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| length(value.y, extent),
+        |value| value.point_expression(1, extent),
+    )
+}
+
+pub(crate) fn rect_x(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Rect>,
+    clock: &str,
+) -> String {
+    rect(plan, owner, value, clock, 0, |value| value.x)
+}
+
+pub(crate) fn rect_y(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Rect>,
+    clock: &str,
+) -> String {
+    rect(plan, owner, value, clock, 1, |value| value.y)
+}
+
+pub(crate) fn rect_width(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Rect>,
+    clock: &str,
+) -> String {
+    rect(plan, owner, value, clock, 2, |value| value.width)
+}
+
+pub(crate) fn rect_height(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Rect>,
+    clock: &str,
+) -> String {
+    rect(plan, owner, value, clock, 3, |value| value.height)
+}
+
+fn expression<T>(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<T>,
+    clock: &str,
+    render: impl Fn(&T) -> String,
+    compiled: impl Fn(&temporal::CompiledValue) -> Option<String>,
+) -> String {
+    match value {
+        Animatable::Constant { value } => render(value),
+        Animatable::Keyframes { keyframes } => keyframes::curve(keyframes, clock, render),
+        Animatable::Binding { binding_id } => compiled(
+            &temporal::compile_binding(plan, binding_id, owner, clock)
+                .expect("preflight compiles every temporal binding"),
+        )
+        .expect("plan validation matches temporal binding and animation sink types"),
     }
 }
 
-fn spring_number(value: f64) -> String {
-    format!("{value:.17e}")
-}
-
-fn cubic_bezier(progress: &str, x1: f64, y1: f64, x2: f64, y2: f64) -> String {
-    let parameter = "ld(0)";
-    let x = cubic(parameter, x1, x2);
-    let root = format!("root(({x})-({progress})\\,1)");
-    format!("st(1\\,{root});{}", cubic("ld(1)", y1, y2))
-}
-
-fn cubic(parameter: &str, first: f64, second: f64) -> String {
-    let first = time::number(first);
-    let second = time::number(second);
-    format!(
-        "3*(1-({parameter}))*(1-({parameter}))*({parameter})*{first}+\
-         3*(1-({parameter}))*({parameter})*({parameter})*{second}+\
-         ({parameter})*({parameter})*({parameter})"
+fn rect(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
+    value: &Animatable<Rect>,
+    clock: &str,
+    index: usize,
+    field: impl Fn(&Rect) -> f64,
+) -> String {
+    expression(
+        plan,
+        owner,
+        value,
+        clock,
+        |value| time::number(field(value)),
+        |value| value.rect_expression(index),
     )
 }
 

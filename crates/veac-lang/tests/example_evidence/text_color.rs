@@ -2,10 +2,13 @@ use std::collections::BTreeSet;
 
 use veac_ir::{
     Anchor, Animatable, ClipSource, ColorStage, Generator, Gradient, MaterialKind, Placement,
-    ProjectEnvelope, TextGranularity, TextWritingMode,
+    ProjectEnvelope, TextGranularity,
 };
 
 use crate::support::{assert_preview_evidence, text_styles};
+
+#[path = "text_color/layout.rs"]
+mod layout;
 
 #[test]
 fn preview_text_and_color_rows_have_typed_evidence_in_their_target() {
@@ -32,32 +35,7 @@ fn evidence(envelope: &ProjectEnvelope) -> BTreeSet<String> {
         found.insert("text.layout.unicode-bidi".to_owned());
     }
     for style in text_styles(envelope) {
-        let layout = style.layout;
-        if layout.horizontal_alignment != veac_ir::HorizontalTextAlignment::Center
-            || layout.vertical_alignment != veac_ir::VerticalTextAlignment::Middle
-        {
-            found.insert("text.layout.alignment".to_owned());
-        }
-        match layout.writing_mode {
-            TextWritingMode::HorizontalTb => {
-                found.insert("text.layout.writing-horizontal".to_owned());
-                found.insert("text.layout.writing-horizontal-tb".to_owned());
-            }
-            TextWritingMode::VerticalRl => {
-                found.insert("text.layout.writing-vertical".to_owned());
-                found.insert("text.layout.writing-vertical-rl".to_owned());
-            }
-            TextWritingMode::VerticalLr => {
-                found.insert("text.layout.writing-vertical".to_owned());
-                found.insert("text.layout.writing-vertical-lr".to_owned());
-            }
-        }
-        if layout.wrap != veac_ir::TextWrap::None {
-            found.insert("text.layout.wrap".to_owned());
-        }
-        if layout.overflow != veac_ir::TextOverflow::Visible {
-            found.insert("text.layout.overflow".to_owned());
-        }
+        layout::evidence(style.layout, &mut found);
         if style.outline.is_some() {
             found.insert("text.style.stroke".to_owned());
         }
@@ -136,13 +114,19 @@ fn color_evidence(envelope: &ProjectEnvelope, found: &mut BTreeSet<String>) {
         has_pipeline = true;
         for stage in &pipeline.stages {
             match stage {
-                ColorStage::Basic { .. } | ColorStage::Matrix { .. } => {
+                ColorStage::Basic { .. } => {
                     found.insert("color.adjust".to_owned());
+                    found.insert("color.stage.basic".to_owned());
                 }
-                ColorStage::Hsl { .. } => color_stage(found, "color.hsl"),
-                ColorStage::Curves { .. } => color_stage(found, "color.curves"),
-                ColorStage::Wheels { .. } => color_stage(found, "color.wheels"),
+                ColorStage::Matrix { .. } => {
+                    found.insert("color.adjust".to_owned());
+                    found.insert("color.stage.matrix".to_owned());
+                }
+                ColorStage::Hsl { .. } => color_stage(found, "hsl"),
+                ColorStage::Curves { .. } => color_stage(found, "curves"),
+                ColorStage::Wheels { .. } => color_stage(found, "wheels"),
                 ColorStage::Lut { application } => {
+                    found.insert("color.stage.lut".to_owned());
                     let kind = envelope
                         .project
                         .materials
@@ -169,7 +153,8 @@ fn color_evidence(envelope: &ProjectEnvelope, found: &mut BTreeSet<String>) {
 
 fn color_stage(found: &mut BTreeSet<String>, id: &str) {
     found.insert("color.adjust".to_owned());
-    found.insert(id.to_owned());
+    found.insert(format!("color.{id}"));
+    found.insert(format!("color.stage.{id}"));
 }
 
 fn has_translucent_generator(envelope: &ProjectEnvelope) -> bool {

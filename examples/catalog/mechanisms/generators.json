@@ -16,6 +16,9 @@
     {"id":"generator.paint","title":"生成形状绘制","family":"形状绘制","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.stroke.solid","title":"纯色形状描边","family":"形状描边","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
     {"id":"generator.stroke.gradient","title":"渐变形状描边","family":"形状描边","coverage":"preview_required","preview_target":"generated-graphics","capability_id":"P1-29"},
+    {"id":"resource.kind.image","title":"本地图片资源类型","family":"资源声明","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"resource.locator.file","title":"项目相对文件定位器","family":"资源声明","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
+    {"id":"source.media.image","title":"图片媒体引用","family":"媒体源","coverage":"preview_required","preview_target":"executable-local-image","capability_id":"P1-09"},
     {"id":"resource.kind.font","title":"字体资源类型","family":"资源声明","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac"},
     {"id":"resource.locator.remote","title":"已固定的远程资源定位器","family":"资源声明","coverage":"workflow_evidence","evidence":"examples/workflow-evidence/resources-closed-sets.veac"}
   ]

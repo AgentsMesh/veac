@@ -10,8 +10,13 @@ cosmic-text = { version = "=0.16.0", default-features = false, features = ["std"
 ttf-parser = "0.25"
 unicode-segmentation = "1.12"
 unicode-script = "0.5"
+sha2 = "0.10"
+veac-ir = { path = "../veac-ir" }
 veac-artifact = { path = "../veac-artifact" }
 veac-plan = { path = "../veac-plan" }
+
+[build-dependencies]
+sha2 = "0.10"
 
 [dev-dependencies]
 serde_json = "1.0"

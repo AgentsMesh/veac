@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use veac_ir::{ClipSource, ItemId, TrackId, TrackKind};
+use veac_ir::{
+    AssCueSettings, CaptionCueSemantics, CaptionNativeCue, ClipSource, ItemId, TrackId, TrackKind,
+};
 
 use crate::{test_support::*, *};
 
@@ -29,7 +31,7 @@ fn document_bindings(value: &CaptionEnvelope) -> CaptionDocumentBindings {
         ]),
         language: value.document.language.clone(),
         overlap_policy: value.document.overlap_policy,
-        settings: value.document.settings.clone(),
+        native: value.document.native.clone(),
         styles: value.document.styles.clone(),
     }
 }
@@ -61,7 +63,11 @@ fn converts_to_and_from_canonical_caption_track_losslessly() {
         &track.clips[0].source,
         ClipSource::Caption { speaker, .. } if speaker.as_deref() == Some("Alice")
     ));
-    assert!(track.clips[0].metadata.contains_key("veac.caption.v1"));
+    let ClipSource::Caption { cue, .. } = &track.clips[0].source else {
+        unreachable!()
+    };
+    assert_eq!(cue.spans.len(), 1);
+    assert_eq!(cue.words.len(), 1);
     assert_eq!(
         from_caption_track(&track, &document_bindings(&value)).unwrap(),
         value
@@ -89,7 +95,7 @@ fn requires_complete_unique_stable_id_bindings() {
 }
 
 #[test]
-fn rejects_wrong_track_items_bindings_and_metadata() {
+fn rejects_wrong_track_items_and_bindings() {
     let value = envelope();
     let mut track = to_caption_track(&value, &track_bindings(&value)).unwrap();
     track.kind = TrackKind::Video;
@@ -114,25 +120,18 @@ fn rejects_wrong_track_items_bindings_and_metadata() {
         from_caption_track(&wrong_source, &document_bindings(&value)),
         Err(CaptionError::Ir(_))
     ));
-
-    track.clips[0].metadata.insert(
-        "veac.caption.v1".to_owned(),
-        serde_json::json!({ "unknown": true }),
-    );
-    assert!(matches!(
-        from_caption_track(&track, &document_bindings(&value)),
-        Err(CaptionError::Json(_))
-    ));
 }
 
 #[test]
-fn plain_ir_caption_without_extension_uses_defaults() {
+fn plain_ir_caption_semantics_use_defaults() {
     let value = envelope();
     let mut track = to_caption_track(&value, &track_bindings(&value)).unwrap();
-    track
-        .clips
-        .iter_mut()
-        .for_each(|clip| clip.metadata.clear());
+    track.clips.iter_mut().for_each(|clip| {
+        let ClipSource::Caption { cue, .. } = &mut clip.source else {
+            unreachable!()
+        };
+        **cue = CaptionCueSemantics::default();
+    });
     let imported = from_caption_track(&track, &document_bindings(&value)).unwrap();
     assert!(imported
         .document
@@ -144,4 +143,28 @@ fn plain_ir_caption_without_extension_uses_defaults() {
         .cues
         .iter()
         .all(|cue| cue.words.is_empty()));
+}
+
+#[test]
+fn ass_native_fields_roundtrip_without_string_codec() {
+    let mut value = envelope();
+    value.document.cues[0].native = Some(CaptionNativeCue::Ass {
+        settings: AssCueSettings {
+            comment: true,
+            layer: Some(2),
+            margin_left: Some(12),
+            margin_right: Some(13),
+            margin_vertical: Some(14),
+            effect: Some("Scroll".to_owned()),
+        },
+    });
+    let track = to_caption_track(&value, &track_bindings(&value)).unwrap();
+    let ClipSource::Caption { cue, .. } = &track.clips[0].source else {
+        unreachable!()
+    };
+    assert!(matches!(cue.native, Some(CaptionNativeCue::Ass { .. })));
+    assert_eq!(
+        from_caption_track(&track, &document_bindings(&value)).unwrap(),
+        value
+    );
 }

@@ -1,13 +1,17 @@
 use tempfile::tempdir;
 
-use super::SourceGraphLock;
+use super::{SourceGraphLock, SourceGraphReadLock};
 
+#[path = "tests/batch.rs"]
+mod batch;
 #[path = "tests/commit_races.rs"]
 mod commit_races;
 #[path = "tests/error_paths.rs"]
 mod error_paths;
 #[path = "tests/path_races.rs"]
 mod path_races;
+#[path = "tests/read.rs"]
+mod read;
 #[path = "tests/stage_races.rs"]
 mod stage_races;
 

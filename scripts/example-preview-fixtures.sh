@@ -110,12 +110,13 @@ materialize_preview_assets() {
   local project=$1
   local canonical=$2
   local fixtures=$3
-  local kind uri target fixture
+  local source_root=${4:-}
+  local kind uri pinned target fixture authored
   jq -e '.project.materials | type == "array"' "$canonical" >/dev/null || {
     preview_die "canonical materials must be an array: $canonical"
     return 1
   }
-  while IFS=$'\t' read -r kind uri; do
+  while IFS=$'\t' read -r kind uri pinned; do
     case "$uri" in
       ""|/*|../*|*/../*|*/..)
         preview_die "unsafe material URI: $uri"
@@ -127,6 +128,24 @@ materialize_preview_assets() {
       return 1
     fi
     [[ -f "$target" ]] && continue
+    if [[ $pinned == true ]]; then
+      [[ -n $source_root && -d $source_root && ! -L $source_root ]] || {
+        preview_die "pinned material requires a regular source root: $uri"
+        return 1
+      }
+      if find "$source_root" -type l -print -quit | grep -q .; then
+        preview_die "pinned material source graph contains a symlink: $uri"
+        return 1
+      fi
+      authored="$source_root/$uri"
+      [[ -f $authored && ! -L $authored ]] || {
+        preview_die "pinned material is missing from the example: $uri"
+        return 1
+      }
+      mkdir -p "$(dirname "$target")" || return 1
+      cp "$authored" "$target" || return 1
+      continue
+    fi
     fixture=$(fixture_for_material "$kind" "$uri" "$fixtures") || return 1
     [[ -f "$fixture" && ! -L "$fixture" ]] || {
       preview_die "fixture must be a regular non-symlink file: $fixture"
@@ -134,7 +153,8 @@ materialize_preview_assets() {
     }
     mkdir -p "$(dirname "$target")" || return 1
     cp "$fixture" "$target" || return 1
-  done < <(jq -r '.project.materials[] | select(.source.type == "file") | [.kind, .source.uri] | @tsv' "$canonical")
+  done < <(jq -r '.project.materials[] | select(.source.type == "file") |
+    [.kind, .source.uri, (.identity != null)] | @tsv' "$canonical")
 }
 
 pad_preview_audio() {
@@ -153,5 +173,7 @@ pad_preview_audio() {
         -af apad -t "$minimum" -c:a aac -b:a 96k -f ipod "$temporary" || return 1
       mv "$temporary" "$target" || return 1
     fi
-  done < <(jq -r '.project.materials[] | select(.kind == "audio" and .source.type == "file") | .source.uri' "$canonical")
+  done < <(jq -r '.project.materials[] | select(
+    .kind == "audio" and .source.type == "file" and .identity == null
+  ) | .source.uri' "$canonical")
 }

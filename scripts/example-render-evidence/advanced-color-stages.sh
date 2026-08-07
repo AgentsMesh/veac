@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
 
 advanced_color_canonical_contract() {
-  local canonical=$1 label=$2 root=${3:-.project}
-  jq -e --arg root "$root" '
-    def t($v): {"timescale":1000,"value":$v};
+  local canonical=$1 label=$2 root=${3:-.project} identity=${4:-$1}
+  local reference hsl curves wheels full tone background
+  reference=$(canonical_clip_id "$identity" reference)
+  hsl=$(canonical_clip_id "$identity" hsl)
+  curves=$(canonical_clip_id "$identity" curves)
+  wheels=$(canonical_clip_id "$identity" wheels)
+  full=$(canonical_clip_id "$identity" full)
+  tone=$(canonical_clip_id "$identity" tone)
+  background=$(canonical_clip_id "$identity" alpha-check)
+  jq -e --arg root "$root" --arg reference "$reference" --arg hsl "$hsl" \
+    --arg curves "$curves" --arg wheels "$wheels" --arg full "$full" \
+    --arg tone "$tone" --arg background "$background" '
+    def seconds: .value/.timescale;
     def clips:
       if $root == ".project" then .project.sequences[].tracks[].clips[]
       else .sequences[].tracks[].clips[] end;
@@ -14,21 +24,20 @@ advanced_color_canonical_contract() {
     def input($id):
       [.inputs[] | select(.id == $id)] |
       if length == 1 then .[0] else null end;
-    clip("itm_reference") as $reference |
-    clip("itm_hsl-only") as $hsl |
-    clip("itm_curves-only") as $curves |
-    clip("itm_wheels-only") as $wheels |
-    clip("itm_full-grade") as $full |
-    clip("itm_tone-curve") as $tone |
-    clip("itm_chart") as $chart |
-    clip("itm_alpha-check") as $background |
-    $reference.record_range == {"start":t(0),"duration":t(1000)} and
-    $hsl.record_range == {"start":t(1000),"duration":t(1000)} and
-    $curves.record_range == {"start":t(2000),"duration":t(1000)} and
-    $wheels.record_range == {"start":t(3000),"duration":t(1000)} and
-    $full.record_range == {"start":t(4000),"duration":t(2000)} and
-    $tone.record_range == {"start":t(6000),"duration":t(2000)} and
-    ($chart.source.generator.gradient.stops | length == 4 and all(.color.alpha == 179)) and
+    clip($reference) as $reference |
+    clip($hsl) as $hsl |
+    clip($curves) as $curves |
+    clip($wheels) as $wheels |
+    clip($full) as $full |
+    clip($tone) as $tone |
+    clip($background) as $background |
+    {type:"anchor",anchor:"center",inset:{x:0,y:0}} as $centered |
+    [[$reference,$hsl,$curves,$wheels,$full,$tone][] |
+      [(.record_range.start|seconds),(.record_range.duration|seconds)]] ==
+      [[0,1],[1,1],[2,1],[3,1],[4,2],[6,2]] and
+    ($reference.source.generator.gradient.stops | length == 4 and all(.color.alpha == 179)) and
+    all([$hsl,$curves,$wheels,$full,$tone][];
+      .visual.placement == $centered and .visual.transform.anchor == {x:0.5,y:0.5}) and
     ($background.source.generator.gradient.stops | map(.color)) == [
       {"alpha":255,"blue":5,"green":5,"red":5},{"alpha":255,"blue":5,"green":5,"red":5},
       {"alpha":255,"blue":250,"green":250,"red":250},{"alpha":255,"blue":250,"green":250,"red":250}] and
@@ -58,37 +67,27 @@ advanced_color_canonical_contract() {
       {"gain":{"blue":-0.01,"green":0.02,"red":0.05},
        "gamma":{"blue":0,"green":0,"red":0.03},"lift":{"blue":0.04,"green":0,"red":0}} and
     (if $root == ".project" then
-      $full.visual.color_pipeline.stages[5].application ==
-        {"interpolation":"tetrahedral","material_id":"med_cinematic"}
+      $full.visual.color_pipeline.stages[5].application.interpolation == "tetrahedral" and
+      (material($full.visual.color_pipeline.stages[5].application.material_id) |
+        .kind == "lut3d" and .source == {"type":"file","uri":"assets/cinematic.cube"})
      else
-      $full.visual.color_pipeline.stages[5].application ==
-        {"input_id":"pin_cinematic","interpolation":"tetrahedral","kind":"three_dimensional"}
+      $full.visual.color_pipeline.stages[5].application as $lut |
+      $lut.interpolation == "tetrahedral" and $lut.kind == "three_dimensional" and
+      (input($lut.input_id) | .canonical_uri == "assets/cinematic.cube")
      end) and
     ($tone.visual.color_pipeline.stages | length) == 1 and
     (if $root == ".project" then
-      $tone.visual.color_pipeline.stages[0] ==
-        {"application":{"interpolation":"linear","material_id":"med_tone-curve"},"type":"lut"}
-     else
-      $tone.visual.color_pipeline.stages[0] ==
-        {"application":{"input_id":"pin_tone-curve","interpolation":"linear",
-         "kind":"one_dimensional"},"type":"lut"}
-     end) and
-    (if $root == ".project" then
-      (material("med_cinematic") |
-        .kind == "lut3d" and .source == {"type":"file","uri":"assets/cinematic.cube"}) and
-      (material("med_tone-curve") |
+      $tone.visual.color_pipeline.stages[0] as $lut |
+      $lut.type == "lut" and $lut.application.interpolation == "linear" and
+      (material($lut.application.material_id) |
         .kind == "lut1d" and .source == {"type":"file","uri":"assets/tone-curve.cube"})
      else
-      (input("pin_cinematic") |
-        .material_id == "med_cinematic" and .canonical_uri == "assets/cinematic.cube" and
-        .kind == {"material_kind":"lut3d","type":"resource"} and
-        .observed_identity.algorithm == "sha256" and
-        ((.observed_identity.digest // "") | test("^[0-9a-f]{64}$"))) and
-      (input("pin_tone-curve") |
-        .material_id == "med_tone-curve" and .canonical_uri == "assets/tone-curve.cube" and
-        .kind == {"material_kind":"lut1d","type":"resource"} and
-        .observed_identity.algorithm == "sha256" and
-        ((.observed_identity.digest // "") | test("^[0-9a-f]{64}$")))
+      $tone.visual.color_pipeline.stages[0] as $lut |
+      $lut.type == "lut" and $lut.application.interpolation == "linear" and
+      $lut.application.kind == "one_dimensional" and
+      (input($lut.application.input_id) |
+        .canonical_uri == "assets/tone-curve.cube" and
+        .kind == {"material_kind":"lut1d","type":"resource"})
      end)
   ' "$canonical" >/dev/null || fail "advanced-color $label stage contract failed"
 }
@@ -101,7 +100,9 @@ advanced_color_rgb_distance() {
 
 advanced_color_assert_rendered_stages() {
   local video=$1 first second label delta index colors=() times=(0.5 1.5 2.5 3.5 5 7)
-  for first in "${times[@]}"; do colors+=("$(visual_region_rgb "$video" "$first" 'iw:ih:0:0')"); done
+  for first in "${times[@]}"; do
+    colors+=("$(visual_region_rgb "$video" "$first" "$(mechanism_crop)")")
+  done
   for index in 1 2 3 4 5; do
     first=${colors[index-1]}; second=${colors[index]}; label="${times[index-1]}/${times[index]}"
     delta=$(advanced_color_rgb_distance "$first" "$second")
@@ -113,7 +114,7 @@ advanced_color_assert_rendered_stages() {
 advanced_color_assert_alpha_composite() {
   local video=$1 top bottom top_delta bottom_delta separation
   top=$(visual_region_rgb "$video" 0.5 '24:90:0:45')
-  bottom=$(visual_region_rgb "$video" 0.5 '24:45:0:225')
+  bottom=$(visual_region_rgb "$video" 0.5 '24:45:0:170')
   top_delta=$(advanced_color_rgb_distance "$top" '16 25 44')
   bottom_delta=$(advanced_color_rgb_distance "$bottom" '88 98 117')
   separation=$(advanced_color_rgb_distance "$top" "$bottom")
@@ -128,14 +129,18 @@ check_advanced_color_stage_evidence() {
   local author preview plan video
   author=$(example_authoring_canonical "$dir")
   preview=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_preview)
-  video=$(delivery_video_path "$dir" preview preview)
+  plan=$(delivery_plan_path "$dir" preview)
+  video=$(delivery_video_path "$dir" preview preview.mp4)
   for file in "$author" "$preview" "$plan" "$video"; do require_file "$file"; done
   advanced_color_canonical_contract "$author" authoring
   advanced_color_canonical_contract "$preview" preview
-  advanced_color_canonical_contract "$plan" plan .plan
+  advanced_color_canonical_contract "$plan" plan .plan "$author"
   video_contract "$video" 7.9
-  assert_unique_frames "$video" 6 0.5 1.5 2.5 3.5 5 7
+  assert_unique_mechanism_regions "$video" 6 0.5 1.5 2.5 3.5 5 7
+  assert_visual_crop_variety "$video" 5 "70:150:400:10" \
+    "高级调色覆盖右侧无标签 ROI" 0.5 1.5 2.5 3.5 5 7
+  assert_visual_crop_variety "$video" 5 "100:45:10:190" \
+    "高级调色覆盖下方无标签 ROI" 0.5 1.5 2.5 3.5 5 7
   advanced_color_assert_rendered_stages "$video"
   advanced_color_assert_alpha_composite "$video"
 }

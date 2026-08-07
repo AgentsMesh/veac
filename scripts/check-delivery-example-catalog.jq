@@ -3,15 +3,15 @@ def delivery_source: "examples/delivery-formats/main.veac";
 def delivery_capabilities: ["P1-30", "P1-32"];
 
 def delivery_artifacts: [
-  "master",
-  "frames",
-  "transcript",
-  "master-audio",
-  "video-waveform",
-  "podcast",
-  "loop-preview",
-  "cover",
-  "stream"
+  {kind:"adaptive_package", target_type:"package", target:"stream"},
+  {kind:"animated_image", target_type:"file", target:"loop-preview.gif"},
+  {kind:"audio_file", target_type:"file", target:"podcast.mp3"},
+  {kind:"audio_stem", target_type:"file", target:"master.wav"},
+  {kind:"caption_sidecar", target_type:"file", target:"captions.vtt"},
+  {kind:"image_sequence", target_type:"image_sequence", target:"frame-%04d.png"},
+  {kind:"scope", target_type:"file", target:"video-waveform.png"},
+  {kind:"still_image", target_type:"file", target:"cover.png"},
+  {kind:"video", target_type:"file", target:"master.mp4"}
 ];
 
 def delivery_mechanisms: [
@@ -43,8 +43,8 @@ def delivery_mechanisms: [
   $target.example == delivery_source and
   $target.capability_ids == delivery_capabilities and
   ([$target.expected_artifacts[] |
-    select(.kind == "authoring_delivery" and .id == "master") |
-    .artifact_ids] == [delivery_artifacts])) and
+    select(.kind == "delivery" and .logical_key == "master") |
+    .artifacts] == [delivery_artifacts])) and
 (["P1-30", "P1-32"] | all(. as $id |
   any($capabilities[0].capabilities[];
     .id == $id and .example == delivery_source and

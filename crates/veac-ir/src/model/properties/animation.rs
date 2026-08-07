@@ -1,13 +1,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{KeyframeId, RationalTime};
+use crate::{KeyframeId, RationalTime, TemporalBindingId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Animatable<T> {
     Constant { value: T },
     Keyframes { keyframes: Vec<Keyframe<T>> },
+    Binding { binding_id: TemporalBindingId },
 }
 
 impl<T> Animatable<T> {
@@ -17,8 +18,15 @@ impl<T> Animatable<T> {
 
     pub fn keyframes(&self) -> Option<&[Keyframe<T>]> {
         match self {
-            Self::Constant { .. } => None,
+            Self::Constant { .. } | Self::Binding { .. } => None,
             Self::Keyframes { keyframes } => Some(keyframes),
+        }
+    }
+
+    pub fn binding_id(&self) -> Option<&TemporalBindingId> {
+        match self {
+            Self::Binding { binding_id } => Some(binding_id),
+            Self::Constant { .. } | Self::Keyframes { .. } => None,
         }
     }
 }

@@ -1,10 +1,25 @@
 use clap::{Arg, ArgAction, ArgMatches, Command as ClapCommand};
 
 use super::shared::{path, path_option, path_value, required_path_value};
-use crate::arguments::{Command, DeriveArgs, ProviderProposeArgs, ProviderRunArgs};
+use crate::arguments::{
+    Command, DeriveArgs, IngestAnalysisArgs, ProviderProposeArgs, ProviderRunArgs,
+};
 
-pub(super) fn commands() -> [ClapCommand; 3] {
-    [derive(), provider_run(), provider_propose()]
+pub(super) fn commands() -> [ClapCommand; 4] {
+    [
+        derive(),
+        ingest_analysis(),
+        provider_run(),
+        provider_propose(),
+    ]
+}
+
+fn ingest_analysis() -> ClapCommand {
+    ClapCommand::new("ingest-analysis")
+        .about("Ingest one closed typed provider analysis result")
+        .arg(path("input"))
+        .arg(path("request"))
+        .arg(path_option("store").long("store").required(true))
 }
 
 fn derive() -> ClapCommand {
@@ -55,6 +70,11 @@ pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
             store: required_path_value(matches, "store"),
             ffmpeg: required_path_value(matches, "ffmpeg"),
             ffprobe: required_path_value(matches, "ffprobe"),
+        }),
+        "ingest-analysis" => Command::IngestAnalysis(IngestAnalysisArgs {
+            input: required_path_value(matches, "input"),
+            request: required_path_value(matches, "request"),
+            store: required_path_value(matches, "store"),
         }),
         "provider-run" => Command::ProviderRun(ProviderRunArgs {
             request: required_path_value(matches, "request"),

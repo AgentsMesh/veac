@@ -2,12 +2,26 @@ use crate::*;
 
 use super::super::Validator;
 
-pub(super) fn validate(validator: &mut Validator, project: &Project) {
-    report(validator, usage(project), project.id.as_str());
+pub(super) fn validate(
+    validator: &mut Validator,
+    project: &Project,
+    temporal: &TemporalProgramLibrary,
+) {
+    report(validator, usage(project, temporal), project.id.as_str());
 }
 
-fn usage(project: &Project) -> RenderStructureUsage {
-    let mut total = RenderStructureUsage::default();
+fn usage(project: &Project, temporal: &TemporalProgramLibrary) -> RenderStructureUsage {
+    let mut total = RenderStructureUsage {
+        temporal_programs: count(temporal.programs.len()),
+        temporal_bindings: count(temporal.bindings.len()),
+        temporal_nodes: temporal
+            .programs
+            .iter()
+            .map(|program| count(program.nodes.len()))
+            .fold(0, u64::saturating_add),
+        temporal_provenance: count(temporal.provenance.len()),
+        ..RenderStructureUsage::default()
+    };
     for track in project.sequences.iter().flat_map(|value| &value.tracks) {
         total.tracks = total.tracks.saturating_add(1);
         for clip in &track.clips {
@@ -35,8 +49,8 @@ fn clip_usage(clip: &Clip) -> RenderStructureUsage {
             .saturating_add(keys(&audio.pan));
     }
     for effect in &clip.effects {
-        for parameter in effect.parameters.values() {
-            if let ParameterValue::NumberCurve { value: curve } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(curve) = effect.effect.curve(parameter) {
                 value.keyframes = value.keyframes.saturating_add(keys(curve));
             }
         }
@@ -125,6 +139,30 @@ fn report(validator: &mut Validator, usage: RenderStructureUsage, project_id: &s
             MAX_TOTAL_CAPTION_CUES,
             "BUDGET_CAPTION_CUES",
             "caption cues",
+        ),
+        (
+            usage.temporal_programs,
+            MAX_TOTAL_TEMPORAL_PROGRAMS,
+            "BUDGET_TEMPORAL_PROGRAMS",
+            "temporal programs",
+        ),
+        (
+            usage.temporal_bindings,
+            MAX_TOTAL_TEMPORAL_BINDINGS,
+            "BUDGET_TEMPORAL_BINDINGS",
+            "temporal bindings",
+        ),
+        (
+            usage.temporal_nodes,
+            MAX_TOTAL_TEMPORAL_NODES,
+            "BUDGET_TEMPORAL_NODES",
+            "temporal nodes",
+        ),
+        (
+            usage.temporal_provenance,
+            MAX_TOTAL_TEMPORAL_PROVENANCE,
+            "BUDGET_TEMPORAL_PROVENANCE",
+            "temporal provenance records",
         ),
     ];
     for (actual, limit, code, label) in limits {

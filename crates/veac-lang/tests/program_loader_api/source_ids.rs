@@ -1,13 +1,6 @@
-use veac_lang::program::{compile_with_loader, LoadedSource, SourceLoader};
+use veac_lang::program::{prepare_with_loader, LoadedSource, SourceLoader};
 
-const ENTRY: &str = r#"import "./module.veac" as module;
-project root {
-  settings {
-    timebase 1/1000; canvas 1px by 1px;
-    frame-rate 1fps; sample-rate 48000hz;
-  }
-  entry sequence main; sequence main {}
-}"#;
+use super::executable_entry;
 
 struct ReturnedId(String);
 
@@ -35,7 +28,7 @@ fn invalid_ids() -> Vec<String> {
 #[test]
 fn custom_loader_roots_obey_the_canonical_source_id_contract() {
     for id in invalid_ids() {
-        let error = compile_with_loader(
+        let error = prepare_with_loader(
             LoadedSource {
                 id: id.clone(),
                 source: String::new(),
@@ -50,10 +43,10 @@ fn custom_loader_roots_obey_the_canonical_source_id_contract() {
 #[test]
 fn custom_loader_imports_obey_the_canonical_source_id_contract() {
     for id in invalid_ids() {
-        let error = compile_with_loader(
+        let error = prepare_with_loader(
             LoadedSource {
                 id: "main.veac".to_owned(),
-                source: ENTRY.to_owned(),
+                source: executable_entry("import \"./module.veac\" as module;", "1s"),
             },
             &ReturnedId(id.clone()),
         )
@@ -64,13 +57,13 @@ fn custom_loader_imports_obey_the_canonical_source_id_contract() {
 
 #[test]
 fn every_successful_source_graph_can_build_its_source_index() {
-    let compiled = compile_with_loader(
+    let prepared = prepare_with_loader(
         LoadedSource {
             id: "main.veac".to_owned(),
-            source: ENTRY.to_owned(),
+            source: executable_entry("import \"./module.veac\" as module;", "1s"),
         },
         &ReturnedId("parts/片头.veac".to_owned()),
     )
     .unwrap();
-    compiled.source_index().unwrap();
+    prepared.source_index().unwrap();
 }

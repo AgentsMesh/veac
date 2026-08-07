@@ -9,8 +9,6 @@ fn every_ffmpeg_artifact_snapshot_satisfies_its_typed_contract() {
         let result = crate::workflow::validate_media_artifact_snapshot(&probe, &spec);
         assert!(result.is_ok(), "spec={spec:?} result={result:?}");
     }
-    let (analysis, probe) = analysis_case();
-    assert!(validate(&probe, &analysis).is_err());
 }
 
 #[test]

@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use veac_ir::{
     Clip, ClipSource, EditOperation, Precondition, Rational, SourceMapping, StructureEdit,
 };
@@ -26,7 +24,7 @@ pub(crate) fn append_material(
     built.evidence.push(ProposalEvidence::ArtifactMaterial {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         material_id: insertion.material.id.clone(),
     });
     built.operations.push(operation);
@@ -45,7 +43,7 @@ pub(crate) fn append_generated_clip(
     built.evidence.push(ProposalEvidence::GeneratedAudioClip {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         material_id: insertion.material.material.id.clone(),
     });
     built.operations.push(operation);
@@ -66,7 +64,7 @@ pub(crate) fn append_stem_clip(
     built.evidence.push(ProposalEvidence::SeparatedStemClip {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         material_id: insertion.material.material.id.clone(),
         kind,
         label: label.to_owned(),
@@ -100,7 +98,7 @@ pub(crate) fn append_replacement(
     built.evidence.push(ProposalEvidence::ReplacedMedia {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         material_id: insertion.material.id.clone(),
     });
     built.operations.push(operation);
@@ -135,7 +133,7 @@ fn clip_operation(
             effects: Vec::new(),
             replaceable: None,
             template_editable_text: false,
-            metadata: BTreeMap::new(),
+            authorship: None,
         }),
         before_id: insertion.before_id.clone(),
         after_id: insertion.after_id.clone(),

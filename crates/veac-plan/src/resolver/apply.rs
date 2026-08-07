@@ -68,8 +68,7 @@ impl PlanResolver<'_> {
             ApplyOperation::Effect { effect } if effect.enabled => (
                 stage_range,
                 ResolvedApplyOperation::Effect {
-                    effect_type: effect.effect_type.clone(),
-                    parameters: effect.parameters.clone(),
+                    effect: effect.effect.clone(),
                 },
             ),
             ApplyOperation::Effect { .. } => return None,

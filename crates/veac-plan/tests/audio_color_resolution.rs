@@ -1,7 +1,5 @@
 mod support;
 
-use std::collections::BTreeMap;
-
 use support::*;
 use veac_plan::canonical::*;
 use veac_plan::{plan_hash, resolve_one, ResolvedColorStage, ResolvedInputKind, ResolvedLutKind};
@@ -164,7 +162,7 @@ fn lut_material() -> Material {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: BTreeMap::new(),
+        authorship: None,
     }
 }
 

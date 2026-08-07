@@ -33,13 +33,9 @@ fn delayed_source_ranges_survive_loudness_processing() {
     let mut normalize = ranged_clip("itm_normalize", 6_000);
     normalize.effects.push(EffectInstance {
         id: EffectId::new("fx_normalize").unwrap(),
-        effect_type: "audio.normalize".to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([(
-            "target_lufs".to_owned(),
-            ParameterValue::Number { value: -18.0 },
-        )]),
+        effect: Effect::AudioNormalize { target_lufs: -18.0 },
     });
     canonical.project.sequences[0].tracks.push(track(
         "trk_processed",

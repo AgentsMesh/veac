@@ -139,7 +139,9 @@ fn system_environment_maps_segment_validation_failures() {
     let temp = tempdir().unwrap();
     let project = super::support::canonical_project(&temp, super::support::GENERATED_SOURCE);
     let fixture_environment = super::support::FakeEnvironment::success();
-    let prepared = crate::planning::prepare(&project, None, &fixture_environment).unwrap();
+    let prepared =
+        crate::planning::prepare_with_material_root(&project, None, None, &fixture_environment)
+            .unwrap();
     let contract =
         super::substitution_command_tests::segment_contract(&prepared, &fixture_environment);
     let record = ArtifactRecord {
@@ -167,7 +169,7 @@ fn system_environment_executes_a_guarded_render_bundle() {
     crate::commands::render(
         &project,
         None,
-        None,
+        crate::planning::InputResolution::default(),
         None,
         crate::arguments::SubstitutionPolicy::Original,
         crate::arguments::SubstitutionPolicy::Original,

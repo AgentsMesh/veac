@@ -66,3 +66,7 @@ pub(crate) fn quote(value: &str) -> String {
     rendered.push('"');
     rendered
 }
+
+#[cfg(test)]
+#[path = "string_codec/tests.rs"]
+mod tests;

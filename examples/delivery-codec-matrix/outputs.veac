@@ -1,0 +1,43 @@
+module {
+  fn hevc() -> Deliverable {
+    let color = color_space(
+      primaries_bt2020(), transfer_smpte2084(), matrix_bt2020_ncl(), range_limited()
+    );
+    let video = video_output(
+      video_h265(), pixel_yuv420p10le(), alpha_opaque(), video_color_present(color),
+      video_crf(28), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_h265_main10()), video_level_auto()
+    );
+    deliverable_video(
+      identifier("hevc-main10"), delivery_file("hevc.mov"),
+      video_delivery(
+        container_mov(), video, embedded_audio_none(),
+        false, pass_single(), hardware_software()
+      )
+    )
+  }
+
+  fn vp9() -> Deliverable {
+    let video = video_output(
+      video_vp9(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+      video_crf(30), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_vp9_0()), video_level_auto()
+    );
+    deliverable_video(
+      identifier("vp9-opus"), delivery_file("vp9.webm"),
+      video_delivery(
+        container_webm(), video,
+        embedded_audio_present(audio_output(audio_opus(), 48000, 2)),
+        false, pass_single(), hardware_software()
+      )
+    )
+  }
+
+  export fn matrix(timeline: Sequence) -> Delivery {
+    delivery(
+      identifier("codec-matrix"), timeline,
+      raster_settings(canvas(640px, 360px), frame_rate(24, 1), caption_burn_in()),
+      [hevc(), vp9()]
+    )
+  }
+}

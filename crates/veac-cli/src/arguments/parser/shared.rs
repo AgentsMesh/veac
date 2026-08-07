@@ -12,6 +12,13 @@ pub(super) fn path_option(id: &'static str) -> Arg {
     value(id).value_parser(clap::value_parser!(PathBuf))
 }
 
+pub(super) fn material_root() -> Arg {
+    path_option("material_root")
+        .long("material-root")
+        .value_name("DIRECTORY")
+        .help("Declare the base directory for project-relative local material URIs")
+}
+
 pub(super) fn value(id: &'static str) -> Arg {
     Arg::new(id).value_name(value_name(id))
 }
@@ -42,6 +49,15 @@ pub(super) fn string_value(matches: &ArgMatches, id: &str) -> Option<String> {
     matches.get_one::<String>(id).cloned()
 }
 
+pub(super) fn string_values(matches: &ArgMatches, id: &str) -> Vec<String> {
+    matches
+        .get_many::<String>(id)
+        .into_iter()
+        .flatten()
+        .cloned()
+        .collect()
+}
+
 pub(super) fn flag_value(matches: &ArgMatches, id: &str) -> bool {
     matches.get_flag(id)
 }
@@ -67,6 +83,8 @@ fn value_name(id: &str) -> &'static str {
         "document" => "DOCUMENT",
         "operation_id" => "OPERATION_ID",
         "bindings" => "BINDINGS",
+        "inputs" => "INPUTS",
+        "inline_inputs" => "NAME=VALUE",
         "key" => "KEY",
         "package" => "PACKAGE",
         "search" => "SEARCH",
@@ -76,12 +94,15 @@ fn value_name(id: &str) -> &'static str {
         "source" => "SOURCE",
         "emit_ir" => "EMIT_IR",
         "revision" => "REVISION",
+        "frontend" => "FRONTEND",
         "edit_batch" => "EDIT_BATCH",
         "source_edit_batch" => "SOURCE_EDIT_BATCH",
         "contract" => "CONTRACT",
         "config" => "CONFIG",
         "destination" => "DESTINATION",
         "media" => "MEDIA",
+        "material" => "MATERIAL_ID",
+        "material_root" => "MATERIAL_ROOT",
         _ => unreachable!("all parser value identifiers have display names"),
     }
 }

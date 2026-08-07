@@ -19,22 +19,36 @@ def exact_keys($expected):
   (keys_unsorted | sort) == ($expected | sort);
 
 def artifact_key:
-  if .kind == "authoring_delivery" then "authoring_delivery:" + .id else .kind end;
+  if .kind == "delivery" then "delivery:" + .logical_key else .kind end;
+
+def delivery_artifact:
+  exact_keys(["kind", "target", "target_type"]) and
+  (.kind as $kind | [
+    "adaptive_package", "animated_image", "audio_file", "audio_stem",
+    "caption_sidecar", "image_sequence", "scope", "still_image", "video"
+  ] | index($kind) != null) and
+  (.target_type as $target | ["file", "image_sequence", "package"] |
+    index($target) != null) and
+  (.target | nonempty and
+    test("^[A-Za-z0-9][A-Za-z0-9._%+-]*$") and
+    contains("..") | not);
 
 def expected_artifact:
   . as $artifact
-  | if $artifact.kind == "authoring_delivery" then
-      ($artifact | exact_keys(["artifact_ids", "id", "kind"])) and
-      ($artifact.id | nonempty and test("^[a-z][a-z0-9-]*$")) and
-      ($artifact.artifact_ids | type == "array" and length > 0 and
-        all(.[]; nonempty and test("^[a-z][a-z0-9-]*$")) and
-        length == (unique | length))
+  | if $artifact.kind == "delivery" then
+      ($artifact | exact_keys(["artifacts", "kind", "logical_key"])) and
+      ($artifact.logical_key | nonempty and test("^[a-z][a-z0-9-]*$")) and
+      ($artifact.artifacts | type == "array" and length > 0 and
+        all(.[]; delivery_artifact) and
+        (map([.kind, .target_type, .target] | join(":")) |
+          length == (unique | length)))
     else
       ($artifact | exact_keys(["kind"])) and
       ($artifact.kind as $kind | [
         "canonical_project", "resolved_plan", "provider_observations",
         "preview_canonical_project", "preview_resolved_plan", "caption_sidecar",
-        "template_bindings", "edit_outcome", "probe_snapshot", "source_revision",
+        "template_bindings", "edit_batch", "edit_outcome", "edit_replay_outcome",
+        "probe_snapshot", "source_revision",
         "source_index", "source_edit_batch", "source_edit_outcome"
       ] | index($kind) != null)
     end;
@@ -52,20 +66,30 @@ def evidence_owner:
 def source_artifacts:
   all(.expected_artifacts[];
     .kind == "canonical_project" or .kind == "preview_canonical_project" or
-    .kind == "preview_resolved_plan" or .kind == "authoring_delivery" or
+    .kind == "preview_resolved_plan" or .kind == "delivery" or
     .kind == "source_revision" or .kind == "source_index" or
-    .kind == "source_edit_batch" or .kind == "source_edit_outcome") and
+    .kind == "source_edit_batch" or .kind == "source_edit_outcome" or
+    .kind == "edit_batch" or .kind == "edit_outcome" or
+    .kind == "edit_replay_outcome" or .kind == "probe_snapshot") and
   ([.expected_artifacts[] | select(.kind == "canonical_project")] | length == 1) and
   ([.expected_artifacts[] | select(.kind == "preview_canonical_project")] | length == 1) and
   ([.expected_artifacts[] | select(.kind == "preview_resolved_plan")] | length == 1) and
-  any(.expected_artifacts[]; .kind == "authoring_delivery") and
+  ([.expected_artifacts[] | select(.kind == "delivery")] | length == 1) and
   ([.expected_artifacts[] | select(
     .kind == "source_revision" or .kind == "source_index" or
     .kind == "source_edit_batch" or .kind == "source_edit_outcome")] |
     length == 0 or
     (length == 4 and
       ([.[].kind] | sort) ==
-      ["source_edit_batch", "source_edit_outcome", "source_index", "source_revision"]));
+      ["source_edit_batch", "source_edit_outcome", "source_index", "source_revision"])) and
+  ([.expected_artifacts[] | select(
+    .kind == "edit_batch" or .kind == "edit_outcome" or
+    .kind == "edit_replay_outcome")] |
+    length == 0 or
+    (length == 3 and
+      ([.[].kind] | sort) ==
+      ["edit_batch", "edit_outcome", "edit_replay_outcome"])) and
+  ([.expected_artifacts[] | select(.kind == "probe_snapshot")] | length <= 1);
 
 def presentation_check:
   exact_keys(["cue", "expect"]) and
@@ -82,7 +106,7 @@ def target:
   . as $target
   | (all(keys_unsorted[]; . as $key |
       ["id", "kind", "capability_ids", "example", "preview_window",
-       "expected_artifacts", "workflow_evidence", "external_reason",
+       "frontend", "expected_artifacts", "workflow_evidence", "external_reason",
        "not_applicable"] | index($key) != null)) and
     ($target.id | nonempty and test("^[a-z][a-z0-9-]+$")) and
     ($target.kind == "render" or $target.kind == "workflow") and
@@ -92,10 +116,21 @@ def target:
       all(.[]; expected_artifact) and
       (map(artifact_key) | length == (unique | length))) and
     ($target | evidence_owner) and
-    (if ($target.example | nonempty) then
-      ($target.example == ("examples/" + $target.id + "/main.veac")) and
-      ($target | source_artifacts)
-    else $target.kind == "workflow" end) and
+    ($target.example | nonempty) and
+    ($target.example == ("examples/" + $target.id + "/main.veac")) and
+    ($target.frontend == "executable") and
+    ($target | source_artifacts) and
+    (if any($target.expected_artifacts[];
+      .kind == "edit_batch" or .kind == "edit_outcome" or
+      .kind == "edit_replay_outcome") then
+        $target.kind == "workflow" and
+        ($target.capability_ids | index("P1-04")) != null and
+        ($target.capability_ids | index("P1-08")) != null
+      else true end) and
+    (if any($target.expected_artifacts[]; .kind == "probe_snapshot") then
+        $target.kind == "workflow" and
+        ($target.capability_ids | index("P1-34")) != null
+      else true end) and
     (if $target.kind == "render" then
       ($target.example | nonempty) and ($target.preview_window | preview_window)
     else $target.preview_window == null end);
@@ -119,7 +154,7 @@ def checks_fit_preview_windows:
         $target.preview_window.duration_seconds)));
 
 exact_keys(["examples", "presentation_language", "schema_version", "targets"]) and
-.schema_version == 7 and
+.schema_version == 10 and
 .presentation_language == "zh-CN" and
 (.examples | type == "array" and length > 0 and unique_ids) and
 all(.examples[]; example) and

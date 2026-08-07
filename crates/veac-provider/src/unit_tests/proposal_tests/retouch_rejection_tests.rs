@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use veac_ir::TimeRange;
 
-use veac_ir::{EffectId, EffectInstance, ParameterValue};
+use veac_ir::{Animatable, Effect, EffectId, EffectInstance, EffectKind, EffectParameter};
 
 use crate::*;
 
@@ -30,14 +28,16 @@ fn retouch_rejects_noncanonical_or_unexecutable_effect_bindings() {
     assert_invalid(propose_edit(&project, &request, &response, &missing));
 
     let (project, request, response, mut unknown) = multi_control_fixture();
-    retouch_mut(&mut unknown).effects[0].effect.effect_type = "vendor.face_magic".into();
+    retouch_mut(&mut unknown).effects[0].effect.effect =
+        Effect::neutral(EffectKind::VideoPluginReferenceMonochromeV1);
     assert_unsupported(propose_edit(&project, &request, &response, &unknown));
 
     let (project, request, response, mut prefilled) = multi_control_fixture();
-    retouch_mut(&mut prefilled).effects[0]
-        .effect
-        .parameters
-        .insert("radius".into(), ParameterValue::Number { value: 0.5 });
+    let Effect::VideoBlur { radius } = &mut retouch_mut(&mut prefilled).effects[0].effect.effect
+    else {
+        unreachable!()
+    };
+    *radius = Animatable::Keyframes { keyframes: vec![] };
     assert_invalid(propose_edit(&project, &request, &response, &prefilled));
 }
 
@@ -46,7 +46,7 @@ fn retouch_rejects_duplicate_targets_and_out_of_range_samples() {
     let (project, request, response, mut duplicate) = multi_control_fixture();
     let value = retouch_mut(&mut duplicate);
     value.controls[1].effect_id = value.controls[0].effect_id.clone();
-    value.controls[1].effect_parameter = value.controls[0].effect_parameter.clone();
+    value.controls[1].effect_parameter = value.controls[0].effect_parameter;
     assert_invalid(propose_edit(&project, &request, &response, &duplicate));
 
     let (project, request, mut response, context) = multi_control_fixture();
@@ -64,10 +64,11 @@ fn retouch_trial_apply_rejects_effect_ids_owned_elsewhere_in_the_project() {
         .effects
         .push(EffectInstance {
             id: EffectId::new("fx_provider_blur").unwrap(),
-            effect_type: "video.blur".into(),
             enabled: true,
             enable_range: None,
-            parameters: BTreeMap::from([("radius".into(), ParameterValue::Number { value: 1.0 })]),
+            effect: Effect::VideoBlur {
+                radius: Animatable::constant(1.0),
+            },
         });
     assert_invalid(propose_edit(&project, &request, &response, &context));
 }
@@ -76,8 +77,8 @@ fn retouch_trial_apply_rejects_effect_ids_owned_elsewhere_in_the_project() {
 fn retouch_rejects_static_parameter_mappings_and_values_outside_effect_ranges() {
     let (canonical, request, response, mut static_target) = multi_control_fixture();
     let value = retouch_mut(&mut static_target);
-    value.effects[1].effect.effect_type = "video.stabilize".into();
-    value.controls[1].effect_parameter = "enabled".into();
+    value.effects[1].effect.effect = Effect::neutral(EffectKind::VideoStabilize);
+    value.controls[1].effect_parameter = EffectParameter::Enabled;
     assert_unsupported(propose_edit(
         &canonical,
         &request,

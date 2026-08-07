@@ -1,12 +1,12 @@
 mod text;
 
-use std::collections::BTreeMap;
-
 use subtitler::model::{Subtitle, SubtitleFormat};
+use veac_ir::{CaptionNativeCue, CaptionNativeId};
 
 use crate::{
-    time::range_from_millis, validate, CaptionCue, CaptionDocument, CaptionEnvelope, CaptionError,
-    CaptionFormat, ImportOptions, ImportResult, LossReport,
+    time::range_from_millis, validate, CaptionCue, CaptionDocument, CaptionDocumentNative,
+    CaptionEnvelope, CaptionError, CaptionFormat, ImportOptions, ImportResult, LossReport,
+    WebVttHeader,
 };
 
 use super::{ids::IdFactory, native};
@@ -25,17 +25,13 @@ pub(super) fn import_srt(
     build(
         file.subtitles(),
         Vec::new(),
+        None,
         CaptionFormat::Srt,
         options,
         |_index, sub| {
             let native = sub.index.map(|value| value.to_string());
-            (
-                native,
-                BTreeMap::from_iter(
-                    sub.index
-                        .map(|value| ("srt.index".to_owned(), value.to_string())),
-                ),
-            )
+            let index = sub.index.map(|index| index as u64);
+            Ok((native, index.map(|index| CaptionNativeCue::Srt { index })))
         },
     )
 }
@@ -56,7 +52,7 @@ pub(super) fn import_vtt(
             "missing WEBVTT signature",
         ));
     }
-    let (header, subtitles) = subtitler::vtt::parse_content_full(input)
+    let (raw_header, subtitles) = subtitler::vtt::parse_content_full(input)
         .map_err(|error| CaptionError::parse(CaptionFormat::WebVtt, error))?;
     strict_count(
         input.matches("-->").count(),
@@ -64,28 +60,38 @@ pub(super) fn import_vtt(
         CaptionFormat::WebVtt,
     )?;
     let ids = native::vtt_ids(input);
-    let mut settings = BTreeMap::new();
-    if let Some(header) = header {
-        settings.insert("webvtt.header".to_owned(), header);
-    }
+    let (header, unsupported_header) = webvtt_header(raw_header.as_deref());
     let mut result = build(
         &subtitles,
         Vec::new(),
+        Some(CaptionDocumentNative::WebVtt { header }),
         CaptionFormat::WebVtt,
         options,
         |index, sub| {
             let native = ids.get(index).cloned().flatten();
-            let mut values = BTreeMap::new();
-            if let Some(value) = &native {
-                values.insert("webvtt.identifier".to_owned(), value.clone());
-            }
-            if let Some(value) = &sub.settings {
-                values.insert("webvtt.settings".to_owned(), value.clone());
-            }
-            (native, values)
+            let settings = sub
+                .settings
+                .as_deref()
+                .map(|value| {
+                    crate::ir::semantics::webvtt::parse(value)
+                        .map_err(|error| CaptionError::parse(CaptionFormat::WebVtt, error))
+                })
+                .transpose()?;
+            Ok((
+                native.clone(),
+                Some(CaptionNativeCue::WebVtt {
+                    identifier: native.map(CaptionNativeId),
+                    settings,
+                }),
+            ))
         },
     )?;
-    result.document.settings = settings;
+    if unsupported_header {
+        result.loss_report.document(
+            "native.webvtt.header",
+            "additional WebVTT header lines are outside the closed contract",
+        );
+    }
     if native::has_unsupported_vtt_markup(input) {
         result.loss_report.document(
             "text.spans",
@@ -99,12 +105,13 @@ pub(super) fn import_vtt(
 pub(super) fn build<F>(
     subtitles: &[Subtitle],
     styles: Vec<crate::CaptionStyle>,
+    document_native: Option<CaptionDocumentNative>,
     format: CaptionFormat,
     options: &ImportOptions,
     mut native: F,
 ) -> Result<ImportResult, CaptionError>
 where
-    F: FnMut(usize, &Subtitle) -> (Option<String>, BTreeMap<String, String>),
+    F: FnMut(usize, &Subtitle) -> Result<(Option<String>, Option<CaptionNativeCue>), CaptionError>,
 {
     if subtitles.is_empty() {
         return Err(CaptionError::parse(format, "no valid cues found"));
@@ -112,7 +119,7 @@ where
     let mut ids = IdFactory::new(&options.id_namespace);
     let mut cues = Vec::with_capacity(subtitles.len());
     for (index, subtitle) in subtitles.iter().enumerate() {
-        let (native_id, settings) = native(index, subtitle);
+        let (native_id, cue_native) = native(index, subtitle)?;
         let id = ids.next(format, native_id.as_deref(), subtitle);
         let range = range_from_millis(subtitle.start, subtitle.end, options.timescale)?;
         let (mut caption_text, mut speaker) =
@@ -127,7 +134,7 @@ where
             text: caption_text,
             speaker: subtitle.actor.clone().or(speaker),
             style: subtitle.style.clone(),
-            settings,
+            native: cue_native,
             words: Vec::new(),
         });
     }
@@ -135,7 +142,7 @@ where
         timescale: options.timescale,
         language: None,
         overlap_policy: options.overlap_policy,
-        settings: BTreeMap::new(),
+        native: document_native,
         styles,
         cues,
     };
@@ -144,6 +151,17 @@ where
         document,
         loss_report: LossReport::default(),
     })
+}
+
+fn webvtt_header(raw: Option<&str>) -> (WebVttHeader, bool) {
+    let mut lines = raw.unwrap_or("WEBVTT").lines();
+    let signature = lines.next().unwrap_or("WEBVTT").trim();
+    let description = signature
+        .strip_prefix("WEBVTT")
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned);
+    (WebVttHeader { description }, lines.next().is_some())
 }
 
 fn strict_count(markers: usize, parsed: usize, format: CaptionFormat) -> Result<(), CaptionError> {

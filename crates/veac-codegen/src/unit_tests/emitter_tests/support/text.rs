@@ -17,12 +17,13 @@ pub fn text_fixture(caption: bool) -> ProjectEnvelope {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: Default::default(),
+        authorship: None,
     });
     let source = if caption {
         ClipSource::Caption {
             text: escaped_text(),
             speaker: None,
+            cue: Box::default(),
             style: style(),
         }
     } else {

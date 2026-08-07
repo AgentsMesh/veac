@@ -54,10 +54,14 @@ mod composition_matte;
 mod composition_placement;
 #[path = "render_e2e/composition_placement_edges.rs"]
 mod composition_placement_edges;
+#[path = "render_e2e/composition_rotation_alpha.rs"]
+mod composition_rotation_alpha;
 #[path = "render_e2e/composition_shadow_clipping.rs"]
 mod composition_shadow_clipping;
 #[path = "render_e2e/composition_shadow_matte.rs"]
 mod composition_shadow_matte;
+#[path = "render_e2e/composition_star_mask.rs"]
+mod composition_star_mask;
 #[path = "render_e2e/effects.rs"]
 mod effects;
 #[path = "render_e2e/example_transform_animation.rs"]
@@ -104,6 +108,8 @@ mod stabilization;
 mod streams;
 #[path = "render_e2e/support/mod.rs"]
 mod support;
+#[path = "render_e2e/temporal_bindings.rs"]
+mod temporal_bindings;
 #[path = "render_e2e/text.rs"]
 mod text;
 #[path = "render_e2e/text_advanced.rs"]
@@ -122,6 +128,8 @@ mod transform_shear;
 mod transition;
 #[path = "render_e2e/transition_frame_completion.rs"]
 mod transition_frame_completion;
+#[path = "render_e2e/transition_motion.rs"]
+mod transition_motion;
 #[path = "render_e2e/transition_typed.rs"]
 mod transition_typed;
 #[path = "render_e2e/transitive_inputs.rs"]

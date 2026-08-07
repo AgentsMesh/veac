@@ -1,38 +1,40 @@
 #!/usr/bin/env bash
 
 check_delivery_plan_contracts() {
-  local dir=$1 canonical plan
+  local dir=$1 canonical plan config
   canonical=$(example_preview_canonical "$dir")
-  plan=$(example_preview_plan "$dir" out_master)
+  plan=$(delivery_plan_path "$dir" master)
+  config=$(delivery_config_id "$canonical" master)
   require_file "$canonical"
   require_file "$plan"
-  jq -e --slurpfile resolved "$plan" '
+  jq -e --arg config "$config" --slurpfile resolved "$plan" '
     (.project.render_configs | length) == 1 and
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
+    first(.project.render_configs[] | select(.id == $config)) as $config |
     ($resolved | length) == 1 and $resolved[0].output as $output |
-    $output.id == "pout_master" and $output.render_config_id == $config.id and
+    $output.render_config_id == $config.id and
     $output.sequence_id == $config.sequence_id and
     $output.raster == $config.raster and $output.deliverables == $config.deliverables
   ' "$canonical" >/dev/null || fail "delivery canonical and resolved plan outputs differ"
   jq -e '
-    .output.deliverables | map({id, kind:.kind.type, target:.target}) | sort_by(.id) == [
-      {"id":"dlv_cover","kind":"still_image","target":{"type":"file","name":"cover.png"}},
-      {"id":"dlv_frames","kind":"image_sequence","target":{"type":"image_sequence","pattern":"frame-%04d.png"}},
-      {"id":"dlv_loop-preview","kind":"animated_image","target":{"type":"file","name":"loop-preview.gif"}},
-      {"id":"dlv_master","kind":"video","target":{"type":"file","name":"master.mp4"}},
-      {"id":"dlv_master-audio","kind":"audio_stem","target":{"type":"file","name":"master.wav"}},
-      {"id":"dlv_podcast","kind":"audio_file","target":{"type":"file","name":"podcast.mp3"}},
-      {"id":"dlv_stream","kind":"adaptive_package","target":{"type":"package","name":"stream"}},
-      {"id":"dlv_transcript","kind":"caption_sidecar","target":{"type":"file","name":"captions.vtt"}},
-      {"id":"dlv_video-waveform","kind":"scope","target":{"type":"file","name":"video-waveform.png"}}
-    ]
+    .output.deliverables | map({kind:.kind.type, target:.target}) |
+      sort_by(.kind, (.target.name // .target.pattern)) == [
+      {"kind":"adaptive_package","target":{"type":"package","name":"stream"}},
+      {"kind":"animated_image","target":{"type":"file","name":"loop-preview.gif"}},
+      {"kind":"audio_file","target":{"type":"file","name":"podcast.mp3"}},
+      {"kind":"audio_stem","target":{"type":"file","name":"master.wav"}},
+      {"kind":"caption_sidecar","target":{"type":"file","name":"captions.vtt"}},
+      {"kind":"image_sequence","target":{"type":"image_sequence","pattern":"frame-%04d.png"}},
+      {"kind":"scope","target":{"type":"file","name":"video-waveform.png"}},
+      {"kind":"still_image","target":{"type":"file","name":"cover.png"}},
+      {"kind":"video","target":{"type":"file","name":"master.mp4"}}]
   ' "$plan" >/dev/null || fail "delivery resolved plan does not contain the exact 9-deliverable set"
 }
 
 check_delivery_preview_policy() {
-  local canonical=$1
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
+  local canonical=$1 config
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
     $config.raster.width == 480 and $config.raster.height == 270 and
     $config.raster.frame_rate == {"numerator":12,"denominator":1} and
     all($config.deliverables[] | select(.kind.type == "video");
@@ -41,10 +43,12 @@ check_delivery_preview_policy() {
 }
 
 check_delivery_master_recipe() {
-  local canonical=$1
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
-    first($config.deliverables[] | select(.id == "dlv_master")) as $master |
+  local canonical=$1 config
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
+    first($config.deliverables[] | select(.kind.type == "video" and
+      .target == {"type":"file","name":"master.mp4"})) as $master |
     $master.kind.type == "video" and $master.kind.settings as $settings |
     $settings.container == "mp4" and $settings.optimize_for_streaming == true and
     $settings.pass_mode == "single" and
@@ -57,10 +61,12 @@ check_delivery_master_recipe() {
 }
 
 check_delivery_frame_recipe() {
-  local canonical=$1
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
-    first($config.deliverables[] | select(.id == "dlv_frames")) as $frames |
+  local canonical=$1 config
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
+    first($config.deliverables[] | select(.kind.type == "image_sequence" and
+      .target.pattern == "frame-%04d.png")) as $frames |
     $frames.kind == {"type":"image_sequence","settings":{
       "format":"png","start_number":1}}
   ' "$canonical" >/dev/null || fail "delivery PNG sequence numbering canonical contract failed"

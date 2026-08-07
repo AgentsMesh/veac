@@ -2,7 +2,7 @@
 
 for module in common pixels audio-metrics delivery-typed-common delivery-contracts \
   delivery-audio-file delivery-images delivery-waveform delivery-hls-playlist delivery-hls \
-  delivery; do
+  delivery-master-audio delivery-master delivery; do
   # shellcheck disable=SC1090
   source "$ROOT_DIR/scripts/example-render-evidence/$module.sh"
 done

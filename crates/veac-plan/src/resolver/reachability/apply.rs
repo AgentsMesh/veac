@@ -96,9 +96,11 @@ fn band<'a>(
     let Some(end) = tracks.iter().position(|track| track.id == *through) else {
         return Vec::new();
     };
-    (start <= end)
-        .then(|| tracks[start..=end].to_vec())
-        .unwrap_or_default()
+    if start <= end {
+        tracks[start..=end].to_vec()
+    } else {
+        Vec::new()
+    }
 }
 
 fn sorted_tracks(sequence: &Sequence) -> Vec<&Track> {

@@ -41,7 +41,7 @@ fn font_bindings_do_not_consume_ffmpeg_input_indexes() {
             audio: StreamChoice::Disabled,
         },
         probe: None,
-        metadata: Default::default(),
+        authorship: None,
     });
     let mut text = project.project.sequences[0].tracks[0].clips[0].clone();
     text.id = ItemId::new("itm_text").unwrap();

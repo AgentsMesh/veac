@@ -1,6 +1,6 @@
 use veac_artifact::ExecutionBindings;
 use veac_plan::canonical::{TextGranularity, TextOverflow, TextWrap, TextWritingMode};
-use veac_plan::{ResolvedClip, ResolvedText, ResolvedTextStyle};
+use veac_plan::{ResolvedClip, ResolvedRenderPlan, ResolvedText, ResolvedTextStyle};
 
 use super::animation;
 use super::error::TextError;
@@ -17,6 +17,7 @@ pub(super) struct Backend {
 }
 
 pub(super) fn build(
+    plan: &ResolvedRenderPlan,
     content: &ResolvedText,
     clip: &ResolvedClip,
     bindings: &ExecutionBindings,
@@ -79,13 +80,17 @@ pub(super) fn build(
         AssLayout::Lines(animated)
     };
     let samples = animation::samples(
+        animation::SamplingSpec {
+            plan,
+            clip,
+            duration: clip.record_range.duration,
+            frame_rate: canvas.frame_rate,
+            surface: dimensions,
+        },
         style.animation.as_ref(),
-        clip.record_range.duration,
-        canvas.frame_rate,
         unit_count,
-        dimensions,
         sample_count,
-    );
+    )?;
     let layers = event_layers(style.background.is_some(), style.shadow.is_some());
     let items = match &ass_layout {
         AssLayout::Lines(lines) => lines.len(),

@@ -40,7 +40,7 @@ pub struct RetouchControlEvidence {
     pub control: String,
     pub apply_stage_id: veac_ir::ApplyStageId,
     pub effect_id: veac_ir::EffectId,
-    pub effect_parameter: String,
+    pub effect_parameter: veac_ir::EffectParameter,
     pub keyframe_id_prefix: String,
     pub sample_indices: Vec<u32>,
 }

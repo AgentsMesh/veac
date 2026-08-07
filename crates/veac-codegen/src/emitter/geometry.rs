@@ -1,7 +1,8 @@
 use veac_plan::canonical::{Anchor, Length, LengthUnit, Placement};
 use veac_plan::EffectiveVisualProperties;
+use veac_plan::ResolvedRenderPlan;
 
-use super::{animation, time, Canvas};
+use super::{animation, process_owner::ProcessOwner, time, Canvas};
 
 #[cfg(test)]
 #[path = "../unit_tests/geometry_test_support.rs"]
@@ -30,6 +31,8 @@ struct CoordinateSpace<'a> {
 }
 
 pub(super) fn canvas_position(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
     visual: &EffectiveVisualProperties,
     local_clock: &str,
     pivot_x: f64,
@@ -40,6 +43,8 @@ pub(super) fn canvas_position(
     let height = canvas.height.to_string();
     position(
         visual,
+        plan,
+        owner,
         local_clock,
         pivot_x,
         pivot_y,
@@ -53,6 +58,8 @@ pub(super) fn canvas_position(
 }
 
 pub(super) fn canvas_overlay_position(
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
     visual: &EffectiveVisualProperties,
     local_clock: &str,
     pivot_x: f64,
@@ -63,6 +70,8 @@ pub(super) fn canvas_overlay_position(
     let height = canvas.height.to_string();
     position(
         visual,
+        plan,
+        owner,
         local_clock,
         pivot_x,
         pivot_y,
@@ -77,14 +86,28 @@ pub(super) fn canvas_overlay_position(
 
 fn position(
     visual: &EffectiveVisualProperties,
+    plan: &ResolvedRenderPlan,
+    owner: ProcessOwner<'_>,
     local_clock: &str,
     pivot_x: f64,
     pivot_y: f64,
     space: CoordinateSpace<'_>,
 ) -> (String, String) {
     let (base_x, base_y) = placement_target(visual.placement, space.width, space.height);
-    let offset_x = animation::point_x(&visual.transform.position, local_clock, space.width);
-    let offset_y = animation::point_y(&visual.transform.position, local_clock, space.height);
+    let offset_x = animation::point_x(
+        plan,
+        owner,
+        &visual.transform.position,
+        local_clock,
+        space.width,
+    );
+    let offset_y = animation::point_y(
+        plan,
+        owner,
+        &visual.transform.position,
+        local_clock,
+        space.height,
+    );
     (
         format!("({base_x})+({offset_x})-{pivot_x}*{}", space.source_width),
         format!("({base_y})+({offset_y})-{pivot_y}*{}", space.source_height),

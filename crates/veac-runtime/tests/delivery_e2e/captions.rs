@@ -143,6 +143,7 @@ fn caption(
     clip.source = ClipSource::Caption {
         text: text.to_owned(),
         speaker: speaker.map(str::to_owned),
+        cue: Box::default(),
         style,
     };
     let mut visual = full_visual();

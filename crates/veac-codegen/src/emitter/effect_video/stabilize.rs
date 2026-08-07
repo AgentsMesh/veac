@@ -1,7 +1,7 @@
 use super::super::{
     effects, effects::EffectSpec, process_owner::ProcessOwner, time, CodegenErrors, EmitContext,
 };
-use veac_plan::canonical::ParameterValue;
+use veac_plan::canonical::EffectParameter;
 use veac_plan::ResolvedClip;
 
 pub(super) fn apply(
@@ -10,10 +10,7 @@ pub(super) fn apply(
     effect: EffectSpec<'_>,
     input: &str,
 ) -> Result<String, CodegenErrors> {
-    if !matches!(
-        effect.parameters.get("enabled"),
-        Some(ParameterValue::Boolean { value: true })
-    ) {
+    if effect.effect.boolean(EffectParameter::Enabled) != Some(true) {
         return Ok(input.to_owned());
     }
     let Some(clip) = owner.as_clip() else {

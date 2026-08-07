@@ -41,7 +41,9 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
         "template" => template::from_matches(matches),
         "artifact" | "package-bindings" | "relink" => artifact::from_matches(name, matches),
         "otio" => otio::from_matches(matches),
-        "derive" | "provider-run" | "provider-propose" => workflow::from_matches(name, matches),
+        "derive" | "ingest-analysis" | "provider-run" | "provider-propose" => {
+            workflow::from_matches(name, matches)
+        }
         _ => core::from_matches(name, matches),
     }
 }

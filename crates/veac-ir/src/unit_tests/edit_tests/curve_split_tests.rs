@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use super::*;
 
@@ -74,7 +74,7 @@ fn split_resamples_all_curves_and_crops_effect_ranges_without_child_id_collision
     let right_span = right
         .effects
         .iter()
-        .find(|value| value.effect_type == "video.color_adjust")
+        .find(|value| value.kind() == EffectKind::VideoColorAdjust)
         .unwrap();
     assert_ne!(right_span.id, left_span.id);
     assert_eq!(right_span.enable_range, Some(range(0, 100)));
@@ -107,19 +107,17 @@ fn numbers(start: &str, end: &str, first: f64, second: f64) -> Animatable<f64> {
 fn effect(id: &str, enable_range: TimeRange, curve: Option<Animatable<f64>>) -> EffectInstance {
     EffectInstance {
         id: EffectId::new(id).unwrap(),
-        effect_type: if curve.is_some() {
-            "video.color_adjust".to_owned()
-        } else {
-            "video.blur".to_owned()
-        },
         enabled: true,
         enable_range: Some(enable_range),
-        parameters: match curve {
-            Some(value) => BTreeMap::from([(
-                "brightness".to_owned(),
-                ParameterValue::NumberCurve { value },
-            )]),
-            None => BTreeMap::from([("radius".to_owned(), ParameterValue::Number { value: 2.0 })]),
+        effect: match curve {
+            Some(brightness) => Effect::VideoColorAdjust {
+                brightness,
+                contrast: Animatable::constant(1.0),
+                saturation: Animatable::constant(1.0),
+            },
+            None => Effect::VideoBlur {
+                radius: Animatable::constant(2.0),
+            },
         },
     }
 }
@@ -159,8 +157,11 @@ fn child_ids(clip: &Clip) -> BTreeSet<String> {
         ids.insert(id);
     }
     for effect in &clip.effects {
-        for parameter in effect.parameters.values() {
-            if let ParameterValue::NumberCurve { value } = parameter {
+        for parameter in EffectParameter::ALL {
+            if let Some(value) = effect.effect.curve(parameter) {
+                if value.keyframes().is_none() {
+                    continue;
+                }
                 ids.extend(
                     value
                         .keyframes()

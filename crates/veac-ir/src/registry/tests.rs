@@ -3,9 +3,9 @@ use super::*;
 #[test]
 fn parameter_spec_builders_preserve_runtime_schema_contracts() {
     assert_eq!(
-        number("amount", -1.0, 2.0),
+        curve(EffectParameter::Amount, -1.0, 2.0),
         ParameterSpec {
-            name: "amount",
+            parameter: EffectParameter::Amount,
             value_type: ParameterType::Number,
             minimum: Some(-1.0),
             maximum: Some(2.0),
@@ -13,9 +13,9 @@ fn parameter_spec_builders_preserve_runtime_schema_contracts() {
         }
     );
     assert_eq!(
-        boolean("enabled"),
+        boolean(EffectParameter::Enabled),
         ParameterSpec {
-            name: "enabled",
+            parameter: EffectParameter::Enabled,
             value_type: ParameterType::Boolean,
             minimum: None,
             maximum: None,

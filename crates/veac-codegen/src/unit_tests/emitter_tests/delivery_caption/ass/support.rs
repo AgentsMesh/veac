@@ -1,7 +1,7 @@
 use super::super::*;
 use veac_plan::{ResolvedText, ResolvedTextSpan};
 
-pub(super) fn normalize(plan: &mut ResolvedRenderPlan) {
+pub(crate) fn normalize(plan: &mut ResolvedRenderPlan) {
     let clips = &mut plan.sequences[0]
         .tracks
         .iter_mut()
@@ -61,7 +61,10 @@ fn normalize_visual(visual: &mut veac_plan::EffectiveVisualProperties) {
 pub(super) fn first_caption(
     plan: &mut ResolvedRenderPlan,
 ) -> (&mut ResolvedText, &mut Option<String>) {
-    let ResolvedClipSource::Caption { content, speaker } = &mut caption_clip(plan).source else {
+    let ResolvedClipSource::Caption {
+        content, speaker, ..
+    } = &mut caption_clip(plan).source
+    else {
         unreachable!()
     };
     (content, speaker)

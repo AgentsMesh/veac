@@ -4,6 +4,10 @@ mod visual;
 pub use arithmetic::*;
 pub use visual::*;
 
+use crate::{
+    MAX_TEMPORAL_BINDINGS, MAX_TEMPORAL_NODES, MAX_TEMPORAL_PROGRAMS, MAX_TEMPORAL_PROVENANCE,
+};
+
 /// Long-form edits remain representable, while accidental multi-day timelines fail closed.
 pub const MAX_TIMELINE_SECONDS: u64 = 86_400;
 /// Final video frames emitted by one deliverable.
@@ -24,6 +28,10 @@ pub const MAX_TOTAL_MASKS: u64 = 32_768;
 pub const MAX_TOTAL_KEYFRAMES: u64 = 262_144;
 pub const MAX_TOTAL_SOURCE_CURVE_SEGMENTS: u64 = 65_536;
 pub const MAX_TOTAL_CAPTION_CUES: u64 = 10_000;
+pub const MAX_TOTAL_TEMPORAL_PROGRAMS: u64 = MAX_TEMPORAL_PROGRAMS as u64;
+pub const MAX_TOTAL_TEMPORAL_BINDINGS: u64 = MAX_TEMPORAL_BINDINGS as u64;
+pub const MAX_TOTAL_TEMPORAL_NODES: u64 = MAX_TEMPORAL_NODES as u64;
+pub const MAX_TOTAL_TEMPORAL_PROVENANCE: u64 = MAX_TEMPORAL_PROVENANCE as u64;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct RenderStructureUsage {
@@ -34,6 +42,10 @@ pub struct RenderStructureUsage {
     pub keyframes: u64,
     pub source_curve_segments: u64,
     pub caption_cues: u64,
+    pub temporal_programs: u64,
+    pub temporal_bindings: u64,
+    pub temporal_nodes: u64,
+    pub temporal_provenance: u64,
 }
 
 impl RenderStructureUsage {
@@ -47,5 +59,15 @@ impl RenderStructureUsage {
             .source_curve_segments
             .saturating_add(other.source_curve_segments);
         self.caption_cues = self.caption_cues.saturating_add(other.caption_cues);
+        self.temporal_programs = self
+            .temporal_programs
+            .saturating_add(other.temporal_programs);
+        self.temporal_bindings = self
+            .temporal_bindings
+            .saturating_add(other.temporal_bindings);
+        self.temporal_nodes = self.temporal_nodes.saturating_add(other.temporal_nodes);
+        self.temporal_provenance = self
+            .temporal_provenance
+            .saturating_add(other.temporal_provenance);
     }
 }

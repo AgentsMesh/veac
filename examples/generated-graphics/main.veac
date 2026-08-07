@@ -1,118 +1,63 @@
-project generated-graphics {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
+import "./shapes.veac" as shapes;
+import "./showcase.veac" as showcase;
 
-  sequence main {
-    layer visual transparency-base {
-      item light-cells {
-        source generated solid { color #d9dde3ff; }
-        record { at 0s; duration 1s; }
-      }
-    }
-    layer visual dark-top-left {
-      item top-left-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
-        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 320px; y 180px; } } } } }
-    }
-    layer visual dark-bottom-right {
-      item bottom-right-cell { record { at 0s; duration 1s; } source generated solid { color #7f8792ff; }
-        modifiers { layout cell { frame { width 640px; height 360px; fit fill; } placement absolute { position { x 960px; y 540px; } } } } }
-    }
-    layer visual graphics {
-      item transparent {
-        source generated transparent;
-        record { at 0s; duration 1s; }
-      }
-      item solid {
-        source generated solid { color #005f73ff; }
-        record { at 1s; duration 1s; }
-      }
-      item gradient {
-        source generated gradient radial {
-          center 50% 50%; radius 70%;
-          stop 0% #ee9b00ff; stop 55% #ca6702ff; stop 100% #9b2226ff;
-        }
-        record { at 2s; duration 1s; }
-      }
-      item rectangle {
-        source generated shape {
-          geometry rounded-rectangle { bounds 8% 12% 84% 76%; radius 24px; }
-          fill gradient linear {
-            from 0% 0%; to 100% 100%;
-            stop 0% #94d2bdff; stop 50% #0a9396ff; stop 100% #005f73ff;
-          }
-          stroke 8px solid #001219ff;
-        }
-        record { at 3s; duration 1s; }
-      }
-      item polygon {
-        source generated shape {
-          geometry polygon { point 50% 5%; point 95% 90%; point 5% 90%; }
-          fill solid #e9d8a6ff;
-        }
-        record { at 4s; duration 1s; }
-      }
-      item path {
-        source generated shape {
-          geometry path { move 10% 10%; line 90% 10%; line 50% 90%; close; }
-          stroke 10px gradient radial {
-            center 50% 50%; radius 55%;
-            stop 0% #ffffffff; stop 100% #ee4d8bff;
-          }
-        }
-        record { at 5s; duration 1s; }
-      }
-      item ellipse {
-        source generated shape {
-          geometry ellipse { bounds 10% 15% 80% 70%; }
-          fill solid #5bc0beff;
-        }
-        record { at 6s; duration 1s; }
-      }
-      item rectangle-plain {
-        source generated shape {
-          geometry rectangle { bounds 12% 18% 76% 64%; }
-          fill solid #3a86ffff;
-        }
-        record { at 7s; duration 1s; }
-      }
-    }
-    layer audio tone {
-      item silence {
-        source generated silence;
-        record { at 0s; duration 8s; }
-      }
-    }
-  }
+fn graphic(key: identifier, start: time, generator: Generator) -> Item {
+  item(
+    key, item_enabled(), during(start, 1s),
+    source_generated(generator), source_timing_native()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio aac {
-          sample-rate 48khz;
-          channel-layout stereo;
-        }
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("plate"), #111827ff, 0s, 9s));
+  let graphics = visual_layer(
+    identifier("graphics"), 1, placement_free(),
+    showcase.state(), track_routing_default()
+  )
+    .with_item(graphic(identifier("solid"), 0s, generator_solid(#dc2626ff)))
+    .with_item(graphic(identifier("transparent"), 1s, generator_transparent()))
+    .with_item(graphic(identifier("linear"), 2s, shapes.linear()))
+    .with_item(graphic(identifier("radial"), 3s, shapes.radial()))
+    .with_item(graphic(identifier("rectangle"), 4s, shapes.rectangle()))
+    .with_item(graphic(identifier("rounded"), 5s, shapes.rounded()))
+    .with_item(graphic(identifier("ellipse"), 6s, shapes.ellipse()))
+    .with_item(graphic(identifier("polygon"), 7s, shapes.polygon()))
+    .with_item(graphic(identifier("path"), 8s, shapes.path()));
+  let label = visual_layer(
+    identifier("label"), 2, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("label"), item_enabled(), during(0s, 9s),
+    source_text(
+      "生成源序列：纯色、透明、渐变、矩形、圆角、椭圆、多边形与路径",
+      showcase.caption_style(font, 24px, 600px)
+    ), source_timing_native()
+  ));
+  let silence = audio_layer(
+    identifier("silence"), 3, placement_free(),
+    showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("silence"), item_enabled(), during(0s, 9s),
+    source_generated(generator_silence()), source_timing_native()
+  ).with_audio(audio_style(
+    scalar_constant(1.0), scalar_constant(0.0),
+    audio_playback(false, false, pitch_preserve()), [], audio_crossfade_none()
+  )));
+  let timeline = sequence(
+    identifier("main"), "生成图形原语",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(graphics).with_layer(label).with_layer(silence);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), true, false
+  );
+  project(identifier("generated-graphics"), project_settings(600))
+    .with_resource(font)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

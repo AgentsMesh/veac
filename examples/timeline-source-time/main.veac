@@ -1,120 +1,71 @@
-project timeline-source-time {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource video reel {
-    locator local { path "assets/reel.mp4"; }
-    streams { video auto; audio auto; }
-  }
+import "./timing.veac" as timing;
+import "./showcase.veac" as showcase;
 
-  sequence boundary-source {
-    layer visual frames {
-      item first-frame {
-        source generated solid { color #d1495bff; }
-        record { at 0s; duration 1s; }
-      }
-      item last-frame {
-        source generated solid { color #00798cff; }
-        record { at 1s; duration 1s; }
-      }
-    }
-  }
-
-  sequence main {
-    layer video edits {
-      item linear-trim {
-        source media resource reel;
-        record { at 0s; duration 3s; }
-        mapping linear { from 5s; to 8s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-      item speed-ramp {
-        source media resource reel;
-        record { at 3s; duration 3s; }
-        mapping curve {
-          key begin { at 0s; source 10s; interpolation linear; }
-          key gentle { at 750ms; source 10.5s; interpolation linear; }
-          key rising { at 1.5s; source 11.5s; interpolation linear; }
-          key fast { at 2.25s; source 13s; interpolation linear; }
-          key finish { at 3s; source 15s; interpolation linear; }
-        }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-      item freeze {
-        source media resource reel;
-        record { at 6s; duration 2s; }
-        mapping freeze { source 18s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-      item fast-forward {
-        source media resource reel;
-        record { at 8s; duration 2s; }
-        mapping linear { from 20s; to 24s; }
-        modifiers {
-          layout canvas-fit {
-            placement anchor { at center; inset { x 0px; y 0px; } }
-            frame { width 1280px; height 720px; fit contain; }
-          }
-        }
-      }
-      item hold-first {
-        source sequence sequence boundary-source;
-        record { at 10s; duration 2s; }
-        mapping linear { from -1s; to 1s; outside hold-first; }
-      }
-      item hold-last {
-        source sequence sequence boundary-source;
-        record { at 12s; duration 2s; }
-        mapping linear { from 1s; to 3s; outside hold-last; }
-      }
-      item hold-both {
-        source sequence sequence boundary-source;
-        record { at 14s; duration 4s; }
-        mapping linear { from -1s; to 3s; outside hold-both; }
-      }
-    }
-  }
-
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let reel = video_resource(
+    identifier("reel"), resource_file("assets/reel.mp4"),
+    sha256("18e150f526332efca23a274a1d39128c008cc9b9ec342bb8d530bbf8a1119586"),
+    stream_intent(stream_auto(), stream_disabled())
+  );
+  let boundary_layer = visual_layer(
+    identifier("frames"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(showcase.solid(identifier("first-frame"), #d1495bff, 0s, 500ms))
+    .with_item(showcase.solid(identifier("last-frame"), #00798cff, 500ms, 500ms));
+  let boundary = sequence(
+    identifier("boundary-source"), "边界帧素材",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(boundary_layer);
+  let linear = timing.media(
+    identifier("linear-trim"), 0s, 1500ms, reel,
+    source_mapping(
+      source_time_linear(500ms, 1.0, 1, playback_forward()),
+      frame_nearest(), out_of_range_strict()
+    )
+  );
+  let ramp = timing.media(
+    identifier("speed-ramp"), 1500ms, 1500ms, reel,
+    source_mapping(source_time_curve([
+      source_time_segment(375ms, 2s, 2250ms, segment_linear()),
+      source_time_segment(375ms, 2250ms, 2750ms, segment_linear()),
+      source_time_segment(375ms, 2750ms, 3500ms, segment_linear()),
+      source_time_segment(375ms, 3500ms, 4500ms, segment_linear())
+    ]), frame_blend(), out_of_range_strict())
+  );
+  let freeze = item(
+    identifier("freeze"), item_enabled(), during(3s, 1s),
+    source_freeze_frame(reel, 5s), source_timing_native()
+  ).with_visual(timing.fit());
+  let fast = timing.media(
+    identifier("fast-forward"), 4s, 1s, reel,
+    source_mapping(
+      source_time_linear(5500ms, 2.0, 1, playback_forward()),
+      frame_blend(), out_of_range_strict()
+    )
+  );
+  let hold_first = timing.nested(
+    identifier("hold-first"), 5s, 1s, boundary,
+    source_time_linear(-1s, 1.0, 1, playback_forward()), out_of_range_hold_first()
+  );
+  let hold_last = timing.nested(
+    identifier("hold-last"), 6s, 1s, boundary,
+    source_time_linear(1s, 1.0, 1, playback_forward()), out_of_range_hold_last()
+  );
+  let hold_both = timing.nested(
+    identifier("hold-both"), 7s, 2s, boundary,
+    source_time_linear(-1s, 2.0, 1, playback_forward()), out_of_range_hold_both()
+  );
+  let edits = video_layer(
+    identifier("edits"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(linear).with_item(ramp).with_item(freeze).with_item(fast)
+    .with_item(hold_first).with_item(hold_last).with_item(hold_both);
+  let timeline = sequence(
+    identifier("main"), "源时间映射与越界策略",
+    sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)
+  ).with_layer(edits);
+  let output = showcase.video(
+    timeline, canvas(640px, 360px), frame_rate(30, 1), false, false
+  );
+  project(identifier("timeline-source-time"), project_settings(600))
+    .with_resource(reel)
+    .with_sequence(boundary).with_sequence(timeline).entry(timeline).with_delivery(output)
 }

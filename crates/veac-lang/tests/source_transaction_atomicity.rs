@@ -1,93 +1,74 @@
 use std::fs;
 
 use tempfile::tempdir;
-use veac_lang::program::{apply_source_edit_path, compile_path, SourceTransactionError};
+use veac_lang::program::{apply_executable_source_edit_path, build_path, SourceTransactionError};
 use veac_lang::source_edit::{
-    ExpressionSite, ExpressionSource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
+    BodySite, BodySource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
 };
 
-const MODULE: &str = "module { export const time imported = 1s; }\n";
-const ENTRY: &str = r#"import "./timing.veac" as timing;
-const time local = 1s;
-project atomic-edits {
-  settings {
-    timebase 1/1000; canvas 640px by 360px;
-    frame-rate 30fps; sample-rate 48000hz;
-  }
-  entry sequence main;
-  sequence main { layer visual content { item sample {
-    source generated transparent; record { at 0s; duration ${local + timing.imported}; }
-    modifiers {
-      effect key { type video.luma_key; parameter threshold 0.5; }
-    }
-  } } }
-}"#;
+#[path = "program_functions/support.rs"]
+mod support;
+
+const MODULE: &str = "module { export fn imported() -> time { 1s } }\n";
+
+fn entry_source() -> String {
+    support::project_with(
+        "import \"./timing.veac\" as timing;\nfn local() -> time { 1s }",
+        "local() + timing.imported()",
+    )
+}
 
 #[test]
-fn cross_module_batch_is_rejected_without_changing_either_file() {
+fn cross_module_batch_builds_one_atomic_preview_without_writing_files() {
     let fixture = Fixture::new();
     let mut batch = fixture.batch("op_cross_module");
     batch.operations = vec![
-        operation(
-            SourceNodeRef::constant("main.veac", "local"),
-            ExpressionSite::ConstantValue,
-            "2s",
-        ),
-        operation(
-            SourceNodeRef::constant("timing.veac", "imported"),
-            ExpressionSite::ConstantValue,
-            "3s",
-        ),
+        operation(SourceNodeRef::function("main.veac", "local"), "{ 2s }"),
+        operation(SourceNodeRef::function("timing.veac", "imported"), "{ 3s }"),
     ];
-    assert!(matches!(
-        apply_source_edit_path(&fixture.entry, &batch),
-        Err(SourceTransactionError::MultipleModules)
-    ));
+    let preview = apply_executable_source_edit_path(&fixture.entry, &batch).unwrap();
+    assert_eq!(preview.changed_modules(), ["main.veac", "timing.veac"]);
+    assert_eq!(preview.previous_source(), None);
+    assert_eq!(preview.source(), None);
+    assert_eq!(
+        preview.changes()[0].source(),
+        entry_source().replace("{ 1s }", "{ 2s }")
+    );
+    assert_eq!(
+        preview.changes()[1].source(),
+        MODULE.replace("{ 1s }", "{ 3s }")
+    );
+    assert_eq!(support::result_duration(&preview.built), "5s");
     fixture.assert_unchanged();
 }
 
 #[test]
-fn compatible_but_missing_expression_site_reports_target_not_found() {
+fn missing_body_site_reports_target_not_found() {
     let fixture = Fixture::new();
     let mut batch = fixture.batch("op_missing_site");
     batch.operations.push(operation(
-        SourceNodeRef::item("main.veac", "atomic-edits", "main", "content", "sample"),
-        ExpressionSite::ItemEnabled,
-        "enabled",
+        SourceNodeRef::function("main.veac", "missing"),
+        "{ 2s }",
     ));
     assert!(matches!(
-        apply_source_edit_path(&fixture.entry, &batch),
+        apply_executable_source_edit_path(&fixture.entry, &batch),
         Err(SourceTransactionError::TargetNotFound { operation: 0 })
     ));
     fixture.assert_unchanged();
 }
 
 #[test]
-fn canonical_ir_failure_is_a_lowering_error_and_keeps_source_bytes() {
+fn invalid_overlay_keeps_every_source_byte() {
     let fixture = Fixture::new();
-    let mut batch = fixture.batch("op_invalid_canonical_value");
+    let mut batch = fixture.batch("op_invalid_overlay");
     batch.operations.push(operation(
-        SourceNodeRef::modifier(
-            "main.veac",
-            "atomic-edits",
-            "main",
-            "content",
-            "sample",
-            "key",
-        ),
-        ExpressionSite::ModifierParameter {
-            parameter: "threshold".into(),
-        },
-        "1.5",
+        SourceNodeRef::function("timing.veac", "imported"),
+        "{ missing }",
     ));
-    let error = apply_source_edit_path(&fixture.entry, &batch).unwrap_err();
-    let SourceTransactionError::Lowering(diagnostics) = error else {
-        panic!("unexpected source transaction error: {error}");
-    };
-    assert!(diagnostics
-        .as_slice()
-        .iter()
-        .any(|value| value.code == "AUTHORING_LOWER_IR_VALIDATION"));
+    assert!(matches!(
+        apply_executable_source_edit_path(&fixture.entry, &batch),
+        Err(SourceTransactionError::Program(_))
+    ));
     fixture.assert_unchanged();
 }
 
@@ -96,16 +77,19 @@ fn successful_module_preview_preserves_every_untouched_module_byte() {
     let fixture = Fixture::new();
     let mut batch = fixture.batch("op_imported_only");
     batch.operations.push(operation(
-        SourceNodeRef::constant("timing.veac", "imported"),
-        ExpressionSite::ConstantValue,
-        "2500ms",
+        SourceNodeRef::function("timing.veac", "imported"),
+        "{ 2500ms }",
     ));
-    let preview = apply_source_edit_path(&fixture.entry, &batch).unwrap();
-    assert_eq!(preview.module, "timing.veac");
+    let preview = apply_executable_source_edit_path(&fixture.entry, &batch).unwrap();
+    assert_eq!(preview.changed_modules(), ["timing.veac"]);
     assert_eq!(preview.previous_modules(), ["main.veac", "timing.veac"]);
-    assert_eq!(preview.compiled.sources()["main.veac"], ENTRY);
-    assert_eq!(preview.previous_source(), MODULE);
-    assert_eq!(preview.source(), MODULE.replace("1s", "2500ms"));
+    assert_eq!(preview.built.sources()["main.veac"], fixture.entry_source);
+    assert_eq!(preview.previous_source(), Some(MODULE));
+    assert_eq!(
+        preview.source().unwrap(),
+        MODULE.replace("{ 1s }", "{ 2500ms }")
+    );
+    assert_eq!(support::result_duration(&preview.built), "3500ms");
     fixture.assert_unchanged();
 }
 
@@ -113,6 +97,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     entry: std::path::PathBuf,
     module: std::path::PathBuf,
+    entry_source: String,
 }
 
 impl Fixture {
@@ -120,17 +105,19 @@ impl Fixture {
         let temp = tempdir().unwrap();
         let entry = temp.path().join("main.veac");
         let module = temp.path().join("timing.veac");
-        fs::write(&entry, ENTRY).unwrap();
+        let entry_source = entry_source();
+        fs::write(&entry, &entry_source).unwrap();
         fs::write(&module, MODULE).unwrap();
         Self {
             _temp: temp,
             entry,
             module,
+            entry_source,
         }
     }
 
     fn batch(&self, id: &str) -> SourceEditBatch {
-        let revision = compile_path(&self.entry)
+        let revision = build_path(&self.entry)
             .unwrap()
             .source_index()
             .unwrap()
@@ -140,16 +127,16 @@ impl Fixture {
     }
 
     fn assert_unchanged(&self) {
-        assert_eq!(fs::read_to_string(&self.entry).unwrap(), ENTRY);
+        assert_eq!(fs::read_to_string(&self.entry).unwrap(), self.entry_source);
         assert_eq!(fs::read_to_string(&self.module).unwrap(), MODULE);
     }
 }
 
-fn operation(target: SourceNodeRef, site: ExpressionSite, source: &str) -> SourceEditOperation {
-    SourceEditOperation::SetExpression {
+fn operation(target: SourceNodeRef, source: &str) -> SourceEditOperation {
+    SourceEditOperation::SetBody {
         target,
-        site,
-        expression: ExpressionSource {
+        site: BodySite::FunctionBody,
+        body: BodySource {
             source: source.into(),
         },
     }

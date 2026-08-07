@@ -34,6 +34,41 @@ fn rejects_invalid_extent_and_boundary_contracts() {
 }
 
 #[test]
+fn rejects_zero_and_incommensurate_timebases_without_panicking() {
+    let (clip, base) = mapping();
+    let clock = SourceClock::identity(600).expect("identity clock");
+    let invalid_duration = RationalTime {
+        value: 6_000,
+        timescale: 0,
+    };
+    let error = required_error(required(&clip, &base, clock, Some(invalid_duration), false));
+    assert!(error.diagnostics()[0].message.contains("duration timebase"));
+
+    let mut before = base.clone();
+    linear(
+        &mut before,
+        RationalTime::new(-1, u32::MAX).unwrap(),
+        RationalTime::new(1, u32::MAX).unwrap(),
+    );
+    let duration = RationalTime::new(1, u32::MAX - 1).unwrap();
+    let error = required_error(required(&clip, &before, clock, Some(duration), false));
+    assert!(error.diagnostics()[0]
+        .message
+        .contains("start is not representable"));
+
+    let mut after = base;
+    linear(
+        &mut after,
+        RationalTime::zero(u32::MAX).unwrap(),
+        RationalTime::new(2, u32::MAX).unwrap(),
+    );
+    let error = required_error(required(&clip, &after, clock, Some(duration), false));
+    assert!(error.diagnostics()[0]
+        .message
+        .contains("end is not representable"));
+}
+
+#[test]
 fn enforces_policy_and_clock_contracts() {
     let (clip, base) = mapping();
     let duration = time(6_000);

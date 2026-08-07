@@ -8,7 +8,9 @@ use super::FakeEnvironment;
 use crate::planning::PreparedPlan;
 
 pub(crate) fn write_project(path: &Path, envelope: &veac_ir::ProjectEnvelope) {
-    std::fs::write(path, veac_ir::canonical_json(envelope).unwrap()).unwrap();
+    let mut fixture = envelope.clone();
+    strip_source_authorship(&mut fixture);
+    std::fs::write(path, veac_ir::canonical_json(&fixture).unwrap()).unwrap();
 }
 
 pub(crate) fn accessed_names(paths: &RefCell<Vec<PathBuf>>) -> BTreeSet<String> {
@@ -52,7 +54,8 @@ pub(crate) fn assert_project_inputs(
 ) {
     write_project(project, envelope);
     let environment = FakeEnvironment::success();
-    let prepared = crate::planning::prepare(project, None, &environment).unwrap();
+    let prepared =
+        crate::planning::prepare_with_material_root(project, None, None, &environment).unwrap();
     assert_exact_inputs(&prepared, expected);
     assert_eq!(environment.identity_paths.borrow().len(), identities.len());
     assert_eq!(environment.probe_paths.borrow().len(), probes.len());
@@ -65,4 +68,21 @@ pub(crate) fn assert_project_inputs(
 
 fn names(values: &[&str]) -> BTreeSet<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
+}
+
+fn strip_source_authorship(envelope: &mut veac_ir::ProjectEnvelope) {
+    envelope.project.authorship = None;
+    for material in &mut envelope.project.materials {
+        material.authorship = None;
+    }
+    for sequence in &mut envelope.project.sequences {
+        sequence.authorship = None;
+        for clip in sequence
+            .tracks
+            .iter_mut()
+            .flat_map(|track| &mut track.clips)
+        {
+            clip.authorship = None;
+        }
+    }
 }

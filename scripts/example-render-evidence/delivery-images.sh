@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 
 check_delivery_image_contracts() {
-  local canonical=$1
-  jq -e '
-    first(.project.render_configs[] | select(.id == "out_master")) as $config |
-    first($config.deliverables[] | select(.id == "dlv_loop-preview")) as $gif |
-    first($config.deliverables[] | select(.id == "dlv_cover")) as $cover |
+  local canonical=$1 config
+  config=$(delivery_config_id "$canonical" master)
+  jq -e --arg config "$config" '
+    first(.project.render_configs[] | select(.id == $config)) as $config |
+    first($config.deliverables[] | select(.kind.type == "animated_image" and
+      .target.name == "loop-preview.gif")) as $gif |
+    first($config.deliverables[] | select(.kind.type == "still_image" and
+      .target.name == "cover.png")) as $cover |
     $gif.target == {"type":"file","name":"loop-preview.gif"} and
     $gif.kind == {"type":"animated_image","settings":{"type":"gif","settings":{
       "playback":{"mode":"forever"},"dither":"sierra2"}}} and
     $cover.target == {"type":"file","name":"cover.png"} and
     $cover.kind == {"type":"still_image","settings":{
-      "frame":{"mode":"containing","at":{"timescale":1000,"value":2000}},
-      "encoding":"png"}}
+      "frame":{"mode":"containing","at":$cover.kind.settings.frame.at},
+      "encoding":"png"}} and
+    $cover.kind.settings.frame.at.value == 2 * $cover.kind.settings.frame.at.timescale
   ' "$canonical" >/dev/null || fail "delivery GIF/still canonical contract failed"
 }
 

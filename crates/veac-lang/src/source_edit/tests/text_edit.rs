@@ -94,9 +94,14 @@ fn text_edits_reject_out_of_bounds_ranges_and_allow_adjacency() {
 #[test]
 fn resolved_replacements_are_confined_to_one_module() {
     let op = operation("8s");
-    let resolved = resolve_set_expression_text(0, &op, TextRange { start: 0, end: 2 }).unwrap();
+    let resolved = resolve_source_edit_text(0, &op, TextRange { start: 0, end: 2 }).unwrap();
     assert_eq!(
-        apply_resolved_text_replacements("timeline/main.veac", "4s", &[resolved.clone()]).unwrap(),
+        apply_resolved_text_replacements(
+            "timeline/main.veac",
+            "4s",
+            std::slice::from_ref(&resolved)
+        )
+        .unwrap(),
         "8s"
     );
     assert!(matches!(
@@ -107,9 +112,9 @@ fn resolved_replacements_are_confined_to_one_module() {
 
 #[test]
 fn resolver_validates_an_operation_before_cloning_its_fields() {
-    let invalid = operation(&"x".repeat(MAX_SOURCE_EDIT_SINGLE_EXPRESSION_BYTES + 1));
+    let invalid = operation(&"x".repeat(MAX_SOURCE_EDIT_SINGLE_FRAGMENT_BYTES + 1));
     assert!(matches!(
-        resolve_set_expression_text(0, &invalid, TextRange { start: 0, end: 1 }),
+        resolve_source_edit_text(0, &invalid, TextRange { start: 0, end: 1 }),
         Err(SourceEditError::InvalidExpression(_))
     ));
 }
@@ -131,7 +136,7 @@ fn public_text_edit_api_enforces_count_and_string_budgets_atomically() {
     let source = String::from("a");
     let edits = [TextEdit {
         range: TextRange { start: 0, end: 1 },
-        replacement: "x".repeat(MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES + 1),
+        replacement: "x".repeat(MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES + 1),
     }];
     assert!(matches!(
         apply_text_edits(&source, &edits),
@@ -140,7 +145,7 @@ fn public_text_edit_api_enforces_count_and_string_budgets_atomically() {
     assert_eq!(source, "a");
     assert_eq!(
         edits[0].replacement.len(),
-        MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES + 1
+        MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES + 1
     );
     assert_eq!(
         apply_text_edits(
@@ -157,7 +162,7 @@ fn public_text_edit_api_enforces_count_and_string_budgets_atomically() {
 
 #[test]
 fn semantic_text_edit_errors_keep_priority_over_byte_budgets() {
-    let oversized = "x".repeat(MAX_SOURCE_EDIT_EXPRESSION_PAYLOAD_BYTES + 1);
+    let oversized = "x".repeat(MAX_SOURCE_EDIT_FRAGMENT_PAYLOAD_BYTES + 1);
     let invalid = TextEdit {
         range: TextRange { start: 2, end: 1 },
         replacement: oversized,

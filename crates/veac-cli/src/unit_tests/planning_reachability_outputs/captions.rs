@@ -83,6 +83,7 @@ fn caption_track(
     clip.source = ClipSource::Caption {
         text: "caption".into(),
         speaker: None,
+        cue: Box::default(),
         style: TextStyle {
             font: FontRef::Material {
                 material_id: MaterialId::new(font).unwrap(),

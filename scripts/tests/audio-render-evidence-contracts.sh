@@ -21,6 +21,16 @@ expect_fail() {
   fi
 }
 
+audio_plan_variant() {
+  local name=$1 filter=$2 root="$TMP_DIR/$1" plan
+  mkdir -p "$root"
+  cp -R "$VALID/audio-processing" "$root/audio-processing"
+  plan="$root/audio-processing/plans/preview/out_preview.json"
+  jq "$filter" "$plan" >"$root/plan.tmp"
+  mv "$root/plan.tmp" "$plan"
+  expect_fail "$name" "$root"
+}
+
 VALID="$TMP_DIR/valid"
 make_audio_processing_fixture "$VALID"
 make_generated_audio_fixture "$VALID"
@@ -53,37 +63,24 @@ BAD_MULTICAM_SYNC="$TMP_DIR/bad-multicam-sync"
 make_nested_multicam_audio_fixture "$BAD_MULTICAM_SYNC" none timecode
 expect_fail wrong_multicam_sync_basis "$BAD_MULTICAM_SYNC"
 
-MISROUTED_SIDECHAIN="$TMP_DIR/misrouted-sidechain"
-mkdir -p "$MISROUTED_SIDECHAIN"
-cp -R "$VALID/audio-processing" "$MISROUTED_SIDECHAIN/audio-processing"
-jq '(.sequences[].tracks[].clips[] | select(.id == "itm_music-bed") |
-  .audio.sidechain.source.bus_id) = "bus_wrong"' \
-  "$MISROUTED_SIDECHAIN/audio-processing/plans/preview/out_preview.json" \
-  >"$MISROUTED_SIDECHAIN/plan.tmp"
-mv "$MISROUTED_SIDECHAIN/plan.tmp" \
-  "$MISROUTED_SIDECHAIN/audio-processing/plans/preview/out_preview.json"
-expect_fail misrouted_audio_sidechain "$MISROUTED_SIDECHAIN"
-
-WRONG_PROCESSOR_ID="$TMP_DIR/wrong-processor-id"
-mkdir -p "$WRONG_PROCESSOR_ID"
-cp -R "$VALID/audio-processing" "$WRONG_PROCESSOR_ID/audio-processing"
-jq '(.. | objects | select(.id? == "itm_voiceover") |
-  .audio.processors[0].id) = "aud_wrong"' \
-  "$WRONG_PROCESSOR_ID/audio-processing/plans/preview/out_preview.json" \
-  >"$WRONG_PROCESSOR_ID/plan.tmp"
-mv "$WRONG_PROCESSOR_ID/plan.tmp" \
-  "$WRONG_PROCESSOR_ID/audio-processing/plans/preview/out_preview.json"
-expect_fail wrong_audio_processor_id "$WRONG_PROCESSOR_ID"
-
-WRONG_EQ_BAND_ID="$TMP_DIR/wrong-eq-band-id"
-mkdir -p "$WRONG_EQ_BAND_ID"
-cp -R "$VALID/audio-processing" "$WRONG_EQ_BAND_ID/audio-processing"
-jq '(.. | objects | select(.id? == "itm_voiceover") |
-  .audio.processors[1].kind.bands[0].id) = "eqb_wrong"' \
-  "$WRONG_EQ_BAND_ID/audio-processing/plans/preview/out_preview.json" \
-  >"$WRONG_EQ_BAND_ID/plan.tmp"
-mv "$WRONG_EQ_BAND_ID/plan.tmp" \
-  "$WRONG_EQ_BAND_ID/audio-processing/plans/preview/out_preview.json"
-expect_fail wrong_eq_band_id "$WRONG_EQ_BAND_ID"
+audio_plan_variant wrong-duration '.sequences[0].duration.value=2399'
+audio_plan_variant wrong-output-audio '.output.deliverables[0].kind.settings.audio.channels=1'
+audio_plan_variant wrong-record-range '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.record_range.duration.value)=1199'
+audio_plan_variant wrong-source-input '(.sequences[].tracks[].clips[]|select(.id=="itm_key")|.source.input_id)="pin_wrong"'
+audio_plan_variant wrong-source-rate '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.source_mapping.time_map.rate.numerator)=2'
+audio_plan_variant wrong-music-bus '(.sequences[].tracks[]|select(.id=="trk_music")|.routing.audio.bus_id)="bus_wrong"'
+audio_plan_variant wrong-gain-value '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.gain.keyframes[1].value)=0.8'
+audio_plan_variant wrong-pan-interpolation '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.pan.keyframes[1].interpolation.type)="linear"'
+audio_plan_variant wrong-processor-order '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.processors)|=([.[1],.[0]]+.[2:])'
+audio_plan_variant wrong-processor-id '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.processors[0].id)="aud_wrong"'
+audio_plan_variant wrong-eq-band '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.processors[0].kind.bands[0].id)="eqb_wrong"'
+audio_plan_variant wrong-compressor '(.sequences[].tracks[].clips[]|select(.id=="itm_voice")|.audio.processors[3].kind.ratio)=2'
+audio_plan_variant wrong-music-fade '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.audio.crossfade.curve)="equal_power"'
+audio_plan_variant wrong-key-fade '(.sequences[].tracks[].clips[]|select(.id=="itm_key")|.audio.crossfade.curve)="linear"'
+audio_plan_variant wrong-pitch-policy '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.audio.pitch_policy)="preserve"'
+audio_plan_variant wrong-sidechain-source '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.audio.sidechain.source.track_id)="trk_voice"'
+audio_plan_variant wrong-sidechain-ratio '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.audio.sidechain.ratio)=8'
+audio_plan_variant wrong-normalize-target '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.effects[0].effect.target_lufs)=-18'
+audio_plan_variant wrong-normalize-range '(.sequences[].tracks[].clips[]|select(.id=="itm_music")|.effects[0].active_range.start.value)=600'
 
 echo "audio render evidence contract tests passed"

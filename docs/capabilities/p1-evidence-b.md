@@ -12,7 +12,7 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-22 verification: [animated effect codegen](../../crates/veac-codegen/src/unit_tests/emitter_tests/effects/animated.rs)
 - P1-22 observable: [Apply stack E2E](../../crates/veac-runtime/tests/render_e2e/composition_apply_stack.rs)
 ### P1-23
-- P1-23 implementation: [effect contract](../../crates/veac-ir/src/effect_contract.rs)
+- P1-23 implementation: [closed typed effect model](../../crates/veac-ir/src/model/effect.rs)
 - P1-23 verification: [keying codegen tests](../../crates/veac-codegen/src/unit_tests/emitter_tests/keying.rs)
 - P1-23 observable: [keying pixel E2E](../../crates/veac-runtime/tests/render_e2e/keying.rs)
 ### P1-24
@@ -27,10 +27,11 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-26 implementation: [transition model](../../crates/veac-ir/src/model/transition.rs)
 - P1-26 verification: [transition contract validation](../../crates/veac-ir/src/unit_tests/validation_tests/transition_contract_tests.rs)
 - P1-26 observable: [typed transition observability](../../crates/veac-runtime/tests/render_e2e/transition_typed_observability.rs)
+- P1-26 contract: schema v9 publishes only explicit `centered` alignment and requires the authored duration to equal the adjacent items' exact true-overlap window.
 ### P1-27
 - P1-27 model: [first-class Apply IR](../../crates/veac-ir/src/model/apply.rs)
 - P1-27 implementation: [Apply resolver](../../crates/veac-plan/src/resolver/apply.rs)
-- P1-27 verification: [public authoring integration](../../crates/veac-lang/tests/apply_authoring.rs)
+- P1-27 verification: [executable Apply integration](../../crates/veac-lang/tests/executable_lowering/relation_apply_v6.rs)
 - P1-27 observable: [Apply target/stack E2E](../../crates/veac-runtime/tests/render_e2e/composition_apply_stack.rs)
 - P1-27 example: [closed Apply targets](../../examples/apply-scopes/main.veac)
 ### P1-28
@@ -82,8 +83,10 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-36 observable: [cache CLI integration](../../crates/veac-cli/tests/integration/artifact_cache.rs)
 ### P1-37
 - P1-37 implementation: [artifact workflow](../../crates/veac-artifact/src/workflow.rs)
+- P1-37 contract: FFmpeg derives proxy, optical-flow, and source-segment artifacts; external analyzers publish closed typed result envelopes through explicit analysis ingestion. Analysis is not advertised as a local FFmpeg derivation.
 - P1-37 verification: [render-segment guard tests](../../crates/veac-artifact/src/render_segment/guard_tests.rs)
 - P1-37 observable: [proxy substitution E2E](../../crates/veac-runtime/tests/render_e2e/proxy_substitution.rs)
+- P1-37 typed analysis observable: [analysis ingestion E2E](../../crates/veac-cli/tests/integration/analysis_ingestion.rs)
 ### P1-38
 - P1-38 implementation: [CLI dispatch](../../crates/veac-cli/src/main.rs)
 - P1-38 verification: [command tests](../../crates/veac-cli/src/unit_tests/command_tests.rs)
@@ -93,8 +96,18 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-39 verification: [recovery safety contracts](../../crates/veac-runtime/src/executor/staging/tests/recovery_safety_contracts.rs)
 - P1-39 observable: [checkpoint delivery E2E](../../crates/veac-runtime/tests/delivery_e2e/checkpoint.rs)
 ### P1-40
-- P1-40 implementation: [compile-time program layer](../../crates/veac-lang/src/program/mod.rs)
-- P1-40 verification: [language integration](../../crates/veac-lang/tests/programming_language.rs)
+- P1-40 implementation: [typed function resolver](../../crates/veac-lang/src/program/resolve/functions.rs)
+- P1-40 implementation: [compiled expression core](../../crates/veac-lang/src/program/expression/compile/mod.rs)
+- P1-40 verification: [control-flow integration](../../crates/veac-lang/tests/programming_language_control_flow.rs)
+- P1-40 Temporal verification: [authored Temporal integration](../../crates/veac-lang/tests/executable_authored_temporal.rs)
 - P1-40 source editing: [source transaction](../../crates/veac-lang/src/program/source_transaction.rs)
 - P1-40 observable: [programming language example](../../examples/programming-language/main.veac)
 - P1-40 source-of-truth transaction: [revision-bound edit batch](../../examples/programming-language/source-edit.json)
+### P1-41
+- P1-41 implementation: [typed plugin lowering](../../crates/veac-lang/src/program/executable/lower/effect/video.rs)
+- P1-41 verification: [descriptor and canonical effect tests](../../crates/veac-lang/tests/executable_lowering/plugin_effect.rs)
+- P1-41 observable: [color-to-monochrome example](../../examples/video-effects/main.veac)
+### P1-42
+- P1-42 implementation: [curve residualization](../../crates/veac-lang/src/program/expression/residual/instruction/call/builtin/curve.rs)
+- P1-42 verification: [authored curve integration](../../crates/veac-lang/tests/executable_authored_temporal/curves.rs)
+- P1-42 observable: [curve-driven transform example](../../examples/transforms-and-animation/main.veac)

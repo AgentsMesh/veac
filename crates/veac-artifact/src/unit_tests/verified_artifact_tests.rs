@@ -1,7 +1,5 @@
 use std::fs;
 
-use serde_json::json;
-
 use crate::{test_support, *};
 
 #[test]
@@ -45,7 +43,10 @@ fn exact_open_distinguishes_a_miss_from_an_invalid_expectation() {
     );
 
     let mut other = expected.clone();
-    other.parameters = json!({"codec": "h265", "height": 720});
+    let ArtifactParameters::ProxyVideo(parameters) = &mut other.parameters else {
+        unreachable!()
+    };
+    parameters.crf = 25;
     assert_eq!(
         store.open_verified(&expected_key, &other).unwrap_err().kind,
         ArtifactErrorKind::IdentityMismatch

@@ -62,11 +62,6 @@ pub(super) fn validate(
                 limits,
             )
         }
-        MediaArtifactSpec::Analysis(value) => {
-            crate::json::validate_shape(&value.configuration)?;
-            metadata::bounded_json(&value.analysis_type, MAX_ARTIFACT_METADATA_BYTES)?;
-            metadata::bounded_json(&value.configuration, MAX_ARTIFACT_METADATA_BYTES)
-        }
         MediaArtifactSpec::SourceSegment(value) => {
             geometry(value.width, value.height, limits)?;
             range(value.start, value.duration, limits)?;

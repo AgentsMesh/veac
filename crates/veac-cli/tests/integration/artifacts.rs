@@ -4,6 +4,12 @@ use super::support::*;
 fn manifest_is_machine_neutral_and_output_is_canonical() {
     let temp = tempdir().unwrap();
     let project = compile_ir(&temp, GENERATED_SOURCE);
+    let expected = veac_ir::decode_canonical_json(&std::fs::read_to_string(&project).unwrap())
+        .unwrap()
+        .project
+        .render_configs[0]
+        .id
+        .to_string();
     let output = temp.path().join("build.json");
     veac()
         .args([
@@ -17,7 +23,7 @@ fn manifest_is_machine_neutral_and_output_is_canonical() {
     let bytes = std::fs::read(&output).unwrap();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value["schema"], "https://veac.dev/schemas/build-manifest");
-    assert_eq!(value["output"]["render_config_id"], "out_main");
+    assert_eq!(value["output"]["render_config_id"], expected);
     assert!(!String::from_utf8(bytes)
         .unwrap()
         .contains(&temp.path().display().to_string()));

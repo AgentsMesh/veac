@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[build-dependencies]
+sha2 = "0.10"
+
 [dependencies]
 ethnum = "1.5"
 rustix = { version = "1", features = ["fs"] }

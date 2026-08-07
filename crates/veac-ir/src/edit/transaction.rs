@@ -2,7 +2,9 @@ use sha2::{Digest, Sha256};
 
 use crate::*;
 
-use super::{apply_operation, check_preconditions, diagnostic, operation_error, ChangeSet};
+use super::{
+    apply_operation, check_preconditions, diagnostic, operation_error, provenance, ChangeSet,
+};
 
 pub fn apply_edit_batch(project: &ProjectEnvelope, batch: &EditBatch) -> EditOutcome {
     let batch_json = serde_json::to_value(batch).ok();
@@ -86,9 +88,11 @@ fn apply_valid_batch(
     let mut next = project.clone();
     let mut changed = ChangeSet::new();
     for operation in &batch.operations {
+        let authorship = provenance::AuthorshipSnapshot::capture(&next.project, operation);
         if let Err(error) = apply_operation(&mut next.project, operation, &mut changed) {
             return rejected(project, error);
         }
+        authorship.reconcile(&mut next.project, &mut changed);
     }
     let semantic_changed = next.project != project.project;
     let Some(new_revision) = next

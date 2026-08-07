@@ -39,12 +39,13 @@ pub(super) fn apply_source(
 
 pub(super) fn apply_alpha(
     context: &mut EmitContext<'_>,
+    owner: ProcessOwner<'_>,
     input: &str,
     masks: &[Mask],
     opacity: &Animatable<f64>,
 ) -> String {
-    let masked = mask::apply(context, input, masks);
-    opacity_value(context, &masked, opacity)
+    let masked = mask::apply(context, owner, input, masks);
+    opacity_value(context, owner, &masked, opacity)
 }
 
 fn apply_inner(
@@ -60,13 +61,14 @@ fn apply_inner(
         label,
         visual.color_pipeline.as_ref(),
     )?;
-    label = super::visual_crop::apply(context, &label, &visual.transform.crop);
+    let owner = ProcessOwner::clip(clip);
+    label = super::visual_crop::apply(context, owner, &label, &visual.transform.crop);
     label = visual_frame::apply(context, &label, visual, geometry.mode);
     label = effects::video(context, clip, label)?;
     label = flip(context, &label, visual);
-    label = scale(context, &label, visual);
+    label = scale(context, owner, &label, visual);
     label = corners(context, &label, visual);
-    label = mask::apply(context, &label, &visual.masks);
+    label = mask::apply(context, owner, &label, &visual.masks);
     let (sheared, pivot_x, pivot_y) = visual_shear::apply(
         context,
         &label,
@@ -74,8 +76,8 @@ fn apply_inner(
         geometry.pivot_x,
         geometry.pivot_y,
     );
-    let (rotated, pivot_x, pivot_y) = rotate(context, &sheared, visual, pivot_x, pivot_y);
-    label = opacity(context, &rotated, visual);
+    let (rotated, pivot_x, pivot_y) = rotate(context, owner, &sheared, visual, pivot_x, pivot_y);
+    label = opacity(context, owner, &rotated, visual);
     Ok(PreparedLayer {
         label,
         pivot_x,
@@ -96,9 +98,14 @@ fn flip(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProp
     context.graph.filter(&[input], filter, "flipv")
 }
 
-fn scale(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProperties) -> String {
-    let x = animation::vec_x(&visual.transform.scale, "t");
-    let y = animation::vec_y(&visual.transform.scale, "t");
+fn scale(
+    context: &mut EmitContext<'_>,
+    owner: ProcessOwner<'_>,
+    input: &str,
+    visual: &EffectiveVisualProperties,
+) -> String {
+    let x = animation::vec_x(context.plan, owner, &visual.transform.scale, "t");
+    let y = animation::vec_y(context.plan, owner, &visual.transform.scale, "t");
     if matches!(&visual.transform.scale, Animatable::Constant { value } if value.x == 1.0 && value.y == 1.0)
     {
         input.to_owned()
@@ -113,6 +120,7 @@ fn scale(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualPro
 
 fn rotate(
     context: &mut EmitContext<'_>,
+    owner: ProcessOwner<'_>,
     input: &str,
     visual: &EffectiveVisualProperties,
     pivot_x: f64,
@@ -123,7 +131,7 @@ fn rotate(
         return (input.to_owned(), pivot_x, pivot_y);
     }
     let padded = visual_pivot::center(context, input, pivot_x, pivot_y, "pivotv");
-    let angle = animation::number(&visual.transform.rotation_degrees, "t");
+    let angle = animation::number(context.plan, owner, &visual.transform.rotation_degrees, "t");
     let rotated = context.graph.filter(
         &[&padded],
         format!("rotate=angle='({angle})*PI/180':ow='ceil(hypot(iw\\,ih))':oh='ceil(hypot(iw\\,ih))':c=black@0"),
@@ -134,17 +142,23 @@ fn rotate(
 
 fn opacity(
     context: &mut EmitContext<'_>,
+    owner: ProcessOwner<'_>,
     input: &str,
     visual: &EffectiveVisualProperties,
 ) -> String {
-    opacity_value(context, input, &visual.opacity)
+    opacity_value(context, owner, input, &visual.opacity)
 }
 
-fn opacity_value(context: &mut EmitContext<'_>, input: &str, opacity: &Animatable<f64>) -> String {
+fn opacity_value(
+    context: &mut EmitContext<'_>,
+    owner: ProcessOwner<'_>,
+    input: &str,
+    opacity: &Animatable<f64>,
+) -> String {
     if matches!(opacity, Animatable::Constant { value } if *value == 1.0) {
         return input.to_owned();
     }
-    let alpha = animation::number(opacity, "T");
+    let alpha = animation::number(context.plan, owner, opacity, "T");
     context.graph.filter(
         &[input],
         format!(

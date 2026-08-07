@@ -1,6 +1,7 @@
 def resized($edge):
   . as $source
-  | if $source.width >= $source.height then
+  | if $source.width <= $edge and $source.height <= $edge then .
+    elif $source.width >= $source.height then
       .width = $edge
       | .height = ([2, (((($source.height * $edge) / $source.width) / 2 | floor) * 2)] | max)
     else
@@ -117,7 +118,7 @@ def preview_font_material($id; $uri):
       audio: {type: "disabled"}
     },
     probe: null,
-    metadata: {}
+    authorship: null
   };
 
 def family_font_paths:
@@ -126,8 +127,9 @@ def family_font_paths:
     (.family? | type) == "string" and
     (keys_unsorted | sort) == ["family", "type"]);
 
-def preview_font_id($path):
-  if ($path | any(. == "fallback_fonts")) then
+def preview_font_id($path; $family):
+  if ($path | any(. == "fallback_fonts")) or
+      (($family | ascii_downcase) | contains("arabic")) then
     "med_preview-arabic-font"
   else "med_preview-font" end;
 
@@ -137,13 +139,14 @@ def preview_font_uri($id):
   else "assets/preview-font.ttf" end;
 
 def adapt_family_fonts:
-  [family_font_paths] as $paths
-  | reduce $paths[] as $path (.;
-      setpath($path; {
+  [family_font_paths as $path |
+    {path: $path, id: preview_font_id($path; getpath($path).family)}] as $fonts
+  | reduce $fonts[] as $font (.;
+      setpath($font.path; {
         type: "material",
-        material_id: preview_font_id($path)
+        material_id: $font.id
       }))
-  | ([$paths[] | preview_font_id(.)] | unique) as $material_ids
+  | ([$fonts[].id] | unique) as $material_ids
   | reduce $material_ids[] as $id (.;
       if any(.project.materials[]?; .id == $id) then
         error("reserved preview font material already exists: \($id)")

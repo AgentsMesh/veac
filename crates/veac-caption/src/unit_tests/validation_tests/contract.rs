@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::{test_support::*, *};
 
 fn codes(value: &CaptionEnvelope) -> Vec<String> {
@@ -23,7 +21,11 @@ fn validates_envelope_document_and_styles() {
     value.schema_version = 99;
     value.document.timescale = 0;
     value.document.language = Some(" ".to_owned());
-    value.document.settings.insert(String::new(), String::new());
+    value.document.native = Some(CaptionDocumentNative::WebVtt {
+        header: WebVttHeader {
+            description: Some("bad\nheader".to_owned()),
+        },
+    });
     let mut duplicate = value.document.styles[0].clone();
     duplicate.font_family.clear();
     duplicate.font_size_pixels = 0;
@@ -40,7 +42,7 @@ fn validates_envelope_document_and_styles() {
         "VERSION",
         "TIMESCALE",
         "EMPTY",
-        "SETTING",
+        "NATIVE_TEXT",
         "DUPLICATE_ID",
         "STYLE_RANGE",
         "STYLE_NUMBER",
@@ -60,7 +62,12 @@ fn validates_cue_identity_text_references_spans_and_words() {
     cue.text.plain = " ".to_owned();
     cue.speaker = Some(String::new());
     cue.style = Some("Missing".to_owned());
-    cue.settings = BTreeMap::from([(String::new(), String::new())]);
+    cue.native = Some(CaptionNativeCue::Ass {
+        settings: AssCueSettings {
+            effect: Some("bad,effect".to_owned()),
+            ..AssCueSettings::default()
+        },
+    });
     cue.text.spans = vec![CaptionSpan {
         range: TextRange { start: 2, end: 1 },
         style: InlineStyle::default(),
@@ -82,7 +89,7 @@ fn validates_cue_identity_text_references_spans_and_words() {
         "ID",
         "EMPTY",
         "STYLE_REF",
-        "SETTING",
+        "NATIVE_TEXT",
         "TEXT_RANGE",
         "EMPTY_STYLE",
         "WORD_CONTAINMENT",
@@ -136,4 +143,35 @@ fn validates_duplicate_cues_and_span_option_text() {
     let found = codes(&value);
     assert!(found.contains(&"DUPLICATE_ID".to_owned()));
     assert!(found.iter().filter(|code| *code == "EMPTY").count() >= 2);
+}
+
+#[test]
+fn validates_closed_native_format_and_fields() {
+    let mut value = envelope();
+    value.document.native = Some(CaptionDocumentNative::WebVtt {
+        header: WebVttHeader::default(),
+    });
+    value.document.cues[0].native = Some(CaptionNativeCue::Ass {
+        settings: AssCueSettings::default(),
+    });
+    assert!(codes(&value).contains(&"NATIVE_FORMAT".to_owned()));
+
+    value.document.native = None;
+    value.document.cues[0].native = Some(CaptionNativeCue::Srt { index: 0 });
+    assert!(codes(&value).contains(&"NATIVE_RANGE".to_owned()));
+
+    value.document.cues[0].native = Some(CaptionNativeCue::WebVtt {
+        identifier: Some(CaptionNativeId("bad-->id".to_owned())),
+        settings: Some(WebVttCueSettings {
+            line: Some("bad token".to_owned()),
+            position: None,
+            size: None,
+            align: None,
+            vertical: None,
+            region: None,
+        }),
+    });
+    let found = codes(&value);
+    assert!(found.contains(&"NATIVE_TEXT".to_owned()));
+    assert!(found.contains(&"NATIVE_SETTING".to_owned()));
 }

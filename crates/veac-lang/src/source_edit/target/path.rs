@@ -1,133 +1,139 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::definition::{SourceDeliveryArtifactKind, SourcePresetKind};
+use super::SourceTemporalProperty;
 
 mod identity;
-mod kind;
-
-pub use kind::SourceNodeKind;
+pub(super) mod kind;
 
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SourceNodePath {
-    Project {
+    Input {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        project: String,
+        input: String,
     },
     Constant {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
         constant: String,
     },
-    Component {
+    Function {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
+        function: String,
     },
-    ComponentInstance {
+    Method {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        instance: String,
+        receiver: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        method: String,
     },
-    ComponentLocalInstance {
+    Implementation {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
+        receiver: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        instance: String,
+        implementation: String,
     },
-    ComponentLayer {
+    Struct {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        layer: String,
+        structure: String,
     },
-    ComponentItem {
+    StructField {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
+        structure: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        layer: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        item: String,
+        field: String,
     },
-    ComponentModifier {
+    Enum {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        layer: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        item: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        modifier: String,
+        enumeration: String,
     },
-    ComponentApply {
+    EnumVariant {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
+        enumeration: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        apply: String,
+        variant: String,
     },
-    ComponentStage {
+    EnumVariantField {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        component: String,
+        enumeration: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        apply: String,
+        variant: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
-        stage: String,
+        field: String,
     },
-    Preset {
-        preset_kind: SourcePresetKind,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-    },
-    PresetModifier {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        modifier: String,
-    },
-    PresetStage {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        stage: String,
-    },
-    PresetAudioProcessor {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        processor: String,
-    },
-    PresetAudioEqBand {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        processor: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        band: String,
-    },
-    PresetDeliveryArtifact {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        preset: String,
-        artifact_kind: SourceDeliveryArtifactKind,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        artifact: String,
-    },
-    Resource {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        resource: String,
-    },
-    Sequence {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        project: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        sequence: String,
-    },
-    Layer {
+    Temporal {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
         project: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
         sequence: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
         layer: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        item: String,
+        property: SourceTemporalProperty,
+    },
+    TemporalClipMask {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        project: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        sequence: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        layer: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        item: String,
+        mask_index: u32,
+        property: SourceTemporalProperty,
+    },
+    TemporalClipEffect {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        project: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        sequence: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        layer: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        item: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        effect: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        parameter: String,
+        property: SourceTemporalProperty,
+    },
+    TemporalApply {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        project: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        sequence: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        apply: String,
+        property: SourceTemporalProperty,
+    },
+    TemporalApplyMask {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        project: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        sequence: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        apply: String,
+        mask_index: u32,
+        property: SourceTemporalProperty,
+    },
+    TemporalApplyEffect {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        project: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        sequence: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        apply: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        stage: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        effect: String,
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        parameter: String,
+        property: SourceTemporalProperty,
     },
     Item {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
@@ -138,35 +144,5 @@ pub enum SourceNodePath {
         layer: String,
         #[schemars(with = "super::schema::CanonicalNameSchema")]
         item: String,
-    },
-    Modifier {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        project: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        sequence: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        layer: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        item: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        modifier: String,
-    },
-    Apply {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        project: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        sequence: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        apply: String,
-    },
-    Stage {
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        project: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        sequence: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        apply: String,
-        #[schemars(with = "super::schema::CanonicalNameSchema")]
-        stage: String,
     },
 }

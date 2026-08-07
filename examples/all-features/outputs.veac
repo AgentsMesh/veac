@@ -1,0 +1,22 @@
+module {
+  export fn master(timeline: Sequence) -> Delivery {
+    let video = video_output(
+      video_h264(), pixel_yuv420p(), alpha_opaque(), video_color_unspecified(),
+      video_crf(23), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_h264_high()), video_level_auto()
+    );
+    let artifact = deliverable_video(
+      identifier("master"), delivery_file("all-features.mp4"),
+      video_delivery(
+        container_mp4(), video,
+        embedded_audio_present(audio_output(audio_aac(), 48000, 2)),
+        true, pass_single(), hardware_software()
+      )
+    );
+    delivery(
+      identifier("master"), timeline,
+      raster_settings(canvas(1920px, 1080px), frame_rate(30, 1), caption_burn_in()),
+      [artifact]
+    )
+  }
+}

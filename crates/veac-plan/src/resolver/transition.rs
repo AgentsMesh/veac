@@ -5,7 +5,7 @@ use veac_ir::{
 };
 
 use super::PlanResolver;
-use crate::{EffectiveTrackState, ResolvedClip, ResolvedTransition, TransitionHandle};
+use crate::{EffectiveTrackState, ResolvedClip, ResolvedTransition};
 
 impl PlanResolver<'_> {
     pub(super) fn resolve_transitions(
@@ -44,9 +44,11 @@ impl PlanResolver<'_> {
         transition: &veac_ir::Transition,
     ) -> Option<ResolvedTransition> {
         let scale = transition.duration.timescale;
-        if outgoing.record_range.duration.timescale != scale
-            || incoming.record_range.duration.timescale != scale
+        if outgoing.record_range.start.timescale != scale
+            || outgoing.record_range.duration.timescale != scale
             || incoming.record_range.start.timescale != scale
+            || incoming.record_range.duration.timescale != scale
+            || transition.alignment != TransitionAlignment::Centered
         {
             self.push_internal(
                 "TRANSITION_TIMEBASE",
@@ -55,53 +57,52 @@ impl PlanResolver<'_> {
             );
             return None;
         }
-        let duration = transition.duration.value;
-        let outgoing_duration = match transition.alignment {
-            TransitionAlignment::BeforeCut => duration,
-            TransitionAlignment::Centered => duration / 2,
-            TransitionAlignment::AfterCut => 0,
+        let outgoing_end = outgoing.record_range.end().ok()?;
+        let duration = outgoing_end
+            .value
+            .checked_sub(incoming.record_range.start.value)?;
+        if duration != transition.duration.value {
+            self.push_internal(
+                "TRANSITION_OVERLAP",
+                outgoing.id.to_string(),
+                "validated transition duration differs from endpoint overlap".to_owned(),
+            );
+            return None;
+        }
+        let record_window = TimeRange {
+            start: incoming.record_range.start,
+            duration: transition.duration,
         };
-        let incoming_duration = duration - outgoing_duration;
-        let cut = incoming.record_range.start;
-        let window_start = RationalTime {
-            value: cut.value.checked_sub(outgoing_duration)?,
-            timescale: scale,
-        };
-        let outgoing_offset = RationalTime {
-            value: outgoing
-                .record_range
-                .duration
-                .value
-                .checked_sub(outgoing_duration)?,
-            timescale: scale,
-        };
+        let outgoing_start = incoming
+            .record_range
+            .start
+            .value
+            .checked_sub(outgoing.record_range.start.value)?;
+        let local_duration = transition.duration;
         Some(ResolvedTransition {
             relation_id: relation_id.clone(),
             kind: transition.kind.clone(),
             outgoing_clip_id: outgoing.id.clone(),
             incoming_clip_id: incoming.id.clone(),
             alignment: transition.alignment,
-            cut_time: cut,
-            record_window: TimeRange {
-                start: window_start,
-                duration: transition.duration,
+            cut_time: RationalTime {
+                value: record_window.start.value.checked_add(duration / 2)?,
+                timescale: scale,
             },
-            outgoing_handle: TransitionHandle {
-                offset: outgoing_offset,
-                duration: RationalTime {
-                    value: outgoing_duration,
+            record_window,
+            outgoing_range: TimeRange {
+                start: RationalTime {
+                    value: outgoing_start,
                     timescale: scale,
                 },
+                duration: local_duration,
             },
-            incoming_handle: TransitionHandle {
-                offset: RationalTime {
+            incoming_range: TimeRange {
+                start: RationalTime {
                     value: 0,
                     timescale: scale,
                 },
-                duration: RationalTime {
-                    value: incoming_duration,
-                    timescale: scale,
-                },
+                duration: local_duration,
             },
         })
     }

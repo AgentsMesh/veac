@@ -1,145 +1,73 @@
-project advanced-color {
-  settings {
-    timebase 1/1000;
-    canvas 1280px by 720px;
-    frame-rate 30fps;
-    sample-rate 48000hz;
-  }
-  entry sequence main;
-  resource lut-3d cinematic { locator local { path "assets/cinematic.cube"; } }
-  resource lut-1d tone-curve { locator local { path "assets/tone-curve.cube"; } }
+import "./grades.veac" as grades;
+import "./showcase.veac" as showcase;
 
-  sequence color-card {
-    layer visual card-source {
-      item chart {
-        source generated gradient linear {
-          from 0% 50%; to 100% 50%;
-          stop 0% #14213db3; stop 35% #3a86ffb3;
-          stop 68% #ff4d8db3; stop 100% #ffd166b3;
-        }
-        record { at 0s; duration 8s; }
-      }
-    }
-  }
+fn card(key: identifier, start: time, duration: time) -> Item {
+  item(
+    key, item_enabled(), during(start, duration),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.0, 0.5), vector(1.0, 0.5), [
+        gradient_stop(0%, #14213db3), gradient_stop(35%, #3a86ffb3),
+        gradient_stop(68%, #ff4d8db3), gradient_stop(100%, #ffd166b3)
+      ]
+    ))), source_timing_native()
+  )
+}
 
-  sequence main {
-    layer visual background {
-      item alpha-check {
-        source generated gradient linear {
-          from 50% 0%; to 50% 100%;
-          stop 0% #050505ff; stop 48% #050505ff;
-          stop 52% #fafafaff; stop 100% #fafafaff;
-        }
-        record { at 0s; duration 8s; }
-      }
-    }
-    layer visual comparisons {
-      item reference {
-        source sequence sequence color-card;
-        record { at 0s; duration 1s; }
-      }
-      item hsl-only {
-        source sequence sequence color-card;
-        record { at 1s; duration 1s; }
-        modifiers {
-          color red-isolation {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            hsl { range red; hue 18deg; saturation 0.3; lightness 0.06; }
-          }
-        }
-      }
-      item curves-only {
-        source sequence sequence color-card;
-        record { at 2s; duration 1s; }
-        modifiers {
-          color curve-contrast {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            curves {
-              interpolation monotonic;
-              curve luma { point 0% 3%; point 45% 52%; point 100% 96%; }
-              curve red { point 0% 0%; point 50% 56%; point 100% 100%; }
-            }
-          }
-        }
-      }
-      item wheels-only {
-        source sequence sequence color-card;
-        record { at 3s; duration 1s; }
-        modifiers {
-          color split-tone {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            wheels { lift 0 0 0.04; gamma 0.03 0 0; gain 0.05 0.02 -0.01; }
-          }
-        }
-      }
-      item full-grade {
-        source sequence sequence color-card;
-        record { at 4s; duration 2s; }
-        modifiers {
-          color cinematic {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            basic {
-              exposure 0.35stops; temperature 4800k; tint 0.08;
-              highlights -0.2; shadows 0.18; fade 4%;
-            }
-            matrix {
-              red 1.08 0.02 0; green 0.01 0.96 0.03;
-              blue 0 0.04 0.9; offset 0.01 0 0.02;
-            }
-            hsl { range red; hue 12deg; saturation 0.18; lightness 0.04; }
-            curves {
-              interpolation monotonic;
-              curve luma { point 0% 3%; point 45% 52%; point 100% 96%; }
-            }
-            wheels { lift 0 0 0.04; gamma 0.03 0 0; gain 0.05 0.02 -0.01; }
-            lut { resource cinematic; interpolation tetrahedral; }
-          }
-        }
-      }
-      item tone-curve {
-        source sequence sequence color-card;
-        record { at 6s; duration 2s; }
-        modifiers {
-          color one-dimensional-lut {
-            input-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            working-space { primaries bt709; transfer linear; matrix rgb; range full; }
-            output-space { primaries bt709; transfer bt709; matrix bt709; range limited; }
-            lut { resource tone-curve; interpolation linear; }
-          }
-        }
-      }
-    }
-  }
+fn label(font: Resource, key: identifier, start: time, duration: time, value: text) -> Item {
+  item(
+    key, item_enabled(), during(start, duration),
+    source_text(value, showcase.caption_style(font, 36px, 900px)), source_timing_native()
+  )
+}
 
-  delivery preview {
-    sequence main;
-    raster { canvas 1280px by 720px; frame-rate 30fps; captions discard; }
-    artifact video preview {
-      target file "preview.mp4";
-      mux mp4 {
-        layout standard;
-        video h264 {
-          pixel-format yuv420p;
-          alpha opaque;
-          color-space source;
-          rate-control crf { value 23; }
-          gop automatic;
-          b-frames automatic;
-          profile automatic;
-          level automatic;
-        }
-        audio none;
-        passes single;
-        accelerator auto;
-      }
-    }
-  }
+fn main(context: Context) -> Project {
+  let font = font_resource(
+    identifier("font"), resource_file("assets/veac-example-zh.ttf"),
+    sha256("64afada094cf447d71fad4ee726799c4fa74917f7d9a1113ed7ea3c4234ff774")
+  );
+  let cinematic = lut3d_resource(
+    identifier("cinematic"), resource_file("assets/cinematic.cube"),
+    sha256("1717e840221b7d8a2eadd5f2ce3d690b5bc0589d3627cd9f3d66181240a75eef")
+  );
+  let tone = lut1d_resource(
+    identifier("tone-curve"), resource_file("assets/tone-curve.cube"),
+    sha256("35e6944db664f1faa718c69d4a9949d7e5aa871559878d829639dd512242d559")
+  );
+  let background = visual_layer(
+    identifier("background"), 0, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(item(
+    identifier("alpha-check"), item_enabled(), during(0s, 8s),
+    source_generated(generator_gradient(gradient_linear(
+      vector(0.5, 0.0), vector(0.5, 1.0), [
+        gradient_stop(0%, #050505ff), gradient_stop(48%, #050505ff),
+        gradient_stop(52%, #fafafaff), gradient_stop(100%, #fafafaff)
+      ]
+    ))), source_timing_native()
+  ));
+  let comparisons = visual_layer(
+    identifier("comparisons"), 1, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(card(identifier("reference"), 0s, 1s))
+    .with_item(card(identifier("hsl"), 1s, 1s).with_visual(grades.hsl()))
+    .with_item(card(identifier("curves"), 2s, 1s).with_visual(grades.curves()))
+    .with_item(card(identifier("wheels"), 3s, 1s).with_visual(grades.wheels()))
+    .with_item(card(identifier("full"), 4s, 2s).with_visual(grades.full(cinematic)))
+    .with_item(card(identifier("tone"), 6s, 2s).with_visual(grades.lut1d(tone)));
+  let labels = visual_layer(
+    identifier("labels"), 2, placement_free(), showcase.state(), track_routing_default()
+  ).with_item(label(font, identifier("reference-label"), 0s, 1s, "未调色参照"))
+    .with_item(label(font, identifier("hsl-label"), 1s, 1s, "红色色域：色相、饱和度与明度"))
+    .with_item(label(font, identifier("curves-label"), 2s, 1s, "亮度与红色通道曲线"))
+    .with_item(label(font, identifier("wheels-label"), 3s, 1s, "暗部、中间调与高光色轮"))
+    .with_item(label(font, identifier("full-label"), 4s, 2s, "完整管线与三维查找表"))
+    .with_item(label(font, identifier("tone-label"), 6s, 2s, "一维查找表"));
+  let timeline = sequence(
+    identifier("main"), "高级调色与查找表",
+    sequence_settings(canvas(1280px, 720px), frame_rate(30, 1), 48000)
+  ).with_layer(background).with_layer(comparisons).with_layer(labels);
+  let output = showcase.video(
+    timeline, canvas(1280px, 720px), frame_rate(30, 1), false, false
+  );
+  project(identifier("advanced-color"), project_settings(600))
+    .with_resource(font).with_resource(cinematic).with_resource(tone)
+    .with_sequence(timeline).entry(timeline).with_delivery(output)
 }

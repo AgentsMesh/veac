@@ -2,7 +2,9 @@ use veac_codegen::emitter::CodegenErrorKind;
 use veac_plan::canonical::*;
 use veac_plan::ResolvedClipSource;
 
-use super::support::{add_transition, bindings, emit_video_command, fixture, resolved, time};
+use super::support::{
+    add_transition, bindings, emit_video_command, fixture, resolved, time, transition_visual,
+};
 
 #[test]
 fn a_single_reverse_curve_segment_emits_exact_video_and_audio_time_maps() {
@@ -42,8 +44,8 @@ fn a_sidechain_source_inherits_its_authored_transition_fades() {
         .filter_graph
         .unwrap();
     for marker in [
-        "afade=t=out:st=0.9:d=0.1",
-        "afade=t=in:st=0:d=0.1",
+        "afade=t=out:st=0.8:d=0.2",
+        "afade=t=in:st=0:d=0.2",
         "sidechainsource",
         "sidechaincompress",
     ] {
@@ -76,10 +78,10 @@ fn sidechain_project() -> ProjectEnvelope {
     let sequence = &mut project.project.sequences[0];
     let mut source = sequence.tracks[0].clone();
     source.id = TrackId::new("trk_voice").unwrap();
-    source.kind = TrackKind::Audio;
+    source.kind = TrackKind::Video;
     source.order = 1;
     source.clips[0].id = ItemId::new("itm_voice_out").unwrap();
-    source.clips[0].visual = None;
+    source.clips[0].visual = Some(transition_visual());
     source.clips[0].audio = Some(audio());
     let transition = Transition {
         kind: TransitionKind::Dissolve,
@@ -88,7 +90,7 @@ fn sidechain_project() -> ProjectEnvelope {
     };
     let mut incoming = source.clips[0].clone();
     incoming.id = ItemId::new("itm_voice_in").unwrap();
-    incoming.record_range.start = time(600);
+    incoming.record_range.start = time(480);
     source.clips.push(incoming);
     sequence.tracks.push(source);
     sequence.tracks[0].clips[0].audio = Some(audio());

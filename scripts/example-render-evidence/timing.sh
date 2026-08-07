@@ -10,14 +10,14 @@ source "$SCRIPT_DIR/example-render-evidence/timing-transform-animation.sh"
 timing_plan() {
   local example_dir=$1 output_id=${2:-preview}
   local plan
-  plan=$(example_preview_plan "$example_dir" "out_$output_id") ||
+  plan=$(delivery_plan_path "$example_dir" "$output_id") ||
     fail "unsafe timing output ID: $output_id"
   require_file "$plan"
   printf '%s\n' "$plan"
 }
 
 timing_video() {
-  local example_dir=$1 delivery_id=${2:-preview} artifact_id=${3:-preview}
+  local example_dir=$1 delivery_id=${2:-preview} artifact_id=${3:-preview.mp4}
   local video
   video=$(delivery_video_path "$example_dir" "$delivery_id" "$artifact_id")
   require_file "$video"

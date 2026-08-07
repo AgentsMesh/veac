@@ -1,35 +1,10 @@
-use super::{AudioProcessorDecl, Identifier, NumberLiteral, ParameterDecl, Span, Spanned};
+super::impl_syntax_tokens!(veac_ir::PitchPolicy,
+    veac_ir::PitchPolicy::Preserve => "preserve",
+    veac_ir::PitchPolicy::FollowSpeed => "follow-speed",
+);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AudioModifierDecl {
-    pub id: Identifier,
-    pub gain: Option<ParameterDecl<NumberLiteral>>,
-    pub pan: Option<ParameterDecl<NumberLiteral>>,
-    pub muted: Option<Spanned<bool>>,
-    pub normalize: Option<Spanned<bool>>,
-    pub pitch: Option<Spanned<PitchPolicyDecl>>,
-    pub processors: Vec<AudioProcessorDecl>,
-    pub crossfade: Option<AudioCrossfadeDecl>,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PitchPolicyDecl {
-    Preserve,
-    FollowSpeed,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AudioCrossfadeDecl {
-    pub fade_in: NumberLiteral,
-    pub fade_out: NumberLiteral,
-    pub curve: Spanned<AudioFadeCurveDecl>,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AudioFadeCurveDecl {
-    Linear,
-    EqualPower,
-    Exponential,
-}
+super::impl_syntax_tokens!(veac_ir::AudioFadeCurve,
+    veac_ir::AudioFadeCurve::Linear => "linear",
+    veac_ir::AudioFadeCurve::EqualPower => "equal-power",
+    veac_ir::AudioFadeCurve::Exponential => "exponential",
+);

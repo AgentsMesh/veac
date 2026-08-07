@@ -1,6 +1,7 @@
 mod common;
 mod losses;
 mod markup;
+mod native;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

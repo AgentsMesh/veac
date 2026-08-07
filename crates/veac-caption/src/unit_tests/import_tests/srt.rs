@@ -13,7 +13,10 @@ fn imports_unicode_multiline_rich_srt_with_stable_ids() {
     let span = &first.document.cues[0].text.spans[0];
     assert_eq!(span.range, TextRange { start: 3, end: 7 });
     assert!(span.style.bold);
-    assert_eq!(first.document.cues[0].settings["srt.index"], "1");
+    assert!(matches!(
+        first.document.cues[0].native,
+        Some(CaptionNativeCue::Srt { index: 1 })
+    ));
 }
 
 #[test]

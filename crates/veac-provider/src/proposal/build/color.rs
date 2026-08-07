@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use veac_ir::{
-    BasicColorAdjustment, ColorPipeline, ColorStage, EditOperation, EffectInstance, ParameterValue,
-    Precondition, ProjectEnvelope, RgbMatrixAdjustment, VisualProperty,
+    Animatable, BasicColorAdjustment, ColorPipeline, ColorStage, EditOperation, Effect,
+    EffectInstance, Precondition, ProjectEnvelope, RgbMatrixAdjustment, VisualProperty,
 };
 
 use super::support::{self, BuiltApplication};
@@ -45,27 +43,13 @@ pub(super) fn build(
     });
     let color_effect = EffectInstance {
         id: context.effect_id.clone(),
-        effect_type: "video.color_adjust".to_owned(),
         enabled: true,
         enable_range: None,
-        parameters: BTreeMap::from([
-            (
-                "brightness".to_owned(),
-                ParameterValue::Number { value: 0.0 },
-            ),
-            (
-                "contrast".to_owned(),
-                ParameterValue::Number {
-                    value: result.adjustment.contrast,
-                },
-            ),
-            (
-                "saturation".to_owned(),
-                ParameterValue::Number {
-                    value: result.adjustment.saturation,
-                },
-            ),
-        ]),
+        effect: Effect::VideoColorAdjust {
+            brightness: Animatable::constant(0.0),
+            contrast: Animatable::constant(result.adjustment.contrast),
+            saturation: Animatable::constant(result.adjustment.saturation),
+        },
     };
     let operations = vec![
         EditOperation::SetVisualProperty {

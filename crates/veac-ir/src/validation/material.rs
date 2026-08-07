@@ -4,7 +4,13 @@ use super::Validator;
 
 impl Validator {
     pub(super) fn material(&mut self, material: &Material, path: &str) {
-        self.metadata(&material.metadata, path, material.id.as_str());
+        if let Some(authorship) = &material.authorship {
+            self.entity_authorship(
+                authorship,
+                &format!("{path}/authorship"),
+                material.id.as_str(),
+            );
+        }
         let uri_valid = match &material.source {
             MaterialSource::File { uri } => project_relative_uri_valid(uri),
             MaterialSource::Remote { uri } => is_http_uri(uri),

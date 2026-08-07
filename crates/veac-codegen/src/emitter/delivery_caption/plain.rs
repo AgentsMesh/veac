@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
-use veac_plan::canonical::CaptionSidecarFormat;
+use veac_plan::canonical::{
+    CaptionNativeCue, CaptionSidecarFormat, WebVttCueSettings, WebVttTextAlign, WebVttVertical,
+};
 use veac_plan::ResolvedTextPresentation;
 
 use super::{failure::Failure, format::timestamp, Cue};
@@ -28,7 +30,7 @@ fn srt(cues: &[Cue<'_>]) -> Result<String, Failure> {
         let _ = writeln!(
             output,
             "{}\n{} --> {}\n{}\n",
-            index + 1,
+            srt_index(cue, index + 1),
             timestamp(cue.start, ','),
             timestamp(cue.end, ','),
             text
@@ -45,15 +47,85 @@ fn webvtt(cues: &[Cue<'_>]) -> Result<String, Failure> {
         if let Some(speaker) = cue.speaker {
             text = format!("<v {}>{text}</v>", html(speaker));
         }
+        if let Some(identifier) = webvtt_identifier(cue) {
+            let _ = writeln!(output, "{}", identifier.0);
+        }
+        let settings = webvtt_settings(cue)
+            .map(format_settings)
+            .unwrap_or_default();
         let _ = writeln!(
             output,
-            "{} --> {}\n{}\n",
+            "{} --> {}{}\n{}\n",
             timestamp(cue.start, '.'),
             timestamp(cue.end, '.'),
+            settings,
             text
         );
     }
     Ok(output)
+}
+
+fn srt_index(cue: &Cue<'_>, fallback: usize) -> u64 {
+    match &cue.semantics.native {
+        Some(CaptionNativeCue::Srt { index }) => *index,
+        _ => fallback as u64,
+    }
+}
+
+fn webvtt_identifier<'a>(cue: &'a Cue<'a>) -> Option<&'a veac_plan::canonical::CaptionNativeId> {
+    match &cue.semantics.native {
+        Some(CaptionNativeCue::WebVtt { identifier, .. }) => identifier.as_ref(),
+        _ => None,
+    }
+}
+
+fn webvtt_settings<'a>(cue: &'a Cue<'a>) -> Option<&'a WebVttCueSettings> {
+    match &cue.semantics.native {
+        Some(CaptionNativeCue::WebVtt { settings, .. }) => settings.as_ref(),
+        _ => None,
+    }
+}
+
+fn format_settings(value: &WebVttCueSettings) -> String {
+    let mut fields = Vec::new();
+    push(&mut fields, "line", value.line.as_deref());
+    push(&mut fields, "position", value.position.as_deref());
+    push(&mut fields, "size", value.size.as_deref());
+    push(&mut fields, "align", value.align.map(align));
+    push(&mut fields, "vertical", value.vertical.map(vertical));
+    push(
+        &mut fields,
+        "region",
+        value.region.as_ref().map(|region| region.0.as_str()),
+    );
+    if fields.is_empty() {
+        String::new()
+    } else {
+        format!(" {}", fields.join(" "))
+    }
+}
+
+fn push(fields: &mut Vec<String>, name: &str, value: Option<&str>) {
+    if let Some(value) = value {
+        fields.push(format!("{name}:{value}"));
+    }
+}
+
+const fn align(value: WebVttTextAlign) -> &'static str {
+    match value {
+        WebVttTextAlign::Start => "start",
+        WebVttTextAlign::Center => "center",
+        WebVttTextAlign::End => "end",
+        WebVttTextAlign::Left => "left",
+        WebVttTextAlign::Right => "right",
+    }
+}
+
+const fn vertical(value: WebVttVertical) -> &'static str {
+    match value {
+        WebVttVertical::Rl => "rl",
+        WebVttVertical::Lr => "lr",
+    }
 }
 
 fn validate_rich(cue: &Cue<'_>, format: &str) -> Result<(), Failure> {

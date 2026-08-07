@@ -1,4 +1,6 @@
 mod cursor;
+mod number;
+mod operator;
 mod output;
 
 use crate::authoring::Span;
@@ -75,10 +77,19 @@ impl<'a> Lexer<'a> {
             '}' => self.single(TokenKind::RightBrace),
             '(' => self.single(TokenKind::LeftParen),
             ')' => self.single(TokenKind::RightParen),
+            '[' => self.single(TokenKind::LeftBracket),
+            ']' => self.single(TokenKind::RightBracket),
+            ':' => self.single(TokenKind::Colon),
             ';' => self.single(TokenKind::Semicolon),
             ',' => self.single(TokenKind::Comma),
-            '=' => self.single(TokenKind::Equals),
+            '=' => self.one_or_two(TokenKind::Equals, '=', TokenKind::EqualsEquals),
+            '!' => self.one_or_two(TokenKind::Bang, '=', TokenKind::BangEquals),
+            '<' => self.one_or_two(TokenKind::Less, '=', TokenKind::LessEquals),
+            '>' => self.one_or_two(TokenKind::Greater, '=', TokenKind::GreaterEquals),
+            '&' => self.required_pair('&', TokenKind::AndAnd),
+            '|' => self.required_pair('|', TokenKind::OrOr),
             '+' => self.single(TokenKind::Plus),
+            '-' if self.next() == Some('>') => self.arrow(),
             '-' => self.single(TokenKind::Minus),
             '*' => self.single(TokenKind::Star),
             '/' => self.single(TokenKind::Slash),
@@ -86,6 +97,7 @@ impl<'a> Lexer<'a> {
             '"' => self.string(start),
             '#' => self.color(start),
             '@' => self.local_id(start),
+            '.' if self.next() == Some('.') => self.required_pair('.', TokenKind::DotDot),
             value if value.is_ascii_digit() || value == '.' => self.number(start),
             value if is_word_start(value) => self.word(start),
             _ => self.invalid(value, start),
@@ -106,18 +118,13 @@ impl<'a> Lexer<'a> {
     }
 
     fn word(&mut self, start: usize) {
-        self.take_while(is_word_continue);
+        while self.current().is_some_and(is_word_continue)
+            && !(self.current() == Some('.') && self.next() == Some('.'))
+        {
+            self.advance();
+        }
         self.push(
             TokenKind::Word(self.source[start..self.offset].to_owned()),
-            start,
-            self.offset,
-        );
-    }
-
-    fn number(&mut self, start: usize) {
-        self.take_while(|value| value.is_alphanumeric() || matches!(value, '.' | '%'));
-        self.push(
-            TokenKind::Number(self.source[start..self.offset].to_owned()),
             start,
             self.offset,
         );

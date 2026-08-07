@@ -2,6 +2,8 @@
 
 `veac-caption` owns VEAC's versioned, backend-neutral caption interchange model and its
 SRT, WebVTT, ASS, and canonical-IR adapters. It does not own a second render timeline.
+Schema v2 represents document and cue native semantics with closed tagged types; public
+caption values contain no extensible string settings bag.
 
 The format parser is `subtitler` 2.6.1 with default features disabled. Its published
 `ass` feature currently references the `Ssa` enum tag without guarding that reference,

@@ -115,9 +115,9 @@ fn report_clip_features(clip: &Clip, pointer: &str, losses: &mut OtioLossReport)
             "OTIO effects are not VEAC typed effects",
         ),
         (
-            !clip.metadata.is_empty(),
-            "metadata",
-            "VEAC clip metadata is preserved only in the extension",
+            clip.authorship.is_some(),
+            "authorship",
+            "VEAC clip authorship is preserved only in the extension",
         ),
         (
             clip.source_mapping.as_ref().is_some_and(|mapping| {

@@ -55,10 +55,13 @@ fn executable_binding_rejects_a_provider_declared_reserved_dependency() {
     let envelope = ProviderRequestEnvelope::new(negotiated(request.capability()), request).unwrap();
     let mut raw = ProviderResponseEnvelope::new(&envelope, output_for(&envelope)).unwrap();
     let artifact = raw.output.artifacts_mut().into_iter().next().unwrap();
-    artifact.descriptor.dependencies.push(ArtifactDependency {
-        role: PROVIDER_EXECUTABLE_DEPENDENCY_ROLE.to_owned(),
-        identity: ContentDigest::sha256(b"provider supplied identity"),
-    });
+    artifact
+        .descriptor
+        .dependencies
+        .push(ArtifactDependency::new(
+            PROVIDER_EXECUTABLE_DEPENDENCY_ROLE,
+            ContentDigest::sha256(b"provider supplied identity"),
+        ));
     artifact.descriptor.dependencies.sort_by(|left, right| {
         (&left.role, &left.identity.value).cmp(&(&right.role, &right.identity.value))
     });

@@ -149,13 +149,9 @@ fn render_normalize_effect(source: &Path, enabled: bool, output: &Path) {
     if enabled {
         clip.effects.push(EffectInstance {
             id: EffectId::new("fx_partial_normalize").unwrap(),
-            effect_type: "audio.normalize".to_owned(),
             enabled: true,
             enable_range: Some(TimeRange::new(time(500), time(1_000)).unwrap()),
-            parameters: BTreeMap::from([(
-                "target_lufs".to_owned(),
-                ParameterValue::Number { value: -8.0 },
-            )]),
+            effect: Effect::AudioNormalize { target_lufs: -8.0 },
         });
     }
     canonical.project.sequences[0].tracks.push(track(

@@ -80,7 +80,7 @@ pub(super) fn append_relation(
     built.evidence.push(ProposalEvidence::AppliedTrackMatte {
         operation: OperationBinding::new(index, &operation)?,
         artifact_key: artifact.record.key.clone(),
-        artifact_role: artifact.role.clone(),
+        artifact_role: artifact.role.as_str().to_owned(),
         matte_clip_id: matte.insertion.clip_id.clone(),
     });
     built.operations.push(operation);

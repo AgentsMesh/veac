@@ -7,7 +7,7 @@ pub(super) fn relation_project() -> ProjectEnvelope {
     let mut envelope = project();
     let track = &mut envelope.project.sequences[0].tracks[0];
     let prototype = track.clips[0].clone();
-    for (id, start) in [("itm_next", 900), ("itm_third", 1500)] {
+    for (id, start) in [("itm_next", 840), ("itm_third", 1_380)] {
         let mut clip = prototype.clone();
         clip.id = ItemId::new(id).unwrap();
         clip.record_range = range(start, 600);

@@ -12,80 +12,94 @@ assert_text_progression() {
   done
 }
 
-check_text_animation() {
-  local video=$1 fade_start fade_mid fade_end whole_visible
-  local highlight_first highlight_middle highlight_full
-  local slide_early slide_early_x slide_late slide_late_x
-  local scale_early scale_early_width scale_early_height
-  local scale_late scale_late_width scale_late_height
-  local _ignored_width _ignored_height _ignored_y _ignored_x
-  local line_top line_bottom line_late_bottom
-  local word_one word_two word_three word_four
-  local grapheme_one grapheme_two grapheme_three grapheme_four grapheme_five grapheme_six
-  check_text_media "$video" 12 480 270 "text-animation"
-  fade_start=$(region_yavg "$video" 0.05 '300:120:60:75')
-  fade_mid=$(region_yavg "$video" 0.45 '300:120:60:75')
-  fade_end=$(region_yavg "$video" 0.8 '300:120:60:75')
-  read -r whole_visible _ < <(text_stats "$video" 0.8 0 0 480 270 100)
-  awk -v start="$fade_start" -v mid="$fade_mid" -v end="$fade_end" \
-    'BEGIN { exit !(mid > start + .5 && end > mid + .5) }' ||
-    fail "text-animation whole fade does not progress: $fade_start,$fade_mid,$fade_end"
-  ((whole_visible > 40)) || fail "text-animation whole fade has no visible terminal text"
-  read -r slide_early _ignored_width _ignored_height slide_early_x _ignored_y < <(
-    text_stats "$video" 0.8 0 0 480 270 100
-  )
-  read -r slide_late _ignored_width _ignored_height slide_late_x _ignored_y < <(
-    text_stats "$video" 1.6 0 0 480 270 100
-  )
-  ((slide_early > 40 && slide_late > 40 && slide_late_x > slide_early_x + 20)) ||
-    fail "text-animation whole slide is not visible: early=${slide_early}/${slide_early_x} late=${slide_late}/${slide_late_x}"
-  read -r scale_early scale_early_width scale_early_height _ignored_x _ignored_y < <(
-    text_stats "$video" 1.5 0 0 480 270 100
-  )
-  read -r scale_late scale_late_width scale_late_height _ignored_x _ignored_y < <(
-    text_stats "$video" 2.5 0 0 480 270 100
-  )
-  ((scale_late > scale_early + 100 && scale_late_width > scale_early_width + 30 &&
-    scale_late_height > scale_early_height + 5)) ||
-    fail "text-animation whole scale is not visible: early=${scale_early}/${scale_early_width}x${scale_early_height} late=${scale_late}/${scale_late_width}x${scale_late_height}"
-  read -r highlight_first _ < <(text_stats "$video" 3.55 0 0 480 270 0 yellow)
-  read -r highlight_middle _ < <(text_stats "$video" 4.2 0 0 480 270 0 yellow)
-  read -r highlight_full _ < <(text_stats "$video" 4.75 0 0 480 270 0 yellow)
-  assert_text_progression "text-animation word highlight" 40 \
-    "$highlight_first" "$highlight_middle" "$highlight_full"
+text_animation_canonical_contract() {
+  jq -e '
+    def seconds: .value/.timescale;
+    def granular_progress:
+      .type=="keyframes" and (.keyframes|map(.time|seconds)==[0,0.5,1]) and
+      (.keyframes|map(.value)==[0,0.55,1]);
+    def clips: reduce (.project.sequences[].tracks[].clips[] |
+      select(.source.type=="text")) as $clip
+      ({}; .[$clip.authorship.logical_path[-1]]=$clip);
+    clips as $c |
+    ["whole","line","word","grapheme"] as $keys |
+    ["整块动画","第一行动画\n第二行动画","逐词 动画 类型化 关键帧",
+      "逐字动画：打字机揭示"] as $texts |
+    ["whole","line","word","grapheme"] as $units |
+    all(range(0;4); . as $index | $keys[$index] as $key | $c[$key] as $clip |
+      ($clip.record_range.start|seconds)==($index*1.5) and
+      ($clip.record_range.duration|seconds)==1.5 and $clip.source.text==$texts[$index] and
+      $clip.source.style.animation as $animation |
+      $animation.granularity==$units[$index] and ($animation.stagger|seconds)==0.045 and
+      $animation.highlight.fill=={"red":250,"green":204,"blue":21,"alpha":255} and
+      (if $index==0 then
+        $animation.reveal=={"type":"constant","value":1} and
+        $animation.highlight.progress=={"type":"constant","value":1}
+       else
+        ($animation.reveal|granular_progress) and
+        ($animation.highlight.progress|granular_progress)
+       end) and
+      ($animation.opacity.keyframes|map(.time|seconds))==[0,0.4] and
+      ($animation.opacity.keyframes|map(.value))==[0,1] and
+      ($animation.transform.position_offset.keyframes|map(.value.y.value))==[28,0] and
+      ($animation.transform.scale.keyframes|map(.value))==
+        [{"x":0.75,"y":0.75},{"x":1,"y":1}])
+  ' "$1" >/dev/null || fail "text-animation canonical channel contract failed"
+}
 
-  read -r line_top _ < <(text_stats "$video" 5.3 0 70 480 65 0 cyan)
-  read -r line_bottom _ < <(text_stats "$video" 5.3 0 135 480 65 0 cyan)
-  ((line_top > line_bottom + 20)) || fail "text-animation line stagger is not visible"
-  read -r line_late_bottom _ < <(text_stats "$video" 5.9 0 135 480 65 0 cyan)
-  ((line_late_bottom > line_bottom + 20)) ||
-    fail "text-animation staggered second line does not appear"
-  read -r word_one _ < <(text_stats "$video" 7.2 0 0 480 270 0 orange)
-  read -r word_two _ < <(text_stats "$video" 7.5 0 0 480 270 0 orange)
-  read -r word_three _ < <(text_stats "$video" 7.8 0 0 480 270 0 orange)
-  read -r word_four _ < <(text_stats "$video" 8.1 0 0 480 270 0 orange)
-  assert_text_progression "text-animation four-word stagger" 20 \
-    "$word_one" "$word_two" "$word_three" "$word_four"
-  read -r grapheme_one _ < <(text_stats "$video" 9.3 0 0 480 270 500)
-  read -r grapheme_two _ < <(text_stats "$video" 9.55 0 0 480 270 500)
-  read -r grapheme_three _ < <(text_stats "$video" 9.8 0 0 480 270 500)
-  read -r grapheme_four _ < <(text_stats "$video" 10.05 0 0 480 270 500)
-  read -r grapheme_five _ < <(text_stats "$video" 10.3 0 0 480 270 500)
-  read -r grapheme_six _ < <(text_stats "$video" 10.55 0 0 480 270 500)
-  assert_text_progression "text-animation six-grapheme reveal" 20 \
-    "$grapheme_one" "$grapheme_two" "$grapheme_three" \
-    "$grapheme_four" "$grapheme_five" "$grapheme_six"
+text_animation_progress() {
+  local video=$1 start=$2 label=$3 first middle last
+  read -r first _ < <(text_stats "$video" "$(awk -v s="$start" 'BEGIN{print s+.15}')" \
+    0 0 480 270 0 yellow)
+  read -r middle _ < <(text_stats "$video" "$(awk -v s="$start" 'BEGIN{print s+.6}')" \
+    0 0 480 270 0 yellow)
+  read -r last _ < <(text_stats "$video" "$(awk -v s="$start" 'BEGIN{print s+1.15}')" \
+    0 0 480 270 0 yellow)
+  assert_text_progression "$label highlight/reveal" 4 "$first" "$middle" "$last"
+}
+
+check_text_animation() {
+  local dir=$1 video=$2 canonical early_count early_width early_height early_x early_y
+  local late_count late_width late_height late_x late_y time
+  canonical=$(example_authoring_canonical "$dir")
+  text_animation_canonical_contract "$canonical"
+  check_text_media "$video" 6 480 270 "text-animation"
+  for time in 0.15 0.6 1.15 1.65 2.1 2.65 3.15 3.6 4.15 4.65 5.1 5.65; do
+    frame_hash "$video" "$time" >/dev/null || fail "text-animation frame is missing at ${time}s"
+  done
+  text_animation_progress "$video" 1.5 "text-animation line"
+  text_animation_progress "$video" 3 "text-animation word"
+  text_animation_progress "$video" 4.5 "text-animation grapheme"
+  read -r early_count early_width early_height early_x early_y < <(
+    text_stats "$video" 0.3 0 0 480 270 500)
+  read -r late_count late_width late_height late_x late_y < <(
+    text_stats "$video" 1.15 0 0 480 270 500)
+  ((late_count>early_count+15 && late_width>early_width && late_y+4<early_y)) ||
+    fail "text-animation whole transform/fade is not visible: early=$early_count/${early_width}x${early_height}@$early_x,$early_y late=$late_count/${late_width}x${late_height}@$late_x,$late_y"
+  read -r late_count late_width late_height _ _ < <(text_stats "$video" 2.65 0 0 480 270 500)
+  ((late_count>=80 && late_height>=20)) ||
+    fail "text-animation two-line terminal layout is missing: $late_count/${late_width}x$late_height"
 }
 
 check_text_overlay() {
-  local dir=$1 video=$2 white cyan panel background canonical
+  local dir=$1 video=$2 white cyan detail_white canonical title detail
+  local panel_r panel_g panel_b background_r background_g background_b
   local cyan_width cyan_height cyan_x cyan_y shadow shadow_width shadow_height shadow_x shadow_y
-  local shadow_left shadow_right shadow_top shadow_bottom
+  local shadow_bottom
   canonical="$dir/project/project.veac.json"
   check_text_media "$video" 4 480 270 "text-overlay"
   if [[ -f $canonical ]]; then
-    jq -e '
-      first(.project.sequences[].tracks[].clips[] | select(.id == "itm_title")).source.style as $s |
+    title=$(canonical_clip_id "$canonical" title)
+    detail=$(canonical_clip_id "$canonical" detail)
+    jq -e --arg title "$title" --arg detail "$detail" '
+      def seconds: .value / .timescale;
+      first(.project.sequences[].tracks[].clips[] | select(.id == $title)) as $title_clip |
+      first(.project.sequences[].tracks[].clips[] | select(.id == $detail)) as $detail_clip |
+      $title_clip.source.style as $s |
+      ($title_clip.record_range.start | seconds) == 0 and
+      ($title_clip.record_range.duration | seconds) == 2 and
+      ($detail_clip.record_range.start | seconds) == 2 and
+      ($detail_clip.record_range.duration | seconds) == 2 and
       $s.color == {"alpha":255,"blue":255,"green":255,"red":255} and
       $s.outline.width_pixels == 2 and $s.outline.color ==
         {"alpha":255,"blue":216,"green":180,"red":0} and
@@ -96,24 +110,22 @@ check_text_overlay() {
       $s.shadow.blur_pixels == 8
     ' "$canonical" >/dev/null || fail "text-overlay canonical style contract failed"
   fi
-  read -r white _ < <(text_stats "$video" 2 45 95 390 80 650)
+  read -r white _ < <(text_stats "$video" 1 45 95 390 80 650)
+  read -r detail_white _ < <(text_stats "$video" 3 45 95 390 80 650)
   read -r cyan cyan_width cyan_height cyan_x cyan_y < <(
-    text_stats "$video" 2 45 95 390 80 0 cyan)
-  ((white > 100 && cyan > 40)) ||
-    fail "text-overlay white fill or cyan outline is missing: white=$white cyan=$cyan"
-  panel=$(region_color_count "$video" 2 '390:80:45:95' black)
-  background=$(region_color_count "$video" 2 '390:50:45:30' black)
-  ((panel > background + 300)) || fail \
-    "text-overlay black padded panel is missing: panel=$panel background=$background"
+    text_stats "$video" 1 45 95 390 80 0 cyan)
+  ((white > 100 && detail_white > 100 && cyan > 40)) || fail \
+    "text-overlay text or cyan outline is missing: title=$white detail=$detail_white cyan=$cyan"
+  read -r panel_r panel_g panel_b < <(region_rgb "$video" 1 '40:20:30:115')
+  read -r background_r background_g background_b < <(region_rgb "$video" 1 '40:20:30:30')
+  ((panel_r < background_r && panel_g + 10 < background_g &&
+    panel_b + 25 < background_b)) || fail \
+    "text-overlay padded panel is missing: panel=$panel_r,$panel_g,$panel_b background=$background_r,$background_g,$background_b"
   read -r shadow shadow_width shadow_height shadow_x shadow_y < <(
-    text_stats "$video" 2 45 95 390 80 0 red)
-  shadow_left=$((shadow_x - cyan_x))
-  shadow_right=$((shadow_x + shadow_width - cyan_x - cyan_width))
-  shadow_top=$((shadow_y - cyan_y))
+    text_stats "$video" 1 45 95 390 80 0 red)
   shadow_bottom=$((shadow_y + shadow_height - cyan_y - cyan_height))
-  ((shadow > 40 && shadow_left > 2 && shadow_left <= 16 &&
-    shadow_right > 2 && shadow_right <= 16 && shadow_top > 2 && shadow_top <= 16 &&
-    shadow_bottom > 2 && shadow_bottom <= 16)) ||
-    fail "text-overlay shadow direction is invalid: pixels=$shadow edge=$shadow_left,$shadow_right,$shadow_top,$shadow_bottom"
-  text_expect_box "$video" 2 40 90 400 90 500 120 110 9 390 80 "text overlay bounds"
+  ((shadow > 40 && shadow_x > cyan_x + 10 &&
+    shadow_y > cyan_y + cyan_height + 4 && shadow_bottom <= 20)) || fail \
+    "text-overlay shadow direction is invalid: pixels=$shadow origin=$shadow_x,$shadow_y text=$cyan_x,$cyan_y,$cyan_width,$cyan_height"
+  text_expect_box "$video" 1 40 90 400 90 500 120 110 9 390 80 "text overlay bounds"
 }

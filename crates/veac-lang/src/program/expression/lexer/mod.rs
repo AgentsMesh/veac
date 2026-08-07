@@ -1,5 +1,7 @@
 mod comment;
+mod lexeme;
 mod literal;
+mod operator;
 mod token;
 
 pub(super) use token::{Token, TokenKind};
@@ -15,6 +17,9 @@ struct Lexer<'a> {
     offset: usize,
     tokens: Vec<Token>,
 }
+
+#[cfg(test)]
+mod tests;
 
 impl<'a> Lexer<'a> {
     fn new(source: &'a str) -> Self {
@@ -42,17 +47,34 @@ impl<'a> Lexer<'a> {
             let start = self.offset;
             match character {
                 '+' => self.single(TokenKind::Plus),
+                '-' if self.next() == Some('>') => self.pair(TokenKind::Arrow),
                 '-' => self.single(TokenKind::Minus),
                 '*' => self.single(TokenKind::Star),
                 '/' => self.single(TokenKind::Slash),
+                '!' => self.one_or_two(TokenKind::Bang, '=', TokenKind::BangEqual),
+                '=' if self.next() == Some('>') => self.pair(TokenKind::FatArrow),
+                '=' => self.one_or_two(TokenKind::Equal, '=', TokenKind::EqualEqual),
+                '<' => self.one_or_two(TokenKind::Less, '=', TokenKind::LessEqual),
+                '>' => self.one_or_two(TokenKind::Greater, '=', TokenKind::GreaterEqual),
+                '&' => self.required_pair('&', TokenKind::AndAnd)?,
+                '|' => self.required_pair('|', TokenKind::OrOr)?,
                 '(' => self.single(TokenKind::LeftParen),
                 ')' => self.single(TokenKind::RightParen),
+                '[' => self.single(TokenKind::LeftBracket),
+                ']' => self.single(TokenKind::RightBracket),
+                '{' => self.single(TokenKind::LeftBrace),
+                '}' => self.single(TokenKind::RightBrace),
+                '#' if self.next() == Some('{') => self.pair(TokenKind::MapStart),
+                ':' => self.single(TokenKind::Colon),
+                ';' => self.single(TokenKind::Semicolon),
                 ',' => self.single(TokenKind::Comma),
                 '"' => self.string(start)?,
                 '#' => self.color(start)?,
+                '.' if self.next() == Some('.') => self.pair(TokenKind::DotDot),
                 value if value.is_ascii_digit() || value == '.' && self.next_is_digit() => {
                     self.number(start)?
                 }
+                '.' => self.single(TokenKind::Dot),
                 value if crate::name::is_name_start(value) => self.symbol(start)?,
                 _ => {
                     self.advance();
@@ -78,97 +100,6 @@ impl<'a> Lexer<'a> {
             kind,
             span: start..self.offset,
         });
-    }
-
-    fn number(&mut self, start: usize) -> Result<(), ExpressionError> {
-        let mut decimal = false;
-        while let Some(character) = self.current() {
-            if character.is_ascii_digit() {
-                self.advance();
-            } else if character == '.' && !decimal {
-                decimal = true;
-                self.advance();
-            } else {
-                break;
-            }
-        }
-        let number_end = self.offset;
-        while self
-            .current()
-            .is_some_and(|value| value.is_ascii_alphabetic())
-        {
-            self.advance();
-        }
-        if self.current() == Some('%') {
-            self.advance();
-        }
-        if self
-            .current()
-            .is_some_and(|value| value == '.' || value == '_')
-        {
-            return Err(ExpressionError::new(
-                "EXPRESSION_NUMBER_LITERAL",
-                "invalid numeric literal",
-                start..self.offset + self.current().map_or(0, char::len_utf8),
-            ));
-        }
-        self.tokens.push(Token {
-            kind: TokenKind::Number {
-                number: self.source[start..number_end].to_owned(),
-                unit: self.source[number_end..self.offset].to_ascii_lowercase(),
-            },
-            span: start..self.offset,
-        });
-        Ok(())
-    }
-
-    fn symbol(&mut self, start: usize) -> Result<(), ExpressionError> {
-        self.symbol_segment();
-        while self.current() == Some('.') {
-            self.advance();
-            if !self.current().is_some_and(crate::name::is_name_start) {
-                return Err(ExpressionError::new(
-                    "EXPRESSION_SYMBOL",
-                    "qualified symbol requires a segment after `.`",
-                    start..self.offset,
-                ));
-            }
-            self.symbol_segment();
-        }
-        let value = &self.source[start..self.offset];
-        let kind = match value {
-            "true" => TokenKind::Bool(true),
-            "false" => TokenKind::Bool(false),
-            _ if crate::name::is_qualified_name(value) => TokenKind::Symbol(value.to_owned()),
-            _ => {
-                return Err(ExpressionError::new(
-                    "EXPRESSION_SYMBOL",
-                    format!("symbol segments must be {}", crate::name::NAME_CONTRACT),
-                    start..self.offset,
-                ))
-            }
-        };
-        self.tokens.push(Token {
-            kind,
-            span: start..self.offset,
-        });
-        Ok(())
-    }
-
-    fn symbol_segment(&mut self) {
-        while let Some(character) = self.current() {
-            if character.is_ascii_alphanumeric()
-                || character == '_'
-                || character == '-'
-                    && self
-                        .next()
-                        .is_some_and(|next| next.is_ascii_alphanumeric() || next == '_')
-            {
-                self.advance();
-            } else {
-                break;
-            }
-        }
     }
 
     pub(super) fn current(&self) -> Option<char> {

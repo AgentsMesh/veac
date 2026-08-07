@@ -54,8 +54,8 @@ frame_edge_avg() {
 
 frame_sharpen_halo_contrast() {
   local video=$1 time=$2 near far
-  near=$(region_yavg "$video" "$time" '2:ih/2:iw/2-2:ih/4')
-  far=$(region_yavg "$video" "$time" '2:ih/2:iw/2-6:ih/4')
+  near=$(region_yavg "$video" "$time" '2:ih/2:2*iw/5-2:ih/4')
+  far=$(region_yavg "$video" "$time" '2:ih/2:2*iw/5-6:ih/4')
   awk -v near="$near" -v far="$far" 'BEGIN { print far-near }'
 }
 

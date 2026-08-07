@@ -47,8 +47,8 @@ fn vtt_speaker_and_settings_report_srt_loss() {
         .map(|loss| loss.field.as_str())
         .collect();
     assert!(fields.contains(&"speaker"));
-    assert!(fields.contains(&"settings.webvtt.identifier"));
-    assert!(fields.contains(&"settings.webvtt.settings"));
+    assert!(fields.contains(&"native.webvtt.identifier"));
+    assert!(fields.contains(&"native.webvtt.settings"));
     assert!(output.content.contains("Hello"));
 }
 

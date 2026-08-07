@@ -1,4 +1,29 @@
-use crate::{Clip, PlaybackDirection, Rational, RationalTime, SourceTimeMap};
+use crate::test_support::time;
+use crate::{
+    ChangedObjectId, Clip, EditOutcome, PlacementMode, PlaybackDirection, ProjectEnvelope,
+    Rational, RationalTime, SourceTimeMap,
+};
+
+pub(super) fn transition_ready_project(duration: i64) -> ProjectEnvelope {
+    let mut project = super::magnetic_project();
+    let track = &mut project.project.sequences[0].tracks[0];
+    track.placement_mode = PlacementMode::Free;
+    let clips = &mut track.clips;
+    clips[1].record_range.start = time(600 - duration);
+    clips[2].record_range.start = time(1_200 - duration);
+    project
+}
+
+pub(super) fn applied_changes(outcome: EditOutcome) -> (ProjectEnvelope, Vec<ChangedObjectId>) {
+    match outcome {
+        EditOutcome::Applied {
+            project,
+            changed_objects,
+            ..
+        } => (project, changed_objects),
+        other => panic!("expected applied, got {other:?}"),
+    }
+}
 
 pub(super) fn linear_map_mut(
     clip: &mut Clip,

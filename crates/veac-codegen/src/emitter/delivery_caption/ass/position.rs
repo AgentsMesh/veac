@@ -77,6 +77,7 @@ fn constant<T>(value: &Animatable<T>) -> Result<&T, Failure> {
     match value {
         Animatable::Constant { value } => Ok(value),
         Animatable::Keyframes { .. } => Err(unsupported("animated caption visuals")),
+        Animatable::Binding { .. } => Err(unsupported("temporal caption visuals")),
     }
 }
 

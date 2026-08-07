@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::*;
 
 use super::{
@@ -12,47 +10,73 @@ pub(crate) fn sample_project() -> ProjectEnvelope {
     let video = video_material();
     let font = font_material();
     let sequence_id = SequenceId::new("seq_main").unwrap();
-    ProjectEnvelope::new(Project {
-        id: ProjectId::new("prj_sample").unwrap(),
-        revision: 7,
-        timebase: 600,
-        entry_sequence_id: sequence_id.clone(),
-        render_configs: vec![render_config(sequence_id.clone())],
-        materials: vec![video, font.clone()],
-        multicam_groups: vec![],
-        annotations: vec![],
-        relations: vec![],
-        sequences: vec![Sequence {
-            id: sequence_id,
-            name: "Main".to_owned(),
-            settings: SequenceSettings {
-                width: 1080,
-                height: 1920,
-                frame_rate: Rational::new(30, 1).unwrap(),
-                sample_rate: 48_000,
-            },
-            tracks: vec![
-                track(
-                    "trk_video",
-                    TrackKind::Video,
-                    0,
-                    PlacementMode::Magnetic,
-                    vec![media_clip()],
-                ),
-                track(
-                    "trk_captions",
-                    TrackKind::Caption,
-                    10,
-                    PlacementMode::Free,
-                    vec![caption_clip(font.id)],
-                ),
-            ],
-            applies: Vec::new(),
-            metadata: BTreeMap::new(),
-        }],
-        applied_operations: vec![],
-        metadata: BTreeMap::new(),
-    })
+    ProjectEnvelope::new(
+        Project {
+            id: ProjectId::new("prj_sample").unwrap(),
+            revision: 7,
+            timebase: 600,
+            entry_sequence_id: sequence_id.clone(),
+            render_configs: vec![render_config(sequence_id.clone())],
+            materials: vec![video, font.clone()],
+            multicam_groups: vec![],
+            annotations: vec![],
+            relations: vec![],
+            sequences: vec![Sequence {
+                id: sequence_id,
+                name: "Main".to_owned(),
+                settings: SequenceSettings {
+                    width: 1080,
+                    height: 1920,
+                    frame_rate: Rational::new(30, 1).unwrap(),
+                    sample_rate: 48_000,
+                },
+                tracks: vec![
+                    track(
+                        "trk_video",
+                        TrackKind::Video,
+                        0,
+                        PlacementMode::Magnetic,
+                        vec![media_clip()],
+                    ),
+                    track(
+                        "trk_captions",
+                        TrackKind::Caption,
+                        10,
+                        PlacementMode::Free,
+                        vec![caption_clip(font.id)],
+                    ),
+                ],
+                applies: Vec::new(),
+                authorship: None,
+            }],
+            applied_operations: vec![],
+            authorship: None,
+        },
+        executable_manifest(),
+        empty_temporal(),
+    )
+}
+
+pub(crate) fn executable_manifest() -> ExecutableManifest {
+    ExecutableManifest::current(
+        "0.1.0",
+        ExecutableDigests {
+            domain_registry_sha256: "a".repeat(64),
+            main_core_sha256: "b".repeat(64),
+            source_graph_sha256: "c".repeat(64),
+            declared_inputs_sha256: "d".repeat(64),
+            compiler_sha256: "e".repeat(64),
+        },
+    )
+}
+
+pub(crate) fn empty_temporal() -> TemporalProgramLibrary {
+    TemporalProgramLibrary {
+        opset_version: TEMPORAL_OPSET_VERSION,
+        programs: Vec::new(),
+        bindings: Vec::new(),
+        provenance: Vec::new(),
+    }
 }
 
 pub(crate) fn linked_project() -> ProjectEnvelope {
