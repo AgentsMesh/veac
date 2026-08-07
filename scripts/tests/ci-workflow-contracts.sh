@@ -75,6 +75,8 @@ for contract in scripts/check-rust-structure.sh scripts/check-language-docs.sh; 
 done
 rg -q '^[[:space:]]+name: FFmpeg integration$' <<<"$ffmpeg_job" ||
   fail "required FFmpeg job identity changed"
+rg -Uq 'uses: actions/checkout@v4\n[[:space:]]+with:\n[[:space:]]+lfs: true' \
+  <<<"$ffmpeg_job" || fail "FFmpeg CI must materialize Git LFS media"
 rg -q 'apt-get install --yes .*jq.*ripgrep' <<<"$ffmpeg_job" ||
   fail "example smoke CI must install the preview-tool dependencies"
 rg -q 'run: make build-examples-smoke$' <<<"$ffmpeg_job" ||
@@ -105,6 +107,8 @@ rg -q '^  schedule:$' "$FULL" || fail "full previews must run on a weekly schedu
 if rg -q '^  (push|pull_request):' "$FULL"; then
   fail "full previews must not run for pushes or pull requests"
 fi
+rg -Uq 'uses: actions/checkout@v4\n[[:space:]]+with:\n[[:space:]]+lfs: true' "$FULL" ||
+  fail "full previews must materialize Git LFS media"
 rg -q 'run: make build-examples$' "$FULL" ||
   fail "full preview workflow must render every example"
 rg -q 'apt-get install --yes .*jq.*ripgrep' "$FULL" ||

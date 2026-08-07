@@ -1,4 +1,5 @@
 use crate::{
+    analysis_ingestion_request_json_schema, analysis_result_json_schema,
     artifact_descriptor_json_schema, build_manifest_json_schema,
     execution_binding_manifest_json_schema, media_artifact_request_json_schema,
     package_manifest_json_schema,
@@ -26,6 +27,14 @@ fn public_contract_schemas_are_strict_deterministic_objects() {
         (
             media_artifact_request_json_schema().unwrap(),
             &["source_identity", "producer", "spec"][..],
+        ),
+        (
+            analysis_ingestion_request_json_schema().unwrap(),
+            &["source_identity", "producer", "result"][..],
+        ),
+        (
+            analysis_result_json_schema().unwrap(),
+            &["schema", "schema_version", "descriptor", "result"][..],
         ),
     ] {
         assert!(schema["properties"].is_object());

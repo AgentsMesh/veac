@@ -38,7 +38,18 @@ bash "$SMOKE" "$ARCHIVE" "$TARGET" "$RELEASE" >"$TEMP/valid.log"
 rg -q 'release archive smoke passed' "$TEMP/valid.log"
 
 mkdir -p "$TEMP/duplicate"
-tar czf "$TEMP/duplicate/$PACKAGE.tar.gz" -C "$TEMP/stage" "$PACKAGE" "$PACKAGE/veac"
+python3 - "$TEMP/stage" "$TEMP/duplicate/$PACKAGE.tar.gz" "$PACKAGE" <<'PY'
+import pathlib
+import sys
+import tarfile
+
+stage = pathlib.Path(sys.argv[1])
+archive = pathlib.Path(sys.argv[2])
+package = sys.argv[3]
+with tarfile.open(archive, "w:gz") as output:
+    output.add(stage / package, arcname=package)
+    output.add(stage / package / "veac", arcname=f"{package}/veac")
+PY
 if bash "$SMOKE" "$TEMP/duplicate/$PACKAGE.tar.gz" "$TARGET" "$RELEASE" \
     >"$TEMP/duplicate.log" 2>&1; then
   echo "release smoke accepted a duplicate packaged binary" >&2
