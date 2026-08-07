@@ -76,6 +76,10 @@ for name in text-layout text-overlay captions-and-sidecars agentsmesh-intro-15s 
   check_text_render_contract "$name" "$TMP_DIR/$name" "$TMP_DIR/$name/rendered/preview.mp4"
 done
 
+make_video "$TMP_DIR/sparse-shadow-overlay.mp4" 4 480x270 \
+  "drawbox=x=0:y=0:w=480:h=270:color=0x1b263b:t=fill,drawbox=x=20:y=110:w=380:h=52:color=black@0.6:t=fill,drawbox=x=95:y=144:w=8:h=2:color=0xff477e@0.8:t=fill,drawbox=x=80:y=125:w=260:h=12:color=cyan:t=fill,drawbox=x=82:y=127:w=256:h=8:color=white:t=fill"
+check_text_render_contract text-overlay "$TMP_DIR/text-overlay" "$TMP_DIR/sparse-shadow-overlay.mp4"
+
 make_video "$TMP_DIR/black-text-layout.mp4" 6 480x270 "null"
 if (check_text_render_contract text-layout "$TMP_DIR/text-layout" "$TMP_DIR/black-text-layout.mp4"); then
   fail "text-layout without rendered scripts should fail"

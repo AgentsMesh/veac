@@ -124,8 +124,8 @@ check_text_overlay() {
   read -r shadow shadow_width shadow_height shadow_x shadow_y < <(
     text_stats "$video" 1 45 95 390 80 0 red)
   shadow_bottom=$((shadow_y + shadow_height - cyan_y - cyan_height))
-  ((shadow > 40 && shadow_x > cyan_x + 10 &&
+  ((shadow >= 12 && shadow_x > cyan_x + 10 &&
     shadow_y > cyan_y + cyan_height + 4 && shadow_bottom <= 20)) || fail \
-    "text-overlay shadow direction is invalid: pixels=$shadow origin=$shadow_x,$shadow_y text=$cyan_x,$cyan_y,$cyan_width,$cyan_height"
+    "text-overlay shadow direction is invalid: shadow=$shadow/${shadow_width}x${shadow_height}@$shadow_x,$shadow_y text=$cyan/${cyan_width}x${cyan_height}@$cyan_x,$cyan_y"
   text_expect_box "$video" 1 40 90 400 90 500 120 110 9 390 80 "text overlay bounds"
 }
