@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use veac_ir::{MediaProbeSnapshot, Rational, VideoCadence};
 
-use super::process;
+use super::{process, source::ProbeSource};
 use crate::input_policy;
 
 mod evidence;
@@ -20,7 +20,7 @@ pub(super) enum Inspection {
 pub(super) fn inspect(
     snapshot: &MediaProbeSnapshot,
     binary: &Path,
-    source: &Path,
+    source: &ProbeSource,
     deadline: Instant,
 ) -> Inspection {
     inspect_with_limit(snapshot, binary, source, deadline, MAX_CADENCE_OUTPUT_BYTES)
@@ -29,7 +29,7 @@ pub(super) fn inspect(
 fn inspect_with_limit(
     snapshot: &MediaProbeSnapshot,
     binary: &Path,
-    source: &Path,
+    source: &ProbeSource,
     deadline: Instant,
     output_limit: u64,
 ) -> Inspection {
@@ -86,7 +86,7 @@ pub(super) fn apply(snapshot: &mut MediaProbeSnapshot, evidence: Evidence) {
     }
 }
 
-fn arguments(source: &Path, type_index: u32) -> Vec<OsString> {
+fn arguments(source: &ProbeSource, type_index: u32) -> Vec<OsString> {
     let selection = format!("v:{type_index}");
     let mut values = [
         "-v",
@@ -103,8 +103,7 @@ fn arguments(source: &Path, type_index: u32) -> Vec<OsString> {
     .map(OsString::from)
     .collect::<Vec<_>>();
     values.extend(input_policy::os_arguments());
-    values.push(OsString::from("-i"));
-    values.push(source.as_os_str().to_owned());
+    source.append_input_arguments(&mut values);
     values
 }
 

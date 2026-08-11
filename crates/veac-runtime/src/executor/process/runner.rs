@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::tool::{spawn_pinned_until, PinnedSpawnError};
 use crate::RuntimeError;
 
 mod output;
@@ -43,7 +44,7 @@ pub(super) fn run(
         command.current_dir(directory);
     }
     crate::process_group::configure(&mut command);
-    let mut child = command.spawn().map_err(io_error)?;
+    let mut child = spawn_pinned_until(&mut command, limits.deadline).map_err(spawn_error)?;
     let status = loop {
         let resources = resource_violation(&stdout, &stderr, &limits);
         let violation = match resources {
@@ -141,6 +142,15 @@ fn stop_with<T>(child: &mut Child, error: RuntimeError) -> Result<T, RuntimeErro
 
 fn io_error(error: std::io::Error) -> RuntimeError {
     RuntimeError::new(error.to_string())
+}
+
+fn spawn_error(error: PinnedSpawnError) -> RuntimeError {
+    match error {
+        PinnedSpawnError::Deadline => {
+            RuntimeError::resource_limit("FFmpeg process launch exceeded its wall-clock limit")
+        }
+        PinnedSpawnError::Io(error) => io_error(error),
+    }
 }
 
 #[cfg(test)]

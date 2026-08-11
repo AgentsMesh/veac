@@ -42,6 +42,15 @@ fn missing_executable_is_a_stable_tool_start_failure() {
 }
 
 #[test]
+fn launch_errors_keep_deadlines_distinct_from_tool_failures() {
+    let deadline = launch_error(PinnedSpawnError::Deadline);
+    assert_eq!(deadline.kind, WorkflowErrorKind::ResourceLimit);
+    let failed = launch_error(PinnedSpawnError::Io(std::io::Error::other("spawn")));
+    assert_eq!(failed.kind, WorkflowErrorKind::ToolFailure);
+    assert!(std::error::Error::source(&failed).is_some());
+}
+
+#[test]
 fn timeout_kills_ffmpeg_descendants_before_they_can_escape() {
     let temp = tempfile::tempdir().unwrap();
     let marker = temp.path().join("descendant-ran");

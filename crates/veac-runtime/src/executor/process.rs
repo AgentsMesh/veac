@@ -11,7 +11,7 @@ use std::process::Output;
 use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
-use crate::tool::{LaunchExecutable, PinnedExecutable};
+use crate::tool::{DeadlineCache, DeadlineCacheError, LaunchExecutable, PinnedExecutable};
 use crate::RuntimeError;
 use veac_artifact::ContentDigest;
 
@@ -29,6 +29,7 @@ pub struct FfmpegFingerprint {
 pub struct SystemFfmpeg {
     binary: PathBuf,
     pinned: Arc<OnceLock<PinnedExecutable>>,
+    fingerprint: Arc<DeadlineCache<FfmpegFingerprint>>,
 }
 
 impl SystemFfmpeg {
@@ -36,6 +37,7 @@ impl SystemFfmpeg {
         Self {
             binary: binary.into(),
             pinned: Arc::new(OnceLock::new()),
+            fingerprint: Arc::new(DeadlineCache::default()),
         }
     }
 
@@ -99,6 +101,9 @@ fn hard_deadline() -> Instant {
     Instant::now() + runner::MAX_WALL_TIME
 }
 
+#[cfg(test)]
+#[path = "process/system_cache_tests.rs"]
+mod system_cache_tests;
 #[cfg(test)]
 #[path = "process/system_tests.rs"]
 mod system_tests;

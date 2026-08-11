@@ -58,3 +58,7 @@ impl ProviderResourceLimits {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "limits/tests.rs"]
+mod tests;

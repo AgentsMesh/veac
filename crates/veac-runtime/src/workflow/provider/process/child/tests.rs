@@ -59,6 +59,14 @@ fn stdin_and_error_helpers_preserve_typed_failure_kinds() {
         WorkflowErrorKind::ToolFailure
     );
     assert_eq!(
+        launch_error(PinnedSpawnError::Deadline).kind,
+        WorkflowErrorKind::ResourceLimit
+    );
+    assert_eq!(
+        launch_error(PinnedSpawnError::Io(io::Error::other("spawn"))).kind,
+        WorkflowErrorKind::ToolFailure
+    );
+    assert_eq!(
         thread_error(io::Error::other("thread")).kind,
         WorkflowErrorKind::Io
     );

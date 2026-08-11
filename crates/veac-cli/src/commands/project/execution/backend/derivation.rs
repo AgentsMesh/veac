@@ -63,11 +63,23 @@ fn workflow_error(
     if cancellation.is_cancelled() {
         ProjectBackendError::cancelled("project media derivation was cancelled")
     } else {
+        let detail = error_chain(&error);
         failed(format!(
-            "project media derivation failed ({:?}): {error}",
+            "project media derivation failed ({:?}): {detail}",
             error.kind
         ))
     }
+}
+
+fn error_chain(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+    while let Some(error) = source {
+        message.push_str(": ");
+        message.push_str(&error.to_string());
+        source = error.source();
+    }
+    message
 }
 
 #[cfg(test)]

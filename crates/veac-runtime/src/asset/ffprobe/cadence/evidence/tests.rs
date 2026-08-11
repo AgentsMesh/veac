@@ -106,3 +106,43 @@ fn candidate_does_not_hide_variable_packet_cadence() {
         );
     }
 }
+
+#[test]
+fn arithmetic_boundaries_fail_closed_without_overflowing() {
+    let extreme_pts = format!(
+        "{{\"packets\":[{{\"pts\":{},\"duration\":1}},{{\"pts\":{},\"duration\":1}}]}}",
+        i64::MIN,
+        i64::MAX
+    );
+    assert_eq!(
+        classify(extreme_pts.as_bytes(), time_base(), None).cadence,
+        VideoCadence::Unknown
+    );
+    let large_delta = format!(
+        "{{\"packets\":[{{\"pts\":0,\"duration\":{0}}},{{\"pts\":{0},\"duration\":{0}}}]}}",
+        i64::MAX
+    );
+    assert_eq!(
+        classify(
+            large_delta.as_bytes(),
+            Rational::new(veac_ir::MAX_SAFE_INTEGER as i64, 1).unwrap(),
+            None,
+        )
+        .cadence,
+        VideoCadence::Unknown
+    );
+    let packets = br#"{"packets":[{"pts":0,"duration":2},{"pts":2,"duration":2}]}"#;
+    assert_eq!(
+        classify(packets, Rational::new(0, 1).unwrap(), None).cadence,
+        VideoCadence::Unknown
+    );
+    assert_eq!(
+        classify(
+            packets,
+            Rational::new(-1, 1).unwrap(),
+            Some(Rational::new(1, 1).unwrap()),
+        )
+        .cadence,
+        VideoCadence::Unknown
+    );
+}

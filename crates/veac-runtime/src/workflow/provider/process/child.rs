@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 
 use super::super::limits::ProviderResourceLimits;
 use super::super::{WorkflowError, WorkflowErrorKind, WorkflowResult};
+use crate::tool::{spawn_pinned_until, PinnedSpawnError};
 
 mod reader;
 
@@ -40,7 +41,7 @@ pub(super) fn run(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     crate::process_group::configure(&mut command);
-    let mut child = command.spawn().map_err(start_error)?;
+    let mut child = spawn_pinned_until(&mut command, deadline).map_err(launch_error)?;
     let stdout = required_pipe(child.stdout.take(), "provider stdout pipe is unavailable")?;
     let stderr = required_pipe(child.stderr.take(), "provider stderr pipe is unavailable")?;
     let (sender, receiver) = mpsc::channel();
@@ -160,6 +161,16 @@ fn start_error(error: std::io::Error) -> WorkflowError {
         "failed to start provider process",
         error,
     )
+}
+
+fn launch_error(error: PinnedSpawnError) -> WorkflowError {
+    match error {
+        PinnedSpawnError::Deadline => WorkflowError::new(
+            WorkflowErrorKind::ResourceLimit,
+            "provider process launch exceeded its wall-clock limit",
+        ),
+        PinnedSpawnError::Io(error) => start_error(error),
+    }
 }
 
 fn thread_error(error: std::io::Error) -> WorkflowError {

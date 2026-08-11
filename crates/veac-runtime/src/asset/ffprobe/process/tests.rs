@@ -56,6 +56,16 @@ fn preexpired_deadline_wins_over_a_missing_executable() {
     )
     .unwrap_err();
     assert!(matches!(error, ProbeError::ResourceLimit { .. }));
+    assert!(matches!(
+        launch(
+            std::path::Path::new("ffprobe"),
+            "launch probe",
+            PinnedSpawnError::Deadline,
+        ),
+        ProbeError::ResourceLimit {
+            operation: "launch probe"
+        }
+    ));
 }
 
 #[test]

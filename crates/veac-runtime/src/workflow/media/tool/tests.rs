@@ -81,6 +81,15 @@ fn media_producer_rejects_invalid_backend_identities() {
     assert!(producer(&valid, &invalid).is_err());
 }
 
+#[test]
+fn producer_verification_preserves_fingerprint_deadlines() {
+    let ffmpeg = SystemFfmpeg::new("/veac/missing/ffmpeg");
+    let expected = media_artifact_producer(&fingerprint("version", b"configuration")).unwrap();
+    let error = verify(&ffmpeg, &expected, Instant::now()).unwrap_err();
+    assert_eq!(error.kind, WorkflowErrorKind::ResourceLimit);
+    assert!(std::error::Error::source(&error).is_some());
+}
+
 fn fingerprint(version: &str, configuration: &[u8]) -> FfmpegFingerprint {
     FfmpegFingerprint {
         version: version.into(),

@@ -37,3 +37,7 @@ pub(super) fn validate_package(path: &Path) -> Result<(), RuntimeError> {
 pub(super) fn validate_pattern(pattern: &Path) -> Result<(), RuntimeError> {
     output::enumerate_pattern(pattern).map(|_| ())
 }
+
+#[cfg(test)]
+#[path = "existing/tests.rs"]
+mod tests;

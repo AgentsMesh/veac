@@ -52,6 +52,13 @@ fn tempfile_helpers_recheck_length_before_returning_bytes() {
         io_error(std::io::Error::other("io")).kind,
         RuntimeErrorKind::General
     );
+    let deadline = spawn_error(PinnedSpawnError::Deadline);
+    assert_eq!(deadline.kind, RuntimeErrorKind::ResourceLimit);
+    assert!(deadline.message.contains("process launch"));
+    assert_eq!(
+        spawn_error(PinnedSpawnError::Io(std::io::Error::other("spawn"))).kind,
+        RuntimeErrorKind::General
+    );
 }
 
 #[test]

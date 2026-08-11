@@ -6,11 +6,15 @@ use veac_ir::MediaIdentity;
 
 use crate::RuntimeError;
 
+mod cache;
 mod interpreter;
 mod permissions;
 mod snapshot;
+mod spawn;
 
+pub(crate) use cache::{DeadlineCache, DeadlineCacheError};
 use permissions::writable_directory;
+pub(crate) use spawn::{spawn_pinned_until, PinnedSpawnError};
 
 #[derive(Debug)]
 pub(crate) struct PinnedExecutable {

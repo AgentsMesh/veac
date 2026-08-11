@@ -147,3 +147,7 @@ fn active(guard: &mut impl FnMut() -> bool) -> WorkflowResult<()> {
         ))
     }
 }
+
+#[cfg(test)]
+#[path = "derive/tests.rs"]
+mod tests;

@@ -98,7 +98,7 @@ fn probe_with_tool(
         Ok(pinned) => pinned,
         Err(error) => return Err(version::tool_error(binary, error)),
     };
-    let engine = version::read(binary, pinned, deadline)?;
+    let engine = tool.version_until(pinned, deadline)?;
     let executable = match pinned.launch_until(deadline) {
         Ok(executable) => executable,
         Err(error) => return Err(version::tool_error(binary, error)),
@@ -112,8 +112,7 @@ fn probe_with_tool(
         "-show_streams",
     ]);
     arguments.extend(input_policy::os_arguments());
-    arguments.push(OsString::from("-i"));
-    arguments.push(source.path().as_os_str().to_owned());
+    source.append_input_arguments(&mut arguments);
     let output = process::run(
         executable.path(),
         &arguments,
@@ -135,7 +134,7 @@ fn probe_with_tool(
         &engine,
     )?;
     verify(path, &observed_identity, deadline)?;
-    match cadence::inspect(&snapshot, executable.path(), source.path(), deadline) {
+    match cadence::inspect(&snapshot, executable.path(), &source, deadline) {
         cadence::Inspection::Skipped => {}
         cadence::Inspection::Attempted(evidence) => {
             match verify(path, &observed_identity, deadline) {

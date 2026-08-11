@@ -18,7 +18,7 @@ impl SystemFfprobe {
         let pinned = self
             .pinned_until(deadline)
             .map_err(|error| version::tool_error(self.binary(), error))?;
-        let version = version::read(self.binary(), pinned, deadline)?;
+        let version = self.version_until(pinned, deadline)?;
         let mut payload = b"veac.ffprobe-fingerprint.v1\0".to_vec();
         field(&mut payload, pinned.identity().digest.as_bytes());
         field(&mut payload, version.as_bytes());
