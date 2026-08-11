@@ -26,13 +26,21 @@ impl FileSystemLoader {
             .parent()
             .filter(|value| !value.as_os_str().is_empty())
             .unwrap_or_else(|| Path::new("."));
-        let root = fs::canonicalize(parent)
-            .map_err(|error| format!("cannot resolve source root {}: {error}", parent.display()))?;
-        let directory = open_directory(&root, &root)?;
         let name = entry
             .file_name()
             .ok_or_else(|| format!("entry {} is not a regular file", entry.display()))?;
-        let id = normalize(Path::new(name))?;
+        Self::for_root_entry(parent, Path::new(name))
+    }
+
+    pub fn for_root_entry(root: &Path, entry: &Path) -> Result<(Self, LoadedSource), String> {
+        let requested = entry
+            .to_str()
+            .ok_or_else(|| "source entry path is not valid UTF-8".to_owned())?;
+        let relative = confined_request(requested)?;
+        let root = fs::canonicalize(root)
+            .map_err(|error| format!("cannot resolve source root {}: {error}", root.display()))?;
+        let directory = open_directory(&root, &root)?;
+        let id = normalize(&relative)?;
         let opened = open_source(&directory, Path::new(&id), entry)?;
         let identities = IdentityRegistry::default();
         identities.register(&id, opened.identity)?;

@@ -87,6 +87,49 @@ fn absurd_auxiliary_frame_rates_normalize_but_playable_video_fails_closed() {
 }
 
 #[test]
+fn average_and_declared_rates_do_not_claim_cadence_without_packet_evidence() {
+    let mut variable = complete_output();
+    variable["streams"][1]["avg_frame_rate"] = json!("4/1");
+    variable["streams"][1]["r_frame_rate"] = json!("10/1");
+    let snapshot = parse(&variable, auto_stream_intent()).unwrap();
+    let info = snapshot.streams[0].video.as_ref().unwrap();
+    assert_eq!(info.frame_rate, Some(veac_ir::Rational::new(4, 1).unwrap()));
+    assert_eq!(info.cadence, veac_ir::VideoCadence::Unknown);
+
+    variable["streams"][1]["avg_frame_rate"] = Value::Null;
+    let snapshot = parse(&variable, auto_stream_intent()).unwrap();
+    let info = snapshot.streams[0].video.as_ref().unwrap();
+    assert_eq!(
+        info.frame_rate,
+        Some(veac_ir::Rational::new(10, 1).unwrap())
+    );
+    assert_eq!(info.cadence, veac_ir::VideoCadence::Unknown);
+}
+
+#[test]
+fn average_rate_precedes_strict_declared_rate_fallback() {
+    let mut value = complete_output();
+    value["streams"][1]["avg_frame_rate"] = json!("30/1");
+    value["streams"][1]["r_frame_rate"] = json!("not-a-rational");
+    let snapshot = parse(&value, auto_stream_intent()).unwrap();
+    assert_eq!(
+        snapshot.streams[0].video.as_ref().unwrap().frame_rate,
+        Some(veac_ir::Rational::new(30, 1).unwrap())
+    );
+
+    value["streams"][1]["avg_frame_rate"] = json!("90000/1");
+    value["streams"][1]["r_frame_rate"] = json!("24/1");
+    assert_field(&value, "streams[].frame_rate");
+
+    value["streams"][1]["avg_frame_rate"] = Value::Null;
+    let snapshot = parse(&value, auto_stream_intent()).unwrap();
+    assert_eq!(
+        snapshot.streams[0].video.as_ref().unwrap().frame_rate,
+        Some(veac_ir::Rational::new(24, 1).unwrap())
+    );
+}
+
+#[test]
 fn codec_and_channel_layout_are_bounded_control_fields() {
     let mut value = complete_output();
     value["streams"][1]["codec_name"] = json!("x".repeat(129));

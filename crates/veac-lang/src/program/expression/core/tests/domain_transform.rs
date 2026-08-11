@@ -11,9 +11,9 @@ fn failure(program: super::super::CoreProgram) -> String {
 }
 
 #[test]
-fn raw_transform_core_uses_v7_numeric_contracts_and_exact_metadata() {
+fn raw_transform_core_uses_v8_numeric_contracts_and_exact_metadata() {
     let program = transform_program();
-    assert_eq!(program.domain_opset(), DomainOpsetVersion::V7);
+    assert_eq!(program.domain_opset(), DomainOpsetVersion::V8);
     assert_eq!(result_domain(&program), DomainType::Transform);
     let operations = program.blocks[0]
         .instructions

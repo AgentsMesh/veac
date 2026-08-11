@@ -43,7 +43,7 @@ fn main(context: Context) -> Project {
 }
 ```
 
-`main(Context) -> Project` is the only entry ABI; root `animate` declarations residualize approved dynamic leaves.
+`main(Context) -> Project` is the video-program entry ABI; project and evidence hosts use typed entries described below. Root `animate` declarations residualize approved dynamic leaves.
 
 ## Features
 
@@ -171,7 +171,7 @@ make serve-examples
 - [Getting Started](docs/getting-started.md)
 - [CLI Reference](docs/cli-reference.md)
 - [Language Reference](docs/language-reference/)
-- [Executable Build](docs/language-reference/executable-build.md)
+- [Executable Build](docs/language-reference/executable-build.md)、[工程工作区](docs/language-reference/project-workspaces.md) 与 [证据验收](docs/language-reference/evidence.md)
 - [Architecture](docs/architecture.md)
 - [Editing Capability Matrix and Roadmap](docs/capability-matrix-roadmap.md)
 

@@ -47,8 +47,8 @@ fn sidechain_bus_endpoint_round_trips_without_clip_projection() {
 #[test]
 fn schema_version_marks_the_relation_table_as_a_clean_break() {
     let project = relation_project();
-    assert_eq!(project.schema_version, 9);
-    assert_eq!(project.min_reader_version, 9);
+    assert_eq!(project.schema_version, 10);
+    assert_eq!(project.min_reader_version, 10);
     let mut json = serde_json::to_value(project).unwrap();
     json["project"].as_object_mut().unwrap().remove("relations");
     assert!(decode_canonical_json(&json.to_string()).is_err());

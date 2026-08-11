@@ -12,7 +12,8 @@ pub(super) fn apply(
     input: String,
     enable: &str,
 ) -> Result<String, CodegenErrors> {
-    match effect.effect.kind() {
+    let kind = effect.effect.kind();
+    match kind {
         EffectKind::VideoColorAdjust => Ok(color_adjust(context, effect, &input, enable)),
         EffectKind::VideoBlur => Ok(effects::dynamic_filter(
             context,
@@ -21,12 +22,24 @@ pub(super) fn apply(
             enable,
             "gblur",
             "",
-            &[effects::RuntimeNumber::new(
+            &[effects::RuntimeNumber::bounded(
+                kind,
                 EffectParameter::Radius,
                 "sigma",
                 0.0,
-                1.0,
             )],
+        )),
+        EffectKind::VideoDirectionalBlur => Ok(effects::dynamic_filter(
+            context,
+            effect,
+            &input,
+            enable,
+            "dblur",
+            "planes=15",
+            &[
+                effects::RuntimeNumber::bounded(kind, EffectParameter::AngleDegrees, "angle", 0.0),
+                effects::RuntimeNumber::bounded(kind, EffectParameter::Radius, "radius", 0.0),
+            ],
         )),
         EffectKind::VideoSharpen => Ok(effects::dynamic_filter(
             context,
@@ -35,7 +48,8 @@ pub(super) fn apply(
             enable,
             "cas",
             "",
-            &[effects::RuntimeNumber::new(
+            &[effects::RuntimeNumber::scaled(
+                kind,
                 EffectParameter::Amount,
                 "strength",
                 0.0,

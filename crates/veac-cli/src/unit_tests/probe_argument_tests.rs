@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use clap::error::ErrorKind;
 
@@ -13,7 +13,7 @@ fn probe_arguments_distinguish_media_and_canonical_material_modes() {
             input,
             material: None,
             ..
-        } if input == PathBuf::from("clip.mp4")
+        } if input.as_path() == Path::new("clip.mp4")
     ));
 
     let material =
@@ -24,7 +24,7 @@ fn probe_arguments_distinguish_media_and_canonical_material_modes() {
             input,
             material: Some(id),
             ..
-        } if input == PathBuf::from("project.json") && id == "footage"
+        } if input.as_path() == Path::new("project.json") && id == "footage"
     ));
 }
 

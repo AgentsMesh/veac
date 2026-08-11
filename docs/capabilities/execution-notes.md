@@ -34,6 +34,12 @@ source-curve segments, and caption cues. Overflow and mutated serialized plans f
 construction. Text shaping/ASS emission, graph size, arguments, artifacts, provider I/O, and runtime
 deadlines have separate bounded contracts.
 
+Reverse memory is charged by an emission-time ledger for each FFmpeg command. Every emitted video
+or audio reverse instance contributes its complete conservative decoded-buffer estimate, including
+rebuilt transition, Apply, matte, sidechain, nested, and curve branches; record-range overlap is not
+used as a concurrency approximation. Reverse video additionally requires packet-proven constant
+cadence, while verified CFR proxy facts replace original source facts.
+
 ## Media Semantics
 
 Freeze and hold select the containing displayed frame at canvas rate before cloning it. The project

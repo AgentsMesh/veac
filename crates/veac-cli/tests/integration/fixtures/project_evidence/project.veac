@@ -1,0 +1,75 @@
+fn workspace() -> ProjectManifest {
+  ProjectManifest {
+    schema: "veac.project",
+    version: 1,
+    id: identifier("evidence-e2e"),
+    paths: ProjectPaths {
+      source_base: "sources",
+      material_root: "materials",
+      build_root: "build",
+      cache_root: ".cache/veac",
+      delivery_root: "dist",
+    },
+    defaults: ProjectDefaults {
+      profile: OptionalIdentifier.Some { value: identifier("preview"), },
+      locale: OptionalIdentifier.None,
+      max_instances_per_target: 4,
+      max_total_instances: 8,
+    },
+    locales: [],
+    profiles: [
+      ProjectProfile {
+        id: identifier("preview"),
+        execution: ExecutionPolicy.Serial,
+        proxy: ProxyPolicy.Disabled,
+        segmentation: SegmentationPolicy.Whole,
+      }
+    ],
+    targets: [
+      ProjectTarget {
+        id: identifier("render"),
+        entry: ProjectTargetEntry.Veac { source: "main.veac", },
+        localized: false,
+        inputs: [
+          ProjectInput { id: identifier("profile"), source: ProjectInputSource.ProfileBinding, }
+        ],
+        profiles: [identifier("preview")],
+        axes: [],
+        needs: [],
+        outputs: [
+          ProjectOutput.Media { id: identifier("video"), media_type: MediaType.Video, }
+        ],
+        deliveries: [],
+      },
+      ProjectTarget {
+        id: identifier("evidence"),
+        entry: ProjectTargetEntry.Evidence { contract: "evidence.veac", },
+        localized: false,
+        inputs: [
+          ProjectInput {
+            id: identifier("rendered"),
+            source: ProjectInputSource.Artifact {
+              target: TargetRef {
+                target: identifier("render"),
+                profile: OptionalIdentifier.None,
+                selector: InstanceSelector.Same,
+              },
+              output: identifier("video"),
+            },
+          }
+        ],
+        profiles: [identifier("preview")],
+        axes: [],
+        needs: [],
+        outputs: [ProjectOutput.Directory { id: identifier("bundle"), }],
+        deliveries: [
+          ProjectDelivery.Directory {
+            id: identifier("evidence"),
+            output: identifier("bundle"),
+            destination: "evidence/{profile}",
+          }
+        ],
+      }
+    ],
+  }
+}

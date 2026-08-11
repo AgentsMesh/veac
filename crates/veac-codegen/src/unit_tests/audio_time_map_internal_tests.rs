@@ -22,11 +22,14 @@ fn rejects_an_empty_resolved_audio_curve() {
     let error = curve(
         &mut context,
         clip,
-        "0:1",
-        &[],
-        SourceClock::identity(600).expect("identity clock"),
-        &output,
-        PitchPolicy::Preserve,
+        CurveRequest {
+            raw: "0:1",
+            segments: &[],
+            clock: SourceClock::identity(600).expect("identity clock"),
+            output: &output,
+            pitch: PitchPolicy::Preserve,
+            reverse_facts: None,
+        },
     )
     .unwrap_err();
     assert_eq!(error.diagnostics()[0].code, "AUDIO_PLAN_INVALID");

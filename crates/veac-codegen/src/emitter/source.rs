@@ -113,6 +113,7 @@ fn nested(
         nested,
         source_mapping(clip)?,
         nested_clock(sequence.duration, clip)?,
+        super::reverse_ledger::VideoFacts::sequence(&sequence.settings),
     )
 }
 

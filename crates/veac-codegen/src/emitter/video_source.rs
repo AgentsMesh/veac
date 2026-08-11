@@ -15,6 +15,11 @@ pub(super) fn media(
     let route = input_route(context, clip, input_id)?;
     let raw = format!("{}:{}", route.input_index(), route.global_stream());
     let clock = route.clock();
+    let reverse_facts = context
+        .bindings
+        .input(input_id)
+        .and_then(|binding| binding.video_facts())
+        .map(super::reverse_ledger::VideoFacts::bound);
     let label = super::video_time_map::apply(
         context,
         clip,
@@ -26,6 +31,7 @@ pub(super) fn media(
             time_invariant: route.time_invariant(),
             image,
             info: Some(info),
+            reverse_facts,
         },
     )?;
     let label = sample_frames(context, &label, mapping.frame_synthesis);
@@ -45,6 +51,7 @@ pub(super) fn nested(
     raw: String,
     mapping: &ResolvedSourceMapping,
     clock: SourceClock,
+    reverse_facts: super::reverse_ledger::VideoFacts,
 ) -> Result<String, CodegenErrors> {
     let label = super::video_time_map::apply(
         context,
@@ -57,6 +64,7 @@ pub(super) fn nested(
             time_invariant: false,
             image: false,
             info: None,
+            reverse_facts: Some(reverse_facts),
         },
     )?;
     let label = sample_frames(context, &label, mapping.frame_synthesis);

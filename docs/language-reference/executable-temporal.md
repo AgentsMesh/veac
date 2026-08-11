@@ -89,7 +89,7 @@ root 声明中的 `source_time` 只在 `using resource(...)` 时存在。Item at
 `source_time` 时不会伪造 source clock，真正引用时则必须从 canonical Item source 推导出 media owner。
 Apply attachment 只公开 `sequence_time: time` 与 `frame: integer`。canonical Temporal input 只包含
 这些 clock 与 typed Parameter。`.veac` 的 `input analysis name: T` 是 Build-stage typed input，在
-residualization 前已经成为 concrete value，并不是随时间采样的 analysis signal。schema v9 不发布
+residualization 前已经成为 concrete value，并不是随时间采样的 analysis signal。schema v10 不发布
 缺少 analyzer、采样时钟、插值和数据传输语义的 Analysis placeholder；旧 `analysis` variant 或
 `analyses` binding field 会被 deny-unknown validation 拒绝。
 

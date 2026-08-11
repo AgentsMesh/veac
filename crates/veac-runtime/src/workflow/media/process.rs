@@ -12,15 +12,19 @@ use super::{WorkflowError, WorkflowErrorKind, WorkflowResult};
 const MAX_STDERR_BYTES: u64 = 1024 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
 
-pub(super) fn run(
+pub(super) fn run_while(
     executable: &Path,
     arguments: &[OsString],
     output: &Path,
     limits: MediaArtifactLimits,
     deadline: Instant,
+    mut guard: impl FnMut() -> bool,
 ) -> WorkflowResult<()> {
     if Instant::now() >= deadline {
         return limit("FFmpeg artifact derivation exceeded its wall-clock budget");
+    }
+    if !guard() {
+        return limit("FFmpeg artifact derivation was cancelled");
     }
     let mut stderr = tempfile::tempfile()?;
     let writer = stderr.try_clone()?;
@@ -33,6 +37,10 @@ pub(super) fn run(
     crate::process_group::configure(&mut command);
     let mut child = command.spawn().map_err(start_error)?;
     let status = loop {
+        if !guard() {
+            crate::process_group::stop(&mut child);
+            return limit("FFmpeg artifact derivation was cancelled");
+        }
         let stderr_bytes = match stderr.metadata() {
             Ok(value) => value.len(),
             Err(error) => {

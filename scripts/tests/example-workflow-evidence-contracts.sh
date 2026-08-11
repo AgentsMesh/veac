@@ -74,6 +74,9 @@ expect_probe_failure missing-source-audio "$AUTHORING" "$PLAN" "$TMP/no-audio.js
 jq '.selected_audio_stream = {global_index:1,type_index:0}' \
   "$(example_probe_snapshot "$ENTRY")" >"$TMP/selected-audio.json"
 expect_probe_failure selected-disabled-audio "$AUTHORING" "$PLAN" "$TMP/selected-audio.json"
+jq '.streams[0].video.cadence = "invalid"' \
+  "$(example_probe_snapshot "$ENTRY")" >"$TMP/invalid-cadence.json"
+expect_probe_failure invalid-cadence "$AUTHORING" "$PLAN" "$TMP/invalid-cadence.json"
 jq '.inputs[0].audio = {selection:{global_index:1}}' "$PLAN" >"$TMP/bad-plan.json"
 expect_probe_failure enabled-plan-audio "$AUTHORING" "$TMP/bad-plan.json" \
   "$(example_probe_snapshot "$ENTRY")"

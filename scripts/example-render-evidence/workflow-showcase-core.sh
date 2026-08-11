@@ -36,7 +36,7 @@ workflow_plan_base_contract() {
     .header.schema == "https://veac.dev/schemas/render-plan" and
     .header.schema_version == 6 and
     .header.resolver == {capability_profile:"backend-neutral-v1",
-      effect_registry_version:"veac-ir-effects-v2",
+      effect_registry_version:"veac-ir-effects-v3",
       resolver_version:"veac-plan-resolver-v6",
       stream_selection_policy:$policy} and
     .header.source.timebase == 600 and .entry_sequence_id == $sequence and

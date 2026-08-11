@@ -91,6 +91,15 @@ fn reject_manifest_duplicates(manifest: &BuildInputManifestV1) -> CliResult {
 }
 
 fn decode(declaration: &BuildInputDeclaration, raw: &str) -> CliResult<BuildInputManifestValue> {
+    if declaration.role() == veac_lang::program::BuildInputRole::Material {
+        return Err(CliError::new(
+            "PROGRAM_INPUT_INLINE_MATERIAL",
+            format!(
+                "material Build input `{}` requires a typed manifest binding",
+                declaration.name()
+            ),
+        ));
+    }
     let value = match declaration.value_type().kind() {
         ValueTypeKind::Primitive(PrimitiveType::Boolean) => BuildInputManifestValue::Bool {
             value: parse_bool(raw, declaration.name())?,

@@ -113,7 +113,7 @@ effect_disabled(window: EffectWindow) -> EffectState
 
 An effect window is Item-relative and half-open. Disabled effects remain addressable for source edits.
 
-## Ten Built-Ins
+## Eleven Built-Ins
 
 ```veac
 video_color_adjust_effect(key: identifier, state: EffectState, brightness: ScalarAnimation,
@@ -134,9 +134,10 @@ Item.with_effect(effect: Effect) -> Item
 ```
 
 `Item.with_effect` is `GraphEmit`; call order is chain order. Brightness is `[-1,1]`, contrast and
-saturation `[0,4]`, blur `[0px,100px]`, sharpen `[0,10]`, normalized parameters `[0%,100%]`, chroma
-similarity is greater than zero, and target LUFS is `[-70,-5]`. Stabilization and target LUFS are
-static leaves. There is no generic effect constructor and no plugin parameter map in v6.
+saturation `[0,4]`, blur `[0px,100px]`, directional blur angle `[0deg,360deg]` and radius
+`[0px,100px]`, sharpen `[0,10]`, normalized parameters `[0%,100%]`, chroma similarity is greater
+than zero, and target LUFS is `[-70,-5]`. Stabilization and target LUFS are static leaves. There is
+no generic effect constructor and no plugin parameter map in v6.
 
 ## Versioned Plugin Descriptor
 
@@ -153,3 +154,25 @@ descriptor schema v1, implementation identity, the typed `amount: ScalarAnimatio
 The effect constructor accepts no names, maps, backend flags, or untyped values. A descriptor whose
 digest or backend adapter is absent fails closed before rendering. The reference descriptor mixes the
 input toward monochrome at `0` to `1`; its typed amount may remain a Temporal leaf.
+
+## Directional Blur (v8)
+
+The v8 signature is appended after the existing v7 operations to keep every published Core operation
+identity stable while adding the eleventh built-in.
+
+```veac
+video_directional_blur_effect(key: identifier, state: EffectState, angle: AngleAnimation,
+                              radius: LengthAnimation) -> Effect
+```
+
+The registry ranges are also runtime sink contracts. A Temporal result is clamped to angle
+`[0deg,360deg]` and radius `[0px,100px]` immediately before the typed backend command is emitted;
+the canonical Temporal program itself is unchanged and out-of-range values never reach FFmpeg.
+Directional blur expands alpha in premultiplied space only while its half-open effect window is
+active and the clamped radius is greater than zero. A constant zero radius emits no effect graph;
+keyframed and Temporal radii use the same residualized positive-radius predicate for blur,
+premultiply, and unpremultiply. Zero-radius frames and frames outside the window therefore preserve
+straight-alpha samples exactly instead of round-tripping their color planes. Every visual clip enters
+one `gbrap16le` working-format boundary after crop/frame conformance and before effects, scale, shear,
+and rotation; a disabled effect can therefore neither introduce an earlier conversion nor change
+downstream filter negotiation relative to an otherwise identical clip without that effect.

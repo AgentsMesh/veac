@@ -4,6 +4,10 @@ use super::*;
 fn reads_exact_document_types_from_bounded_headers() {
     assert_eq!(doc_type(&header(b"webm")), Some(b"webm".as_slice()));
     assert_eq!(doc_type(&header(b"matroska")), Some(b"matroska".as_slice()));
+
+    assert!(validate(&header(b"webm"), DocType::Webm).is_ok());
+    assert!(validate(&header(b"matroska"), DocType::Matroska).is_ok());
+    assert!(validate(&header(b"webm"), DocType::Matroska).is_err());
 }
 
 #[test]
@@ -14,6 +18,13 @@ fn rejects_malformed_unknown_and_truncated_elements() {
     value[4] = 0xff;
     assert!(doc_type(&value).is_none());
     assert!(doc_type(&header(b"other")).is_some());
+
+    let truncated_header = [EBML_MAGIC.as_slice(), &[0x88, 0x42, 0x82, 0x80]].concat();
+    assert!(doc_type(&truncated_header).is_none());
+    let oversized_element = [EBML_MAGIC.as_slice(), &[0x83, 0x42, 0x82, 0x84]].concat();
+    assert!(doc_type(&oversized_element).is_none());
+    let unrelated_element = [EBML_MAGIC.as_slice(), &[0x83, 0x42, 0x83, 0x80]].concat();
+    assert!(doc_type(&unrelated_element).is_none());
 }
 
 #[test]

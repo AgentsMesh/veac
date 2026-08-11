@@ -1,6 +1,7 @@
 use tempfile::tempdir;
 
 use super::super::support::*;
+use super::programs::progress_curve;
 use super::{install, temporal_node};
 
 #[test]
@@ -57,6 +58,37 @@ fn progress_bindings_drive_position_and_opacity_in_rendered_pixels() {
     );
 }
 
+#[test]
+fn out_of_range_temporal_scale_is_clamped_before_ffmpeg_allocation() {
+    let temp = tempdir().unwrap();
+    let output = temp.path().join("temporal-scale-bounds.mp4");
+    let mut project = project(false);
+    let base = solid_clip("itm_scale_bound_base", color(20, 48, 72), 0, 1_000);
+    let mut marker = solid_clip("itm_scale_bound_marker", color(236, 35, 42), 0, 1_000);
+    let huge = TemporalValue::Vec2 {
+        value: Vec2 { x: 100.0, y: 100.0 },
+    };
+    let scale = install(
+        &mut project,
+        "visual_scale_bound",
+        "itm_scale_bound_marker",
+        TemporalType::Vec2,
+        progress_curve(huge.clone(), huge),
+        1,
+    );
+    let mut visual = framed_visual(Anchor::Center, Some((4.0, 4.0)));
+    visual.transform.scale = Animatable::Binding { binding_id: scale };
+    marker.visual = Some(visual);
+    project.project.sequences[0].tracks.extend([
+        track("trk_scale_bound_base", TrackKind::Video, 0, vec![base]),
+        track("trk_scale_bound_marker", TrackKind::Visual, 1, vec![marker]),
+    ]);
+    render(project, &BTreeMap::new(), &output);
+
+    assert_red(rgb_at(&output, 0.5, 48, 27));
+    assert_navy(rgb_at(&output, 0.5, 4, 4));
+}
+
 fn position_nodes() -> Vec<TemporalNode> {
     vec![
         temporal_node(
@@ -101,4 +133,15 @@ fn marker_stats(frame: &[u8]) -> (f64, f64) {
     }
     assert!(energy > 100.0, "marker is missing");
     (weighted_x / energy, energy)
+}
+
+fn assert_red(pixel: [u8; 3]) {
+    assert!(
+        pixel[0] > 180 && pixel[1] < 80 && pixel[2] < 90,
+        "{pixel:?}"
+    );
+}
+
+fn assert_navy(pixel: [u8; 3]) {
+    assert!(pixel[0] < 45 && pixel[1] < 80 && pixel[2] > 55, "{pixel:?}");
 }

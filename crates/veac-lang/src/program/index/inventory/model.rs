@@ -42,6 +42,11 @@ pub enum SourceIndexBuildInputType {
     Length,
     Angle,
     Color,
+    Material {
+        name: String,
+        type_id: String,
+        definition_sha256: String,
+    },
     Enum {
         name: String,
         type_id: String,

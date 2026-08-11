@@ -4,8 +4,16 @@ use clap::{ArgMatches, Command as ClapCommand};
 use super::super::shared::{required_string, value};
 use crate::arguments::{Command, SchemaContract, SchemaFormat};
 
-const CONTRACTS: [&str; 26] = [
+const CONTRACTS: [&str; 34] = [
     "project",
+    "project-manifest",
+    "resolved-project-graph",
+    "build-receipt",
+    "evidence-suite",
+    "observation-plan",
+    "evidence-report",
+    "evidence-bundle",
+    "evidence-provenance",
     "caption",
     "caption-track-insertion",
     "caption-document-bindings",
@@ -60,6 +68,14 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
 fn contract(value: &str) -> SchemaContract {
     match value {
         "project" => SchemaContract::Project,
+        "project-manifest" => SchemaContract::ProjectManifest,
+        "resolved-project-graph" => SchemaContract::ResolvedProjectGraph,
+        "build-receipt" => SchemaContract::BuildReceipt,
+        "evidence-suite" => SchemaContract::EvidenceSuite,
+        "observation-plan" => SchemaContract::ObservationPlan,
+        "evidence-report" => SchemaContract::EvidenceReport,
+        "evidence-bundle" => SchemaContract::EvidenceBundle,
+        "evidence-provenance" => SchemaContract::EvidenceProvenance,
         "caption" => SchemaContract::Caption,
         "caption-track-insertion" => SchemaContract::CaptionTrackInsertion,
         "caption-document-bindings" => SchemaContract::CaptionDocumentBindings,

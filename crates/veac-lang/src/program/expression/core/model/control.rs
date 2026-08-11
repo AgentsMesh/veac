@@ -47,7 +47,7 @@ pub enum CoreTerminator {
         arms: Vec<CoreMatchArm>,
         span: Range<usize>,
     },
-    ForEach(CoreForEach),
+    ForEach(Box<CoreForEach>),
 }
 
 impl CoreTerminator {

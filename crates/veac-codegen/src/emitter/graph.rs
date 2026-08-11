@@ -21,6 +21,17 @@ impl Graph {
         self.nodes.is_empty()
     }
 
+    pub(crate) fn reverse_filter_count(&self) -> u64 {
+        self.nodes
+            .iter()
+            .flat_map(|node| node.expression.split(','))
+            .filter(|filter| {
+                let name = filter.trim().split(['@', '=']).next().unwrap_or_default();
+                matches!(name, "reverse" | "areverse")
+            })
+            .count() as u64
+    }
+
     pub fn filter(&mut self, inputs: &[&str], expression: impl AsRef<str>, prefix: &str) -> String {
         let output = self.label(prefix);
         self.push(inputs, expression, vec![output.clone()]);

@@ -17,7 +17,7 @@ pub fn emit_all(
     plan: &ResolvedRenderPlan,
     bindings: &ExecutionBindings,
 ) -> Result<BackendBundle, CodegenErrors> {
-    super::preflight::validate(plan)?;
+    super::preflight::validate(plan, bindings)?;
     let plan_identity = plan_identity(plan)?;
     let protected_resources = protected_resources(plan, bindings)?;
     let mut tasks = Vec::new();

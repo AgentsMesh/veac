@@ -19,5 +19,5 @@ pub use validation::*;
 pub use veac_ir as canonical;
 
 pub const RESOLVER_VERSION: &str = "veac-plan-resolver-v6";
-pub const EFFECT_REGISTRY_VERSION: &str = "veac-ir-effects-v2";
+pub const EFFECT_REGISTRY_VERSION: &str = "veac-ir-effects-v3";
 pub const CAPABILITY_PROFILE: &str = "backend-neutral-v1";

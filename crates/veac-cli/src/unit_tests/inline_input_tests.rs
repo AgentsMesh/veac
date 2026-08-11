@@ -149,3 +149,22 @@ fn invalid_unit_and_enum_variant_reach_the_typed_binder() {
         assert!(error.to_string().contains(code), "{error}");
     }
 }
+
+#[test]
+fn material_input_cannot_be_flattened_into_an_inline_string() {
+    let temp = tempdir().unwrap();
+    let declaration = r#"
+struct MaterialBinding {
+  kind: text,
+  path: text,
+  sha256: text,
+  authority: text,
+  artifact_key: text,
+  video_stream: int,
+  audio_stream: int,
+}
+input material portrait: MaterialBinding;"#;
+    let (source, program) = prepared(&temp, declaration);
+    let error = validate(&source, &program, None, &["portrait=stills/hero.png"]).unwrap_err();
+    assert!(error.to_string().contains("PROGRAM_INPUT_INLINE_MATERIAL"));
+}

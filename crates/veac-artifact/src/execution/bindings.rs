@@ -4,10 +4,15 @@ use std::path::{Path, PathBuf};
 use veac_ir::{DeliverableId, HashAlgorithm, MediaIdentity, StreamSelection};
 use veac_plan::{PlanInputId, ResolvedInput, ResolvedRenderPlan};
 
-use super::{BoundResource, BoundStream, FullRenderSegmentBinding, MediaRole, SourceClock};
+use super::{
+    BoundAudioFacts, BoundResource, BoundStream, BoundVideoFacts, FullRenderSegmentBinding,
+    MediaRole, SourceClock,
+};
 use crate::{ArtifactError, ArtifactErrorKind, ArtifactResult, VerifiedArtifact};
 
 mod contract;
+#[path = "bindings/input.rs"]
+mod input;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExecutionBindings {
@@ -20,7 +25,9 @@ pub struct ExecutionBindings {
 pub struct InputBinding {
     resource: Option<BoundResource>,
     video: Option<BoundStream>,
+    video_facts: Option<BoundVideoFacts>,
     audio: Option<BoundStream>,
+    audio_facts: Option<BoundAudioFacts>,
     source_identity: Option<MediaIdentity>,
     source_video: Option<StreamSelection>,
     source_audio: Option<StreamSelection>,
@@ -66,10 +73,18 @@ impl ExecutionBindings {
                 .video
                 .as_ref()
                 .map(|stream| BoundStream::new(resource.clone(), stream.selection, clock)),
+            video_facts: input
+                .video
+                .as_ref()
+                .map(|stream| BoundVideoFacts::original(&stream.info)),
             audio: input
                 .audio
                 .as_ref()
                 .map(|stream| BoundStream::new(resource.clone(), stream.selection, clock)),
+            audio_facts: input
+                .audio
+                .as_ref()
+                .map(|stream| BoundAudioFacts::original(&stream.info)),
             source_identity: Some(input.observed_identity.clone()),
             source_video: input.video.as_ref().map(|stream| stream.selection),
             source_audio: input.audio.as_ref().map(|stream| stream.selection),
@@ -84,7 +99,8 @@ impl ExecutionBindings {
         role: MediaRole,
         artifact: &VerifiedArtifact,
     ) -> ArtifactResult<()> {
-        let (physical_stream, clock) = super::proxy::binding(input, role, artifact)?;
+        let (physical_stream, clock, video_facts, audio_facts) =
+            super::proxy::binding(input, role, artifact)?;
         let identity = MediaIdentity {
             algorithm: HashAlgorithm::Sha256,
             digest: artifact.record().content.value.clone(),
@@ -99,8 +115,14 @@ impl ExecutionBindings {
         let binding = self.inputs.entry(input.id.clone()).or_default();
         binding.record_source(input, role)?;
         match role {
-            MediaRole::Video if input.video.is_some() => binding.video = Some(stream),
-            MediaRole::Audio if input.audio.is_some() => binding.audio = Some(stream),
+            MediaRole::Video if input.video.is_some() => {
+                binding.video = Some(stream);
+                binding.video_facts = video_facts;
+            }
+            MediaRole::Audio if input.audio.is_some() => {
+                binding.audio = Some(stream);
+                binding.audio_facts = audio_facts;
+            }
             _ => return invalid("proxy role is not present on the resolved input"),
         }
         Ok(())
@@ -126,38 +148,6 @@ impl ExecutionBindings {
 
     pub fn outputs(&self) -> &BTreeMap<DeliverableId, PathBuf> {
         &self.outputs
-    }
-}
-
-impl InputBinding {
-    pub fn resource(&self) -> Option<&BoundResource> {
-        self.resource.as_ref()
-    }
-
-    pub fn video(&self) -> Option<&BoundStream> {
-        self.video.as_ref()
-    }
-
-    pub fn audio(&self) -> Option<&BoundStream> {
-        self.audio.as_ref()
-    }
-
-    pub fn stream(&self, role: MediaRole) -> Option<&BoundStream> {
-        match role {
-            MediaRole::Video => self.video(),
-            MediaRole::Audio => self.audio(),
-        }
-    }
-
-    pub fn source_identity(&self) -> Option<&MediaIdentity> {
-        self.source_identity.as_ref()
-    }
-
-    pub fn source_stream(&self, role: MediaRole) -> Option<StreamSelection> {
-        match role {
-            MediaRole::Video => self.source_video,
-            MediaRole::Audio => self.source_audio,
-        }
     }
 }
 

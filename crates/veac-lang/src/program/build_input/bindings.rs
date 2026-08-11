@@ -33,7 +33,11 @@ impl VerifiedBuildInputs {
                     format!("unknown Build input `{}`", binding.name),
                 )
             })?;
-            if !binding.value.matches_type(declaration.value_type()) {
+            if !binding.value.matches_declaration(
+                declaration.role(),
+                declaration.value_type(),
+                types,
+            ) {
                 return Err(BuildInputsError::new(
                     "PROGRAM_INPUT_TYPE_MISMATCH",
                     format!(
@@ -114,6 +118,14 @@ fn digest_value(digest: &mut Sha256, value: &Value) {
             digest.update(value.type_id().as_bytes());
             digest.update(value.definition_digest().as_bytes());
             digest.update(value.variant().value().to_be_bytes());
+        }
+        Value::Struct(value) => {
+            digest.update(value.type_id().as_bytes());
+            digest.update(value.definition_digest().as_bytes());
+            digest.update((value.fields().len() as u64).to_be_bytes());
+            for field in value.fields() {
+                digest_value(digest, field);
+            }
         }
         _ => unreachable!("verified Build inputs are closed primitive or enum leaves"),
     }

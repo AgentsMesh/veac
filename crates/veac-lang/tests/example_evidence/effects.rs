@@ -6,6 +6,9 @@ use crate::support::{
     assert_preview_evidence, authored_key, clips, preview_claims, sequence_by_key,
 };
 
+#[path = "effects/directional.rs"]
+mod directional;
+
 #[test]
 fn preview_effect_rows_have_registry_instances_in_their_target() {
     assert_preview_evidence("effects.json", evidence);
@@ -56,6 +59,9 @@ fn video_effects_use_explicit_parameters_in_distinct_segments() {
             "luma",
             "stabilize-after",
             "plugin-after",
+            "directional-horizontal",
+            "directional-vertical",
+            "directional-animated",
         ],
         "each effect stage needs its own attributable clip"
     );
@@ -64,7 +70,7 @@ fn video_effects_use_explicit_parameters_in_distinct_segments() {
             .iter()
             .map(|clip| clip.effects.len())
             .collect::<Vec<_>>(),
-        vec![1, 4, 2, 1, 1, 1]
+        vec![1, 4, 2, 1, 1, 1, 1, 1, 1]
     );
     for id in [
         "focus",
@@ -75,6 +81,9 @@ fn video_effects_use_explicit_parameters_in_distinct_segments() {
         "stabilize-after",
         "plugin-before",
         "plugin-after",
+        "directional-horizontal",
+        "directional-vertical",
+        "directional-animated",
     ] {
         let frame = clips
             .iter()
@@ -157,6 +166,7 @@ fn mechanism_id(kind: EffectKind) -> Option<&'static str> {
     Some(match kind {
         EffectKind::VideoColorAdjust => "effect.video.color-adjust",
         EffectKind::VideoBlur => "effect.video.blur",
+        EffectKind::VideoDirectionalBlur => "effect.video.directional-blur",
         EffectKind::VideoSharpen => "effect.video.sharpen",
         EffectKind::VideoVignette => "effect.video.vignette",
         EffectKind::VideoGrain => "effect.video.grain",

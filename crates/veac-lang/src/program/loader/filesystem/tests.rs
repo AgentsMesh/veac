@@ -67,6 +67,26 @@ fn entry_reports_missing_parent_and_missing_file_name() {
 }
 
 #[test]
+fn explicit_root_supports_nested_entries_and_rejects_escape() {
+    let temp = tempdir().unwrap();
+    std::fs::create_dir(temp.path().join("nested")).unwrap();
+    std::fs::write(
+        temp.path().join("nested/project.veac"),
+        "fn project() -> int { 1 }",
+    )
+    .unwrap();
+    let (loader, loaded) =
+        FileSystemLoader::for_root_entry(temp.path(), Path::new("nested/project.veac")).unwrap();
+    assert_eq!(loader.root(), temp.path().canonicalize().unwrap());
+    assert_eq!(loaded.id, "nested/project.veac");
+    assert!(
+        FileSystemLoader::for_root_entry(temp.path(), Path::new("../outside.veac"))
+            .unwrap_err()
+            .contains("root-confined")
+    );
+}
+
+#[test]
 fn loader_rejects_two_ids_for_one_physical_file() {
     let temp = tempdir().unwrap();
     let entry = temp.path().join("main.veac");

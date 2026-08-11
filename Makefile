@@ -38,6 +38,7 @@ doctor: ## Verify the pinned Rust, FFmpeg, and coverage tools.
 	@rustc +$(RUST_TOOLCHAIN) --version
 	@ffmpeg -version | head -n 1 | grep -E 'ffmpeg version 8\.0([.[:space:]]|$$)'
 	@ffprobe -version | head -n 1 | grep -E 'ffprobe version 8\.0([.[:space:]]|$$)'
+	@ffmpeg -hide_banner -filters 2>&1 | rg -q ' dblur +V->V '
 	@ffmpeg -hide_banner -filters 2>&1 | rg -q ' vidstabdetect +V->V '
 	@ffmpeg -hide_banner -filters 2>&1 | rg -q ' vidstabtransform +V->V '
 	@cargo llvm-cov --version | grep -E 'cargo-llvm-cov 0\.8\.4([.[:space:]]|$$)'
@@ -86,6 +87,7 @@ e2e: e2e-source e2e-executable ## Run all real FFmpeg, ffprobe, workflow, and CL
 	$(CARGO) test -p veac-runtime --test render_e2e_tests -- --test-threads=1
 	$(CARGO) test -p veac-runtime --test delivery_e2e_tests -- --test-threads=1
 	$(CARGO) test -p veac-runtime --test probe_e2e_tests -- --test-threads=1
+	$(CARGO) test -p veac-runtime --test observation_e2e -- --test-threads=1
 	$(CARGO) test -p veac-runtime --test workflow_e2e_tests -- --test-threads=1
 	$(CARGO) test -p veac-cli --test cli_tests -- --test-threads=1
 
@@ -162,6 +164,7 @@ test-example-render-contracts: test-example-preview-contracts ## Exercise render
 	bash scripts/tests/mask-shape-render-evidence-contracts.sh
 	bash scripts/tests/video-stabilization-render-evidence-contracts.sh
 	bash scripts/tests/video-effects-sharpen-contracts.sh
+	bash scripts/tests/video-effects-directional-blur-contracts.sh
 	bash scripts/tests/resolution-chain-render-evidence-contracts.sh
 	bash scripts/tests/executable-family-render-evidence-contracts.sh
 	bash scripts/tests/workflow-showcase-render-evidence-contracts.sh

@@ -80,12 +80,12 @@ fn executable_authorship_tracks_modules_pure_maps_updates_and_identity() {
 }
 
 #[test]
-fn preview_lookup_helpers_consume_real_v9_authorship() {
+fn preview_lookup_helpers_consume_real_v10_authorship() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let built = build_path(&root.join("examples/minimal/main.veac")).unwrap();
     let canonical = veac_ir::canonical_json(built.envelope()).unwrap();
     let decoded = veac_ir::decode_canonical_json(&canonical).unwrap();
-    assert_eq!(decoded.schema_version, 9);
+    assert_eq!(decoded.schema_version, 10);
 
     let temp = tempdir().unwrap();
     let file = temp.path().join("project.veac.json");

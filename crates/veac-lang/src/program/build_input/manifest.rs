@@ -74,6 +74,8 @@ pub fn parse_build_input_manifest(input: &str) -> Result<BuildInputManifestV1, B
             format!("Build input manifest exceeds the {MAX_BUILD_INPUT_MANIFEST_BYTES} byte limit"),
         ));
     }
+    veac_ir::reject_duplicate_json_keys(input)
+        .map_err(|error| BuildInputsError::new("PROGRAM_INPUT_MANIFEST_JSON", error.to_string()))?;
     let manifest: BuildInputManifestV1 = serde_json::from_str(input)
         .map_err(|error| BuildInputsError::new("PROGRAM_INPUT_MANIFEST_JSON", error.to_string()))?;
     manifest.validate_identity()?;

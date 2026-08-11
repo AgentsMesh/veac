@@ -51,8 +51,8 @@ fn plugin_parameter_schema_is_typed_and_registered_separately() {
         built_in_effect(EffectKind::VideoPluginReferenceMonochromeV1),
         None
     );
-    assert_eq!(built_in_effects().len(), 10);
-    assert_eq!(registered_effects().count(), 11);
+    assert_eq!(built_in_effects().len(), 11);
+    assert_eq!(registered_effects().count(), 12);
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::{SourceIndexBuildInput, SourceIndexBuildInputType};
-use crate::program::expression::{PrimitiveType, ValueType, ValueTypeKind};
+use crate::program::expression::{PrimitiveType, ValueTypeKind};
 use crate::program::{BuildInputDeclaration, TypeDefinitionKind, TypeRegistry};
 
 pub(crate) fn describe(
@@ -13,20 +13,31 @@ pub(crate) fn describe(
         .map(|declaration| SourceIndexBuildInput {
             name: declaration.name().to_owned(),
             role: declaration.role(),
-            value_type: describe_type(declaration.value_type(), registry),
+            value_type: describe_type(declaration, registry),
         })
         .collect()
 }
 
-fn describe_type(value: &ValueType, registry: &TypeRegistry) -> SourceIndexBuildInputType {
+fn describe_type(
+    declaration: &BuildInputDeclaration,
+    registry: &TypeRegistry,
+) -> SourceIndexBuildInputType {
+    let value = declaration.value_type();
     match value.kind() {
         ValueTypeKind::Primitive(primitive) => describe_primitive(primitive),
         ValueTypeKind::Nominal(reference) => {
             let definition = registry
                 .definition(reference.id())
                 .expect("verified Build input nominal type is registered");
+            if declaration.role() == crate::program::BuildInputRole::Material {
+                return SourceIndexBuildInputType::Material {
+                    name: reference.to_string(),
+                    type_id: reference.id().to_string(),
+                    definition_sha256: definition.digest().to_string(),
+                };
+            }
             let TypeDefinitionKind::Enum(layout) = definition.kind() else {
-                unreachable!("verified Build input nominal type is a payloadless enum")
+                unreachable!("verified non-material nominal Build input is an enum")
             };
             SourceIndexBuildInputType::Enum {
                 name: reference.to_string(),

@@ -10,6 +10,28 @@ pub(super) fn apply(
     apply_timeline(context, base, &source, placement)
 }
 
+pub(super) fn apply_opaque(
+    context: &mut EmitContext<'_>,
+    base: &str,
+    source: &str,
+    placement: &Placement,
+) -> String {
+    // With an opaque base, straight-alpha source-over is a masked color merge; base alpha stays one.
+    let source = position(context, source, placement);
+    let base = context.graph.filter(&[base], "format=gbrap16le", "soob");
+    let source = context.graph.filter(&[&source], "format=gbrap16le", "soos");
+    let (source_color, source_alpha) = context.graph.split(&source, "soos");
+    let source_alpha = extract_alpha(context, &source_alpha, "sooa");
+    context.graph.filter(
+        &[&base, &source_color, &source_alpha],
+        format!(
+            "maskedmerge=planes=7:enable='gte(t,{})*lt(t,{})'",
+            placement.start, placement.end
+        ),
+        "soo",
+    )
+}
+
 pub(super) fn apply_timeline(
     context: &mut EmitContext<'_>,
     base: &str,

@@ -5,6 +5,8 @@ use veac_plan::canonical::*;
 use super::{clip, effect, graph};
 use crate::unit_tests::emitter_tests::support::{fixture, resolved, time};
 
+mod sink_bounds;
+
 #[test]
 fn every_curve_capable_video_effect_has_a_frame_evaluated_backend_path() {
     for (kind, value, marker) in [
@@ -107,7 +109,6 @@ fn animated(end: f64) -> Animatable<f64> {
 }
 
 fn with_curve(kind: EffectKind, value: Animatable<f64>) -> Effect {
-    let mut effect = Effect::neutral(kind);
     let parameter = match kind {
         EffectKind::VideoBlur => EffectParameter::Radius,
         EffectKind::VideoChromaKey => EffectParameter::Similarity,
@@ -118,6 +119,11 @@ fn with_curve(kind: EffectKind, value: Animatable<f64>) -> Effect {
         | EffectKind::VideoGrain => EffectParameter::Amount,
         _ => unreachable!("fixture only covers curve-capable video effects"),
     };
+    with_parameter(kind, parameter, value)
+}
+
+fn with_parameter(kind: EffectKind, parameter: EffectParameter, value: Animatable<f64>) -> Effect {
+    let mut effect = Effect::neutral(kind);
     assert_eq!(
         effect.set_parameter(parameter, EffectParameterValue::Curve(value)),
         Some(true)

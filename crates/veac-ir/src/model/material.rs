@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const MEDIA_PROBE_SCHEMA_VERSION: u32 = 3;
+pub const MEDIA_PROBE_SCHEMA_VERSION: u32 = 4;
 use crate::{EntityAuthorship, MaterialId, Rational, RationalTime};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -133,11 +133,21 @@ pub struct VideoStreamInfo {
     pub height: u32,
     /// Canonical average frame rate, falling back to the declared frame rate when necessary.
     pub frame_rate: Option<Rational>,
+    /// Cadence proven from the complete selected stream packet timestamp sequence.
+    pub cadence: VideoCadence,
     pub pixel_format: String,
     pub profile: Option<String>,
     pub level: Option<i32>,
     pub sample_aspect_ratio: Rational,
     pub rotation_degrees: i16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum VideoCadence {
+    Constant,
+    Variable,
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

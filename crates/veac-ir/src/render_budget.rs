@@ -18,6 +18,14 @@ pub const MAX_PIXEL_FRAMES_PER_DELIVERABLE: u128 = 4_000_000_000_000;
 pub const MAX_AUDIO_SAMPLES_PER_DELIVERABLE: u128 = 8_294_400_000;
 /// FFmpeg's reverse filters buffer an entire source interval in memory.
 pub const MAX_REVERSE_BUFFERED_SECONDS: u64 = 30;
+/// Maximum conservative decoded-buffer sum for all reverse instances emitted by one command.
+pub const MAX_REVERSE_BUFFERED_BYTES: u128 = 1024 * 1024 * 1024;
+/// Eight bytes cover planar 16-bit RGBA; another 2x covers planes, alignment, and filter ownership.
+pub const REVERSE_DECODED_BYTES_PER_PIXEL: u128 = 16;
+/// Conservative per-frame AVFrame, buffer-reference, and allocator overhead.
+pub const REVERSE_FRAME_OVERHEAD_BYTES: u128 = 4 * 1024;
+/// Eight bytes cover decoded f64; another 2x covers planes, alignment, and filter ownership.
+pub const REVERSE_DECODED_BYTES_PER_CHANNEL_SAMPLE: u128 = 16;
 /// About 512 MiB for a single 8-bit RGBA intermediate before backend overhead.
 pub const MAX_VISUAL_INTERMEDIATE_PIXELS: u128 = 134_217_728;
 

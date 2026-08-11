@@ -14,6 +14,8 @@ mod color_alpha;
 mod color_alpha_source_over;
 #[path = "delivery_e2e/delivery_probe.rs"]
 mod delivery_probe;
+#[path = "delivery_e2e/directional_blur_identity.rs"]
+mod directional_blur_identity;
 #[path = "delivery_e2e/frames_scopes.rs"]
 mod frames_scopes;
 #[path = "delivery_e2e/hls.rs"]

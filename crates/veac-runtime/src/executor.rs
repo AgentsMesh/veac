@@ -13,6 +13,7 @@ mod staging;
 
 pub use bundle::{execute_bundle, BundleExecution, BundleExecutor, TaskExecution};
 pub use deadline::{BundleSetupLimits, TaskExecutionLimits};
+pub(crate) use process::ensure_success;
 pub use process::{FfmpegEnvironment, FfmpegFingerprint, FfmpegInvocation, SystemFfmpeg};
 
 use crate::RuntimeError;

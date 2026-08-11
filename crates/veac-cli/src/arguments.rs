@@ -10,6 +10,8 @@ pub(crate) use artifact::*;
 mod otio;
 pub(crate) use otio::*;
 mod parser;
+mod project;
+pub(crate) use project::*;
 mod schema_contract;
 pub(crate) use schema_contract::*;
 mod template;
@@ -57,6 +59,8 @@ fn diagnostic_format(matches: &clap::ArgMatches) -> DiagnosticFormat {
 
 #[derive(Debug)]
 pub(super) enum Command {
+    /// Validate and inspect an authored VEAC project workspace.
+    Project { command: ProjectCommand },
     /// Loss-aware caption sidecar interchange and canonical edit proposals.
     Caption { command: CaptionCommand },
     /// Loss-aware OpenTimelineIO interchange and canonical edit proposals.

@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use veac_ir::{HashAlgorithm, ProbedStreamType, Rational, RationalTime};
+use veac_ir::{HashAlgorithm, ProbedStreamType, Rational, RationalTime, VideoCadence};
 
 use super::*;
 
@@ -38,6 +38,7 @@ fn normalizes_complete_ffprobe_output_without_floating_point_time() {
     assert_eq!((facts.width, facts.height), (1920, 1080));
     assert_eq!(facts.sample_aspect_ratio, Rational::new(1, 1).unwrap());
     assert_eq!(facts.frame_rate, Some(Rational::new(24, 1).unwrap()));
+    assert_eq!(facts.cadence, VideoCadence::Unknown);
     assert_eq!(facts.pixel_format, "yuv420p");
     assert_eq!(facts.profile.as_deref(), Some("High"));
     assert_eq!(facts.level, Some(40));

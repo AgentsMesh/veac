@@ -12,7 +12,7 @@ source compatibility is out of scope.
   -> resolve + type/effect/stage verification
   -> verified Core v10
   -> bounded graph execution + Temporal residualization
-  -> canonical JSON IR schema 9
+  -> canonical JSON IR schema 10
   -> plan -> typed backend bundle -> artifacts
 ```
 
@@ -54,7 +54,7 @@ canonical ID derivation, not hidden string concatenation.
 ## Canonical Boundary
 
 Canonical IR uses exact rational time, stable typed IDs, deterministic ordering and closed serde schemas.
-The current project envelope is schema version 9 with minimum reader version 9. IR contains graph facts and
+The current project envelope is schema version 10 with minimum reader version 10. IR contains graph facts and
 residual Temporal programs, not modules, functions, closures, nominal declarations or Surface expressions.
 
 This accepted media fragment is parsed by the IR documentation test so the RFC cannot drift from the

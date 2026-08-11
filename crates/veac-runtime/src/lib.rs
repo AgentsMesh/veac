@@ -1,5 +1,6 @@
 pub mod asset;
 pub mod executor;
+pub mod observation;
 pub mod progress;
 pub mod workflow;
 

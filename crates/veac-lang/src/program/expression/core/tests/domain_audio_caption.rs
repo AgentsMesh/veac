@@ -95,7 +95,7 @@ fn raw_audio_caption_core_uses_v5_closed_operations() {
         ),
     ] {
         let program = program(&source);
-        assert_eq!(program.domain_opset(), DomainOpsetVersion::V7);
+        assert_eq!(program.domain_opset(), DomainOpsetVersion::V8);
         assert_eq!(program.result_type().as_domain(), Some(expected));
         for operation_id in operations {
             operation(&program, operation_id);

@@ -6,9 +6,11 @@ use crate::{
     ProxyVideoSpec, SourceSegmentSpec, ThumbnailSpec, WaveformSpec,
 };
 
+mod evidence;
 mod provider;
 mod render;
 
+pub use evidence::*;
 pub use provider::*;
 pub use render::*;
 
@@ -38,6 +40,7 @@ pub enum ArtifactParameters {
     AnimatedImage(RenderOutputParameters),
     StillImage(RenderOutputParameters),
     AdaptivePackage(RenderOutputParameters),
+    EvidenceBundle(EvidenceBundleParameters),
     VideoMaster(ProducedArtifactParameters),
     ImageSequenceFrame(RenderOutputParameters),
     VideoWaveform(RenderOutputParameters),
@@ -87,6 +90,7 @@ impl ArtifactParameters {
             Self::AnimatedImage(_) => ArtifactKind::AnimatedImage,
             Self::StillImage(_) => ArtifactKind::StillImage,
             Self::AdaptivePackage(_) => ArtifactKind::AdaptivePackage,
+            Self::EvidenceBundle(_) => ArtifactKind::EvidenceBundle,
             Self::VideoMaster(_) => ArtifactKind::VideoMaster,
             Self::ImageSequenceFrame(_) => ArtifactKind::ImageSequenceFrame,
             Self::VideoWaveform(_) => ArtifactKind::VideoWaveform,
@@ -126,6 +130,7 @@ impl ArtifactParameters {
             | Self::VideoWaveform(value)
             | Self::Vectorscope(value)
             | Self::Histogram(value) => value.validate(),
+            Self::EvidenceBundle(value) => value.validate(),
             Self::AudioStem(value) | Self::VideoMaster(value) => value.validate(),
             Self::RenderCheckpoint(value) => value.validate(),
             Self::ProxyVideo(value) => {

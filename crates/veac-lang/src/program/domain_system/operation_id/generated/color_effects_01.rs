@@ -17,4 +17,5 @@ declare_operations!(ColorEffects {
     ItemWithEffect = 0x5052 => "item_with_effect";
     PluginReferenceMonochromeV1 = 0x5053 => "plugin_reference_monochrome_v1";
     VideoPluginScalarEffect = 0x5054 => "video_plugin_scalar_effect";
+    VideoDirectionalBlurEffect = 0x5055 => "video_directional_blur_effect";
 });

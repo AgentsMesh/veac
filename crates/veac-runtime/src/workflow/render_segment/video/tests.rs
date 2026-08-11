@@ -1,6 +1,8 @@
 use veac_ir::{PixelFormat, VideoCodec, VideoProfile};
 
-use super::{codec, level_matches, parse_level, pixel_format_matches, profile_matches};
+use super::{
+    codec, level_matches, parse_level, pixel_format, pixel_format_matches, profile_matches,
+};
 
 #[test]
 fn every_authored_video_codec_has_an_exact_probe_name() {
@@ -14,6 +16,20 @@ fn every_authored_video_codec_has_an_exact_probe_name() {
     ];
     for (authored, observed) in cases {
         assert_eq!(codec(authored), observed);
+    }
+}
+
+#[test]
+fn every_authored_pixel_format_has_an_exact_probe_name() {
+    for (authored, observed) in [
+        (PixelFormat::Yuv420p, "yuv420p"),
+        (PixelFormat::Yuv420p10le, "yuv420p10le"),
+        (PixelFormat::Yuv422p, "yuv422p"),
+        (PixelFormat::Yuv422p10le, "yuv422p10le"),
+        (PixelFormat::Yuv444p10le, "yuv444p10le"),
+        (PixelFormat::Yuva444p10le, "yuva444p10le"),
+    ] {
+        assert_eq!(pixel_format(authored), observed);
     }
 }
 

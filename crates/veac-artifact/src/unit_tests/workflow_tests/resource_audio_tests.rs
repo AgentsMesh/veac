@@ -134,8 +134,8 @@ fn segment_audio(sample_rate: u32, channels: u8) -> MediaArtifactSpec {
         video_stream: stream(),
         start: time(0),
         duration: time(1),
-        width: 1,
-        height: 1,
+        width: 2,
+        height: 2,
         frame_rate: Rational::new(1, 1).unwrap(),
         audio: Some(SourceSegmentAudioSpec {
             source_stream: stream(),

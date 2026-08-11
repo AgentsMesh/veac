@@ -37,6 +37,15 @@ Effects 按 `.with_effect(...)` 调用顺序执行：
 
 ```veac,fragment
 item(...)
+  .with_effect(video_directional_blur_effect(
+    identifier("vertical-motion"), effect_enabled(effect_window_full()),
+    angle_constant(90deg),
+    length_keyframes([
+      length_keyframe(identifier("clear"), 0s, 0px, interpolation_ease_in_out()),
+      length_keyframe(identifier("fast"), 400ms, 32px, interpolation_ease_in_out()),
+      length_keyframe(identifier("settled"), 800ms, 0px, interpolation_linear())
+    ])
+  ))
   .with_effect(video_blur_effect(
     identifier("blur"), effect_enabled(effect_window_full()), length_constant(8px)
   ))
@@ -45,6 +54,13 @@ item(...)
     scalar_constant(0.1), scalar_constant(1.2), scalar_constant(0.9)
   ))
 ```
+
+方向性模糊只沿指定画面轴扩散：`0deg` 是横向拖影，`90deg` 是纵向拖影，角度按画面坐标
+顺时针增加。`radius` 是该方向上的像素模糊半径；`0px` 保持原画面，适合在位移动画的速度峰值
+增大半径，并在画面停稳时恢复为零。普通 `video_blur_effect` 则同时软化两个方向，二者语义不同。
+registry 同时定义 effect sink 的闭合范围：方向角是 `[0deg,360deg]`，半径是 `[0px,100px]`。
+Temporal 程序可以在中间计算中越过该范围，但每一帧写入 backend 参数前都会在 effect sink clamp；
+这不会改写 canonical Temporal 程序，也不会把越界值交给 FFmpeg 后依赖其静默失败行为。
 
 插件 Effect 不接受动态名字或参数 map；源码只能选择已固定版本的 typed descriptor：
 

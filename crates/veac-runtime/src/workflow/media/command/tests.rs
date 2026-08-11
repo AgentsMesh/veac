@@ -5,6 +5,9 @@ use veac_ir::{Rational, RationalTime, StreamSelection};
 
 use super::*;
 
+#[path = "tests/parameter_tests.rs"]
+mod parameter_tests;
+
 #[test]
 fn every_ffmpeg_spec_uses_bounded_direct_typed_arguments() {
     let specs = [

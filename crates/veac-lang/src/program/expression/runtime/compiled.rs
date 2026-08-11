@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use super::super::core::{CompiledExpression, FunctionRegistry};
 use super::super::{
-    DomainOrigin, ExecutionBudget, ExecutionFrame, ExpressionError, ExpressionLoopFrame, Value,
-    ValueLookup,
+    DomainOrigin, ExecutionBudget, ExecutionDefinition, ExecutionFrame, ExpressionError,
+    ExpressionLoopFrame, Value, ValueLookup,
 };
 use super::domain_graph::{DomainGraphTransaction, FrozenDomainGraph};
 use crate::program::{DomainOperationRegistry, DomainType};
@@ -84,6 +84,28 @@ pub(in crate::program) fn execute_project(
 }
 
 pub(in crate::program) use entry::execute as execute_entry;
+
+pub(in crate::program) fn execute_value_entry(
+    entry: &super::super::CompiledFunction,
+    functions: &super::super::FunctionMap,
+    types: &crate::program::TypeRegistry,
+    arguments: &[Value],
+    environment: &dyn super::super::ValueLookup,
+    execution: &ExecutionBudget,
+) -> Result<Value, ExpressionError> {
+    if entry.return_type().contains_domain_in(types) != Some(false) {
+        return Err(ExpressionError::new(
+            "EXPRESSION_DOMAIN_RESULT_BOUNDARY",
+            "host entry cannot return domain values",
+            program_span(entry.body()),
+        ));
+    }
+    let registry = DomainOperationRegistry::shared();
+    validate_core_domain_identity(entry.body(), registry)?;
+    let mut evaluator = Evaluator::new(environment, execution, functions.registry_arc(), registry);
+    let frame = ExecutionDefinition::function(entry).map(|value| ExecutionFrame::new(value, None));
+    evaluator.program(entry.verified_body(), arguments, &[], 0, Some(entry), frame)
+}
 
 struct Evaluator<'a> {
     environment: &'a dyn ValueLookup,

@@ -28,19 +28,19 @@ fn animate_has_distinct_root_and_component_attachment_uses() {
 #[test]
 fn public_surface_statistics_match_the_machine_contract() {
     let vocabulary = language_spec().vocabulary;
-    assert_eq!(vocabulary.entries.len(), 91);
+    assert_eq!(vocabulary.entries.len(), 92);
     assert_eq!(
         vocabulary
             .entries
             .iter()
             .map(|entry| entry.uses.len())
             .sum::<usize>(),
-        97
+        98
     );
 
     for (category, spellings, uses) in [
         (VocabularyCategory::ReservedLiteral, 2, 2),
-        (VocabularyCategory::ContextualControl, 58, 61),
+        (VocabularyCategory::ContextualControl, 59, 62),
         (VocabularyCategory::EnumValue, 4, 4),
         (VocabularyCategory::BuiltinFunction, 14, 14),
         (VocabularyCategory::UnitSuffix, 6, 6),
@@ -55,7 +55,7 @@ fn public_surface_statistics_match_the_machine_contract() {
     }
 
     for (policy, expected) in [
-        (IdentifierPolicy::Allowed, 88),
+        (IdentifierPolicy::Allowed, 89),
         (IdentifierPolicy::Reserved, 2),
         (IdentifierPolicy::NotApplicable, 1),
     ] {
@@ -70,7 +70,7 @@ fn public_surface_statistics_match_the_machine_contract() {
     }
 
     for (layer, expected) in [
-        (LanguageLayer::StaticProgram, 59),
+        (LanguageLayer::StaticProgram, 60),
         (LanguageLayer::ExecutableExpression, 38),
     ] {
         assert_eq!(

@@ -3,7 +3,7 @@ use veac_plan::canonical::*;
 use super::support::{bindings, emit_video_command, fixture, resolved, time};
 
 #[test]
-fn layers_are_sorted_before_source_over_composition() {
+fn layers_are_sorted_before_opaque_overlay_composition() {
     let mut plan = resolved(&fixture());
     let track = &mut plan.sequences[0].tracks[0];
     let mut copies = Vec::new();
@@ -55,12 +55,11 @@ fn layers_are_sorted_before_source_over_composition() {
         "wrong layer order {positions:?}: {graph}"
     );
     assert_eq!(
-        graph
-            .matches("blend=all_expr='B+A*(65535-B)/65535'")
-            .count(),
+        graph.matches("maskedmerge=planes=7:enable='gte(t,").count(),
         4,
         "graph={graph}"
     );
+    assert!(!graph.contains("unpremultiply=planes=7"), "graph={graph}");
     assert_eq!(
         graph.matches("stop_mode=add:stop=1:color=black@0").count(),
         4,

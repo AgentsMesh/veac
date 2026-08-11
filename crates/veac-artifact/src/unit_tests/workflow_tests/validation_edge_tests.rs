@@ -49,7 +49,7 @@ fn every_media_spec_rejects_its_remaining_boundary_failures() {
         MediaArtifactSpec::ProxyVideo(ProxyVideoSpec {
             source_stream: stream(),
             source_clock: clock(),
-            width: 0,
+            width: 639,
             height: 360,
             frame_rate: Rational::new(30, 1).unwrap(),
             crf: 20,
@@ -67,6 +67,14 @@ fn every_media_spec_rejects_its_remaining_boundary_failures() {
             width: 10,
             height: 10,
             color: String::new(),
+        }),
+        MediaArtifactSpec::OpticalFlow(OpticalFlowSpec {
+            source_stream: stream(),
+            source_clock: clock(),
+            width: 31,
+            height: 32,
+            frame_rate: Rational::new(30, 1).unwrap(),
+            method: OpticalFlowMethod::BlockMatching,
         }),
         MediaArtifactSpec::SourceSegment(SourceSegmentSpec {
             video_stream: stream(),

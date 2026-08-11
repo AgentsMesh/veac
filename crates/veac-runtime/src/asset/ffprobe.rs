@@ -8,11 +8,14 @@ use veac_ir::{MediaProbeSnapshot, StreamIntent};
 use super::{parse_ffprobe_json, ProbeError};
 use crate::input_policy;
 
+mod cadence;
+mod fingerprint;
 mod process;
 mod source;
 mod tool;
 mod version;
 
+pub use fingerprint::FfprobeFingerprint;
 pub use tool::SystemFfprobe;
 
 /// Probe a local file using deterministic automatic video and audio selection.
@@ -125,12 +128,42 @@ fn probe_with_tool(
             stderr: String::from_utf8_lossy(&output.stderr).trim().to_owned(),
         });
     }
+    let mut snapshot = parse_ffprobe_json(
+        &String::from_utf8_lossy(&output.stdout),
+        observed_identity.clone(),
+        intent,
+        &engine,
+    )?;
+    verify(path, &observed_identity, deadline)?;
+    match cadence::inspect(&snapshot, executable.path(), source.path(), deadline) {
+        cadence::Inspection::Skipped => {}
+        cadence::Inspection::Attempted(evidence) => {
+            match verify(path, &observed_identity, deadline) {
+                Ok(()) => {
+                    if let Some(evidence) = evidence.filter(|value| cadence::usable(*value)) {
+                        cadence::apply(&mut snapshot, evidence);
+                    }
+                }
+                Err(ProbeError::ResourceLimit { .. }) => {}
+                Err(error) => return Err(error),
+            }
+        }
+    }
+    Ok(snapshot)
+}
+
+fn verify(
+    path: &Path,
+    identity: &veac_ir::MediaIdentity,
+    deadline: Instant,
+) -> Result<(), ProbeError> {
     verify_source_bounded_while(
         path,
-        Some(&observed_identity),
+        Some(identity),
         veac_artifact::MAX_VERIFIED_SOURCE_BYTES,
         || Instant::now() < deadline,
     )
+    .map(|_| ())
     .map_err(|error| {
         if error.kind == veac_artifact::ArtifactErrorKind::ResourceLimit {
             ProbeError::ResourceLimit {
@@ -141,13 +174,7 @@ fn probe_with_tool(
                 path: path.to_path_buf(),
             }
         }
-    })?;
-    parse_ffprobe_json(
-        &String::from_utf8_lossy(&output.stdout),
-        observed_identity,
-        intent,
-        &engine,
-    )
+    })
 }
 
 fn strings(values: &[&str]) -> Vec<OsString> {

@@ -30,6 +30,7 @@ fn transition_backend_rejects_missing_and_nonvisual_endpoints() {
         "base".to_owned(),
         track,
         transition,
+        false,
     )
     .unwrap_err();
     assert_eq!(error.diagnostics()[0].code, "TRANSITION_SOURCE_INVALID");
@@ -48,6 +49,7 @@ fn transition_backend_rejects_missing_and_nonvisual_endpoints() {
         "base".to_owned(),
         track,
         transition,
+        false,
     )
     .unwrap_err();
     assert_eq!(error.diagnostics()[0].code, "TRANSITION_PLAN_INVALID");

@@ -1,7 +1,7 @@
 use veac_ir::{HashAlgorithm, MediaIdentity, RationalTime, StreamSelection, TimeRange};
 use veac_plan::ResolvedInput;
 
-use super::{MediaRole, SourceClock};
+use super::{BoundAudioFacts, BoundVideoFacts, MediaRole, SourceClock};
 use crate::{
     ArtifactDependencyRole, ArtifactError, ArtifactErrorKind, ArtifactKind, ArtifactParameters,
     ArtifactResult, ContentDigest, SourceClockSpec, VerifiedArtifact,
@@ -11,7 +11,12 @@ pub(super) fn binding(
     input: &ResolvedInput,
     role: MediaRole,
     artifact: &VerifiedArtifact,
-) -> ArtifactResult<(StreamSelection, SourceClock)> {
+) -> ArtifactResult<(
+    StreamSelection,
+    SourceClock,
+    Option<BoundVideoFacts>,
+    Option<BoundAudioFacts>,
+)> {
     let expected_kind = match role {
         MediaRole::Video => ArtifactKind::ProxyVideo,
         MediaRole::Audio => ArtifactKind::ProxyAudio,
@@ -29,15 +34,22 @@ pub(super) fn binding(
     {
         return invalid("verified proxy is not bound to the resolved input and media role");
     }
-    let (source_stream, clock) = match (role, &artifact.descriptor().parameters) {
-        (MediaRole::Video, ArtifactParameters::ProxyVideo(value)) => {
-            (value.source_stream, value.source_clock)
-        }
-        (MediaRole::Audio, ArtifactParameters::ProxyAudio(value)) => {
-            (value.source_stream, value.source_clock)
-        }
-        _ => return invalid("verified proxy parameters do not match its media role"),
-    };
+    let (source_stream, clock, video_facts, audio_facts) =
+        match (role, &artifact.descriptor().parameters) {
+            (MediaRole::Video, ArtifactParameters::ProxyVideo(value)) => (
+                value.source_stream,
+                value.source_clock,
+                Some(BoundVideoFacts::proxy(value)),
+                None,
+            ),
+            (MediaRole::Audio, ArtifactParameters::ProxyAudio(value)) => (
+                value.source_stream,
+                value.source_clock,
+                None,
+                Some(BoundAudioFacts::proxy(value)),
+            ),
+            _ => return invalid("verified proxy parameters do not match its media role"),
+        };
     if source_stream != selected(input, role)? {
         return invalid("verified proxy source stream differs from the resolved input stream");
     }
@@ -47,6 +59,8 @@ pub(super) fn binding(
             type_index: 0,
         },
         source_clock(clock)?,
+        video_facts,
+        audio_facts,
     ))
 }
 

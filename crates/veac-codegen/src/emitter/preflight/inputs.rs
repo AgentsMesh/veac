@@ -95,6 +95,12 @@ fn video_valid(value: &veac_plan::ResolvedVideoStream) -> bool {
         && value.start_time.is_none_or(|time| intrinsic(time, false))
         && value.duration.is_none_or(|time| intrinsic(time, true))
         && veac_plan::canonical::input_video_geometry_valid(&value.info)
+        && value.info.frame_rate.is_some_and(|rate| {
+            rate.is_positive()
+                && i128::from(rate.numerator)
+                    <= i128::from(veac_plan::canonical::MAX_FRAME_RATE)
+                        * i128::from(rate.denominator)
+        })
         && !value.disposition.attached_picture
         && !value.disposition.timed_thumbnail
 }

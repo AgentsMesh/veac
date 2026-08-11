@@ -6,6 +6,16 @@ use std::time::{Duration, Instant};
 
 use super::*;
 
+fn run(
+    executable: &std::path::Path,
+    arguments: &[std::ffi::OsString],
+    output: &std::path::Path,
+    limits: MediaArtifactLimits,
+    deadline: Instant,
+) -> WorkflowResult<()> {
+    run_while(executable, arguments, output, limits, deadline, || true)
+}
+
 #[test]
 fn missing_executable_is_a_stable_tool_start_failure() {
     let temp = tempfile::tempdir().unwrap();
@@ -85,5 +95,38 @@ fn output_monitor_error_also_kills_ffmpeg_descendants() {
     )
     .is_err());
     std::thread::sleep(Duration::from_millis(2_200));
+    assert!(!marker.exists());
+}
+
+#[test]
+fn cancelled_guard_kills_ffmpeg_descendants() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("descendant-ran");
+    let script = temp.path().join("ffmpeg-cancel.sh");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/sh\n(sleep 1; touch '{}') &\nsleep 5\n",
+            marker.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
+    let mut polls = 0;
+    let error = run_while(
+        &script,
+        &[],
+        &temp.path().join("output"),
+        MediaArtifactLimits::default(),
+        Instant::now() + Duration::from_secs(5),
+        || {
+            polls += 1;
+            polls < 3
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.kind, WorkflowErrorKind::ResourceLimit);
+    assert!(error.to_string().contains("cancelled"));
+    std::thread::sleep(Duration::from_millis(1_200));
     assert!(!marker.exists());
 }

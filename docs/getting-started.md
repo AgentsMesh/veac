@@ -42,8 +42,9 @@ fn main(context: Context) -> Project {
 }
 ```
 
-`main(Context) -> Project` is the only entry ABI. `animate` is a typed declaration over a closed
-property and stable logical path; its body is verified Core, not a JSON expression or property bag.
+`main(Context) -> Project` 是视频程序入口 ABI。`animate` 在闭合属性和稳定 logical path 上声明
+typed animation；body 是 verified Core，不是 JSON expression 或 property bag。多目标工程使用独立的
+`workspace() -> ProjectManifest` host entry，验收合同使用 `evidence() -> EvidenceSuite`。
 
 ## Check, Build, and Inspect
 
@@ -75,7 +76,7 @@ the project JSON directory, preserving the self-contained project-tree default.
 
 Diagnostics include a stable code and exact source span. Unknown symbols, wrong units, invalid owners,
 effect/stage violations, duplicate animation sinks and incomplete graph topology fail before IR is
-published. Build emits canonical project envelope schema v9 and performs no media probing.
+published. Build emits canonical project envelope schema v10 and performs no media probing.
 
 The small source above intentionally has no delivery. To render a complete checked-in project
 without publishing generated files into its source tree:
@@ -87,6 +88,22 @@ make build-examples EXAMPLES=minimal
 The `minimal` example owns a typed video delivery. Centered transitions require true overlap between
 two complete real stream ranges; the backend never creates held-frame endpoint padding. Its generated
 IR, render plan, logs and deliverables remain under the ignored `examples-preview/minimal/` directory.
+
+## 构建多目标工程
+
+当一个项目包含多语言、多个 profile、素材派生和自动验收时，由 `project.veac` 统一声明 source、
+material、build、cache、delivery 根目录以及 target DAG：
+
+```bash
+veac project check project.veac
+veac project graph project.veac
+veac project build project.veac --receipt build/receipt.json
+veac project evidence project.veac --receipt build/evidence.json
+veac project test project.veac --receipt build/test.json
+```
+
+完整合同见[工程工作区](language-reference/project-workspaces.md)和[证据与验收](language-reference/evidence.md)。
+`.veac` 是真源；上述命令生成的 canonical JSON、CAS payload、receipt 和交付目录都是可重建产物。
 
 ## Preview Every Mechanism
 

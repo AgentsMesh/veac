@@ -58,6 +58,7 @@ mod preparation;
 pub(crate) mod process_owner;
 mod render_segment;
 mod resource;
+mod reverse_ledger;
 mod rgb_planes;
 mod sequence;
 mod shadow;
@@ -133,6 +134,7 @@ struct EmitContext<'a> {
     input_routes: input::InputRoutes,
     canvas: Canvas,
     graph: Graph,
+    reverse_ledger: reverse_ledger::ReverseLedger,
     filter_bindings: Vec<BackendFilterBinding>,
     preparations: Vec<BackendPreparation>,
 }

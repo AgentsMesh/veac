@@ -5,6 +5,7 @@ use veac_plan::canonical::{
 use veac_plan::ResolvedClip;
 
 use super::super::audio::AudioRenderSpec;
+use super::super::reverse_ledger::AudioFacts;
 use super::super::{audio, audio_processing, audio_source::invalid, time};
 use super::{CodegenErrors, EmitContext};
 
@@ -12,15 +13,28 @@ use super::{CodegenErrors, EmitContext};
 #[path = "../../unit_tests/audio_segment_internal_tests.rs"]
 mod internal_tests;
 
+pub(super) struct FilterRequest<'a> {
+    pub raw: &'a str,
+    pub segment: &'a SourceTimeSegment,
+    pub clock: SourceClock,
+    pub output: &'a AudioRenderSpec,
+    pub pitch: PitchPolicy,
+    pub reverse_facts: Option<AudioFacts>,
+}
+
 pub(super) fn filter(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
-    raw: &str,
-    segment: &SourceTimeSegment,
-    clock: SourceClock,
-    output: &AudioRenderSpec,
-    pitch: PitchPolicy,
+    request: FilterRequest<'_>,
 ) -> Result<String, CodegenErrors> {
+    let FilterRequest {
+        raw,
+        segment,
+        clock,
+        output,
+        pitch,
+        reverse_facts,
+    } = request;
     if segment.record_duration.value <= 0 {
         return Err(invalid(clip, "source-time segment duration is invalid"));
     }
@@ -61,7 +75,14 @@ pub(super) fn filter(
         .ok_or_else(|| invalid(clip, "audio ramp start is outside its binding"))?;
     let mut label = trim(context, raw, source_start, source_duration, output);
     if delta < 0 {
-        label = context.graph.filter(&[&label], "areverse", "rampreversea");
+        label = context.reverse_audio(
+            &label,
+            "rampreversea",
+            clip,
+            source_duration,
+            output.sample_rate,
+            reverse_facts,
+        )?;
     }
     let rate = source_span as f64 / segment.record_duration.value as f64;
     Ok(audio_processing::speed_factor(

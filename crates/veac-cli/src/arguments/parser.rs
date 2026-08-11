@@ -6,6 +6,7 @@ mod artifact;
 mod caption;
 mod core;
 mod otio;
+mod project;
 mod shared;
 mod template;
 mod workflow;
@@ -28,6 +29,7 @@ pub(super) fn command() -> ClapCommand {
         .subcommand(template::command())
         .subcommands(artifact::commands())
         .subcommand(otio::command())
+        .subcommand(project::command())
         .subcommands(workflow::commands())
         .subcommands(core::commands())
 }
@@ -41,6 +43,7 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
         "template" => template::from_matches(matches),
         "artifact" | "package-bindings" | "relink" => artifact::from_matches(name, matches),
         "otio" => otio::from_matches(matches),
+        "project" => project::from_matches(matches),
         "derive" | "ingest-analysis" | "provider-run" | "provider-propose" => {
             workflow::from_matches(name, matches)
         }

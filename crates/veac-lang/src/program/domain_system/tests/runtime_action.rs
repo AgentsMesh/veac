@@ -8,7 +8,7 @@ fn every_operation_declares_one_closed_runtime_action() {
     for contract in all_contracts() {
         *counts.entry(contract.runtime_action()).or_insert(0usize) += 1;
     }
-    assert_eq!(counts[&DomainRuntimeAction::Description], 534);
+    assert_eq!(counts[&DomainRuntimeAction::Description], 535);
     assert_eq!(counts[&DomainRuntimeAction::EntityConstructor], 17);
     assert_eq!(counts[&DomainRuntimeAction::OwnedAttachment], 18);
     assert_eq!(counts[&DomainRuntimeAction::NonOwningUpdate], 4);

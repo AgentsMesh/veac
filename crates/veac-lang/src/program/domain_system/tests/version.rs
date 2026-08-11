@@ -17,7 +17,9 @@ fn version_and_digest_value_apis_are_closed() {
     assert_eq!(DomainOpsetVersion::V6.raw(), 6);
     assert_eq!(DomainOpsetVersion::from_raw(7), DomainOpsetVersion::V7);
     assert_eq!(DomainOpsetVersion::V7.raw(), 7);
-    assert_eq!(DomainOpsetVersion::CURRENT, DomainOpsetVersion::V7);
+    assert_eq!(DomainOpsetVersion::from_raw(8), DomainOpsetVersion::V8);
+    assert_eq!(DomainOpsetVersion::V8.raw(), 8);
+    assert_eq!(DomainOpsetVersion::CURRENT, DomainOpsetVersion::V8);
     let digest = DomainRegistryDigest::from_bytes([0xab; 32]);
     assert_eq!(digest.as_bytes(), &[0xab; 32]);
     assert_eq!(digest.to_string(), "ab".repeat(32));

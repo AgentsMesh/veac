@@ -61,6 +61,22 @@ See [Source-Of-Truth Editing](language-reference/source-editing.md).
 as canonical JSON; `--schema` prints its strict JSON Schema in the same canonical encoding. See
 [Language Vocabulary](language-reference/vocabulary.md).
 
+## 工程工作区命令
+
+```bash
+veac project check <project.veac>
+veac project inspect <project.veac>
+veac project graph <project.veac>
+veac project build <project.veac> [--receipt <path>]
+veac project evidence <project.veac> [--receipt <path>]
+veac project test <project.veac> [--receipt <path>]
+```
+
+`check` 验证 authored manifest 和 resolved DAG；`inspect`、`graph` 输出 canonical 中间合同。
+三个执行命令都运行完整 DAG、verified CAS 和 delivery。`evidence` 保留失败断言而不做 gate；`test`
+在 bundle 和 receipt 发布后对 `fail`/`error` 返回非零状态。参见
+[工程工作区](language-reference/project-workspaces.md)和[证据与验收](language-reference/evidence.md)。
+
 ## Canonical Commands
 
 ```bash
@@ -115,6 +131,13 @@ The default deliverable directory and `.veac-artifacts` remain anchored to the p
 
 ```bash
 veac schema --contract project
+veac schema --contract project-manifest
+veac schema --contract resolved-project-graph
+veac schema --contract evidence-suite
+veac schema --contract observation-plan
+veac schema --contract evidence-report
+veac schema --contract evidence-bundle
+veac schema --contract evidence-provenance
 veac schema --contract edit-batch
 veac schema --contract source-edit-batch
 veac schema --contract source-index

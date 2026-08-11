@@ -1,12 +1,12 @@
 {
   "schema": "https://veac.dev/schemas/project",
-  "schema_version": 9,
-  "min_reader_version": 9,
+  "schema_version": 10,
+  "min_reader_version": 10,
   "executable": {
     "language": "veac",
     "language_version": "0.1.0",
     "core_version": 10,
-    "domain_opset_version": 7,
+    "domain_opset_version": 8,
     "temporal_opset_version": 1,
     "digests": {
       "domain_registry_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

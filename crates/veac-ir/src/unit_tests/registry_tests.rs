@@ -43,6 +43,24 @@ fn parameter_schema_checks_typed_values_and_ranges() {
         normalize,
         EffectParameterRef::Number(-16.0)
     ));
+
+    let directional = built_in_effect(EffectKind::VideoDirectionalBlur).unwrap();
+    assert_eq!(directional.effect_type, "video.directional_blur");
+    assert_eq!(directional.parameters.len(), 2);
+    let angle = directional.parameters[0];
+    let radius = directional.parameters[1];
+    assert_eq!(angle.parameter, EffectParameter::AngleDegrees);
+    assert_eq!((angle.minimum, angle.maximum), (Some(0.0), Some(360.0)));
+    assert_eq!(radius.parameter, EffectParameter::Radius);
+    assert_eq!((radius.minimum, radius.maximum), (Some(0.0), Some(100.0)));
+    assert!(!parameter_matches(
+        angle,
+        EffectParameterRef::Curve(&Animatable::constant(-0.1))
+    ));
+    assert!(!parameter_matches(
+        radius,
+        EffectParameterRef::Curve(&Animatable::constant(100.1))
+    ));
 }
 
 #[test]

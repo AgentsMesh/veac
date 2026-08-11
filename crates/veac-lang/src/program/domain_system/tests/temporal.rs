@@ -32,6 +32,6 @@ fn temporal_availability_is_closed_and_exhaustive() {
                 contract.max_stage() == Stage::Build && contract.temporal_lowering().is_none()
             })
             .count(),
-        578
+        579
     );
 }

@@ -53,11 +53,11 @@ fn render_inner(
 ) -> Result<RenderedLayer, CodegenErrors> {
     let prepared = match &clip.source {
         ResolvedClipSource::Text { content } | ResolvedClipSource::Caption { content, .. } => {
-            text::prepare(context, clip, content, visual)?
+            text::prepare(context, sequence, clip, content, visual)?
         }
         _ => {
             let source = source::video(context, clip)?;
-            visual_pipeline::apply(context, clip, visual, source)?
+            visual_pipeline::apply(context, sequence, clip, visual, source)?
         }
     };
     let placed = layer_place::place(context, sequence, clip, visual, prepared);

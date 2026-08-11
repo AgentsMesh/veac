@@ -22,6 +22,7 @@ fn chroma(
     enable: &str,
 ) -> String {
     let color = color(effect);
+    let kind = effect.effect.kind();
     effects::dynamic_filter(
         context,
         effect,
@@ -33,8 +34,8 @@ fn chroma(
             color.red, color.green, color.blue
         ),
         &[
-            effects::RuntimeNumber::new(EffectParameter::Similarity, "similarity", 0.1, 1.0),
-            effects::RuntimeNumber::new(EffectParameter::Blend, "blend", 0.0, 1.0),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Similarity, "similarity", 0.1),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Blend, "blend", 0.0),
         ],
     )
 }
@@ -45,6 +46,7 @@ fn luma(
     input: &str,
     enable: &str,
 ) -> String {
+    let kind = effect.effect.kind();
     let mut label = effects::dynamic_filter(
         context,
         effect,
@@ -53,9 +55,9 @@ fn luma(
         "lumakey",
         "",
         &[
-            effects::RuntimeNumber::new(EffectParameter::Threshold, "threshold", 0.0, 1.0),
-            effects::RuntimeNumber::new(EffectParameter::Tolerance, "tolerance", 0.01, 1.0),
-            effects::RuntimeNumber::new(EffectParameter::Softness, "softness", 0.0, 1.0),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Threshold, "threshold", 0.0),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Tolerance, "tolerance", 0.01),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Softness, "softness", 0.0),
         ],
     );
     if boolean(effect, EffectParameter::Invert) {
@@ -81,6 +83,7 @@ fn spill(
     } else {
         "green"
     };
+    let kind = effect.effect.kind();
     effects::dynamic_filter(
         context,
         effect,
@@ -89,8 +92,8 @@ fn spill(
         "despill",
         &format!("type={screen}"),
         &[
-            effects::RuntimeNumber::new(EffectParameter::Amount, "mix", 0.5, 1.0),
-            effects::RuntimeNumber::new(EffectParameter::Range, "expand", 0.0, 1.0),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Amount, "mix", 0.5),
+            effects::RuntimeNumber::bounded(kind, EffectParameter::Range, "expand", 0.0),
         ],
     )
 }

@@ -1,0 +1,21 @@
+[package]
+name = "veac-build"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[dependencies]
+fs2 = "0.4"
+schemars = "1.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_json_canonicalizer = "0.3"
+sha2 = "0.10"
+tempfile = "3"
+veac-artifact = { path = "../veac-artifact" }
+veac-evidence = { path = "../veac-evidence" }
+veac-lang = { path = "../veac-lang" }
+veac-project = { path = "../veac-project" }
+
+[dev-dependencies]

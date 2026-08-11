@@ -14,7 +14,7 @@ fn validate_rejects_every_invalid_resource_policy_field() {
     validate(&limits).unwrap();
     for mutation in [
         |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = 0,
-        |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = MAX_STDOUT_BYTES + 1,
+        |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = MAX_CAPTURE_BYTES + 1,
         |value: &mut ProcessLimits<'_>| value.max_stderr_bytes = 0,
         |value: &mut ProcessLimits<'_>| value.max_stderr_bytes = MAX_STDERR_BYTES + 1,
         |value: &mut ProcessLimits<'_>| value.max_output_bytes = 0,

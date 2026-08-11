@@ -52,7 +52,7 @@ stable keys, source provenance, effect, stage, and operand-axis contracts.
 Generic plugin effects are separate from the core algebra. A plugin descriptor must pin its schema,
 implementation identity, typed parameter schema, determinism class, supported backends, and digest.
 The former `effect_type + map<string, value>` model has been removed from both executable Core and
-canonical schema v9. The typed plugin contract proves this boundary with
+the closed canonical schema. The typed plugin contract proves this boundary with
 `plugin_reference_monochrome_v1()` as static topology
 and the typed `video_plugin_scalar_effect(...)` constructor. Canonical IR carries a closed effect variant
 and its content-addressed descriptor digest;
@@ -77,13 +77,13 @@ canonical JSON property projection, and reparsing are forbidden migration shortc
 
 ## Temporal Programs
 
-Canonical schema v9 owns backend-neutral, closed temporal DAGs. A program declares typed inputs,
+Canonical schema v10 owns backend-neutral, closed temporal DAGs. A program declares typed inputs,
 topologically ordered typed nodes, one result, a content digest, and typed provenance. Bindings select
 an owner, clock, declared typed parameters, and expected result type. Media properties store
 binding IDs, never expression strings.
 
 Analyzer results enter executable source through typed Build-stage `input analysis` declarations and
-become concrete before Temporal residualization. Schema v9 deliberately has no time-varying analysis
+become concrete before Temporal residualization. Schema v10 deliberately has no time-varying analysis
 input: such a contract would also need a pinned analyzer identity, sampling clock, interpolation,
 content transport, and random-access rules. Unknown `analysis` input variants and `analyses` binding
 fields are rejected instead of publishing a backend-incomplete digest placeholder.

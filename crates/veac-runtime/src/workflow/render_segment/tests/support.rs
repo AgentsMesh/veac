@@ -4,7 +4,7 @@ use veac_artifact::{
 use veac_ir::{
     AudioCodec, AudioOutput, AudioStreamInfo, HashAlgorithm, MediaIdentity, MediaProbeSnapshot,
     ProbedStream, ProbedStreamType, Rational, RationalTime, StreamDisposition, StreamSelection,
-    VideoStreamInfo,
+    VideoCadence, VideoStreamInfo,
 };
 
 pub(super) fn contract(with_audio: bool) -> FullRenderSegmentContract {
@@ -98,6 +98,7 @@ pub(super) fn snapshot(
             width: profile.width(),
             height: profile.height(),
             frame_rate: Some(profile.frame_rate()),
+            cadence: VideoCadence::Constant,
             pixel_format: "yuv420p".to_owned(),
             profile: Some("High".to_owned()),
             level: Some(40),

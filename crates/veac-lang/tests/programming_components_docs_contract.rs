@@ -125,8 +125,8 @@ fn standard_library_reference_defers_numeric_identity_to_language_spec() {
         "{STDLIB_DOC} must not duplicate numeric opcode tables"
     );
     for contract in [
-        "558 个 free function 加 23 个 method",
-        "581 项 callable inventory",
+        "559 个 free function 加 23 个 method",
+        "582 项 callable inventory",
     ] {
         assert!(
             source.contains(contract),

@@ -77,9 +77,13 @@ impl MediaWorkflow {
         ffmpeg: impl Into<std::path::PathBuf>,
         ffprobe: impl Into<std::path::PathBuf>,
     ) -> Self {
+        Self::from_system_tools(SystemFfmpeg::new(ffmpeg), SystemFfprobe::new(ffprobe))
+    }
+
+    pub fn from_system_tools(ffmpeg: SystemFfmpeg, ffprobe: SystemFfprobe) -> Self {
         Self {
-            ffmpeg: SystemFfmpeg::new(ffmpeg),
-            ffprobe: SystemFfprobe::new(ffprobe),
+            ffmpeg,
+            ffprobe,
             limits: MediaArtifactLimits::default(),
         }
     }

@@ -24,7 +24,7 @@ Source, Resource
 Canvas, FrameRate, TimeRange, TextStyle, Transform, Transition, ContentIdentity
 ```
 
-The current v7 family includes `Modifier`, `Delivery`, and `AudioMix` together with their closed
+The current v8 family includes `Modifier`, `Delivery`, and `AudioMix` together with their closed
 operations, verifier rules, lowering, and tests. A name is not an implemented type and cannot be
 used in source unless it is present in the versioned registry.
 
@@ -175,7 +175,7 @@ Migration proceeded container-first: root project and sequence, layer and item,
 sources and resources, modifiers and relations, then delivery. Every published capability now has one
 executable path. Generated-source text expansion and mixed ownership are forbidden.
 
-Current opset v7 has 214 Domain types and 581 numeric operations. It covers generated and media sources,
+Current opset v8 has 214 Domain types and 582 numeric operations. It covers generated and media sources,
 identity-pinned resources, text/caption, audio processing, transforms, effects, relations, multicam,
 templates, annotations and delivery. Approved temporal leaves are authored in `.veac` and residualize from
 verified Core without changing topology.

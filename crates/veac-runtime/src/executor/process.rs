@@ -71,6 +71,28 @@ impl SystemFfmpeg {
         )
         .map_err(|error| error.context(&format!("failed to run FFmpeg {}", self.binary.display())))
     }
+
+    pub(crate) fn capture_until(
+        &self,
+        arguments: &[String],
+        max_stdout_bytes: u64,
+        deadline: Instant,
+    ) -> Result<Output, RuntimeError> {
+        let executable = self.launch_until(deadline)?;
+        runner::run(
+            executable.path(),
+            arguments,
+            runner::ProcessLimits {
+                deadline,
+                max_stdout_bytes,
+                max_stderr_bytes: runner::MAX_STDERR_BYTES,
+                output_root: None,
+                working_directory: None,
+                max_output_bytes: runner::MAX_OUTPUT_BYTES,
+            },
+        )
+        .map_err(|error| error.context("failed to capture FFmpeg observation"))
+    }
 }
 
 fn hard_deadline() -> Instant {
@@ -100,13 +122,16 @@ pub(super) fn validate_requirements_until(
     capability::validate(environment, requirements, deadline)
 }
 
-pub(super) fn ensure_success(output: &Output, operation: &str) -> Result<(), RuntimeError> {
+pub(crate) fn ensure_success(output: &Output, operation: &str) -> Result<(), RuntimeError> {
     if output.status.success() {
         return Ok(());
     }
     let detail = String::from_utf8_lossy(&output.stderr);
-    Err(RuntimeError::new(format!(
-        "{operation} failed: {}",
-        detail.trim()
-    )))
+    let detail = detail.trim();
+    let message = if detail.is_empty() {
+        format!("{operation} failed ({})", output.status)
+    } else {
+        format!("{operation} failed: {detail} ({})", output.status)
+    };
+    Err(RuntimeError::new(message))
 }

@@ -55,10 +55,16 @@ pub(super) fn video(
             continue;
         }
         let effect = EffectSpec::clip(clip, effect);
-        let enable = enable(effect);
-        label = alpha::apply(context, effect, &label, |context, input| {
-            super::effect_video::apply(context, ProcessOwner::clip(clip), effect, input, &enable)
-        })?;
+        let window = active_window(effect);
+        label = alpha::apply(
+            context,
+            effect,
+            &label,
+            &window,
+            |context, input, enable| {
+                super::effect_video::apply(context, ProcessOwner::clip(clip), effect, input, enable)
+            },
+        )?;
     }
     Ok(label)
 }
@@ -71,10 +77,16 @@ pub(super) fn apply_stage(
     label: String,
 ) -> Result<String, CodegenErrors> {
     let effect = EffectSpec::apply(apply, stage, active_range).expect("effect stage requested");
-    let enable = enable(effect);
-    alpha::apply(context, effect, &label, |context, input| {
-        super::effect_video::apply(context, ProcessOwner::apply(apply), effect, input, &enable)
-    })
+    let window = active_window(effect);
+    alpha::apply(
+        context,
+        effect,
+        &label,
+        &window,
+        |context, input, enable| {
+            super::effect_video::apply(context, ProcessOwner::apply(apply), effect, input, enable)
+        },
+    )
 }
 
 pub(super) fn audio(
@@ -141,9 +153,9 @@ pub(super) fn number(
     ))
 }
 
-fn enable(effect: EffectSpec<'_>) -> String {
+fn active_window(effect: EffectSpec<'_>) -> String {
     format!(
-        "enable='gte(t,{})*lt(t,{})'",
+        "gte(t,{})*lt(t,{})",
         time::seconds(effect.active_range.start),
         time::end(effect.active_range)
     )

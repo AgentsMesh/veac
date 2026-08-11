@@ -1,4 +1,5 @@
-use crate::program::expression::{ExactNumber, Value};
+use crate::program::expression::{ExactNumber, PrimitiveType, Value, ValueType};
+use crate::program::TypeRegistryBuilder;
 
 use super::*;
 
@@ -88,4 +89,22 @@ fn runtime_values_preserve_exact_units_and_normalize_colors() {
         .runtime_value(),
         Ok(Value::Color("#aabbccdd".into()))
     );
+}
+
+#[test]
+fn public_value_types_and_enum_mismatches_are_typed() {
+    let integer = BuildInputManifestValue::Integer { value: 1 };
+    assert_eq!(
+        integer.value_type(),
+        Some(ValueType::from(PrimitiveType::Integer))
+    );
+    let enumeration = BuildInputManifestValue::Enum {
+        value: "Preview".to_owned(),
+    };
+    assert_eq!(enumeration.value_type(), None);
+    let registry = TypeRegistryBuilder::new().finish().unwrap();
+    let error = enumeration
+        .bound_value(&ValueType::from(PrimitiveType::Text), &registry)
+        .unwrap_err();
+    assert_eq!(error.code(), "PROGRAM_INPUT_TYPE_MISMATCH");
 }

@@ -64,6 +64,8 @@ mod composition_shadow_matte;
 mod composition_star_mask;
 #[path = "render_e2e/effects.rs"]
 mod effects;
+#[path = "render_e2e/effects_directional_blur.rs"]
+mod effects_directional_blur;
 #[path = "render_e2e/example_transform_animation.rs"]
 mod example_transform_animation;
 #[path = "render_e2e/flip.rs"]
@@ -88,6 +90,10 @@ mod layout_matrix;
 mod multicam;
 #[path = "render_e2e/nested.rs"]
 mod nested;
+#[path = "render_e2e/nested_source_time.rs"]
+mod nested_source_time;
+#[path = "render_e2e/opaque_source_over.rs"]
+mod opaque_source_over;
 #[path = "render_e2e/output.rs"]
 mod output;
 #[path = "render_e2e/proxy_substitution.rs"]
@@ -102,6 +108,8 @@ mod source_boundary;
 mod source_time;
 #[path = "render_e2e/source_time_policies.rs"]
 mod source_time_policies;
+#[path = "render_e2e/source_time_vfr.rs"]
+mod source_time_vfr;
 #[path = "render_e2e/stabilization.rs"]
 mod stabilization;
 #[path = "render_e2e/streams.rs"]

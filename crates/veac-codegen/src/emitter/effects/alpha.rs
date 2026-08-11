@@ -1,18 +1,37 @@
 use super::super::{CodegenErrors, EmitContext};
 use super::EffectSpec;
-use veac_plan::canonical::EffectKind;
+use veac_plan::canonical::{Animatable, EffectKind, EffectParameter};
 
 pub(super) fn apply<F>(
     context: &mut EmitContext<'_>,
     effect: EffectSpec<'_>,
     input: &str,
+    window: &str,
     apply_effect: F,
 ) -> Result<String, CodegenErrors>
 where
-    F: FnOnce(&mut EmitContext<'_>, String) -> Result<String, CodegenErrors>,
+    F: FnOnce(&mut EmitContext<'_>, String, &str) -> Result<String, CodegenErrors>,
 {
+    if expands_alpha(effect.effect.kind()) {
+        let Some(activity) = expansion_activity(context, effect, window) else {
+            return Ok(input.to_owned());
+        };
+        let enable = format!("enable='{activity}'");
+        let input = context.graph.filter(
+            &[input],
+            format!("premultiply=inplace=1:planes=7:{enable}"),
+            "effectpremultiplyv",
+        );
+        let processed = apply_effect(context, input, &enable)?;
+        return Ok(context.graph.filter(
+            &[&processed],
+            format!("unpremultiply=inplace=1:planes=7:{enable}"),
+            "effectunpremultiplyv",
+        ));
+    }
+    let enable = format!("enable='{window}'");
     let (color, source_alpha) = split_input(context, input);
-    let processed = apply_effect(context, color)?;
+    let processed = apply_effect(context, color, &enable)?;
     if replaces_alpha(effect.effect.kind()) {
         combine_key_alpha(context, &processed, &source_alpha)
     } else {
@@ -22,6 +41,32 @@ where
             &source_alpha,
             "effectalphamergev",
         ))
+    }
+}
+
+fn expands_alpha(kind: EffectKind) -> bool {
+    kind == EffectKind::VideoDirectionalBlur
+}
+
+fn expansion_activity(
+    context: &EmitContext<'_>,
+    effect: EffectSpec<'_>,
+    window: &str,
+) -> Option<String> {
+    match effect.effect.curve(EffectParameter::Radius) {
+        Some(Animatable::Constant { value }) if *value <= 0.0 => None,
+        Some(Animatable::Constant { .. }) => Some(window.to_owned()),
+        Some(Animatable::Keyframes { keyframes })
+            if keyframes.iter().all(|keyframe| keyframe.value <= 0.0) =>
+        {
+            None
+        }
+        Some(Animatable::Keyframes { .. } | Animatable::Binding { .. }) => {
+            let radius =
+                super::number_expression_at(context, effect, EffectParameter::Radius, 0.0, "t");
+            Some(format!("({window})*gt(({radius})\\,0)"))
+        }
+        None => None,
     }
 }
 

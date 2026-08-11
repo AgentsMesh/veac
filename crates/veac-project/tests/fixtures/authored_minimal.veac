@@ -1,0 +1,58 @@
+fn workspace() -> ProjectManifest {
+  ProjectManifest {
+    schema: "veac.project",
+    version: 1,
+    id: identifier("demo"),
+    paths: ProjectPaths {
+      source_base: "sources",
+      material_root: "materials",
+      build_root: "build",
+      cache_root: ".cache/veac",
+      delivery_root: "dist",
+    },
+    defaults: ProjectDefaults {
+      profile: OptionalIdentifier.Some { value: identifier("preview"), },
+      locale: OptionalIdentifier.Some { value: identifier("en-us"), },
+      max_instances_per_target: 16,
+      max_total_instances: 32,
+    },
+    locales: [
+      ProjectLocale { id: identifier("en-us"), language_tag: "en-US", }
+    ],
+    profiles: [
+      ProjectProfile {
+        id: identifier("preview"),
+        execution: ExecutionPolicy.Parallel { max_tasks: 2, },
+        proxy: ProxyPolicy.PreferExisting,
+        segmentation: SegmentationPolicy.Whole,
+      }
+    ],
+    targets: [
+      ProjectTarget {
+        id: identifier("render"),
+        entry: ProjectTargetEntry.Veac { source: "main.veac", },
+        localized: true,
+        inputs: [
+          ProjectInput { id: identifier("profile"), source: ProjectInputSource.ProfileBinding, },
+          ProjectInput { id: identifier("locale"), source: ProjectInputSource.LocaleBinding, },
+          ProjectInput { id: identifier("theme"), source: ProjectInputSource.MatrixBinding { axis: identifier("theme"), }, }
+        ],
+        profiles: [identifier("preview")],
+        axes: [
+          MatrixAxis { id: identifier("theme"), values: [identifier("dark")], }
+        ],
+        needs: [],
+        outputs: [
+          ProjectOutput.Media { id: identifier("video"), media_type: MediaType.Video, }
+        ],
+        deliveries: [
+          ProjectDelivery.File {
+            id: identifier("preview-file"),
+            output: identifier("video"),
+            destination: "{target}/{profile}/{locale}/{axis.theme}.mp4",
+          }
+        ],
+      }
+    ],
+  }
+}

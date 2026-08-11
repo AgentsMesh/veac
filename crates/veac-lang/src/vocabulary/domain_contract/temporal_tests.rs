@@ -31,7 +31,7 @@ fn machine_contract_publishes_every_temporal_availability() {
                     && operation.contract.temporal_lowering.is_none()
             )
             .count(),
-        578
+        579
     );
 }
 

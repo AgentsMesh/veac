@@ -8,6 +8,8 @@ macro_rules! curve_ref {
             (Effect::VideoColorAdjust { contrast, .. }, EffectParameter::Contrast) => Some(contrast),
             (Effect::VideoColorAdjust { saturation, .. }, EffectParameter::Saturation) => Some(saturation),
             (Effect::VideoBlur { radius }, EffectParameter::Radius) => Some(radius),
+            (Effect::VideoDirectionalBlur { angle_degrees, .. }, EffectParameter::AngleDegrees) => Some(angle_degrees),
+            (Effect::VideoDirectionalBlur { radius, .. }, EffectParameter::Radius) => Some(radius),
             (Effect::VideoSharpen { amount }, EffectParameter::Amount)
             | (Effect::VideoVignette { amount }, EffectParameter::Amount)
             | (Effect::VideoGrain { amount }, EffectParameter::Amount)
@@ -29,6 +31,7 @@ impl Effect {
         match self {
             Self::VideoColorAdjust { .. } => EffectKind::VideoColorAdjust,
             Self::VideoBlur { .. } => EffectKind::VideoBlur,
+            Self::VideoDirectionalBlur { .. } => EffectKind::VideoDirectionalBlur,
             Self::VideoSharpen { .. } => EffectKind::VideoSharpen,
             Self::VideoVignette { .. } => EffectKind::VideoVignette,
             Self::VideoGrain { .. } => EffectKind::VideoGrain,

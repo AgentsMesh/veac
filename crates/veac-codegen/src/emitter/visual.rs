@@ -12,6 +12,7 @@ pub(super) fn compose(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
     mut base: String,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     let mut layers = Vec::new();
     for track in &sequence.tracks {
@@ -54,7 +55,7 @@ pub(super) fn compose(
             if matte_sources.contains(&clip.id) {
                 continue;
             }
-            base = compose_layer(context, sequence, base, track, clip, visual)?;
+            base = compose_layer(context, sequence, base, track, clip, visual, base_is_opaque)?;
             for target in applies.targets(position) {
                 applies.add_layer(context, &target, sequence, track, clip, visual)?;
             }
@@ -73,16 +74,25 @@ pub(super) fn compose_layer(
     track: &ResolvedTrack,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     if let Some(normal_window) = window::normal(track, clip) {
-        base = overlay(context, sequence, &base, clip, visual, normal_window)?;
+        base = overlay(
+            context,
+            sequence,
+            &base,
+            clip,
+            visual,
+            normal_window,
+            base_is_opaque,
+        )?;
     }
     for effect in track
         .transitions
         .iter()
         .filter(|effect| effect.incoming_clip_id == clip.id)
     {
-        base = transition::compose(context, sequence, base, track, effect)?;
+        base = transition::compose(context, sequence, base, track, effect, base_is_opaque)?;
     }
     Ok(base)
 }
@@ -94,6 +104,7 @@ fn overlay(
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     window: TimeRange,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     let rendered = layer::render_with_shadow(context, sequence, clip, visual)?;
     let foreground = window::slice(context, &rendered.foreground, clip, window, "normalclipv");
@@ -112,7 +123,7 @@ fn overlay(
                 format!("setpts=PTS+{start}/TB"),
                 "shadowoffsetv",
             );
-            blend::composite(
+            blend::composite_with_base(
                 context,
                 base.to_owned(),
                 &shadow,
@@ -121,11 +132,12 @@ fn overlay(
                     end: end.clone(),
                     mode: BlendMode::Normal,
                 },
+                base_is_opaque,
             )
         }
         None => base.to_owned(),
     };
-    Ok(blend::composite(
+    Ok(blend::composite_with_base(
         context,
         base,
         &layer,
@@ -134,6 +146,7 @@ fn overlay(
             end,
             mode: visual.compositing.blend_mode,
         },
+        base_is_opaque,
     ))
 }
 

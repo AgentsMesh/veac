@@ -28,10 +28,12 @@ fn role(parser: &mut Parser<'_>) -> Result<BuildInputRole, Diagnostic> {
         BuildInputRole::AssetMetadata
     } else if parser.at_control(controls::INPUT_ANALYSIS_ROLE) {
         BuildInputRole::Analysis
+    } else if parser.at_control(controls::INPUT_MATERIAL_ROLE) {
+        BuildInputRole::Material
     } else {
         return Err(parser.error(
             "PROGRAM_INPUT_ROLE",
-            "input role must be parameter, asset_metadata, or analysis",
+            "input role must be parameter, asset_metadata, analysis, or material",
             parser.current().span,
         ));
     };

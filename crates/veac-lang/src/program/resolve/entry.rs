@@ -10,6 +10,7 @@ pub(crate) fn resolve(
     root: LoadedSource,
     loader: &dyn SourceLoader,
     execution: &ExecutionBudget,
+    contract: &crate::program::EntryContract,
 ) -> Result<Resolution, Vec<Diagnostic>> {
     validate_source_id(&root.id).map_err(|message| {
         vec![Diagnostic::new(
@@ -32,13 +33,15 @@ pub(crate) fn resolve(
             crate::authoring::Span::default(),
         )]);
     }
-    crate::program::executable::validate_entry(&entry).map_err(|error| vec![error])?;
+    contract
+        .validate_surface(&entry)
+        .map_err(|error| vec![error])?;
     let mut resolver = Resolver::new(loader, source_budget, execution);
     resolver
         .sources
         .insert(root.id.clone(), root.source.clone());
     resolver.active.push(root.id.clone());
-    let result = resolver.scope(&entry, false);
+    let result = resolver.entry_scope(&entry, contract.preludes());
     resolver.active.pop();
     let scope = result.map_err(|error| vec![error])?;
     Ok(Resolution {

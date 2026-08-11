@@ -54,11 +54,11 @@ fn every_vector_geometry_emits_fill_and_stroke_through_normal_visual_pipeline() 
         assert!(graph.contains("shapecanvasv"));
         assert!(graph.contains("shapev"));
         assert!(
-            graph.contains("blend=all_expr='B+A*(65535-B)/65535'"),
-            "missing source-over: {graph}"
+            graph.contains("maskedmerge=planes=7"),
+            "missing opaque source-over fast path: {graph}"
         );
         assert!(
-            graph.contains("mergeplanes=format=gbrap16le"),
+            graph.contains("format=gbrap16le[layerprecisionv"),
             "shape must preserve high-precision alpha: {graph}"
         );
     }

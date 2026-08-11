@@ -30,7 +30,10 @@ use veac_artifact::ExecutionBindings;
 use super::error::{diagnostic, CodegenErrorKind};
 use super::CodegenErrors;
 
-pub(super) fn validate(plan: &ResolvedRenderPlan) -> Result<(), CodegenErrors> {
+pub(super) fn validate(
+    plan: &ResolvedRenderPlan,
+    _bindings: &ExecutionBindings,
+) -> Result<(), CodegenErrors> {
     let mut check = Check::default();
     plan_contract::validate(&mut check, plan);
     check.header(plan);

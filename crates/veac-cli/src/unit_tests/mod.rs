@@ -30,6 +30,7 @@ mod planning_tests;
 mod portable_artifact_tests;
 mod probe_argument_tests;
 mod probe_command_tests;
+mod project_argument_tests;
 mod proxy_postflight_tests;
 mod schema_command_tests;
 mod segment_postflight_tests;

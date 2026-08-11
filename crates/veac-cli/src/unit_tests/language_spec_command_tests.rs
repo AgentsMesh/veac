@@ -29,14 +29,14 @@ fn language_spec_encoding_is_canonical_and_deterministic() {
             .as_array()
             .unwrap()
             .len(),
-        581
+        582
     );
     assert_eq!(
         value["standard_library"]["free_functions"]
             .as_array()
             .unwrap()
             .len(),
-        558
+        559
     );
     assert_eq!(
         value["standard_library"]["methods"]

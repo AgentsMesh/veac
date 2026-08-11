@@ -1,0 +1,136 @@
+fn source_input() -> ProjectInput {
+  ProjectInput {
+    id: identifier("source"),
+    source: ProjectInputSource.ProjectMaterial { path: "source.mp4", },
+  }
+}
+
+fn target(
+  id: identifier,
+  operation: MediaDerivation,
+  output: identifier,
+  media_type: MediaType,
+  destination: text,
+) -> ProjectTarget {
+  ProjectTarget {
+    id: id,
+    entry: ProjectTargetEntry.MediaDerivation { operation: operation, },
+    localized: false,
+    inputs: [source_input()],
+    profiles: [],
+    axes: [],
+    needs: [],
+    outputs: [ProjectOutput.Media { id: output, media_type: media_type, }],
+    deliveries: [
+      ProjectDelivery.File {
+        id: identifier("file"),
+        output: output,
+        destination: destination,
+      }
+    ],
+  }
+}
+
+fn stream(global_index: int) -> ProjectStreamSelection {
+  ProjectStreamSelection { global_index: global_index, type_index: 0, }
+}
+
+fn half_clock() -> ProjectSourceClock {
+  ProjectSourceClock.Bounded {
+    start: ProjectRational { numerator: 1, denominator: 4, },
+    duration: ProjectRational { numerator: 1, denominator: 2, },
+  }
+}
+
+fn workspace() -> ProjectManifest {
+  let proxy_audio = MediaDerivation.ProxyAudio {
+    source: identifier("source"),
+    source_stream: stream(1),
+    source_clock: ProjectSourceClock.Identity {
+      duration: ProjectRational { numerator: 1, denominator: 2, },
+    },
+    sample_rate: 16000,
+    channels: 1,
+  };
+  let thumbnail = MediaDerivation.Thumbnail {
+    source: identifier("source"),
+    source_stream: stream(0),
+    at: ProjectRational { numerator: 1, denominator: 4, },
+    width: 20,
+    height: 14,
+  };
+  let waveform = MediaDerivation.Waveform {
+    source: identifier("source"),
+    source_stream: stream(1),
+    source_clock: half_clock(),
+    sample_rate: 8000,
+    width: 64,
+    height: 24,
+    color: "white",
+  };
+  let optical_flow = MediaDerivation.OpticalFlow {
+    source: identifier("source"),
+    source_stream: stream(0),
+    source_clock: half_clock(),
+    width: 32,
+    height: 32,
+    frame_rate: ProjectRational { numerator: 20, denominator: 1, },
+    method: ProjectOpticalFlowMethod.BlockMatching,
+  };
+  let source_segment = MediaDerivation.SourceSegment {
+    source: identifier("source"),
+    video_stream: stream(0),
+    start: ProjectRational { numerator: 1, denominator: 4, },
+    duration: ProjectRational { numerator: 1, denominator: 2, },
+    width: 40,
+    height: 30,
+    frame_rate: ProjectRational { numerator: 10, denominator: 1, },
+    audio: OptionalProjectSegmentAudio.Some {
+      value: ProjectSegmentAudio {
+        source_stream: stream(1),
+        sample_rate: 22050,
+        channels: 1,
+      },
+    },
+    crf: 30,
+  };
+  ProjectManifest {
+    schema: "veac.project",
+    version: 1,
+    id: identifier("derivation-matrix"),
+    paths: ProjectPaths {
+      source_base: "sources",
+      material_root: "materials",
+      build_root: "build",
+      cache_root: ".cache/veac",
+      delivery_root: "dist",
+    },
+    defaults: ProjectDefaults {
+      profile: OptionalIdentifier.None,
+      locale: OptionalIdentifier.None,
+      max_instances_per_target: 8,
+      max_total_instances: 8,
+    },
+    locales: [],
+    profiles: [
+      ProjectProfile {
+        id: identifier("parallel"),
+        execution: ExecutionPolicy.Parallel { max_tasks: 5, },
+        proxy: ProxyPolicy.Disabled,
+        segmentation: SegmentationPolicy.Whole,
+      }
+    ],
+    targets: [
+      target(identifier("proxy-audio"), proxy_audio, identifier("audio"),
+        MediaType.Audio, "proxy-audio.wav"),
+      target(identifier("thumbnail"), thumbnail, identifier("image"),
+        MediaType.Image, "thumbnail.png"),
+      target(identifier("waveform"), waveform, identifier("image"),
+        MediaType.Image, "waveform.png"),
+      target(identifier("optical-flow"), optical_flow, identifier("video"),
+        MediaType.Video, "optical-flow.mp4"),
+      target(identifier("source-segment"), source_segment, identifier("video"),
+        MediaType.Video, "source-segment.mp4")
+    ],
+  }
+}

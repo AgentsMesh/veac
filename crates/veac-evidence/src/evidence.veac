@@ -1,0 +1,31 @@
+module {
+  export struct EvidenceSuite { schema_version: int, id: identifier, sources: list<EvidenceSource>, samples: list<EvidenceSample>, regions: list<EvidenceRegion>, assertions: list<EvidenceAssertion>, }
+  export struct EvidenceSource { id: identifier, binding: EvidenceSourceBinding, }
+  export enum EvidenceSourceBinding { Deliverable { deliverable_id: identifier, }, Artifact { artifact_id: identifier, }, BoundInput { input_id: identifier, }, }
+  export struct EvidenceSample { id: identifier, source_id: identifier, at: time, }
+  export struct EvidenceRegion { id: identifier, space: EvidenceRegionSpace, }
+  export enum EvidenceRegionSpace { Normalized { x: scalar, y: scalar, width: scalar, height: scalar, }, Pixels { x: int, y: int, width: int, height: int, }, }
+  export enum OptionalIdentifier { None, Some { value: identifier, }, }
+  export enum OptionalScalar { None, Some { value: scalar, }, }
+  export enum OptionalInteger { None, Some { value: int, }, }
+  export struct RangeExpectation { minimum: OptionalScalar, maximum: OptionalScalar, }
+  export enum OptionalRangeExpectation { None, Some { value: RangeExpectation, }, }
+  export struct AlphaExpectation { transparent_below: int, opaque_above: int, mean: OptionalRangeExpectation, transparent_fraction: OptionalRangeExpectation, partial_fraction: OptionalRangeExpectation, opaque_fraction: OptionalRangeExpectation, }
+  export struct DiffExpectation { rmse: OptionalRangeExpectation, mae: OptionalRangeExpectation, maximum_delta: OptionalRangeExpectation, changed_fraction: OptionalRangeExpectation, }
+  export struct BoundsExpectation { non_empty: bool, minimum_margin_pixels: OptionalInteger, maximum_width_pixels: OptionalInteger, maximum_height_pixels: OptionalInteger, }
+  export enum DiffChannels { Rgb, Rgba, Alpha, }
+  export enum MaskSpec { Alpha { minimum: int, }, Difference { reference_sample_id: identifier, minimum_delta: int, }, Luma { threshold: int, above: bool, }, }
+  export struct RevealSubject { id: identifier, region_id: identifier, }
+  export struct RevealCheckpoint { sample_id: identifier, visible_prefix: int, }
+  export enum MotionMetric { ChangedFraction { threshold: int, }, AlphaCentroid { minimum: int, }, }
+  export enum EvidenceAssertion {
+    DecodeComplete { id: identifier, source_id: identifier, minimum_frames: int, },
+    Alpha { id: identifier, sample_id: identifier, region_id: OptionalIdentifier, expectation: AlphaExpectation, },
+    PixelDiff { id: identifier, left_sample_id: identifier, right_sample_id: identifier, region_id: OptionalIdentifier, channels: DiffChannels, change_threshold: int, expectation: DiffExpectation, },
+    Bounds { id: identifier, sample_id: identifier, region_id: OptionalIdentifier, mask: MaskSpec, expectation: BoundsExpectation, },
+    LayerOrder { id: identifier, upper_entity: text, lower_entity: text, },
+    CompositeOver { id: identifier, actual_sample_id: identifier, underlay_sample_id: identifier, overlay_sample_id: identifier, region_id: OptionalIdentifier, overlay_alpha_minimum: int, maximum_expected_rmse: scalar, minimum_improvement_ratio: scalar, },
+    RevealOrder { id: identifier, baseline_sample_id: identifier, subjects: list<RevealSubject>, checkpoints: list<RevealCheckpoint>, change_threshold: int, visible_minimum: scalar, hidden_maximum: scalar, },
+    MotionProfile { id: identifier, sample_ids: list<identifier>, region_id: OptionalIdentifier, metric: MotionMetric, minimum_interval_motion: scalar, minimum_deceleration_ratio: scalar, monotonic_tolerance: scalar, },
+  }
+}

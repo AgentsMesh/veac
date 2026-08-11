@@ -10,7 +10,7 @@ mod time;
 
 pub use display::{selected_audio, selected_video, ProbeDisplay};
 pub use error::ProbeError;
-pub use ffprobe::{probe, probe_with_intent, SystemFfprobe};
+pub use ffprobe::{probe, probe_with_intent, FfprobeFingerprint, SystemFfprobe};
 pub use identity::sha256_identity;
 pub use probe_json::{
     parse_ffprobe_json, FIXTURE_PROBE_ENGINE, PROBE_SCHEMA_VERSION, STREAM_SELECTION_POLICY,

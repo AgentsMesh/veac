@@ -27,7 +27,7 @@ tests that inspect decoded media, ffprobe facts, artifact bytes, or guarded file
 - P1-26 implementation: [transition model](../../crates/veac-ir/src/model/transition.rs)
 - P1-26 verification: [transition contract validation](../../crates/veac-ir/src/unit_tests/validation_tests/transition_contract_tests.rs)
 - P1-26 observable: [typed transition observability](../../crates/veac-runtime/tests/render_e2e/transition_typed_observability.rs)
-- P1-26 contract: schema v9 publishes only explicit `centered` alignment and requires the authored duration to equal the adjacent items' exact true-overlap window.
+- P1-26 contract: schema v10 publishes only explicit `centered` alignment and requires the authored duration to equal the adjacent items' exact true-overlap window.
 ### P1-27
 - P1-27 model: [first-class Apply IR](../../crates/veac-ir/src/model/apply.rs)
 - P1-27 implementation: [Apply resolver](../../crates/veac-plan/src/resolver/apply.rs)

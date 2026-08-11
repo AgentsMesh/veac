@@ -1,4 +1,4 @@
-use veac_ir::{HashAlgorithm, RationalTime};
+use veac_ir::{HashAlgorithm, Rational, RationalTime, VideoCadence};
 
 use crate::{
     execution_bindings_edge_tests::{add_audio, original_paths},
@@ -30,10 +30,38 @@ fn complete_proxy_selection_binds_independent_video_and_audio_artifacts() {
     )
     .unwrap();
     let mut bindings = ExecutionBindings::from_originals(&plan, &original_paths(&plan)).unwrap();
+    let original = bindings.input(&input.id).unwrap();
+    let original_video = original.video_facts().unwrap();
+    let original_audio = original.audio_facts().unwrap();
+    assert_eq!(
+        (original_video.width(), original_video.height()),
+        (1920, 1080)
+    );
+    assert_eq!(
+        original_video.frame_rate(),
+        Some(Rational::new(30, 1).unwrap())
+    );
+    assert_eq!(original_video.cadence(), VideoCadence::Constant);
+    assert_eq!(
+        (original_audio.sample_rate(), original_audio.channels()),
+        (48_000, 2)
+    );
     bindings.bind_proxy_selection(input, &selection).unwrap();
     let bound = bindings.input(&input.id).unwrap();
     let video = bound.video().unwrap();
     let audio = bound.audio().unwrap();
+    let video_facts = bound.video_facts().unwrap();
+    let audio_facts = bound.audio_facts().unwrap();
+    assert_eq!((video_facts.width(), video_facts.height()), (640, 360));
+    assert_eq!(
+        video_facts.frame_rate(),
+        Some(Rational::new(30, 1).unwrap())
+    );
+    assert_eq!(video_facts.cadence(), VideoCadence::Constant);
+    assert_eq!(
+        (audio_facts.sample_rate(), audio_facts.channels()),
+        (48_000, 2)
+    );
     assert_eq!(video.physical_stream(), stream(0, 0));
     assert_eq!(audio.physical_stream(), stream(0, 0));
     assert_eq!(video.clock().logical_range(), Some(range(0, 60)));

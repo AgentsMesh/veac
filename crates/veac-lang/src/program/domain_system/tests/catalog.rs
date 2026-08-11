@@ -3,10 +3,10 @@ use std::collections::BTreeSet;
 use super::*;
 
 #[test]
-fn catalog_covers_the_complete_v7_algebra() {
+fn catalog_covers_the_complete_v8_algebra() {
     let registry = DomainOperationRegistry::standard();
-    assert_eq!(registry.version(), DomainOpsetVersion::V7);
-    assert_eq!(registry.len(), 581);
+    assert_eq!(registry.version(), DomainOpsetVersion::V8);
+    assert_eq!(registry.len(), 582);
     assert_eq!(registry.len(), DomainOperationId::all().len());
     assert_eq!(DomainType::all().len(), 214);
     assert!(!registry.is_empty());

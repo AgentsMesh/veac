@@ -68,7 +68,7 @@ impl Builder<'_> {
             id: CoreForEachSlotId::Index,
             type_id: self.types.intern_value(&index_type),
         };
-        self.terminate(CoreTerminator::ForEach(CoreForEach {
+        self.terminate(CoreTerminator::ForEach(Box::new(CoreForEach {
             iterable: iterable_id,
             maximum_count,
             order: CoreForEachOrder::Source,
@@ -84,7 +84,7 @@ impl Builder<'_> {
             },
             effect: CoreForEachEffect::from_metadata(&result_metadata),
             result_metadata,
-        }));
+        })));
         self.current = continuation;
         result_id
     }

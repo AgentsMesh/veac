@@ -6,6 +6,14 @@ pub(crate) enum SchemaFormat {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SchemaContract {
     Project,
+    ProjectManifest,
+    ResolvedProjectGraph,
+    BuildReceipt,
+    EvidenceSuite,
+    ObservationPlan,
+    EvidenceReport,
+    EvidenceBundle,
+    EvidenceProvenance,
     Caption,
     CaptionTrackInsertion,
     CaptionDocumentBindings,

@@ -97,3 +97,34 @@ frame_saturation_avg() {
     -vf 'signalstats,metadata=print:file=-' -f null - 2>/dev/null |
     awk -F= '/lavfi.signalstats.SATAVG=/ { print $2; exit }'
 }
+
+frame_axis_difference_avg() {
+  local video=$1 time=$2 width=${3:-160} height=${4:-90}
+  ffmpeg -v error -ss "$time" -i "$video" -frames:v 1 \
+    -vf "scale=$width:$height:flags=area,format=gray" -pix_fmt gray -f rawvideo - 2>/dev/null |
+    od -An -v -tu1 |
+    awk -v width="$width" -v expected="$((width * height))" '
+      {
+        for (i = 1; i <= NF; i++) {
+          value = $i
+          x = pixel % width
+          if (x > 0) {
+            delta = value - left
+            x_total += delta < 0 ? -delta : delta
+            x_count++
+          }
+          if (pixel >= width) {
+            delta = value - above[x]
+            y_total += delta < 0 ? -delta : delta
+            y_count++
+          }
+          above[x] = value
+          left = value
+          pixel++
+        }
+      }
+      END {
+        if (pixel != expected || !x_count || !y_count) exit 1
+        printf "%.4f %.4f\n", x_total/x_count, y_total/y_count
+      }'
+}

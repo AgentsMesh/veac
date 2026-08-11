@@ -4,6 +4,14 @@ use crate::{SchemaContract, SchemaFormat};
 fn schema_command_exposes_every_public_contract() {
     let contracts = [
         SchemaContract::Project,
+        SchemaContract::ProjectManifest,
+        SchemaContract::ResolvedProjectGraph,
+        SchemaContract::BuildReceipt,
+        SchemaContract::EvidenceSuite,
+        SchemaContract::ObservationPlan,
+        SchemaContract::EvidenceReport,
+        SchemaContract::EvidenceBundle,
+        SchemaContract::EvidenceProvenance,
         SchemaContract::Caption,
         SchemaContract::CaptionTrackInsertion,
         SchemaContract::CaptionDocumentBindings,

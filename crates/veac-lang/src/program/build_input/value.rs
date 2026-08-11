@@ -3,7 +3,10 @@ use std::sync::Arc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{exact, BuildInputsError};
+use super::{
+    exact, material, primitive, BuildInputRole, BuildInputsError, MaterialInputAuthority,
+    MaterialInputKind,
+};
 use crate::program::expression::{
     PrimitiveType, Value, ValueType, ValueTypeKind, MAX_TEXT_VALUE_BYTES,
 };
@@ -45,6 +48,14 @@ pub enum BuildInputManifestValue {
         )]
         value: String,
     },
+    Material {
+        kind: MaterialInputKind,
+        path: String,
+        sha256: String,
+        authority: MaterialInputAuthority,
+        video_stream: Option<u32>,
+        audio_stream: Option<u32>,
+    },
 }
 
 impl BuildInputManifestValue {
@@ -62,7 +73,7 @@ impl BuildInputManifestValue {
             Self::Length { .. } => PrimitiveType::Length,
             Self::Angle { .. } => PrimitiveType::Angle,
             Self::Color { .. } => PrimitiveType::Color,
-            Self::Enum { .. } => return None,
+            Self::Enum { .. } | Self::Material { .. } => return None,
         })
     }
 
@@ -75,14 +86,14 @@ impl BuildInputManifestValue {
                 Some(Value::Text(Arc::from(value.as_str())))
             }
             Self::Text { .. } => None,
-            Self::Time { value } => unit_value(value, PrimitiveType::Time),
-            Self::Length { value } => unit_value(value, PrimitiveType::Length),
-            Self::Angle { value } => unit_value(value, PrimitiveType::Angle),
-            Self::Color { value } if valid_color(value) => {
+            Self::Time { value } => primitive::unit_value(value, PrimitiveType::Time),
+            Self::Length { value } => primitive::unit_value(value, PrimitiveType::Length),
+            Self::Angle { value } => primitive::unit_value(value, PrimitiveType::Angle),
+            Self::Color { value } if primitive::valid_color(value) => {
                 Some(Value::Color(value.to_ascii_lowercase().into()))
             }
             Self::Color { .. } => None,
-            Self::Enum { .. } => None,
+            Self::Enum { .. } | Self::Material { .. } => None,
         }
         .ok_or_else(|| {
             BuildInputsError::new(
@@ -92,12 +103,23 @@ impl BuildInputManifestValue {
         })
     }
 
-    pub(crate) fn matches_type(&self, expected: &ValueType) -> bool {
+    pub(crate) fn matches_declaration(
+        &self,
+        role: BuildInputRole,
+        expected: &ValueType,
+        registry: &TypeRegistry,
+    ) -> bool {
         match self {
-            Self::Enum { .. } => matches!(expected.kind(), ValueTypeKind::Nominal(_)),
-            _ => self
-                .primitive_type()
-                .is_some_and(|actual| expected.as_primitive() == Some(actual)),
+            Self::Material { .. } => {
+                role == BuildInputRole::Material && material::matches(expected, registry)
+            }
+            Self::Enum { .. } => {
+                role != BuildInputRole::Material
+                    && matches!(expected.kind(), ValueTypeKind::Nominal(_))
+            }
+            _ => self.primitive_type().is_some_and(|actual| {
+                role != BuildInputRole::Material && expected.as_primitive() == Some(actual)
+            }),
         }
     }
 
@@ -107,6 +129,9 @@ impl BuildInputManifestValue {
         registry: &TypeRegistry,
     ) -> Result<Value, BuildInputsError> {
         self.validate_shape()?;
+        if matches!(self, Self::Material { .. }) {
+            return material::value(self, expected, registry);
+        }
         let Self::Enum { value } = self else {
             return self.runtime_value();
         };
@@ -147,7 +172,10 @@ impl BuildInputManifestValue {
     }
 
     pub(crate) fn type_label(&self) -> &'static str {
-        self.primitive_type().map_or("enum", PrimitiveType::as_str)
+        match self {
+            Self::Material { .. } => "material",
+            _ => self.primitive_type().map_or("enum", PrimitiveType::as_str),
+        }
     }
 }
 
@@ -156,27 +184,4 @@ pub(crate) fn type_mismatch(expected: &ValueType, actual: &str) -> BuildInputsEr
         "PROGRAM_INPUT_TYPE_MISMATCH",
         format!("Build input expects {expected}, got {actual}"),
     )
-}
-
-fn unit_value(raw: &str, kind: PrimitiveType) -> Option<Value> {
-    let exact = match kind {
-        PrimitiveType::Time => exact::unit(raw, "s", (1, 1))
-            .or_else(|| exact::unit(raw, "ms", (1, 1_000)))
-            .or_else(|| exact::unit(raw, "us", (1, 1_000_000))),
-        PrimitiveType::Length => exact::unit(raw, "px", (1, 1)),
-        PrimitiveType::Angle => exact::unit(raw, "deg", (1, 1)),
-        _ => None,
-    }?;
-    match kind {
-        PrimitiveType::Time => Some(Value::Time(exact)),
-        PrimitiveType::Length => Some(Value::Length(exact)),
-        PrimitiveType::Angle => Some(Value::Angle(exact)),
-        _ => None,
-    }
-}
-
-fn valid_color(value: &str) -> bool {
-    matches!(value.len(), 7 | 9)
-        && value.starts_with('#')
-        && value[1..].bytes().all(|value| value.is_ascii_hexdigit())
 }

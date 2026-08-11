@@ -15,10 +15,22 @@
   -> FFmpeg tasks and direct artifacts
 ```
 
-An entry must provide one root-local `fn main(context: Context) -> Project`. Imported modules provide
+A video-program entry must provide one root-local `fn main(context: Context) -> Project`. Imported modules provide
 reusable declarations but cannot provide the entry. Planner and backend crates never receive Surface
 AST, Typed HIR, Core, graph handles, or compile-time declarations. The executable path produces a newly
 validated canonical result before planning.
+
+## 工程编排层
+
+`project.veac` 通过 `workspace() -> ProjectManifest` 在视频程序之上建立 profile/locale/matrix 实例、
+target DAG、typed inputs、CAS 和 delivery。target action 只允许 `VeacRender`、`MediaDerivation` 和
+`Evidence`；工程运行时不会执行任意 shell。完整 source graph revision、输入内容身份、上游 artifact
+和实现版本共同形成 computation identity，跨进程 lease 避免重复计算。
+
+Evidence target 通过 `evidence() -> EvidenceSuite` 观察已授权的工程 input，发布带 provenance 和
+outcome 的 typed directory artifact。assertion failure 与 build execution failure 是不同状态；前者保留
+完整 bundle，后者不会伪造成功产物。参见[工程工作区](language-reference/project-workspaces.md)和
+[证据与验收](language-reference/evidence.md)。
 
 ## Crate Ownership
 
@@ -27,6 +39,9 @@ validated canonical result before planning.
 | `veac-lang` | source graph, Typed HIR/Core v10, bounded evaluator, temporal residualization, graph transaction/freeze, direct lowering, source transactions | probing, render policy, FFmpeg strings |
 | `veac-ir` | canonical serde model, IDs, invariants, edit contracts | surface syntax, filesystem access |
 | `veac-artifact` | probe snapshots, source clocks, artifact identity | timeline semantics |
+| `veac-project` | authored workspace ABI、matrix expansion、target graph resolution | target execution、media I/O |
+| `veac-build` | typed DAG、scheduler、cache/lease、CAS publication、delivery、receipt | VEAC authoring、FFmpeg policy |
+| `veac-evidence` | authored suite ABI、observation plan、pure evaluation、evidence bundle | timeline construction、media process execution |
 | `veac-plan` | graph resolution, streams, time maps, output plan | authoring recovery, command execution |
 | `veac-codegen` | typed backend bundle, filters, direct artifacts | project mutation |
 | `veac-runtime` | task execution, locks, checkpoints, output verification | authoring interpretation |
@@ -59,8 +74,8 @@ most Build: **static topology, dynamic leaf values**.
 
 Freeze requires one connected Project with a valid entry. The frozen graph lowers directly to
 canonical `ProjectEnvelope`; executable production never renders `.veac`, reparses a generated
-Document, or dispatches runtime operations by source string. Opset v7 has 214 closed Domain types and
-581 numeric operations covering resources, timeline, transform, text/caption, audio, effects,
+Document, or dispatches runtime operations by source string. Opset v8 has 214 closed Domain types and
+582 numeric operations covering resources, timeline, transform, text/caption, audio, effects,
 transitions, multicam, annotation, template and delivery mechanisms. Root `animate` declarations compile
 through the same function system and residualize approved dynamic leaves into canonical programs.
 The user-facing contract is [Executable Build](language-reference/executable-build.md).
@@ -105,7 +120,7 @@ Plans are deterministic inputs to codegen and contain no parser recovery state.
 
 ## Typed Artifact ABI
 
-Artifact contract v2 has one source of truth for artifact type. `ArtifactParameters` is a closed,
+Artifact contract v3 has one source of truth for artifact type. `ArtifactParameters` is a closed,
 tagged variant; `ArtifactDescriptor::kind()` is derived from that variant and is never serialized as
 a second independently editable field. Parameters are typed structures, not JSON property bags.
 
@@ -121,7 +136,11 @@ advertise an analyzer that the runtime cannot execute.
 
 ## Codegen and Runtime
 
-Codegen emits a typed bundle instead of a shell command. Tasks declare inputs, outputs, dependencies, arguments, and verification expectations. Direct writers handle caption sidecars and other non-FFmpeg artifacts.
+Codegen emits a typed bundle instead of a shell command. Tasks declare inputs, outputs, dependencies,
+arguments, and verification expectations. Oversized graphs transported through a staging script use
+one filter worker and one decoder worker per input, avoiding a graph-node or input-count multiplication
+by the host CPU count. Inline graphs retain FFmpeg's parallel defaults. Direct writers handle caption
+sidecars and other non-FFmpeg artifacts.
 
 Runtime executes the bundle with output locking and checkpoint identity. It never reinterprets `.veac` or mutates canonical intent to make a backend command succeed.
 
@@ -132,6 +151,10 @@ FFmpeg plugin adapter descriptor and implementation ID. Runtime adds its own con
 build identity. FFmpeg configuration and input policy complete the producer fingerprint used by
 render segments and checkpoints; direct-write checkpoints bind the combined codegen/runtime
 identity. Manual contract versions remain explicit audit fields, but are only one identity input.
+The project scheduler applies the same rule before its outer computation-cache lookup: each action
+binds its exact CLI project backend, build/compiler/codegen/runtime/evidence inventory and the pinned
+FFmpeg/ffprobe configuration it actually requires. An inner artifact cache cannot compensate for an
+outer cache key that omitted those identities.
 
 ## Validation Layers
 

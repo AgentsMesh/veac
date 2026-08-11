@@ -40,6 +40,7 @@ fn execute(cli: Cli) -> CliResult {
 fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment) -> CliResult {
     let format = cli.diagnostic_format;
     let result = match cli.command {
+        Command::Project { command } => commands::project(command),
         Command::Caption { command } => commands::caption(command),
         Command::Otio { command } => commands::otio(command),
         Command::Template { command } => commands::template(command, environment),

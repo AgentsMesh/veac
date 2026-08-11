@@ -5,6 +5,7 @@ mod functions;
 mod inputs;
 mod methods;
 mod names;
+mod prelude;
 mod retained;
 mod standalone;
 mod type_annotations;
@@ -20,8 +21,21 @@ use super::loader::{validate_source_id, LoadedSource, SourceLoader};
 use super::model::{FileKind, Scope, SurfaceFile};
 use super::parser;
 
-pub(crate) use entry::resolve as executable_entry;
+pub(crate) use entry::resolve as contract_entry;
 pub(crate) use standalone::resolve as standalone_module;
+
+pub(crate) fn executable_entry(
+    root: LoadedSource,
+    loader: &dyn SourceLoader,
+    execution: &ExecutionBudget,
+) -> Result<Resolution, Vec<Diagnostic>> {
+    entry::resolve(
+        root,
+        loader,
+        execution,
+        &crate::program::EntryContract::video(),
+    )
+}
 
 pub(crate) struct Resolution {
     pub entry: SurfaceFile,
@@ -56,7 +70,15 @@ impl<'a> Resolver<'a> {
     }
 
     fn scope(&mut self, file: &SurfaceFile, exports_only: bool) -> Result<Scope, Diagnostic> {
-        let mut scope = Scope::default();
+        self.scope_from(file, exports_only, Scope::default())
+    }
+
+    fn scope_from(
+        &mut self,
+        file: &SurfaceFile,
+        exports_only: bool,
+        mut scope: Scope,
+    ) -> Result<Scope, Diagnostic> {
         self.imports(file, &mut scope)?;
         let exported_types = types::resolve(file, &mut scope, &mut self.retained)?;
         inputs::resolve(file, &mut scope)?;
