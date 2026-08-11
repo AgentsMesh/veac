@@ -1329,6 +1329,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "getrandom",
+ "png",
  "predicates",
  "rustix",
  "serde",

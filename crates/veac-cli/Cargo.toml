@@ -33,6 +33,7 @@ getrandom = "0.4"
 
 [dev-dependencies]
 assert_cmd = "2"
+png = "0.17"
 predicates = "3"
 
 [build-dependencies]

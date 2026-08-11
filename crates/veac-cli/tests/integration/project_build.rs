@@ -86,11 +86,7 @@ fn project_build_binds_and_verifies_typed_project_materials() {
     std::fs::write(sources.join("main.veac"), target_with_picture()).unwrap();
     let materials = temp.path().join("materials");
     std::fs::create_dir(&materials).unwrap();
-    std::fs::copy(
-        project_root().join("examples/video-effects/assets/effects-plate.png"),
-        materials.join("plate.png"),
-    )
-    .unwrap();
+    write_picture(&materials.join("plate.png"));
 
     let output = invoke(&entry, &receipt);
     assert!(
@@ -155,6 +151,12 @@ pub(super) fn target_with_picture() -> String {
         )
 }
 
-fn project_root() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+fn write_picture(path: &std::path::Path) {
+    let mut encoder = png::Encoder::new(std::fs::File::create(path).unwrap(), 2, 2);
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().unwrap();
+    writer
+        .write_image_data(&[255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255])
+        .unwrap();
 }
