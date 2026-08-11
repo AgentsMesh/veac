@@ -77,6 +77,35 @@ fn cached_analysis_enforces_size_type_digest_and_canonical_form() {
         let result = cache::validate(&artifact, limit, &mut || true);
         assert_eq!(result.as_ref().err().map(|error| error.kind), expected);
     }
+
+    let temp = tempfile::tempdir().unwrap();
+    let store = ArtifactStore::new(temp.path().join("wrong-type"));
+    let wrong = MediaArtifactRequest {
+        source_identity: request.source_identity.clone(),
+        producer: request.producer.clone(),
+        spec: MediaArtifactSpec::ProxyAudio(ProxyAudioSpec {
+            source_stream: veac_ir::StreamSelection {
+                global_index: 0,
+                type_index: 0,
+            },
+            source_clock: SourceClockSpec::Identity {
+                duration: veac_ir::RationalTime::new(1, 1).unwrap(),
+            },
+            sample_rate: 48_000,
+            channels: 2,
+        }),
+    }
+    .descriptor()
+    .unwrap();
+    let canonical = request.result.canonical_bytes(4_096).unwrap();
+    let record = store.put(&wrong, &canonical).unwrap();
+    let artifact = store.open_verified(&record.key, &wrong).unwrap().unwrap();
+    assert_eq!(
+        cache::validate(&artifact, 4_096, &mut || true)
+            .unwrap_err()
+            .kind,
+        WorkflowErrorKind::Artifact
+    );
 }
 
 fn request(source_identity: ContentDigest) -> AnalysisIngestionRequest {

@@ -60,7 +60,7 @@ impl MediaArtifactSpec {
     fn validate_contract(&self) -> ArtifactResult<()> {
         match self {
             Self::ProxyVideo(value) => {
-                dimensions(value.width, value.height)?;
+                dimensions(value.width, value.height, true)?;
                 value.source_clock.validate()?;
                 rate(value.frame_rate, "proxy video frame rate")?;
                 if value.crf > 51 {
@@ -72,7 +72,7 @@ impl MediaArtifactSpec {
                 audio(value.sample_rate, value.channels)?;
             }
             Self::Waveform(value) => {
-                dimensions(value.width, value.height)?;
+                dimensions(value.width, value.height, false)?;
                 value.source_clock.validate()?;
                 if value.sample_rate == 0
                     || value.color.is_empty()
@@ -82,17 +82,20 @@ impl MediaArtifactSpec {
                 }
             }
             Self::Thumbnail(value) => {
-                dimensions(value.width, value.height)?;
+                dimensions(value.width, value.height, false)?;
                 nonnegative(value.at, "thumbnail time")?;
                 exact_backend_time(value.at, "thumbnail time")?;
             }
             Self::OpticalFlow(value) => {
-                dimensions(value.width, value.height)?;
+                dimensions(value.width, value.height, true)?;
+                if value.width < 32 || value.height < 32 {
+                    return invalid("optical-flow dimensions must be at least 32x32");
+                }
                 value.source_clock.validate()?;
                 rate(value.frame_rate, "optical-flow frame rate")?;
             }
             Self::SourceSegment(value) => {
-                dimensions(value.width, value.height)?;
+                dimensions(value.width, value.height, true)?;
                 nonnegative(value.start, "source segment start")?;
                 positive(value.duration, "source segment duration")?;
                 exact_backend_time(value.start, "source segment start")?;
@@ -133,9 +136,9 @@ impl super::SourceClockSpec {
     }
 }
 
-fn dimensions(width: u32, height: u32) -> ArtifactResult<()> {
-    if width == 0 || height == 0 {
-        invalid("artifact dimensions must be positive")
+fn dimensions(width: u32, height: u32, encoded_video: bool) -> ArtifactResult<()> {
+    if width == 0 || height == 0 || (encoded_video && (width % 2 != 0 || height % 2 != 0)) {
+        invalid("artifact dimensions are invalid for the output format")
     } else {
         Ok(())
     }

@@ -48,6 +48,18 @@ pub(super) fn contract(id: Op) -> Option<Contract> {
             Type::Effect,
             Action::Description,
         ),
+        Op::VideoDirectionalBlurEffect => build(
+            id,
+            free("video_directional_blur_effect"),
+            vec![
+                topology("key", primitive(PrimitiveType::Identifier)),
+                leaf("state", domain(Type::EffectState)),
+                leaf("angle", domain(Type::AngleAnimation)),
+                leaf("radius", domain(Type::LengthAnimation)),
+            ],
+            Type::Effect,
+            Action::Description,
+        ),
         _ => return None,
     })
 }

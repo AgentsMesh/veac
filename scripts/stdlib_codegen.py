@@ -105,8 +105,8 @@ def load_operations():
             if text not in signatures:
                 signatures.add(text)
                 operations.append(operation)
-    if len(operations) != 581:
-        raise ValueError(f"expected 581 unique signatures, found {len(operations)}")
+    if len(operations) != 582:
+        raise ValueError(f"expected 582 unique signatures, found {len(operations)}")
     return operations
 
 

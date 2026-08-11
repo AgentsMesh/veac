@@ -30,7 +30,7 @@ fn media_source_emits_reverse_repeat_speed_sampling_sar_and_rotation() {
         info.rotation_degrees = 90;
         let graph = graph(&plan);
         for expected in [
-            "reverse,setpts=N*1/(30*TB)",
+            "]reverse[",
             "setpts=PTS/2",
             "scale=w='iw*2/1':h=ih,setsar=1,transpose=clock",
             "split=2",
@@ -39,6 +39,7 @@ fn media_source_emits_reverse_repeat_speed_sampling_sar_and_rotation() {
         ] {
             assert!(graph.contains(expected), "missing {expected}: {graph}");
         }
+        assert!(!graph.contains("setpts=N*"), "{graph}");
     }
 }
 
@@ -57,6 +58,34 @@ fn media_geometry_handles_every_rotation_branch() {
             assert!(graph.contains(":c=black@0"));
         }
     }
+}
+
+#[test]
+fn reverse_curve_preserves_native_pts_across_mapping_and_probe_timebases() {
+    let mut plan = resolved(&fixture());
+    let probe_timebase = 1_000_000_u32;
+    plan.inputs[0].video.as_mut().unwrap().duration =
+        Some(RationalTime::new(6 * i64::from(probe_timebase), probe_timebase).unwrap());
+    let info = &mut plan.inputs[0].video.as_mut().unwrap().info;
+    info.width = 320;
+    info.height = 180;
+    let mapping = clip(&mut plan).source_mapping.as_mut().unwrap();
+    mapping.time_map = ResolvedSourceTimeMap::Curve {
+        segments: vec![SourceTimeSegment {
+            record_duration: time(600),
+            source_start: time(1_800),
+            source_end: time(0),
+            interpolation: SourceTimeInterpolation::Linear,
+        }],
+    };
+
+    let graph = graph(&plan);
+
+    assert!(graph.contains("trim=start=0:duration=3"), "{graph}");
+    assert!(graph.contains("]reverse["), "{graph}");
+    assert!(!graph.contains("frameboundv"), "{graph}");
+    assert!(!graph.contains("reversefpsv"), "{graph}");
+    assert!(!graph.contains("setpts=N*"), "{graph}");
 }
 
 #[test]

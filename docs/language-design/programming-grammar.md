@@ -8,7 +8,7 @@ entry       = { import | input-declaration | declaration | temporal-declaration 
 module-file = "module" , "{" , { import | [ "export" ] , declaration } , "}" ;
 import      = "import" , relative-string , "as" , identifier , ";" ;
 input-declaration = "input" , input-role , identifier , ":" , value-type , ";" ;
-input-role = "parameter" | "asset_metadata" | "analysis" ;
+input-role = "parameter" | "asset_metadata" | "analysis" | "material" ;
 declaration = typed-const | function | struct-declaration | enum-declaration
             | implementation ;
 
@@ -121,7 +121,9 @@ module 通过 `export` 显式发布 const、fn、struct 与 enum；impl block �
 逐个使用 `export fn` 发布。exported declaration 可以依赖合法的 private sibling declaration，resolver
 会保留其闭合依赖但不会把 private name 暴露给 importer。
 
-root source 可声明 `input parameter`、`input asset_metadata` 与 `input analysis`。input 是 host 在
+root source 可声明 `input parameter`、`input asset_metadata`、`input analysis` 与 `input material`。
+前三类只接受 primitive 或 payloadless enum；`material` 只接受精确的 `MaterialBinding` 闭合 struct。
+input 是 host 在
 build 边界显式提供的 typed source-of-truth，不是 ambient filesystem、environment、clock 或 network
 读取；module file 不能自行声明 input。
 

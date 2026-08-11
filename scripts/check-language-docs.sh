@@ -82,6 +82,8 @@ reject_in 'schema[- ]v[34567]|schema( version)? [34567]|minimum reader( version)
   'stale canonical project version' README.md docs/architecture.md \
   docs/language-reference/README.md docs/language-design/mapping.md \
   docs/language-design/semantic-kernel.md docs/rfcs/agent-authoring-and-canonical-ir.md
+reject '^Opset v[1-7] is the closed executable registry' \
+  'stale executable domain opset version'
 reject 'typed authoring Document|core `Document`|authoring AST|authoring parser|second frontend' \
   'deleted legacy frontend terminology'
 reject '(^|[[:space:]`])veac compile([[:space:]`]|$)|(^|[[:space:]`])compile main[.]veac' \
@@ -108,8 +110,8 @@ for path in README.md docs/getting-started.md docs/language-design/agent-authori
 done
 
 for path in docs/language-design/{mapping,semantic-kernel}.md; do
-  require_in "$path" 'schema version 9' 'canonical project schema version is stale'
-  require_in "$path" 'minimum reader 9|schema-v9' 'canonical minimum reader is stale'
+  require_in "$path" 'schema version 10' 'canonical project schema version is stale'
+  require_in "$path" 'minimum reader 10|schema-v10' 'canonical minimum reader is stale'
 done
 
 require_in docs/language-design/semantic-kernel.md 'centered-only true overlaps' \

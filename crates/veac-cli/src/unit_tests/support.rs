@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use tempfile::TempDir;
 use veac_artifact::ContentDigest;
-use veac_ir::{HashAlgorithm, MediaIdentity, MediaProbeSnapshot, StreamIntent};
+use veac_ir::{HashAlgorithm, MediaIdentity, MediaProbeSnapshot, StreamIntent, VideoCadence};
 mod capability;
 mod fake_environment;
 mod project;
@@ -49,6 +49,11 @@ pub(super) fn snapshot(intent: StreamIntent, observed: MediaIdentity) -> MediaPr
         veac_runtime::asset::FIXTURE_PROBE_ENGINE,
     )
     .unwrap();
+    snapshot
+        .streams
+        .iter_mut()
+        .filter_map(|stream| stream.video.as_mut())
+        .for_each(|video| video.cadence = VideoCadence::Constant);
     let selected = [
         snapshot.selected_video_stream,
         snapshot.selected_audio_stream,

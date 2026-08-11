@@ -11,13 +11,16 @@ def one($label):
 ($material.stream_intent.video.global_index) as $video_index |
 . as $snapshot |
 
-$snapshot.schema_version == 3 and
+$snapshot.schema_version == 4 and
 ($snapshot.engine | type == "string" and length > 0) and
 ($snapshot.selection_policy | type == "string" and length > 0) and
 $snapshot.observed_identity == $material.identity and
 ($snapshot.streams | type == "array" and length >= 2) and
 any($snapshot.streams[];
-  .global_index == $video_index and .media_type == "video" and .video != null) and
+  .global_index == $video_index and .media_type == "video" and
+  .video.frame_rate == {numerator: 30, denominator: 1} and
+  (.video.cadence == "constant" or .video.cadence == "variable" or
+    .video.cadence == "unknown")) and
 any($snapshot.streams[]; .media_type == "audio" and .audio != null) and
 $material.stream_intent.video.type == "global_index" and
 $material.stream_intent.audio.type == "disabled" and

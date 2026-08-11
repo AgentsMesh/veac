@@ -18,7 +18,7 @@ fn authored() -> CoreForEach {
         .blocks()
         .iter()
         .find_map(|block| match block.terminator() {
-            CoreTerminator::ForEach(value) => Some(value.clone()),
+            CoreTerminator::ForEach(value) => Some(value.as_ref().clone()),
             _ => None,
         })
         .unwrap()
@@ -26,7 +26,7 @@ fn authored() -> CoreForEach {
 
 fn hash(value: CoreForEach) -> [u8; 32] {
     let mut digest = Sha256::new();
-    instruction::terminator(&mut digest, &CoreTerminator::ForEach(value));
+    instruction::terminator(&mut digest, &CoreTerminator::ForEach(Box::new(value)));
     digest.finalize().into()
 }
 

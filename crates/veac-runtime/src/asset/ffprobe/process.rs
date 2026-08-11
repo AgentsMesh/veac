@@ -6,6 +6,7 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::time::{Duration, Instant};
 
 use crate::asset::ProbeError;
+use crate::tool::{spawn_pinned_until, PinnedSpawnError};
 
 const MAX_STDERR_BYTES: u64 = veac_artifact::MAX_ARTIFACT_METADATA_BYTES;
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
@@ -40,7 +41,8 @@ pub(super) fn run(
             stderr.try_clone().map_err(|error| spawn(binary, error))?,
         ));
     crate::process_group::configure(&mut command);
-    let mut child = command.spawn().map_err(|error| spawn(binary, error))?;
+    let mut child = spawn_pinned_until(&mut command, deadline)
+        .map_err(|error| launch(binary, operation, error))?;
     let status = loop {
         let output_bytes = match length(&stdout, binary) {
             Ok(value) => value,
@@ -109,6 +111,13 @@ fn spawn(binary: &Path, source: std::io::Error) -> ProbeError {
     ProbeError::ProcessSpawn {
         binary: binary.to_string_lossy().into_owned(),
         source,
+    }
+}
+
+fn launch(binary: &Path, operation: &'static str, error: PinnedSpawnError) -> ProbeError {
+    match error {
+        PinnedSpawnError::Deadline => ProbeError::ResourceLimit { operation },
+        PinnedSpawnError::Io(error) => spawn(binary, error),
     }
 }
 

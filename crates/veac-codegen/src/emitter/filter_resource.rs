@@ -51,6 +51,8 @@ impl EmitContext<'_> {
     pub(super) fn filter_graph(
         &self,
     ) -> Result<(Option<String>, Option<BackendFilterContract>), CodegenErrors> {
+        self.reverse_ledger
+            .validate(self.deliverable, self.graph.reverse_filter_count())?;
         if self.graph.is_empty() {
             return Ok((None, None));
         }

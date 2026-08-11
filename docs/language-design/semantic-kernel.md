@@ -149,8 +149,8 @@ image, and adaptive package.
 
 Artifact values are typed recipes, not anonymous settings. Closed constructors separately own container,
 codec, source, frame, canvas, numbering, analysis, and package choices. Lowering
-creates one schema-v9 `RenderConfig` and one canonical `Deliverable` per artifact;
-the canonical project requires minimum reader 9.
+creates one schema-v10 `RenderConfig` and one canonical `Deliverable` per artifact;
+the canonical project requires minimum reader 10.
 Canonical settings use tagged enums and reject unknown fields.
 
 ## Edit Kernel
@@ -171,6 +171,6 @@ entire batch. It never applies a valid prefix of an invalid batch.
 - Time is exact under the project timebase.
 - Unknown variants and fields fail closed.
 - Formatter output is idempotent.
-- Lowering emits only canonical schema version 9 constructs.
+- Lowering emits only canonical schema version 10 constructs.
 - Planning consumes canonical IR, never executable Surface syntax.
 - Backend artifacts contain no unresolved source-language choices.

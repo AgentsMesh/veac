@@ -122,6 +122,8 @@ fn stream_facts_valid(stream: &ProbedStream) -> bool {
                     && video.level.is_none_or(|value| value >= 0)
                     && (auxiliary || stream.time_base.is_some())
                     && video_rate_valid(video.frame_rate, auxiliary)
+                    && (video.frame_rate.is_some()
+                        || (auxiliary && video.cadence == VideoCadence::Unknown))
             }) && stream.audio.is_none()
         }
         ProbedStreamType::Audio => {

@@ -59,9 +59,9 @@ write_edit_outcome_fixtures() {
 write_probe_evidence_fixtures() {
   local snapshot=$1 plan=$2
   cat >"$snapshot" <<'JSON'
-{"schema_version":3,"engine":"ffprobe fixture","selection_policy":"veac.default-stream.v1","container_format":"mov,mp4","container_duration":{"value":1800,"timescale":600},"observed_identity":{"algorithm":"sha256","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"streams":[{"global_index":0,"type_index":0,"media_type":"video","video":{"width":640,"height":360},"audio":null},{"global_index":1,"type_index":0,"media_type":"audio","video":null,"audio":{"sample_rate":48000,"channels":1}}],"selected_video_stream":{"global_index":0,"type_index":0},"selected_audio_stream":null}
+{"schema_version":4,"engine":"ffprobe fixture","selection_policy":"veac.default-stream.v1","container_format":"mov,mp4","container_duration":{"value":1800,"timescale":600},"observed_identity":{"algorithm":"sha256","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"streams":[{"global_index":0,"type_index":0,"media_type":"video","video":{"width":640,"height":360,"frame_rate":{"numerator":30,"denominator":1},"cadence":"constant"},"audio":null},{"global_index":1,"type_index":0,"media_type":"audio","video":null,"audio":{"sample_rate":48000,"channels":1}}],"selected_video_stream":{"global_index":0,"type_index":0},"selected_audio_stream":null}
 JSON
   cat >"$plan" <<'JSON'
-{"inputs":[{"material_id":"med_source","canonical_uri":"assets/source.mp4","observed_identity":{"algorithm":"sha256","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"video":{"selection":{"global_index":0,"type_index":0}},"audio":null,"probe":{"schema_version":3,"engine":"ffprobe fixture","selection_policy":"veac.default-stream.v1","container_format":"mov,mp4","container_duration":{"value":1800,"timescale":600}}}]}
+{"inputs":[{"material_id":"med_source","canonical_uri":"assets/source.mp4","observed_identity":{"algorithm":"sha256","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"video":{"selection":{"global_index":0,"type_index":0}},"audio":null,"probe":{"schema_version":4,"engine":"ffprobe fixture","selection_policy":"veac.default-stream.v1","container_format":"mov,mp4","container_duration":{"value":1800,"timescale":600}}}]}
 JSON
 }

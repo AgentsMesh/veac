@@ -46,7 +46,7 @@ canonical_track($canonical_key.id) as $canonical_key_track |
 
 $plan.header.schema == "https://veac.dev/schemas/render-plan" and
 $plan.header.schema_version == 6 and $plan.header.source.timebase == 600 and
-$plan.header.resolver.effect_registry_version == "veac-ir-effects-v2" and
+$plan.header.resolver.effect_registry_version == "veac-ir-effects-v3" and
 $plan.entry_sequence_id == $source.project.entry_sequence_id and
 $plan.output.sequence_id == $source.project.entry_sequence_id and
 ($plan.output.deliverables | length) == 1 and

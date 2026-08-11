@@ -22,7 +22,7 @@ fn every_exposure_is_unique_and_resolves_to_its_contract() {
         };
         assert_eq!(resolved, Some(contract));
     }
-    assert_eq!((functions, methods, exposures.len()), (558, 23, 581));
+    assert_eq!((functions, methods, exposures.len()), (559, 23, 582));
 }
 
 #[test]

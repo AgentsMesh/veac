@@ -24,6 +24,7 @@ pub enum ArtifactKind {
     AnimatedImage,
     StillImage,
     AdaptivePackage,
+    EvidenceBundle,
     VideoMaster,
     ImageSequenceFrame,
     VideoWaveform,

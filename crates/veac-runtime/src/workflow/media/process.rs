@@ -8,19 +8,24 @@ use std::time::{Duration, Instant};
 use veac_artifact::MediaArtifactLimits;
 
 use super::{WorkflowError, WorkflowErrorKind, WorkflowResult};
+use crate::tool::{spawn_pinned_until, PinnedSpawnError};
 
 const MAX_STDERR_BYTES: u64 = 1024 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
 
-pub(super) fn run(
+pub(super) fn run_while(
     executable: &Path,
     arguments: &[OsString],
     output: &Path,
     limits: MediaArtifactLimits,
     deadline: Instant,
+    mut guard: impl FnMut() -> bool,
 ) -> WorkflowResult<()> {
     if Instant::now() >= deadline {
         return limit("FFmpeg artifact derivation exceeded its wall-clock budget");
+    }
+    if !guard() {
+        return limit("FFmpeg artifact derivation was cancelled");
     }
     let mut stderr = tempfile::tempfile()?;
     let writer = stderr.try_clone()?;
@@ -31,8 +36,12 @@ pub(super) fn run(
         .stdout(Stdio::null())
         .stderr(Stdio::from(writer));
     crate::process_group::configure(&mut command);
-    let mut child = command.spawn().map_err(start_error)?;
+    let mut child = spawn_pinned_until(&mut command, deadline).map_err(launch_error)?;
     let status = loop {
+        if !guard() {
+            crate::process_group::stop(&mut child);
+            return limit("FFmpeg artifact derivation was cancelled");
+        }
         let stderr_bytes = match stderr.metadata() {
             Ok(value) => value.len(),
             Err(error) => {
@@ -131,6 +140,16 @@ fn start_error(error: std::io::Error) -> WorkflowError {
     )
 }
 
+fn launch_error(error: PinnedSpawnError) -> WorkflowError {
+    match error {
+        PinnedSpawnError::Deadline => WorkflowError::new(
+            WorkflowErrorKind::ResourceLimit,
+            "FFmpeg artifact derivation exceeded its wall-clock budget",
+        ),
+        PinnedSpawnError::Io(error) => start_error(error),
+    }
+}
+
 fn limit<T>(message: &str) -> WorkflowResult<T> {
     Err(WorkflowError::new(
         WorkflowErrorKind::ResourceLimit,
@@ -138,6 +157,9 @@ fn limit<T>(message: &str) -> WorkflowResult<T> {
     ))
 }
 
+#[cfg(test)]
+#[path = "process/coverage_tests.rs"]
+mod coverage_tests;
 #[cfg(test)]
 #[path = "process/tests.rs"]
 mod tests;

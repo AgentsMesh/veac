@@ -7,9 +7,9 @@ fn current_standard_library_maps_the_complete_closed_opset() {
     let spec = language_spec();
     spec.validate().unwrap();
     assert_eq!(spec.domain_opset.types.len(), 214);
-    assert_eq!(spec.domain_opset.operations.len(), 581);
+    assert_eq!(spec.domain_opset.operations.len(), 582);
     assert_eq!(spec.standard_library.types.len(), 214);
-    assert_eq!(spec.standard_library.free_functions.len(), 558);
+    assert_eq!(spec.standard_library.free_functions.len(), 559);
     assert_eq!(spec.standard_library.methods.len(), 23);
 
     let operations = spec
@@ -72,7 +72,7 @@ fn standard_library_names_do_not_change_the_syntax_vocabulary() {
     let baseline = SyntaxVocabulary::current();
     let spec = language_spec();
     assert_eq!(spec.vocabulary, baseline);
-    assert_eq!(spec.vocabulary.entries.len(), 91);
+    assert_eq!(spec.vocabulary.entries.len(), 92);
     assert!(spec.vocabulary.lexer_keywords.is_empty());
     assert!(spec.vocabulary.lookup("Canvas").is_none());
     assert!(spec.vocabulary.lookup("with_sequence").is_none());

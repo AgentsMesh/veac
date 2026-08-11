@@ -16,13 +16,13 @@ Agent 应读取 `veac language-spec` 的 `standard_library` 与 `domain_opset`�
 
 `domain_opset` 是 Core 与 runtime 共用的 ABI：
 
-- `version` 当前为 `7`；
+- `version` 当前为 `8`；
 - `registry_digest` 是 lowercase SHA-256 identity；
 - `types` 按 opcode 排序，固定 `opcode + name + container`；
 - `operations` 按 opcode 排序，固定 canonical name 与完整 contract。
 
 两个表由同一个 verified registry 生成。`LanguageSpec::validate` 会重新计算 digest，检查完整性、
-唯一性、canonical 排序、558 个 free function 加 23 个 method 到 581 个 operation 的一一映射，
+唯一性、canonical 排序、559 个 free function 加 23 个 method 到 582 个 operation 的一一映射，
 并与当前 build identity 比较。
 未知字段、缺少操作、重复 opcode、receiver 漂移、operand 重排或 effect 漂移都会 fail closed。
 
@@ -59,7 +59,7 @@ Project-owned graph entity，`Relation` 是 Sequence-owned graph entity；二者
 
 ## 调用与所有权
 
-完整 581 项 callable inventory 只能读取 `veac language-spec`。method contract 的 `ordered_operands`
+完整 582 项 callable inventory 只能读取 `veac language-spec`。method contract 的 `ordered_operands`
 首项是
 receiver，后续项严格对应显式参数。每个 operand 都发布 `shape` 与 `axis`：`topology` 可决定实体、
 所有权、顺序或 graph shape；`leaf` 只能贡献内容参数。`domain_list` 是同一 DomainType 的有序列表，
@@ -73,11 +73,11 @@ already-owned 或 cross-graph handle 出现时原子失败。
 ## 名字与词汇隔离
 
 Domain type、function、method 作为标准库 symbol 的记录只出现在 `standard_library`。发布它们不会新增
-`VocabularyEntry`，也不会改变 91 个 syntax spelling、97 个 syntax use 或空的
+`VocabularyEntry`，也不会改变 92 个 syntax spelling、98 个 syntax use 或空的
 `lexer_keywords`。某个拼写同时被 closed descriptor position 使用时，`vocabulary` 只记录该
 grammar use；它不会因为标准库同名 callable 而增加虚假的 keyword/use。
 
 源码解析在 typed resolution 阶段将 standard-library name 解析成 numeric operation opcode；Typed
 HIR 与 Core 此后不按字符串 dispatch。Core program、direct call 与 closure body 都固定相同 opset
-version 和 registry digest，runtime 执行前再次核对 identity。当前 v7 digest 是
-`58ba887ccc37ed3ce7d99104b83fc01267e455b1adf6f04e98303e1d33b074ee`。
+version 和 registry digest，runtime 执行前再次核对 identity。当前 v8 digest 是
+`f02bebce0d1b43cc29e6a5aa260e869ede2a8abfeb75f8e6dee0af16859936cb`。

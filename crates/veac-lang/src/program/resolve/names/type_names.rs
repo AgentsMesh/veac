@@ -39,6 +39,36 @@ pub(super) fn namespace(
     Ok(())
 }
 
+pub(super) fn prelude(
+    path: &str,
+    imported: &Scope,
+    target: &mut Scope,
+    span: Span,
+    retained: &mut retained::Budget,
+) -> Result<(), Diagnostic> {
+    let mut builder = TypeRegistryBuilder::new();
+    registry_result(builder.merge(&target.types), path, span)?;
+    registry_result(builder.merge_definitions(&imported.types), path, span)?;
+    for (name, value) in imported.types.names() {
+        if target.types.resolve(name).is_some() {
+            return Err(Diagnostic::new(
+                "PROGRAM_DUPLICATE_TYPE",
+                path,
+                format!("prelude type `{name}` is bound more than once"),
+                span,
+            ));
+        }
+        retained.alias(path, name, span)?;
+        registry_result(
+            builder.bind(name, value.with_diagnostic_name(name)),
+            path,
+            span,
+        )?;
+    }
+    target.types = Arc::new(registry_result(builder.finish(), path, span)?);
+    Ok(())
+}
+
 fn diagnostic(
     path: &str,
     error: crate::program::type_system::TypeRegistryError,

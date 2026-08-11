@@ -3,6 +3,7 @@ mod support;
 use support::*;
 use veac_plan::{
     canonical::*, resolve, resolve_one, ResolvedSourceTimeMap, CURRENT_RENDER_PLAN_VERSION,
+    EFFECT_REGISTRY_VERSION,
 };
 
 #[test]
@@ -31,6 +32,11 @@ fn resolves_complete_snapshot_into_owned_exact_plan() {
     assert_eq!(plans.len(), 1);
     let plan = &plans[0];
     assert_eq!(plan.header.schema_version, CURRENT_RENDER_PLAN_VERSION);
+    assert_eq!(EFFECT_REGISTRY_VERSION, "veac-ir-effects-v3");
+    assert_eq!(
+        plan.header.resolver.effect_registry_version,
+        EFFECT_REGISTRY_VERSION
+    );
     assert_eq!(plan.header.source.project_id.as_str(), "prj_fixture");
     assert_eq!(plan.header.source.semantic_hash.len(), 64);
     assert_eq!(plan.header.source.snapshot_hash.len(), 64);

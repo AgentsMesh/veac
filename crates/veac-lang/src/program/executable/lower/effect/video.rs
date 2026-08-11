@@ -22,6 +22,12 @@ pub(super) fn lower(
         (Op::VideoBlurEffect, [_, _, radius]) => Ok(Effect::VideoBlur {
             radius: length(context, key, radius)?,
         }),
+        (Op::VideoDirectionalBlurEffect, [_, _, angle_source, radius]) => {
+            Ok(Effect::VideoDirectionalBlur {
+                angle_degrees: angle(context, key, angle_source)?,
+                radius: length(context, key, radius)?,
+            })
+        }
         (Op::VideoSharpenEffect, [_, _, amount]) => Ok(Effect::VideoSharpen {
             amount: scalar(context, key, "amount", amount)?,
         }),
@@ -99,6 +105,19 @@ fn percent(
     source: &Value,
 ) -> Result<Animatable<f64>, ExecutableLowerError> {
     percent_curve(context, source, &curve_scope(context, key, name))
+}
+
+fn angle(
+    context: &Context<'_>,
+    key: &str,
+    source: &Value,
+) -> Result<Animatable<f64>, ExecutableLowerError> {
+    animation::angle(
+        context.graph,
+        source,
+        context.timebase,
+        &curve_scope(context, key, "angle_degrees"),
+    )
 }
 
 fn length(

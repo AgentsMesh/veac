@@ -28,11 +28,14 @@ fn run(segments: &[SourceTimeSegment]) -> Result<String, CodegenErrors> {
     apply(
         &mut context,
         clip,
-        "0:0",
-        segments,
-        SourceClock::identity(600).expect("identity clock"),
-        false,
-        plan.inputs[0].video.as_ref().map(|stream| &stream.info),
+        Request {
+            raw: "0:0",
+            segments,
+            clock: SourceClock::identity(600).expect("identity clock"),
+            image: false,
+            info: plan.inputs[0].video.as_ref().map(|stream| &stream.info),
+            reverse_facts: None,
+        },
     )
 }
 

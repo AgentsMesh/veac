@@ -8,6 +8,7 @@ define_control_uses! {
     INPUT_PARAMETER_ROLE => "parameter" @ BuildInputRolePosition : KindDiscriminator;
     INPUT_ASSET_METADATA_ROLE => "asset_metadata" @ BuildInputRolePosition : KindDiscriminator;
     INPUT_ANALYSIS_ROLE => "analysis" @ BuildInputRolePosition : KindDiscriminator;
+    INPUT_MATERIAL_ROLE => "material" @ BuildInputRolePosition : KindDiscriminator;
     FUNCTION_DECLARATION => "fn" @ StaticDeclaration : DeclarationIntroducer;
     IMPL_DECLARATION => "impl" @ StaticDeclaration : DeclarationIntroducer;
     STRUCT_DECLARATION => "struct" @ StaticDeclaration : DeclarationIntroducer;

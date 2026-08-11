@@ -10,6 +10,9 @@ members = [
     "crates/veac-lang",
     "crates/veac-codegen",
     "crates/veac-runtime",
+    "crates/veac-project",
+    "crates/veac-build",
+    "crates/veac-evidence",
     "crates/veac-cli",
 ]
 resolver = "2"

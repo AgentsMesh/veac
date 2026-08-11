@@ -147,7 +147,7 @@ failure is a source-located language error, never a process crash or partial IR.
 
 ## Implemented Boundary
 
-Opset v7 is the closed executable registry for project topology, resources, visual/audio/caption items,
+Opset v8 is the closed executable registry for project topology, resources, visual/audio/caption items,
 typed transforms, effects, transitions, multicam, annotations, templates and deliveries. Root-local
 `main(Context) -> Project` is the only production frontend; an entry cannot mix executable declarations
 with a legacy `project` block. Authored `animate` declarations cover the approved dynamic leaves and lower

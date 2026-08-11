@@ -32,11 +32,14 @@ fn run(segment: SourceTimeSegment) -> Result<String, CodegenErrors> {
     filter(
         &mut context,
         clip,
-        "0:1",
-        &segment,
-        SourceClock::identity(600).expect("identity clock"),
-        &output,
-        PitchPolicy::Preserve,
+        FilterRequest {
+            raw: "0:1",
+            segment: &segment,
+            clock: SourceClock::identity(600).expect("identity clock"),
+            output: &output,
+            pitch: PitchPolicy::Preserve,
+            reverse_facts: None,
+        },
     )
 }
 

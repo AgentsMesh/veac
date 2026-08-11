@@ -22,6 +22,11 @@ pub(in crate::workflow::media::postflight) fn video(
             width,
             height,
             frame_rate,
+            cadence: if frame_rate.is_some() {
+                VideoCadence::Constant
+            } else {
+                VideoCadence::Unknown
+            },
             pixel_format: "yuv420p".into(),
             profile: None,
             level: None,

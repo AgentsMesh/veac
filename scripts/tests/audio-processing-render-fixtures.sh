@@ -35,7 +35,7 @@ write_audio_processing_identity() {
 write_audio_processing_plan() {
   cat >"$1/plans/preview/out_preview.json" <<'JSON'
 {"header":{"schema":"https://veac.dev/schemas/render-plan","schema_version":6,
-  "source":{"timebase":600},"resolver":{"effect_registry_version":"veac-ir-effects-v2"}},
+  "source":{"timebase":600},"resolver":{"effect_registry_version":"veac-ir-effects-v3"}},
 "entry_sequence_id":"seq_main","output":{"sequence_id":"seq_main","deliverables":[{
   "kind":{"type":"video","settings":{"audio":{"channels":2,"codec":"aac","sample_rate":48000}}}}]},
 "sequences":[{"id":"seq_main","duration":{"timescale":600,"value":2400},"tracks":[

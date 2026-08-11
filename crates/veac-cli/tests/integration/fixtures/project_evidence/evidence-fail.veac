@@ -1,0 +1,21 @@
+fn evidence() -> EvidenceSuite {
+  EvidenceSuite {
+    schema_version: 1,
+    id: identifier("decode-fail"),
+    sources: [
+      EvidenceSource {
+        id: identifier("rendered"),
+        binding: EvidenceSourceBinding.BoundInput { input_id: identifier("rendered"), },
+      }
+    ],
+    samples: [],
+    regions: [],
+    assertions: [
+      EvidenceAssertion.DecodeComplete {
+        id: identifier("decode"),
+        source_id: identifier("rendered"),
+        minimum_frames: 999,
+      }
+    ],
+  }
+}

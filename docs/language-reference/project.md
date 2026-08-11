@@ -32,7 +32,7 @@ canonical lowering 稳定派生 `prj_`、`med_`、`seq_`、`trk_`、`itm_`、`fx
 等 ID。源码编辑稳定 key 和构造调用，不直接编辑这些派生 ID。背景是可见内容，应由 generated/media
 Item 表达，不是 Project setting。
 
-schema v9 删除 Project、Material、Sequence 和 Clip 上的任意 `metadata` map，并把效果实例收口为闭合的类型化变体。可执行来源只进入闭合的
+当前 schema v10 不包含 Project、Material、Sequence 和 Clip 上的任意 `metadata` map，并把效果实例收口为闭合的类型化变体。可执行来源只进入闭合的
 typed `authorship`：operation 使用 current opset 的 numeric opcode，event/definition kind 是 enum，
 owner child provenance 使用 typed ID entry 数组。数组必须排序且与实际 owner graph 精确一致；source、
 span、logical path、call stack、iteration 与总字节数均有 validation budget。program identity 只存在于
@@ -41,7 +41,7 @@ span、logical path、call stack、iteration 与总字节数均有 validation bu
 ## 类型化效果 ABI
 
 canonical `EffectInstance` 只保存稳定 ID、启用状态、可选窗口和一个 closed `Effect` variant。颜色调整、
-模糊、锐化、暗角、颗粒、色度键、亮度键、溢色抑制、稳定、响度归一化与已固定版本的单色插件各自拥有
+模糊、方向性模糊、锐化、暗角、颗粒、色度键、亮度键、溢色抑制、稳定、响度归一化与已固定版本的单色插件各自拥有
 确定字段；数值动画直接使用 `Animatable<f64>`，颜色、布尔值和静态 LUFS 使用对应具体类型。JSON 中
 不存在 `effect_type` 加 `map<string, value>`，未知 variant、缺失字段、额外字段和类型不匹配都会在
 反序列化边界失败。

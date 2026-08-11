@@ -1,6 +1,6 @@
 # Executable Source To Canonical IR
 
-VEAC source executes into canonical ProjectEnvelope schema version 9 with minimum reader 9. Mapping is a
+VEAC source executes into canonical ProjectEnvelope schema version 10 with minimum reader 10. Mapping is a
 typed compiler boundary, not a field-by-field textual projection.
 
 ```text

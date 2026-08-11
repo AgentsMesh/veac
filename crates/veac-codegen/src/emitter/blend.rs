@@ -16,7 +16,20 @@ pub(super) fn composite(
     layer: &str,
     placement: Placement,
 ) -> String {
+    composite_with_base(context, base, layer, placement, false)
+}
+
+pub(super) fn composite_with_base(
+    context: &mut EmitContext<'_>,
+    base: String,
+    layer: &str,
+    placement: Placement,
+    base_is_opaque: bool,
+) -> String {
     if placement.mode == BlendMode::Normal {
+        if base_is_opaque {
+            return source_over::apply_opaque(context, &base, layer, &placement);
+        }
         return source_over::apply(context, &base, layer, &placement);
     }
     blend_layer(context, &base, layer, &placement)

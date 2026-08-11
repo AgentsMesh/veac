@@ -14,7 +14,7 @@ fn validate_rejects_every_invalid_resource_policy_field() {
     validate(&limits).unwrap();
     for mutation in [
         |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = 0,
-        |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = MAX_STDOUT_BYTES + 1,
+        |value: &mut ProcessLimits<'_>| value.max_stdout_bytes = MAX_CAPTURE_BYTES + 1,
         |value: &mut ProcessLimits<'_>| value.max_stderr_bytes = 0,
         |value: &mut ProcessLimits<'_>| value.max_stderr_bytes = MAX_STDERR_BYTES + 1,
         |value: &mut ProcessLimits<'_>| value.max_output_bytes = 0,
@@ -50,6 +50,13 @@ fn tempfile_helpers_recheck_length_before_returning_bytes() {
     );
     assert_eq!(
         io_error(std::io::Error::other("io")).kind,
+        RuntimeErrorKind::General
+    );
+    let deadline = spawn_error(PinnedSpawnError::Deadline);
+    assert_eq!(deadline.kind, RuntimeErrorKind::ResourceLimit);
+    assert!(deadline.message.contains("process launch"));
+    assert_eq!(
+        spawn_error(PinnedSpawnError::Io(std::io::Error::other("spawn"))).kind,
         RuntimeErrorKind::General
     );
 }

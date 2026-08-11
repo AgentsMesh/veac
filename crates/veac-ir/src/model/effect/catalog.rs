@@ -1,9 +1,10 @@
 use super::{EffectKind, EffectParameter};
 
 impl EffectKind {
-    pub const BUILT_IN: [Self; 10] = [
+    pub const BUILT_IN: [Self; 11] = [
         Self::VideoColorAdjust,
         Self::VideoBlur,
+        Self::VideoDirectionalBlur,
         Self::VideoSharpen,
         Self::VideoVignette,
         Self::VideoGrain,
@@ -13,9 +14,10 @@ impl EffectKind {
         Self::VideoStabilize,
         Self::AudioNormalize,
     ];
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::VideoColorAdjust,
         Self::VideoBlur,
+        Self::VideoDirectionalBlur,
         Self::VideoSharpen,
         Self::VideoVignette,
         Self::VideoGrain,
@@ -31,6 +33,7 @@ impl EffectKind {
         match self {
             Self::VideoColorAdjust => "video.color_adjust",
             Self::VideoBlur => "video.blur",
+            Self::VideoDirectionalBlur => "video.directional_blur",
             Self::VideoSharpen => "video.sharpen",
             Self::VideoVignette => "video.vignette",
             Self::VideoGrain => "video.grain",
@@ -49,10 +52,11 @@ impl EffectKind {
 }
 
 impl EffectParameter {
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 16] = [
         Self::Brightness,
         Self::Contrast,
         Self::Saturation,
+        Self::AngleDegrees,
         Self::Radius,
         Self::Amount,
         Self::Color,
@@ -72,6 +76,7 @@ impl EffectParameter {
             Self::Brightness => "brightness",
             Self::Contrast => "contrast",
             Self::Saturation => "saturation",
+            Self::AngleDegrees => "angle_degrees",
             Self::Radius => "radius",
             Self::Amount => "amount",
             Self::Color => "color",

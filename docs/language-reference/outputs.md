@@ -93,5 +93,5 @@ B-frame policy。segment duration 是 1s..60s；rendition ID/canvas 唯一，can
 
 完整九类交付示例见
 [`examples/delivery-formats/main.veac`](../../examples/delivery-formats/main.veac) 与
-[`outputs.veac`](../../examples/delivery-formats/outputs.veac)。canonical envelope schema v9 使用 strict
+[`outputs.veac`](../../examples/delivery-formats/outputs.veac)。canonical envelope schema v10 使用 strict
 tagged variants；planner/backend 只消费验证后的 delivery model。

@@ -107,3 +107,7 @@ fn validate_pattern(pattern: &Path) -> Result<(), RuntimeError> {
         invalid("image sequence output requires exactly one %d or %0Nd placeholder")
     }
 }
+
+#[cfg(test)]
+#[path = "task/tests.rs"]
+mod tests;

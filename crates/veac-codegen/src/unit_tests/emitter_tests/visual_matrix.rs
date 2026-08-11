@@ -113,6 +113,25 @@ fn rotation_promotes_opaque_media_before_transparent_pivot_padding() {
 }
 
 #[test]
+fn centered_rotation_promotes_opaque_media_without_pivot_padding() {
+    let mut plan = resolved(&fixture());
+    let visual = visual(&mut plan);
+    visual.frame = None;
+    visual.transform.crop = None;
+    visual.transform.scale = Animatable::constant(Vec2 { x: 0.72, y: 0.72 });
+    visual.transform.anchor = Vec2 { x: 0.5, y: 0.5 };
+    visual.transform.rotation_degrees = Animatable::constant(8.0);
+    visual.opacity = Animatable::constant(1.0);
+    visual.masks.clear();
+    visual.card = None;
+
+    let graph = graph(&plan);
+    assert!(graph.contains("format=gbrap16le[pivotv"), "{graph}");
+    assert!(!graph.contains("pad=w='2*max(0.5*iw"), "{graph}");
+    assert!(graph.contains("rotate=angle='(8)*PI/180'"), "{graph}");
+}
+
+#[test]
 fn animated_crop_uses_a_fixed_viewport_with_per_frame_origin_and_size() {
     let mut plan = resolved(&fixture());
     visual(&mut plan).transform.crop = Some(Animatable::Keyframes {

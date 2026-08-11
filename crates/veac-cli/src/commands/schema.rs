@@ -10,6 +10,30 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
         (SchemaContract::Project, SchemaFormat::JsonSchema) => {
             convert(veac_ir::project_json_schema())
         }
+        (SchemaContract::ProjectManifest, SchemaFormat::JsonSchema) => {
+            Ok(veac_project::project_manifest_json_schema())
+        }
+        (SchemaContract::ResolvedProjectGraph, SchemaFormat::JsonSchema) => {
+            Ok(veac_project::resolved_project_graph_json_schema())
+        }
+        (SchemaContract::BuildReceipt, SchemaFormat::JsonSchema) => {
+            convert(veac_build::build_receipt_json_schema())
+        }
+        (SchemaContract::EvidenceSuite, SchemaFormat::JsonSchema) => {
+            convert(veac_evidence::evidence_suite_json_schema())
+        }
+        (SchemaContract::ObservationPlan, SchemaFormat::JsonSchema) => {
+            convert(veac_evidence::observation_plan_json_schema())
+        }
+        (SchemaContract::EvidenceReport, SchemaFormat::JsonSchema) => {
+            convert(veac_evidence::evidence_report_json_schema())
+        }
+        (SchemaContract::EvidenceBundle, SchemaFormat::JsonSchema) => {
+            convert(veac_evidence::evidence_bundle_json_schema())
+        }
+        (SchemaContract::EvidenceProvenance, SchemaFormat::JsonSchema) => {
+            convert(veac_evidence::evidence_provenance_json_schema())
+        }
         (SchemaContract::Caption, SchemaFormat::JsonSchema) => {
             convert(veac_caption::caption_json_schema())
         }

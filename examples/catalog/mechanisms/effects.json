@@ -2,6 +2,7 @@
   "schema_version": 1,
   "mechanisms": [
     {"id":"effect.video.blur","title":"视频模糊","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.blur"},
+    {"id":"effect.video.directional-blur","title":"方向性运动模糊","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.directional_blur"},
     {"id":"effect.video.color-adjust","title":"视频色彩调整","family":"视频效果","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-22","registry_key":"video.color_adjust"},
     {"id":"effect.video.chroma-key","title":"色度键","family":"视频抠像","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-23","registry_key":"video.chroma_key"},
     {"id":"effect.video.chroma-spill","title":"色溢抑制","family":"视频抠像","coverage":"preview_required","preview_target":"video-effects","capability_id":"P1-23","registry_key":"video.chroma_spill"},

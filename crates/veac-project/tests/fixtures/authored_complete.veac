@@ -1,0 +1,102 @@
+fn workspace() -> ProjectManifest {
+  ProjectManifest {
+    schema: "veac.project", version: 1, id: identifier("complete"),
+    paths: ProjectPaths {
+      source_base: "sources", material_root: "materials", build_root: "build",
+      cache_root: ".cache/veac", delivery_root: "dist",
+    },
+    defaults: ProjectDefaults {
+      profile: OptionalIdentifier.Some { value: identifier("serial"), },
+      locale: OptionalIdentifier.Some { value: identifier("en-us"), },
+      max_instances_per_target: 16, max_total_instances: 32,
+    },
+    locales: [ProjectLocale { id: identifier("en-us"), language_tag: "en-US", }],
+    profiles: [
+      ProjectProfile {
+        id: identifier("serial"), execution: ExecutionPolicy.Serial,
+        proxy: ProxyPolicy.Disabled,
+        segmentation: SegmentationPolicy.Fixed {
+          duration: ProjectRational { numerator: 1, denominator: 2, },
+        },
+      },
+      ProjectProfile {
+        id: identifier("parallel"), execution: ExecutionPolicy.Parallel { max_tasks: 2, },
+        proxy: ProxyPolicy.PreferExisting, segmentation: SegmentationPolicy.Whole,
+      },
+      ProjectProfile {
+        id: identifier("resource"),
+        execution: ExecutionPolicy.ResourceAware {
+          max_tasks: 2, cpu_threads: 4, memory_mib: 1024, gpu_slots: 1,
+        },
+        proxy: ProxyPolicy.Require,
+        segmentation: SegmentationPolicy.Automatic { max_segments: 4, },
+      }
+    ],
+    targets: [
+      ProjectTarget {
+        id: identifier("base"), entry: ProjectTargetEntry.Veac { source: "base.veac", },
+        localized: true,
+        inputs: [
+          ProjectInput { id: identifier("profile"), source: ProjectInputSource.ProfileBinding, },
+          ProjectInput { id: identifier("locale"), source: ProjectInputSource.LocaleBinding, },
+          ProjectInput { id: identifier("theme"), source: ProjectInputSource.MatrixBinding { axis: identifier("theme"), }, },
+          ProjectInput { id: identifier("material"), source: ProjectInputSource.ProjectMaterial { path: "source.mp4", }, },
+          ProjectInput { id: identifier("asset"), source: ProjectInputSource.AssetFact { path: "source.mp4", fact: identifier("duration"), }, },
+          ProjectInput { id: identifier("bool"), source: ProjectInputSource.Literal { value: ProjectLiteral.Bool { value: true, }, }, },
+          ProjectInput { id: identifier("integer"), source: ProjectInputSource.Literal { value: ProjectLiteral.Integer { value: 7, }, }, },
+          ProjectInput { id: identifier("scalar"), source: ProjectInputSource.Literal { value: ProjectLiteral.Scalar { value: ProjectRational { numerator: 1, denominator: 2, }, }, }, },
+          ProjectInput { id: identifier("text"), source: ProjectInputSource.Literal { value: ProjectLiteral.Text { value: "caption", }, }, },
+          ProjectInput { id: identifier("identifier"), source: ProjectInputSource.Literal { value: ProjectLiteral.Identifier { value: identifier("token"), }, }, },
+          ProjectInput { id: identifier("duration"), source: ProjectInputSource.Literal { value: ProjectLiteral.Duration { value: ProjectRational { numerator: 3, denominator: 2, }, }, }, }
+        ],
+        profiles: [identifier("serial")],
+        axes: [MatrixAxis { id: identifier("theme"), values: [identifier("dark")], }],
+        needs: [],
+        outputs: [
+          ProjectOutput.Media { id: identifier("video"), media_type: MediaType.Video, },
+          ProjectOutput.Media { id: identifier("audio"), media_type: MediaType.Audio, },
+          ProjectOutput.Media { id: identifier("image"), media_type: MediaType.Image, },
+          ProjectOutput.Data { id: identifier("data"), schema: OptionalText.Some { value: "veac.fact", }, },
+          ProjectOutput.Data { id: identifier("raw"), schema: OptionalText.None, },
+          ProjectOutput.Directory { id: identifier("directory"), }
+        ],
+        deliveries: [
+          ProjectDelivery.File { id: identifier("video-file"), output: identifier("video"), destination: "base/{axis.theme}.mp4", },
+          ProjectDelivery.Directory { id: identifier("directory-copy"), output: identifier("directory"), destination: "base/{axis.theme}", }
+        ],
+      },
+      ProjectTarget {
+        id: identifier("consumer"), entry: ProjectTargetEntry.Veac { source: "consumer.veac", },
+        localized: true,
+        inputs: [
+          ProjectInput { id: identifier("artifact"), source: ProjectInputSource.Artifact {
+            target: TargetRef { target: identifier("base"), profile: OptionalIdentifier.None, selector: InstanceSelector.Same, },
+            output: identifier("video"),
+          }, },
+          ProjectInput { id: identifier("analysis"), source: ProjectInputSource.AnalysisFact {
+            target: TargetRef { target: identifier("base"), profile: OptionalIdentifier.Some { value: identifier("serial"), }, selector: InstanceSelector.Exact {
+              locale: OptionalIdentifier.Some { value: identifier("en-us"), },
+              axes: [MatrixValue { axis: identifier("theme"), value: identifier("dark"), }],
+            }, }, output: identifier("data"), fact: identifier("score"),
+          }, }
+        ],
+        profiles: [identifier("serial")],
+        axes: [MatrixAxis { id: identifier("theme"), values: [identifier("dark")], }],
+        needs: [TargetRef { target: identifier("base"), profile: OptionalIdentifier.None, selector: InstanceSelector.AllMatching, }],
+        outputs: [ProjectOutput.Data { id: identifier("report"), schema: OptionalText.None, }],
+        deliveries: [],
+      },
+      ProjectTarget {
+        id: identifier("evidence"), entry: ProjectTargetEntry.Evidence { contract: "evidence.veac", },
+        localized: false,
+        inputs: [ProjectInput { id: identifier("reports"), source: ProjectInputSource.Artifact {
+          target: TargetRef { target: identifier("consumer"), profile: OptionalIdentifier.None, selector: InstanceSelector.AllMatching, },
+          output: identifier("report"),
+        }, }],
+        profiles: [identifier("serial")], axes: [], needs: [],
+        outputs: [ProjectOutput.Directory { id: identifier("evidence"), }],
+        deliveries: [ProjectDelivery.Directory { id: identifier("evidence-dir"), output: identifier("evidence"), destination: "evidence", }],
+      }
+    ],
+  }
+}

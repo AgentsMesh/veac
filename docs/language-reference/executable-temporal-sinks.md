@@ -53,6 +53,16 @@ effect parameter 不属于闭合集，或不是所选 effect 已有的 `Animatab
 不匹配；同一完整 sink 有两个 producer。
 声明不能创建 mask、effect、text animation、apply 或 parameter variant。
 
+由 runtime command 驱动的 effect 数值 binding，会在最终 sink 依 effect registry 的 `minimum` /
+`maximum` clamp；当前覆盖普通模糊、方向性模糊、锐化、色度键、亮度键与溢色抑制的动态参数。clamp
+在 backend adapter 的单位缩放之后使用等价的 sink 边界，例如锐化 `[0,10]` 映射为 FFmpeg strength
+`[0,1]`；方向性模糊仍严格写入 angle `[0,360]` 和 radius `[0,100]`。canonical Temporal program 保留
+原始计算语义，范围防线属于 typed runtime-command sink，不依赖 FFmpeg 对越界 command 的容错行为。
+方向性模糊的 blur、premultiply 与 unpremultiply 共用同一个“effect 半开窗口且 clamp 后 radius 大于零”
+predicate。常量零 radius 不生成 effect graph；keyframe 或 Temporal radius 过零时，零值帧也绕过三者，
+因此窗口外和零 radius 的 straight-alpha 样本保持逐样本 identity。视觉流水线在 frame/crop 与 effect
+之间统一进入 `gbrap16le` working format，禁用的 effect 不会提前改变后续 scale/rotate 的格式协商。
+
 Item target 可使用 sequence/frame/clip/progress clock，并可显式绑定 source clock。Apply target 没有 Item
 owner，只公开 `sequence_time` 与 `frame`；在 apply body 中引用 clip/progress/source symbol 会在表达式编译期
 失败。planner 与 FFmpeg backend 对上述 sink 使用 canonical `TemporalBinding`，不重新解释 `.veac`。

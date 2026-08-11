@@ -10,6 +10,7 @@ use crate::{Animatable, Color};
 pub enum EffectKind {
     VideoColorAdjust,
     VideoBlur,
+    VideoDirectionalBlur,
     VideoSharpen,
     VideoVignette,
     VideoGrain,
@@ -36,6 +37,7 @@ pub enum EffectParameter {
     Brightness,
     Contrast,
     Saturation,
+    AngleDegrees,
     Radius,
     Amount,
     Color,

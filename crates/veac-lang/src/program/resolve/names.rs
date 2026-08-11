@@ -54,6 +54,16 @@ pub(super) fn namespace(
     Ok(())
 }
 
+pub(super) fn prelude_types(
+    path: &str,
+    imported: &Scope,
+    target: &mut Scope,
+    span: Span,
+    retained: &mut retained::Budget,
+) -> Result<(), Diagnostic> {
+    type_names::prelude(path, imported, target, span, retained)
+}
+
 fn ensure_available(
     path: &str,
     kind: &str,

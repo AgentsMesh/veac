@@ -19,6 +19,8 @@ fn small_graphs_stay_inline_without_a_sidecar() {
     let environment = Observing::new(Outcome::Success);
     let staged = perform(&environment, &task, deadline()).unwrap();
     let arguments = &environment.inner.calls.borrow()[0];
+    assert_eq!(option(arguments, "-filter_complex_threads"), None);
+    assert_eq!(option(arguments, "-threads"), None);
     assert!(option(arguments, "-filter_complex").is_some());
     assert!(option(arguments, "-filter_complex_script").is_none());
     assert!(environment.script_path.borrow().is_none());
@@ -40,6 +42,12 @@ fn large_graphs_use_an_exact_ephemeral_staging_script() {
     );
     assert!(!path.exists(), "sidecar must be removed before commit");
     let arguments = &environment.inner.calls.borrow()[0];
+    assert_eq!(option(arguments, "-filter_complex_threads"), Some("1"));
+    assert_eq!(option(arguments, "-threads"), Some("1"));
+    assert_eq!(
+        &arguments[arguments.len() - 3..arguments.len() - 1],
+        ["-threads", "1"]
+    );
     assert_eq!(option(arguments, "-filter_complex_script"), path.to_str());
     assert!(option(arguments, "-filter_complex").is_none());
     assert!(staged

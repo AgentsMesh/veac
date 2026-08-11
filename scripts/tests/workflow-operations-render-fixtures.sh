@@ -33,7 +33,7 @@ write_edit_contract_fixtures() {
   jq '
     {sequences:.project.sequences}
     | .header={schema:"https://veac.dev/schemas/render-plan",schema_version:6,
-        resolver:{capability_profile:"backend-neutral-v1",effect_registry_version:"veac-ir-effects-v2",
+        resolver:{capability_profile:"backend-neutral-v1",effect_registry_version:"veac-ir-effects-v3",
           resolver_version:"veac-plan-resolver-v6",stream_selection_policy:"none"},source:{timebase:600}}
     | .entry_sequence_id="seq_main" | .temporal={opset_version:1}
     | .output={sequence_id:"seq_main",raster:{captions:"discard",

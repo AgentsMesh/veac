@@ -37,7 +37,7 @@ fn version_then_original_replacement_keeps_capabilities_on_one_pinned_copy() {
             &arguments,
             temp.path(),
             temp.path(),
-            Instant::now() + std::time::Duration::from_secs(10),
+            Instant::now() + Duration::from_secs(60),
         ))
         .unwrap();
     assert_eq!(std::fs::read(output).unwrap(), b"pinned-render");
@@ -136,6 +136,25 @@ fn empty_version_and_failed_capability_commands_are_rejected() {
     );
     let error = SystemFfmpeg::new(failed).filters().unwrap_err();
     assert!(error.message.contains("filter probe failed: denied"));
+    assert!(
+        error.message.contains("exit status: 4"),
+        "{}",
+        error.message
+    );
+}
+
+#[test]
+fn failed_process_without_stderr_reports_its_exit_status() {
+    let output = std::process::Command::new("/bin/sh")
+        .args(["-c", "exit 9"])
+        .output()
+        .unwrap();
+    let error = ensure_success(&output, "FFmpeg render").unwrap_err();
+    assert!(
+        error.message.contains("exit status: 9"),
+        "{}",
+        error.message
+    );
 }
 
 fn tool(path: PathBuf, comment: &str) -> PathBuf {

@@ -8,6 +8,15 @@ use super::{
     GeneratedArtifact, MediaWorkflow, WorkflowResult,
 };
 
+struct RenderJob<'a> {
+    store: &'a ArtifactStore,
+    input: &'a Path,
+    request: &'a MediaArtifactRequest,
+    descriptor: &'a veac_artifact::ArtifactDescriptor,
+    source: &'a source::SourceSnapshot,
+    deadline: Instant,
+}
+
 impl MediaWorkflow {
     pub fn derive(
         &self,
@@ -15,8 +24,19 @@ impl MediaWorkflow {
         input: &Path,
         request: &MediaArtifactRequest,
     ) -> WorkflowResult<GeneratedArtifact> {
+        self.derive_while(store, input, request, || true)
+    }
+
+    pub fn derive_while(
+        &self,
+        store: &ArtifactStore,
+        input: &Path,
+        request: &MediaArtifactRequest,
+        mut guard: impl FnMut() -> bool,
+    ) -> WorkflowResult<GeneratedArtifact> {
         let deadline =
             Instant::now() + Duration::from_secs(self.limits.max_derivation_wall_seconds);
+        active(&mut guard)?;
         contract(request.validate_with_limits(self.limits))?;
         let descriptor = contract(request.descriptor())?;
         let source = source::SourceSnapshot::capture(
@@ -25,9 +45,11 @@ impl MediaWorkflow {
             self.limits.max_source_bytes,
             deadline,
         )?;
+        active(&mut guard)?;
         tool::verify(&self.ffmpeg, &request.producer, deadline)?;
         let key = contract(artifact_key(&descriptor))?;
         preflight::validate(&self.ffprobe, source.path(), request, self.limits, deadline)?;
+        active(&mut guard)?;
         if let Some(record) = cache::load(
             store,
             &key,
@@ -37,6 +59,7 @@ impl MediaWorkflow {
             self.limits,
             deadline,
         )? {
+            active(&mut guard)?;
             source::verify_until(
                 input,
                 &request.source_identity,
@@ -48,34 +71,51 @@ impl MediaWorkflow {
                 cache_hit: true,
             });
         }
-        self.render(store, input, request, &descriptor, &source, deadline)
+        self.render(
+            RenderJob {
+                store,
+                input,
+                request,
+                descriptor: &descriptor,
+                source: &source,
+                deadline,
+            },
+            &mut guard,
+        )
     }
 
     fn render(
         &self,
-        store: &ArtifactStore,
-        input: &Path,
-        request: &MediaArtifactRequest,
-        descriptor: &veac_artifact::ArtifactDescriptor,
-        source: &source::SourceSnapshot,
-        deadline: Instant,
+        job: RenderJob<'_>,
+        guard: &mut impl FnMut() -> bool,
     ) -> WorkflowResult<GeneratedArtifact> {
+        let RenderJob {
+            store,
+            input,
+            request,
+            descriptor,
+            source,
+            deadline,
+        } = job;
         let staging = tempfile::tempdir()?;
         let output = staging
             .path()
             .join(format!("artifact.{}", request.spec.extension()));
         let arguments = command::arguments(source.path(), &output, &request.spec, self.limits)?;
         let executable = self.ffmpeg.launch_until(deadline).map_err(launch_error)?;
-        process::run(
+        process::run_while(
             executable.path(),
             &arguments,
             &output,
             self.limits,
             deadline,
+            &mut *guard,
         )?;
+        active(&mut *guard)?;
         let rendered =
             output::OutputProof::capture(&output, self.limits.max_payload_bytes, deadline)?;
         postflight::validate(&self.ffprobe, &output, &request.spec, deadline)?;
+        active(&mut *guard)?;
         rendered.reverify(&output, self.limits.max_payload_bytes, deadline)?;
         source::verify_until(
             input,
@@ -96,3 +136,18 @@ impl MediaWorkflow {
         })
     }
 }
+
+fn active(guard: &mut impl FnMut() -> bool) -> WorkflowResult<()> {
+    if guard() {
+        Ok(())
+    } else {
+        Err(super::WorkflowError::new(
+            super::WorkflowErrorKind::ResourceLimit,
+            "media artifact derivation was cancelled",
+        ))
+    }
+}
+
+#[cfg(test)]
+#[path = "derive/tests.rs"]
+mod tests;

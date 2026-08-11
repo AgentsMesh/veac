@@ -184,3 +184,7 @@ pub(in crate::executor) fn validate_size(graph: &str) -> Result<(), RuntimeError
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "filter/tests.rs"]
+mod tests;

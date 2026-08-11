@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -11,6 +12,7 @@ pub(super) struct ProbeSource {
     _directory: TempDir,
     path: PathBuf,
     identity: MediaIdentity,
+    image_demuxer: Option<&'static str>,
 }
 
 impl ProbeSource {
@@ -49,16 +51,39 @@ impl ProbeSource {
             _directory: directory,
             path,
             identity: copied.identity,
+            image_demuxer: static_image_demuxer(source),
         })
-    }
-
-    pub(super) fn path(&self) -> &Path {
-        &self.path
     }
 
     pub(super) fn identity(&self) -> &MediaIdentity {
         &self.identity
     }
+
+    pub(super) fn append_input_arguments(&self, arguments: &mut Vec<OsString>) {
+        if let Some(demuxer) = self.image_demuxer {
+            arguments.extend([OsString::from("-f"), OsString::from(demuxer)]);
+        }
+        arguments.push(OsString::from("-i"));
+        arguments.push(self.path.as_os_str().to_owned());
+    }
+}
+
+fn static_image_demuxer(path: &Path) -> Option<&'static str> {
+    let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+    Some(match extension.as_str() {
+        "bmp" => "bmp_pipe",
+        "dds" => "dds_pipe",
+        "dpx" => "dpx_pipe",
+        "exr" => "exr_pipe",
+        "jfif" | "jpe" | "jpeg" | "jpg" => "jpeg_pipe",
+        "jls" => "jpegls_pipe",
+        "jxl" => "jpegxl_pipe",
+        "png" => "png_pipe",
+        "psd" => "psd_pipe",
+        "tif" | "tiff" => "tiff_pipe",
+        "webp" => "webp_pipe",
+        _ => return None,
+    })
 }
 
 fn readonly(path: &Path) -> std::io::Result<()> {

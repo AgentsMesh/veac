@@ -75,6 +75,7 @@ fn value_name(id: &str) -> &'static str {
         "project" => "PROJECT",
         "context" => "CONTEXT",
         "output" => "OUTPUT",
+        "receipt" => "RECEIPT",
         "format" => "FORMAT",
         "timescale" => "TIMESCALE",
         "overlap" => "OVERLAP",

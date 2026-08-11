@@ -174,7 +174,7 @@ declaration、import 或 typed anchor。source-edit v6 校验 revision 与 fragm
 
 ## 当前 Slice 与边界
 
-当前 opset v7 固定 `214` 个 DomainType 和 `581` 个 numeric operation，覆盖 topology entity 与其闭合
+当前 opset v8 固定 `214` 个 DomainType 和 `582` 个 numeric operation，覆盖 topology entity 与其闭合
 value algebra。完整机器合同以 `veac language-spec` 为准；type/function/method 名是标准库 symbol，
 不是 lexer keyword，不能计入关键字或 syntax spelling 数量。
 

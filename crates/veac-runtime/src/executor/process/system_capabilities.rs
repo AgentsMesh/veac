@@ -110,6 +110,15 @@ impl SystemFfmpeg {
         &self,
         deadline: Instant,
     ) -> Result<FfmpegFingerprint, RuntimeError> {
+        self.fingerprint
+            .get_or_try_init(deadline, || self.capture_fingerprint_until(deadline))
+            .map_err(fingerprint_cache_error)
+    }
+
+    fn capture_fingerprint_until(
+        &self,
+        deadline: Instant,
+    ) -> Result<FfmpegFingerprint, RuntimeError> {
         let executable_identity = self.pinned_until(deadline)?.identity().clone();
         let output = self.run_until(&["-version".to_owned()], None, None, deadline)?;
         ensure_success(&output, "FFmpeg version probe")?;
@@ -153,5 +162,17 @@ impl SystemFfmpeg {
         )?;
         ensure_success(&output, &format!("FFmpeg {name} probe"))?;
         Ok(parse(&String::from_utf8_lossy(&output.stdout)))
+    }
+}
+
+fn fingerprint_cache_error(error: super::DeadlineCacheError<RuntimeError>) -> RuntimeError {
+    match error {
+        super::DeadlineCacheError::Deadline => {
+            RuntimeError::resource_limit("FFmpeg fingerprint cache exceeded its wall-clock limit")
+        }
+        super::DeadlineCacheError::Poisoned => {
+            RuntimeError::new("FFmpeg fingerprint cache is unavailable")
+        }
+        super::DeadlineCacheError::Initialization(error) => error,
     }
 }

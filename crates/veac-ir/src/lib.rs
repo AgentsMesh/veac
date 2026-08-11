@@ -39,10 +39,10 @@ pub use validation::*;
 pub use visual_contract::*;
 
 pub const SCHEMA_ID: &str = "https://veac.dev/schemas/project";
-pub const CURRENT_SCHEMA_VERSION: u32 = 9;
-pub const MIN_READER_VERSION: u32 = 9;
+pub const CURRENT_SCHEMA_VERSION: u32 = 10;
+pub const MIN_READER_VERSION: u32 = 10;
 pub const CURRENT_CORE_VERSION: u16 = 10;
-pub const CURRENT_DOMAIN_OPSET_VERSION: u16 = 7;
+pub const CURRENT_DOMAIN_OPSET_VERSION: u16 = 8;
 /// Largest integer represented exactly by the IEEE-754 number domain required by RFC 8785/I-JSON.
 pub const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 pub const MAX_SEQUENCE_NESTING_DEPTH: usize = 64;

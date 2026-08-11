@@ -160,9 +160,13 @@ fn nodes<'a>(graph: &'a str, output: &str) -> Vec<&'a str> {
 }
 
 fn window_uses(graph: &str, start: f64, end: f64) -> usize {
-    graph
-        .matches(&format!("gte(T\\,{start})*lt(T\\,{end})"))
-        .count()
+    [
+        format!("gte(T\\,{start})*lt(T\\,{end})"),
+        format!("gte(t,{start})*lt(t,{end})"),
+    ]
+    .iter()
+    .map(|window| graph.matches(window).count())
+    .sum()
 }
 
 fn circle_mask() -> Mask {

@@ -1,5 +1,7 @@
 use veac_artifact::MediaArtifactLimits;
-use veac_ir::{AudioStreamInfo, ProbedStreamType, StreamDisposition, VideoStreamInfo};
+use veac_ir::{
+    AudioStreamInfo, ProbedStreamType, StreamDisposition, VideoCadence, VideoStreamInfo,
+};
 
 use super::*;
 
@@ -105,6 +107,7 @@ fn video_stream() -> ProbedStream {
             width: 320,
             height: 180,
             frame_rate: Some(rate(30)),
+            cadence: VideoCadence::Constant,
             pixel_format: "yuv420p".into(),
             profile: None,
             level: None,

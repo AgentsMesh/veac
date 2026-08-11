@@ -1,0 +1,31 @@
+module {
+  export struct ProjectManifest { schema: text, version: int, id: identifier, paths: ProjectPaths, defaults: ProjectDefaults, locales: list<ProjectLocale>, profiles: list<ProjectProfile>, targets: list<ProjectTarget>, }
+  export struct ProjectPaths { source_base: text, material_root: text, build_root: text, cache_root: text, delivery_root: text, }
+  export struct ProjectDefaults { profile: OptionalIdentifier, locale: OptionalIdentifier, max_instances_per_target: int, max_total_instances: int, }
+  export struct ProjectLocale { id: identifier, language_tag: text, }
+  export struct ProjectProfile { id: identifier, execution: ExecutionPolicy, proxy: ProxyPolicy, segmentation: SegmentationPolicy, }
+  export enum ExecutionPolicy { Serial, Parallel { max_tasks: int, }, ResourceAware { max_tasks: int, cpu_threads: int, memory_mib: int, gpu_slots: int, }, }
+  export enum ProxyPolicy { Disabled, PreferExisting, Require, }
+  export enum SegmentationPolicy { Whole, Fixed { duration: ProjectRational, }, Automatic { max_segments: int, }, }
+  export struct ProjectRational { numerator: int, denominator: int, }
+  export enum OptionalIdentifier { None, Some { value: identifier, }, }
+  export enum OptionalText { None, Some { value: text, }, }
+  export struct ProjectTarget { id: identifier, entry: ProjectTargetEntry, localized: bool, inputs: list<ProjectInput>, profiles: list<identifier>, axes: list<MatrixAxis>, needs: list<TargetRef>, outputs: list<ProjectOutput>, deliveries: list<ProjectDelivery>, }
+  export enum ProjectTargetEntry { Veac { source: text, }, MediaDerivation { operation: MediaDerivation, }, Evidence { contract: text, }, }
+  export enum MediaDerivation { ProxyVideo { source: identifier, source_stream: ProjectStreamSelection, source_clock: ProjectSourceClock, width: int, height: int, frame_rate: ProjectRational, crf: int, }, ProxyAudio { source: identifier, source_stream: ProjectStreamSelection, source_clock: ProjectSourceClock, sample_rate: int, channels: int, }, Thumbnail { source: identifier, source_stream: ProjectStreamSelection, at: ProjectRational, width: int, height: int, }, Waveform { source: identifier, source_stream: ProjectStreamSelection, source_clock: ProjectSourceClock, sample_rate: int, width: int, height: int, color: text, }, OpticalFlow { source: identifier, source_stream: ProjectStreamSelection, source_clock: ProjectSourceClock, width: int, height: int, frame_rate: ProjectRational, method: ProjectOpticalFlowMethod, }, SourceSegment { source: identifier, video_stream: ProjectStreamSelection, start: ProjectRational, duration: ProjectRational, width: int, height: int, frame_rate: ProjectRational, audio: OptionalProjectSegmentAudio, crf: int, }, }
+  export struct ProjectStreamSelection { global_index: int, type_index: int, }
+  export enum ProjectSourceClock { Identity { duration: ProjectRational, }, Bounded { start: ProjectRational, duration: ProjectRational, }, }
+  export enum ProjectOpticalFlowMethod { BlockMatching, MotionCompensated, }
+  export struct ProjectSegmentAudio { source_stream: ProjectStreamSelection, sample_rate: int, channels: int, }
+  export enum OptionalProjectSegmentAudio { None, Some { value: ProjectSegmentAudio, }, }
+  export struct ProjectInput { id: identifier, source: ProjectInputSource, }
+  export enum ProjectInputSource { Literal { value: ProjectLiteral, }, ProfileBinding, LocaleBinding, MatrixBinding { axis: identifier, }, ProjectMaterial { path: text, }, Artifact { target: TargetRef, output: identifier, }, AssetFact { path: text, fact: identifier, }, AnalysisFact { target: TargetRef, output: identifier, fact: identifier, }, }
+  export enum ProjectLiteral { Bool { value: bool, }, Integer { value: int, }, Scalar { value: ProjectRational, }, Text { value: text, }, Identifier { value: identifier, }, Duration { value: ProjectRational, }, }
+  export struct TargetRef { target: identifier, profile: OptionalIdentifier, selector: InstanceSelector, }
+  export enum InstanceSelector { Same, Exact { locale: OptionalIdentifier, axes: list<MatrixValue>, }, AllMatching, }
+  export struct MatrixAxis { id: identifier, values: list<identifier>, }
+  export struct MatrixValue { axis: identifier, value: identifier, }
+  export enum ProjectOutput { Media { id: identifier, media_type: MediaType, }, Data { id: identifier, schema: OptionalText, }, Directory { id: identifier, }, }
+  export enum MediaType { Video, Audio, Image, }
+  export enum ProjectDelivery { File { id: identifier, output: identifier, destination: text, }, Directory { id: identifier, output: identifier, destination: text, }, }
+}

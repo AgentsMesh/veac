@@ -9,7 +9,8 @@ impl DomainOpsetVersion {
     pub const V5: Self = Self(5);
     pub const V6: Self = Self(6);
     pub const V7: Self = Self(7);
-    pub const CURRENT: Self = Self::V7;
+    pub const V8: Self = Self(8);
+    pub const CURRENT: Self = Self::V8;
 
     pub const fn from_raw(value: u16) -> Self {
         Self(value)

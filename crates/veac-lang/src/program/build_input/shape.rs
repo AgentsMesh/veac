@@ -14,6 +14,7 @@ impl BuildInputManifestValue {
                 "PROGRAM_INPUT_VALUE",
                 "enum Build input value must be a VEAC declaration name",
             )),
+            Self::Material { .. } => super::material::validate(self),
             _ => Ok(()),
         }
     }

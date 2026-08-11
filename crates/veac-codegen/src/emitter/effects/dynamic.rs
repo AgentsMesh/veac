@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 use super::super::{animation, time, EmitContext};
 use super::EffectSpec;
-use veac_plan::canonical::{Animatable, EffectParameter};
+use veac_plan::canonical::{registered_effect, Animatable, EffectKind, EffectParameter};
 
 #[derive(Clone, Copy)]
 pub(in crate::emitter) struct RuntimeNumber {
@@ -12,22 +12,56 @@ pub(in crate::emitter) struct RuntimeNumber {
     option: &'static str,
     default: f64,
     scale: f64,
+    sink_minimum: f64,
+    sink_maximum: f64,
 }
 
 impl RuntimeNumber {
-    pub(in crate::emitter) const fn new(
+    pub(in crate::emitter) fn bounded(
+        kind: EffectKind,
+        parameter: EffectParameter,
+        option: &'static str,
+        default: f64,
+    ) -> Self {
+        Self::scaled(kind, parameter, option, default, 1.0)
+    }
+
+    pub(in crate::emitter) fn scaled(
+        kind: EffectKind,
         parameter: EffectParameter,
         option: &'static str,
         default: f64,
         scale: f64,
     ) -> Self {
+        let (minimum, maximum) = registry_bounds(kind, parameter);
+        assert!(scale.is_finite() && scale > 0.0);
         Self {
             parameter,
             option,
             default,
             scale,
+            sink_minimum: minimum * scale,
+            sink_maximum: maximum * scale,
         }
     }
+}
+
+fn registry_bounds(kind: EffectKind, parameter: EffectParameter) -> (f64, f64) {
+    let effect = registered_effect(kind).expect("runtime effect must be registered");
+    let parameter = effect
+        .parameters
+        .iter()
+        .find(|candidate| candidate.parameter == parameter)
+        .expect("runtime parameter must belong to its effect");
+    assert!(parameter.supports_curve);
+    (
+        parameter
+            .minimum
+            .expect("runtime number must have a minimum"),
+        parameter
+            .maximum
+            .expect("runtime number must have a maximum"),
+    )
 }
 
 pub(in crate::emitter) fn filter(
@@ -92,9 +126,9 @@ fn command(
     else {
         return None;
     };
-    let expression = scaled(
+    let expression = sink_clamped(
         animation::number(context.plan, effect.owner, value, "T"),
-        parameter.scale,
+        parameter,
     );
     let escaped = expression.replace('\\', "\\\\").replace(';', "\\\\;");
     Some(format!("[expr] {target} {} {escaped}", parameter.option))
@@ -109,15 +143,20 @@ fn initial(effect: EffectSpec<'_>, parameter: RuntimeNumber) -> String {
         Some(Animatable::Binding { .. }) => parameter.default,
         _ => parameter.default,
     };
-    time::number(value * parameter.scale)
+    time::number((value * parameter.scale).clamp(parameter.sink_minimum, parameter.sink_maximum))
 }
 
-fn scaled(expression: String, scale: f64) -> String {
-    if scale == 1.0 {
+fn sink_clamped(expression: String, parameter: RuntimeNumber) -> String {
+    let scaled = if parameter.scale == 1.0 {
         expression
     } else {
-        format!("({expression})*{}", time::number(scale))
-    }
+        format!("({expression})*{}", time::number(parameter.scale))
+    };
+    format!(
+        "clip(({scaled})\\,{}\\,{})",
+        time::number(parameter.sink_minimum),
+        time::number(parameter.sink_maximum)
+    )
 }
 
 fn instance(effect: EffectSpec<'_>) -> String {

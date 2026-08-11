@@ -12,24 +12,30 @@ pub(super) fn build_entry(
     } else {
         "black"
     };
-    build_video(context, sequence, background)
+    build_video(
+        context,
+        sequence,
+        background,
+        context.alpha == AlphaMode::Opaque,
+    )
 }
 
 pub(super) fn build_nested(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
 ) -> Result<String, CodegenErrors> {
-    build_video(context, sequence, "black@0")
+    build_video(context, sequence, "black@0", false)
 }
 
 fn build_video(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
     background: &str,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     let previous = context.canvas;
     context.canvas = Canvas::from_sequence(sequence);
-    let result = build_sequence(context, sequence, background);
+    let result = build_sequence(context, sequence, background, base_is_opaque);
     context.canvas = previous;
     result
 }
@@ -38,6 +44,7 @@ fn build_sequence(
     context: &mut EmitContext<'_>,
     sequence: &ResolvedSequence,
     background: &str,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     let canvas = context.canvas;
     let base = context.graph.source(
@@ -51,7 +58,7 @@ fn build_sequence(
         ),
         "base",
     );
-    visual::compose(context, sequence, base)
+    visual::compose(context, sequence, base, base_is_opaque)
 }
 
 pub(super) fn conform_output(

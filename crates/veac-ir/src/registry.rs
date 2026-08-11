@@ -37,6 +37,10 @@ const COLOR_ADJUST: &[ParameterSpec] = &[
     curve(EffectParameter::Saturation, 0.0, 4.0),
 ];
 const BLUR: &[ParameterSpec] = &[curve(EffectParameter::Radius, 0.0, 100.0)];
+const DIRECTIONAL_BLUR: &[ParameterSpec] = &[
+    curve(EffectParameter::AngleDegrees, 0.0, 360.0),
+    curve(EffectParameter::Radius, 0.0, 100.0),
+];
 const SHARPEN: &[ParameterSpec] = &[curve(EffectParameter::Amount, 0.0, 10.0)];
 const UNIT_AMOUNT: &[ParameterSpec] = &[curve(EffectParameter::Amount, 0.0, 1.0)];
 const CHROMA_KEY: &[ParameterSpec] = &[
@@ -61,6 +65,7 @@ const NORMALIZE: &[ParameterSpec] = &[number(EffectParameter::TargetLufs, -70.0,
 const EFFECTS: &[EffectSpec] = &[
     spec(EffectKind::VideoColorAdjust, COLOR_ADJUST),
     spec(EffectKind::VideoBlur, BLUR),
+    spec(EffectKind::VideoDirectionalBlur, DIRECTIONAL_BLUR),
     spec(EffectKind::VideoSharpen, SHARPEN),
     spec(EffectKind::VideoVignette, UNIT_AMOUNT),
     spec(EffectKind::VideoGrain, UNIT_AMOUNT),

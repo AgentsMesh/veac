@@ -103,7 +103,7 @@ veac=$(prepare_example_preview_cli "$ROOT" 1.85.0)
   "+1.85.0 metadata --manifest-path $ROOT/Cargo.toml --format-version 1 --no-deps" ]]
 unset VEAC_BIN
 
-for target in render_e2e_tests delivery_e2e_tests probe_e2e_tests workflow_e2e_tests; do
+for target in render_e2e_tests delivery_e2e_tests probe_e2e_tests observation_e2e workflow_e2e_tests; do
   [[ -f "$ROOT/crates/veac-runtime/tests/$target.rs" ]] || {
     echo "missing runtime E2E target: $target" >&2
     exit 1

@@ -73,6 +73,7 @@ fn multicam_direct_error(
         input_routes: Default::default(),
         canvas: super::super::Canvas::from_output(&plan.output).expect("raster"),
         graph: Default::default(),
+        reverse_ledger: Default::default(),
         filter_bindings: Vec::new(),
         preparations: Vec::new(),
     };
@@ -98,6 +99,7 @@ fn lut_error(plan: &ResolvedRenderPlan, lut: &ResolvedLut) -> super::super::Code
         input_routes: Default::default(),
         canvas: super::super::Canvas::from_output(&plan.output).expect("raster"),
         graph: Default::default(),
+        reverse_ledger: Default::default(),
         filter_bindings: Vec::new(),
         preparations: Vec::new(),
     };

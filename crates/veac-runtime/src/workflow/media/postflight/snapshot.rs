@@ -1,5 +1,7 @@
 use veac_artifact::MediaArtifactSpec;
-use veac_ir::{MediaProbeSnapshot, ProbedStream, ProbedStreamType, Rational, RationalTime};
+use veac_ir::{
+    MediaProbeSnapshot, ProbedStream, ProbedStreamType, Rational, RationalTime, VideoCadence,
+};
 
 use super::super::{WorkflowError, WorkflowErrorKind, WorkflowResult};
 use super::{intent, timing};
@@ -75,6 +77,7 @@ fn video(
     if stream.codec != codec
         || (facts.width, facts.height) != (width, height)
         || frame_rate.is_some_and(|value| facts.frame_rate != Some(value))
+        || (frame_rate.is_some() && facts.cadence != VideoCadence::Constant)
         || stream.time_base.is_none()
     {
         return invalid("derived video does not match its artifact contract");

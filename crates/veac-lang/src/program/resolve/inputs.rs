@@ -4,7 +4,10 @@ use std::sync::Arc;
 use crate::program::diagnostic::Diagnostic;
 use crate::program::expression::{PrimitiveType, ValueTypeKind};
 use crate::program::model::{Scope, SurfaceFile};
-use crate::program::{BuildInputDeclaration, TypeDefinitionKind, TypeRegistry, MAX_BUILD_INPUTS};
+use crate::program::{
+    is_material_binding_type, BuildInputDeclaration, BuildInputRole, TypeDefinitionKind,
+    TypeRegistry, MAX_BUILD_INPUTS,
+};
 
 use super::type_annotations;
 
@@ -32,11 +35,11 @@ pub(super) fn resolve(file: &SurfaceFile, scope: &mut Scope) -> Result<(), Diagn
             ));
         }
         let value_type = type_annotations::resolve(file, scope, &declaration.type_syntax)?;
-        if !supported(&value_type, &scope.types) {
+        if !supported(declaration.role, &value_type, &scope.types) {
             return Err(Diagnostic::new(
                 "PROGRAM_INPUT_TYPE",
                 &file.path,
-                "Build inputs require a supported primitive or a payloadless nominal enum",
+                "Build input role and type do not form a supported closed binding",
                 declaration.name_span,
             ));
         }
@@ -61,7 +64,14 @@ fn collides(file: &SurfaceFile, scope: &Scope, name: &str) -> bool {
         || file.types.iter().any(|value| value.name == name)
 }
 
-fn supported(value: &crate::program::expression::ValueType, types: &TypeRegistry) -> bool {
+fn supported(
+    role: BuildInputRole,
+    value: &crate::program::expression::ValueType,
+    types: &TypeRegistry,
+) -> bool {
+    if role == BuildInputRole::Material {
+        return is_material_binding_type(value, types);
+    }
     if matches!(
         value.kind(),
         ValueTypeKind::Primitive(

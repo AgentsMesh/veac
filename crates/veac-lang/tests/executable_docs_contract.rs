@@ -37,7 +37,7 @@ fn executable_rfc_surface_examples_use_the_real_language() {
 fn executable_docs_track_the_closed_runtime_boundary() {
     let source = read(REFERENCE);
     assert_eq!(DomainType::all().len(), 214);
-    assert_eq!(DomainOperationId::all().len(), 581);
+    assert_eq!(DomainOperationId::all().len(), 582);
     for contract in [
         "verified Core v10",
         "Pure | LocalMutation | GraphEmit",
@@ -64,7 +64,7 @@ fn executable_docs_track_the_closed_runtime_boundary() {
 fn normative_programming_grammar_tracks_effect_input_and_statement_contracts() {
     let grammar = read("docs/language-design/programming-grammar.md");
     for contract in [
-        "input-role = \"parameter\" | \"asset_metadata\" | \"analysis\"",
+        "input-role = \"parameter\" | \"asset_metadata\" | \"analysis\" | \"material\"",
         "block-statement = let-statement | var-statement | set-statement",
         "function-effect = \"effect\" , ( \"pure\" | \"local\" | \"emit\" | \"any\" )",
         "value-type , function-effect , function-body",

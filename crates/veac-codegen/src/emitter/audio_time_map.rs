@@ -3,6 +3,7 @@ use veac_plan::canonical::{PitchPolicy, PlaybackDirection, RationalTime, SourceT
 use veac_plan::{PlanInputId, ResolvedClip, ResolvedSourceMapping, ResolvedSourceTimeMap};
 
 use super::audio::AudioRenderSpec;
+use super::reverse_ledger::AudioFacts;
 use super::{audio_processing, audio_source::invalid, CodegenErrors, EmitContext};
 
 mod segment;
@@ -18,6 +19,16 @@ pub(super) struct LabelRequest<'a> {
     pub pitch: PitchPolicy,
     pub clock: SourceClock,
     pub source_duration: Option<RationalTime>,
+    pub reverse_facts: Option<AudioFacts>,
+}
+
+struct CurveRequest<'a> {
+    raw: &'a str,
+    segments: &'a [SourceTimeSegment],
+    clock: SourceClock,
+    output: &'a AudioRenderSpec,
+    pitch: PitchPolicy,
+    reverse_facts: Option<AudioFacts>,
 }
 
 pub(super) fn apply(
@@ -35,6 +46,11 @@ pub(super) fn apply(
     let _logical_stream = stream;
     let raw = format!("{}:{}", route.input_index(), route.global_stream());
     let clock = route.clock();
+    let reverse_facts = context
+        .bindings
+        .input(input_id)
+        .and_then(|binding| binding.audio_facts())
+        .map(AudioFacts::bound);
     apply_label(
         context,
         clip,
@@ -45,6 +61,7 @@ pub(super) fn apply(
             pitch,
             clock,
             source_duration: route.source_duration(),
+            reverse_facts,
         },
     )
 }
@@ -84,7 +101,14 @@ pub(super) fn apply_label(
                 request.output,
             );
             if *direction == PlaybackDirection::Reverse {
-                label = context.graph.filter(&[&label], "areverse", "reversea");
+                label = context.reverse_audio(
+                    &label,
+                    "reversea",
+                    clip,
+                    source_range_per_repeat.duration,
+                    request.output.sample_rate,
+                    request.reverse_facts,
+                )?;
             }
             label = audio_processing::speed(
                 context,
@@ -98,11 +122,14 @@ pub(super) fn apply_label(
         ResolvedSourceTimeMap::Curve { segments } => curve(
             context,
             clip,
-            &raw,
-            segments,
-            clock,
-            request.output,
-            request.pitch,
+            CurveRequest {
+                raw: &raw,
+                segments,
+                clock,
+                output: request.output,
+                pitch: request.pitch,
+                reverse_facts: request.reverse_facts,
+            },
         ),
     }
 }
@@ -110,18 +137,28 @@ pub(super) fn apply_label(
 fn curve(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
-    raw: &str,
-    segments: &[SourceTimeSegment],
-    clock: SourceClock,
-    output: &AudioRenderSpec,
-    pitch: PitchPolicy,
+    request: CurveRequest<'_>,
 ) -> Result<String, CodegenErrors> {
-    if segments.is_empty() {
+    if request.segments.is_empty() {
         return Err(invalid(clip, "resolved source-time curve is empty"));
     }
-    let labels: Vec<_> = segments
+    let labels: Vec<_> = request
+        .segments
         .iter()
-        .map(|value| segment::filter(context, clip, raw, value, clock, output, pitch))
+        .map(|segment| {
+            segment::filter(
+                context,
+                clip,
+                segment::FilterRequest {
+                    raw: request.raw,
+                    segment,
+                    clock: request.clock,
+                    output: request.output,
+                    pitch: request.pitch,
+                    reverse_facts: request.reverse_facts,
+                },
+            )
+        })
         .collect::<Result<_, _>>()?;
     if labels.len() == 1 {
         return Ok(labels[0].clone());

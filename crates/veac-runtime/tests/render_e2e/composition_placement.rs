@@ -46,6 +46,40 @@ fn static_position_tracks_animated_scale_dimensions() {
 }
 
 #[test]
+fn growing_scale_with_top_pivot_and_rotation_renders_every_frame() {
+    let temp = tempdir().unwrap();
+    let source = color_video_fixture(temp.path(), "growing-red", "0xEC232A");
+    let base = solid_clip("itm_growing_base", color(14, 38, 72), 0, 1_000);
+    let mut layer = media_clip("itm_growing_layer", "med_growing_red", 0, 1_000);
+    let mut visual = framed_visual(Anchor::Center, Some((30.0, 30.0)));
+    visual.transform.anchor = Vec2 { x: 0.5, y: 0.0 };
+    visual.transform.scale = Animatable::Keyframes {
+        keyframes: vec![
+            axis_scale_key("kf_growing_edge", 0, 0.08),
+            axis_scale_key("kf_growing_face", 300, 1.0),
+        ],
+    };
+    visual.transform.rotation_degrees = Animatable::constant(7.0);
+    layer.visual = Some(visual);
+    let mut canonical = project(false);
+    canonical.project.materials.push(material(
+        "med_growing_red",
+        MaterialKind::Video,
+        StreamChoice::Auto,
+        StreamChoice::Disabled,
+    ));
+    canonical.project.sequences[0].tracks = vec![
+        track("trk_growing_base", TrackKind::Video, 0, vec![base]),
+        track("trk_growing_layer", TrackKind::Visual, 1, vec![layer]),
+    ];
+    let output = temp.path().join("growing-scale-rotation.mp4");
+    let assets = BTreeMap::from([("med_growing_red".to_owned(), source)]);
+    render(canonical, &assets, &output);
+    red_bounds(96, &rgb_frame(&output, 0.05));
+    red_bounds(96, &rgb_frame(&output, 0.75));
+}
+
+#[test]
 fn fully_off_canvas_offsets_remain_transparent() {
     let temp = tempdir().unwrap();
     let base = solid_clip("itm_offset_base", color(14, 38, 72), 0, 2_000);
@@ -85,6 +119,15 @@ fn scale_key(id: &str, milliseconds: i64, value: f64) -> Keyframe<Vec2> {
         time: time(milliseconds),
         value: Vec2 { x: value, y: value },
         interpolation: Interpolation::Hold,
+    }
+}
+
+fn axis_scale_key(id: &str, milliseconds: i64, y: f64) -> Keyframe<Vec2> {
+    Keyframe {
+        id: KeyframeId::new(id).unwrap(),
+        time: time(milliseconds),
+        value: Vec2 { x: 1.0, y },
+        interpolation: Interpolation::Linear,
     }
 }
 

@@ -9,6 +9,8 @@ mod binding_tests;
 mod enum_tests;
 #[path = "tests/manifest.rs"]
 mod manifest_tests;
+#[path = "tests/materials.rs"]
+mod material_tests;
 #[path = "tests/values.rs"]
 mod value_tests;
 

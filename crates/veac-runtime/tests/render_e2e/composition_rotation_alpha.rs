@@ -35,6 +35,38 @@ fn opaque_media_rotation_keeps_padded_pixels_transparent() {
 }
 
 #[test]
+fn centered_opaque_media_rotation_keeps_corners_transparent() {
+    let temp = tempdir().unwrap();
+    let source = color_video_fixture(temp.path(), "centered-red", "0xEC232A");
+    let base = solid_clip("itm_centered_base", color(24, 56, 79), 0, 1_000);
+    let mut layer = media_clip("itm_centered_layer", "med_centered_red", 0, 1_000);
+    let mut visual = framed_visual(Anchor::Center, None);
+    visual.transform.scale = Animatable::constant(Vec2 { x: 0.72, y: 0.72 });
+    visual.transform.rotation_degrees = Animatable::constant(8.0);
+    layer.visual = Some(visual);
+
+    let mut canonical = project(false);
+    canonical.project.materials.push(material(
+        "med_centered_red",
+        MaterialKind::Video,
+        StreamChoice::Auto,
+        StreamChoice::Disabled,
+    ));
+    canonical.project.sequences[0].tracks = vec![
+        track("trk_centered_base", TrackKind::Video, 0, vec![base]),
+        track("trk_centered_layer", TrackKind::Visual, 1, vec![layer]),
+    ];
+    let output = temp.path().join("centered-media-rotation.mp4");
+    let assets = BTreeMap::from([("med_centered_red".to_owned(), source)]);
+    render(canonical, &assets, &output);
+
+    for (x, y) in [(4, 4), (4, 49), (90, 4)] {
+        assert_navy(rgb_at(&output, 0.5, x, y));
+    }
+    assert_red(rgb_at(&output, 0.5, 48, 27));
+}
+
+#[test]
 fn opaque_media_contain_fit_keeps_letterbox_pixels_transparent() {
     let temp = tempdir().unwrap();
     let source = color_video_fixture(temp.path(), "contained-red", "0xEC232A");

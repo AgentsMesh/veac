@@ -70,10 +70,10 @@ Surface grammar 中真正的有限闭集由共享 `SyntaxToken` 实现；当前 
 枚举；即使它们只有少数当前拼写，也必须是 owner-scoped `ControlUse`。动态 identifier、reference
 ID、文本、数值和表达式不是固定词汇 entry。
 
-`standard_library` 的 214 个 type symbol、558 个 free-function symbol 和 23 个 method symbol 是
+`standard_library` 的 214 个 type symbol、559 个 free-function symbol 和 23 个 method symbol 是
 typed name-resolution 合同，不是 keyword，也不会仅因进入标准库而进入 `vocabulary`。例如
 `Canvas`、`video_resource`、`with_sequence` 由类型检查器在对应的 type/callee/method 位置解析；
-它们不会出现在 `lexer_keywords`。581 个 numeric domain operation 也是 backend opcode 合同，不是
+它们不会出现在 `lexer_keywords`。582 个 numeric domain operation 也是 backend opcode 合同，不是
 源码 token。若某个标准库 symbol 恰好与固定语法同名，`VocabularyEntry` 仍只记录它真实的语法 use。
 
 内部仍可保留旧 Core authoring descriptor 供实现代码迁移，但它们不是当前 `.veac` Surface
@@ -82,20 +82,20 @@ production，不得成为 `LanguageSpec` entry/use，也不得出现在 public J
 
 ## 当前统计
 
-当前 `language_version` `0.1.0` 发布 `91` 个不同 spelling 和 `97` 个精确 syntax use。
+当前 `language_version` `0.1.0` 发布 `92` 个不同 spelling 和 `98` 个精确 syntax use。
 category count 是“至少具有该 category 一个 use 的不同 spelling 数”；同一 spelling 可出现在
 多行。第三列是该 category 的精确 use 数。
 
 | Category | Spelling count | Exact uses |
 | --- | ---: | ---: |
 | `reserved_literal` | 2 | 2 |
-| `contextual_control` | 58 | 61 |
+| `contextual_control` | 59 | 62 |
 | `enum_value` | 4 | 4 |
 | `builtin_function` | 14 | 14 |
 | `unit_suffix` | 6 | 6 |
 | `value_type` | 10 | 10 |
 
-公开语言层只有 `static_program`、`executable_expression`；两个层分别有 59、38 个 exact use。
+公开语言层只有 `static_program`、`executable_expression`；两个层分别有 60、38 个 exact use。
 canonical roles 为
 `boolean_literal`、`clause_introducer`、`closed_value`、`compile_time_type`、
 `declaration_introducer`、`declaration_modifier`、`receiver_binding`、

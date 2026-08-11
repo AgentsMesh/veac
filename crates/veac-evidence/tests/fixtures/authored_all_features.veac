@@ -1,0 +1,76 @@
+fn metric_range(minimum: scalar, maximum: scalar) -> RangeExpectation {
+  RangeExpectation {
+    minimum: OptionalScalar.Some { value: minimum, },
+    maximum: OptionalScalar.Some { value: maximum, },
+  }
+}
+
+fn optional_range(minimum: scalar, maximum: scalar) -> OptionalRangeExpectation {
+  OptionalRangeExpectation.Some { value: metric_range(minimum, maximum), }
+}
+
+fn alpha_expectation() -> AlphaExpectation {
+  AlphaExpectation {
+    transparent_below: 1,
+    opaque_above: 254,
+    mean: optional_range(0.0, 1.0),
+    transparent_fraction: OptionalRangeExpectation.None,
+    partial_fraction: OptionalRangeExpectation.None,
+    opaque_fraction: optional_range(0.0, 1.0),
+  }
+}
+
+fn diff_expectation() -> DiffExpectation {
+  DiffExpectation {
+    rmse: optional_range(0.0, 1.0),
+    mae: OptionalRangeExpectation.None,
+    maximum_delta: OptionalRangeExpectation.None,
+    changed_fraction: optional_range(0.0, 1.0),
+  }
+}
+
+fn bounds_expectation() -> BoundsExpectation {
+  BoundsExpectation {
+    non_empty: true,
+    minimum_margin_pixels: OptionalInteger.Some { value: 0, },
+    maximum_width_pixels: OptionalInteger.None,
+    maximum_height_pixels: OptionalInteger.Some { value: 1080, },
+  }
+}
+
+fn evidence() -> EvidenceSuite {
+  EvidenceSuite {
+    schema_version: 1,
+    id: identifier("all-features"),
+    sources: [
+      EvidenceSource { id: identifier("rendered"), binding: EvidenceSourceBinding.Deliverable { deliverable_id: identifier("final-video"), }, },
+      EvidenceSource { id: identifier("overlay"), binding: EvidenceSourceBinding.Artifact { artifact_id: identifier("overlay-plate"), }, },
+      EvidenceSource { id: identifier("baseline"), binding: EvidenceSourceBinding.BoundInput { input_id: identifier("baseline-input"), }, }
+    ],
+    samples: [
+      EvidenceSample { id: identifier("render-0"), source_id: identifier("rendered"), at: 0s, },
+      EvidenceSample { id: identifier("render-1"), source_id: identifier("rendered"), at: 1s, },
+      EvidenceSample { id: identifier("render-2"), source_id: identifier("rendered"), at: 2s, },
+      EvidenceSample { id: identifier("render-3"), source_id: identifier("rendered"), at: 3s, },
+      EvidenceSample { id: identifier("overlay-1"), source_id: identifier("overlay"), at: 1s, },
+      EvidenceSample { id: identifier("baseline-0"), source_id: identifier("baseline"), at: 0s, }
+    ],
+    regions: [
+      EvidenceRegion { id: identifier("full"), space: EvidenceRegionSpace.Normalized { x: 0.0, y: 0.0, width: 1.0, height: 1.0, }, },
+      EvidenceRegion { id: identifier("card"), space: EvidenceRegionSpace.Pixels { x: 10, y: 20, width: 300, height: 180, }, }
+    ],
+    assertions: [
+      EvidenceAssertion.DecodeComplete { id: identifier("decode"), source_id: identifier("rendered"), minimum_frames: 1, },
+      EvidenceAssertion.Alpha { id: identifier("alpha"), sample_id: identifier("render-0"), region_id: OptionalIdentifier.Some { value: identifier("full"), }, expectation: alpha_expectation(), },
+      EvidenceAssertion.PixelDiff { id: identifier("diff"), left_sample_id: identifier("render-0"), right_sample_id: identifier("render-1"), region_id: OptionalIdentifier.None, channels: DiffChannels.Rgba, change_threshold: 1, expectation: diff_expectation(), },
+      EvidenceAssertion.Bounds { id: identifier("bounds-alpha"), sample_id: identifier("render-1"), region_id: OptionalIdentifier.Some { value: identifier("card"), }, mask: MaskSpec.Alpha { minimum: 1, }, expectation: bounds_expectation(), },
+      EvidenceAssertion.Bounds { id: identifier("bounds-difference"), sample_id: identifier("render-1"), region_id: OptionalIdentifier.None, mask: MaskSpec.Difference { reference_sample_id: identifier("render-0"), minimum_delta: 1, }, expectation: bounds_expectation(), },
+      EvidenceAssertion.Bounds { id: identifier("bounds-luma"), sample_id: identifier("render-2"), region_id: OptionalIdentifier.None, mask: MaskSpec.Luma { threshold: 128, above: true, }, expectation: bounds_expectation(), },
+      EvidenceAssertion.LayerOrder { id: identifier("layer-order"), upper_entity: "copy/title", lower_entity: "plate/background", },
+      EvidenceAssertion.CompositeOver { id: identifier("composite"), actual_sample_id: identifier("render-2"), underlay_sample_id: identifier("baseline-0"), overlay_sample_id: identifier("overlay-1"), region_id: OptionalIdentifier.Some { value: identifier("card"), }, overlay_alpha_minimum: 1, maximum_expected_rmse: 0.1, minimum_improvement_ratio: 1.1, },
+      EvidenceAssertion.RevealOrder { id: identifier("reveal"), baseline_sample_id: identifier("baseline-0"), subjects: [RevealSubject { id: identifier("title"), region_id: identifier("full"), }, RevealSubject { id: identifier("card"), region_id: identifier("card"), }], checkpoints: [RevealCheckpoint { sample_id: identifier("render-1"), visible_prefix: 1, }, RevealCheckpoint { sample_id: identifier("render-2"), visible_prefix: 2, }], change_threshold: 1, visible_minimum: 0.8, hidden_maximum: 0.2, },
+      EvidenceAssertion.MotionProfile { id: identifier("motion-change"), sample_ids: [identifier("render-0"), identifier("render-1"), identifier("render-2")], region_id: OptionalIdentifier.None, metric: MotionMetric.ChangedFraction { threshold: 1, }, minimum_interval_motion: 0.0, minimum_deceleration_ratio: 1.0, monotonic_tolerance: 0.0, },
+      EvidenceAssertion.MotionProfile { id: identifier("motion-alpha"), sample_ids: [identifier("render-1"), identifier("render-2"), identifier("render-3")], region_id: OptionalIdentifier.Some { value: identifier("full"), }, metric: MotionMetric.AlphaCentroid { minimum: 1, }, minimum_interval_motion: 0.0, minimum_deceleration_ratio: 1.0, monotonic_tolerance: 0.0, }
+    ],
+  }
+}

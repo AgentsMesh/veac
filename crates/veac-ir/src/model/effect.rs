@@ -31,6 +31,10 @@ pub enum Effect {
     VideoBlur {
         radius: Animatable<f64>,
     },
+    VideoDirectionalBlur {
+        angle_degrees: Animatable<f64>,
+        radius: Animatable<f64>,
+    },
     VideoSharpen {
         amount: Animatable<f64>,
     },

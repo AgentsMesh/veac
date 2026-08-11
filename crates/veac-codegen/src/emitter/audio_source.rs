@@ -170,6 +170,10 @@ fn nested(
             pitch,
             clock,
             source_duration: Some(sequence.duration),
+            reverse_facts: Some(super::reverse_ledger::AudioFacts::output(
+                output.sample_rate,
+                output.channels,
+            )),
         },
     )?;
     Ok(context.graph.filter(

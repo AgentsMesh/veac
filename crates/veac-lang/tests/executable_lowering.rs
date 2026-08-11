@@ -6,6 +6,8 @@ mod audio_effect_template_v6;
 mod canonical;
 #[path = "executable_lowering/delivery_v6.rs"]
 mod delivery_v6;
+#[path = "executable_lowering/directional_blur_v8.rs"]
+mod directional_blur_v8;
 #[path = "executable_lowering/errors.rs"]
 mod errors;
 #[path = "executable_lowering/identity.rs"]

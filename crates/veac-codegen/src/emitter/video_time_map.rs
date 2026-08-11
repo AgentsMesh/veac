@@ -15,6 +15,7 @@ pub(super) struct Request<'a> {
     pub time_invariant: bool,
     pub image: bool,
     pub info: Option<&'a VideoStreamInfo>,
+    pub reverse_facts: Option<super::reverse_ledger::VideoFacts>,
 }
 
 pub(super) fn apply(
@@ -57,14 +58,13 @@ pub(super) fn apply(
                 "trimv",
             );
             if *direction == PlaybackDirection::Reverse && !request.image {
-                label = frame_limit(
-                    context,
+                label = context.reverse_video(
                     &label,
-                    source_range_per_repeat.duration.value,
-                    source_range_per_repeat.duration.timescale,
-                );
-                let reverse = reverse_filter(context);
-                label = context.graph.filter(&[&label], reverse, "reversev");
+                    "reversev",
+                    clip,
+                    source_range_per_repeat.duration,
+                    request.reverse_facts,
+                )?;
             }
             if rate.numerator != i64::from(rate.denominator) {
                 label = context.graph.filter(
@@ -81,11 +81,14 @@ pub(super) fn apply(
         ResolvedSourceTimeMap::Curve { segments } => curve::apply(
             context,
             clip,
-            &raw,
-            segments,
-            clock,
-            request.image,
-            request.info,
+            curve::Request {
+                raw: &raw,
+                segments,
+                clock,
+                image: request.image,
+                info: request.info,
+                reverse_facts: request.reverse_facts,
+            },
         ),
     }
 }
@@ -112,25 +115,4 @@ pub(super) fn image_prefix(image: bool) -> &'static str {
     } else {
         ""
     }
-}
-
-pub(super) fn reverse_filter(context: &EmitContext<'_>) -> String {
-    format!(
-        "reverse,setpts=N*{}/({}*TB)",
-        context.canvas.frame_rate.denominator, context.canvas.frame_rate.numerator
-    )
-}
-
-pub(super) fn frame_limit(
-    context: &mut EmitContext<'_>,
-    label: &str,
-    duration: i64,
-    timescale: u32,
-) -> String {
-    let numerator = i128::from(duration) * i128::from(context.canvas.frame_rate.numerator);
-    let denominator = i128::from(timescale) * i128::from(context.canvas.frame_rate.denominator);
-    let frames = ((numerator + denominator - 1) / denominator).max(1);
-    context
-        .graph
-        .filter(&[label], format!("trim=end_frame={frames}"), "frameboundv")
 }

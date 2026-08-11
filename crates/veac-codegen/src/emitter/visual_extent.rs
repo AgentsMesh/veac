@@ -34,6 +34,24 @@ pub(super) fn placement_extent(
     expand_shadow(extent, visual)
 }
 
+pub(super) fn maximum_scaled_extent(
+    plan: &ResolvedRenderPlan,
+    sequence: &veac_plan::ResolvedSequence,
+    clip: &ResolvedClip,
+    visual: &EffectiveVisualProperties,
+) -> Option<(u128, u128)> {
+    let (width, height) = base_extent(plan, sequence, clip, visual)?;
+    let (x, y) = max_visual_scale(&visual.transform.scale)?;
+    visual_transform_extent(
+        width,
+        height,
+        Vec2 { x, y },
+        false,
+        Vec2 { x: 0.0, y: 0.0 },
+        false,
+    )
+}
+
 pub(super) fn requires_canvas_placement(
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,

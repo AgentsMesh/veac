@@ -1,6 +1,8 @@
 mod bindings;
 mod exact;
 mod manifest;
+mod material;
+mod primitive;
 mod shape;
 mod value;
 
@@ -12,6 +14,8 @@ pub use manifest::{
     build_input_manifest_json_schema, parse_build_input_manifest, BuildInputBinding,
     BuildInputManifestV1, BUILD_INPUT_MANIFEST_SCHEMA, BUILD_INPUT_MANIFEST_VERSION,
 };
+pub(crate) use material::matches as is_material_binding_type;
+pub use material::{MaterialInputAuthority, MaterialInputKind};
 pub use value::BuildInputManifestValue;
 
 use schemars::JsonSchema;
@@ -27,6 +31,7 @@ pub enum BuildInputRole {
     Parameter,
     AssetMetadata,
     Analysis,
+    Material,
 }
 
 impl BuildInputRole {
@@ -35,6 +40,7 @@ impl BuildInputRole {
             Self::Parameter => "parameter",
             Self::AssetMetadata => "asset_metadata",
             Self::Analysis => "analysis",
+            Self::Material => "material",
         }
     }
 }

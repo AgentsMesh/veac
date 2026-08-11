@@ -12,6 +12,10 @@ impl Effect {
                 saturation: one,
             },
             EffectKind::VideoBlur => Self::VideoBlur { radius: zero },
+            EffectKind::VideoDirectionalBlur => Self::VideoDirectionalBlur {
+                angle_degrees: zero.clone(),
+                radius: zero,
+            },
             EffectKind::VideoSharpen => Self::VideoSharpen { amount: zero },
             EffectKind::VideoVignette => Self::VideoVignette { amount: zero },
             EffectKind::VideoGrain => Self::VideoGrain { amount: zero },

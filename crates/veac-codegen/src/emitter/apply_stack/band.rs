@@ -93,6 +93,7 @@ impl Band {
             track,
             clip,
             visual,
+            false,
         )?;
         Ok(())
     }

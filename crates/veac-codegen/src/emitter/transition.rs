@@ -13,6 +13,7 @@ pub(super) fn compose(
     base: String,
     track: &ResolvedTrack,
     transition: &ResolvedTransition,
+    base_is_opaque: bool,
 ) -> Result<String, CodegenErrors> {
     let outgoing = endpoint_clip(track, transition, &transition.outgoing_clip_id, "outgoing")?;
     let incoming = endpoint_clip(track, transition, &transition.incoming_clip_id, "incoming")?;
@@ -21,7 +22,7 @@ pub(super) fn compose(
     let outgoing = outgoing_side(context, &outgoing, transition);
     let incoming = incoming_side(context, &incoming, transition);
     let shifted = timeline::render(context, &outgoing, &incoming, transition);
-    Ok(blend::composite(
+    Ok(blend::composite_with_base(
         context,
         base,
         &shifted,
@@ -30,6 +31,7 @@ pub(super) fn compose(
             end: time::end(transition.record_window),
             mode: BlendMode::Normal,
         },
+        base_is_opaque,
     ))
 }
 

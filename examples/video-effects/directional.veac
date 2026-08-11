@@ -1,0 +1,41 @@
+module {
+  fn blur(
+    value: Item, key: identifier,
+    angle: AngleAnimation, radius: LengthAnimation
+  ) -> Item {
+    value.with_effect(video_directional_blur_effect(
+      key, effect_enabled(effect_window_full()), angle, radius
+    ))
+  }
+
+  export fn horizontal(value: Item) -> Item {
+    blur(
+      value, identifier("horizontal-directional-blur"),
+      angle_constant(0deg), length_constant(28px)
+    )
+  }
+
+  export fn vertical(value: Item) -> Item {
+    blur(
+      value, identifier("vertical-directional-blur"),
+      angle_constant(90deg), length_constant(28px)
+    )
+  }
+
+  export fn animated(value: Item) -> Item {
+    blur(
+      value, identifier("animated-directional-blur"), angle_constant(45deg),
+      length_keyframes([
+        length_keyframe(
+          identifier("clear-start"), 0s, 0px, interpolation_ease_in_out()
+        ),
+        length_keyframe(
+          identifier("maximum"), 1s, 36px, interpolation_ease_in_out()
+        ),
+        length_keyframe(
+          identifier("clear-end"), 2s, 0px, interpolation_linear()
+        )
+      ])
+    )
+  }
+}

@@ -4,10 +4,12 @@ mod build_input;
 mod dependency_budget;
 mod diagnostic;
 pub mod domain_system;
+mod entry_contract;
 mod executable;
 pub mod expression;
 mod expression_diagnostic;
 mod formatter;
+mod host_entry;
 mod index;
 mod lexer;
 mod limits;
@@ -21,11 +23,12 @@ mod source_unit;
 mod token;
 pub mod type_system;
 
+pub(crate) use build_input::is_material_binding_type;
 pub use build_input::{
     build_input_manifest_json_schema, parse_build_input_manifest, BuildInputBinding,
     BuildInputDeclaration, BuildInputManifestV1, BuildInputManifestValue, BuildInputRole,
-    BuildInputsError, BUILD_INPUT_MANIFEST_SCHEMA, BUILD_INPUT_MANIFEST_VERSION, MAX_BUILD_INPUTS,
-    MAX_BUILD_INPUT_MANIFEST_BYTES,
+    BuildInputsError, MaterialInputAuthority, MaterialInputKind, BUILD_INPUT_MANIFEST_SCHEMA,
+    BUILD_INPUT_MANIFEST_VERSION, MAX_BUILD_INPUTS, MAX_BUILD_INPUT_MANIFEST_BYTES,
 };
 pub use diagnostic::{Diagnostic, Diagnostics};
 pub use domain_system::{
@@ -35,6 +38,7 @@ pub use domain_system::{
     TemporalLoweringOpcode, MAX_DOMAIN_OPERATIONS, MAX_DOMAIN_OPERATION_OPERANDS,
     MAX_DOMAIN_REGISTRY_BYTES,
 };
+pub use entry_contract::{EntryContract, EntryParameterContract, EntryValueType};
 pub use executable::{
     build_path, build_path_with_inputs, build_path_with_root, build_path_with_root_and_inputs,
     build_source, build_source_with_inputs, build_with_loader, prepare_path,
@@ -43,6 +47,10 @@ pub use executable::{
 #[cfg(test)]
 pub(crate) use executable::{ClipTemporalProperty, ExecutableTemporalLeaf, ExecutableTemporalSink};
 pub use formatter::{format_path, format_source, format_source_with_loader};
+pub use host_entry::{
+    prepare_host_path, prepare_host_root_path, prepare_host_source, prepare_host_with_loader,
+    EvaluatedHostEntry, PreparedHostEntry,
+};
 pub use index::*;
 pub use loader::{FileSystemLoader, LoadedSource, SourceLoader};
 pub use method_system::{

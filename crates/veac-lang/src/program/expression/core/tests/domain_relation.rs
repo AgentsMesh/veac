@@ -34,7 +34,7 @@ fn operation(program: &super::super::CoreProgram, opcode: u16) -> usize {
 #[test]
 fn raw_relation_core_uses_v5_contract_and_exact_metadata() {
     let program = program();
-    assert_eq!(program.domain_opset(), DomainOpsetVersion::V7);
+    assert_eq!(program.domain_opset(), DomainOpsetVersion::V8);
     assert_eq!(
         program.result_type().as_domain(),
         Some(DomainType::Relation)

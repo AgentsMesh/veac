@@ -90,6 +90,44 @@ fn closed_effect_accessors_cover_every_parameter_storage_class() {
 }
 
 #[test]
+fn directional_blur_has_closed_typed_curve_storage() {
+    let mut effect = Effect::neutral(EffectKind::VideoDirectionalBlur);
+    assert_eq!(effect.kind(), EffectKind::VideoDirectionalBlur);
+    assert_eq!(effect.domain(), EffectDomain::Video);
+    assert_eq!(
+        effect.curve(EffectParameter::AngleDegrees),
+        Some(&Animatable::constant(0.0))
+    );
+    assert_eq!(
+        effect.curve(EffectParameter::Radius),
+        Some(&Animatable::constant(0.0))
+    );
+    assert_eq!(
+        effect.set_parameter(
+            EffectParameter::AngleDegrees,
+            EffectParameterValue::Curve(Animatable::constant(90.0))
+        ),
+        Some(true)
+    );
+    assert_eq!(
+        effect.set_parameter(
+            EffectParameter::Radius,
+            EffectParameterValue::Curve(Animatable::constant(24.0))
+        ),
+        Some(true)
+    );
+    let json = serde_json::to_value(&effect).unwrap();
+    assert_eq!(json["type"], "video_directional_blur");
+    assert_eq!(json["angle_degrees"]["value"], 90.0);
+    assert_eq!(json["radius"]["value"], 24.0);
+    assert!(serde_json::from_value::<Effect>(serde_json::json!({
+        "type": "video_directional_blur",
+        "radius": {"type": "constant", "value": 24.0}
+    }))
+    .is_err());
+}
+
+#[test]
 fn effect_catalog_and_plugin_digest_types_are_total() {
     for kind in EffectKind::ALL {
         let effect = Effect::neutral(kind);

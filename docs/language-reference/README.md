@@ -11,7 +11,7 @@ Surface -> typed HIR -> verified Core v10 -> bounded graph build
         -> canonical validation -> plan -> FFmpeg/artifacts
 ```
 
-当前 canonical project envelope 使用 schema version 9 和 minimum reader 9。centered transition 只接受
+当前 canonical project envelope 使用 schema version 10 和 minimum reader 10。centered transition 只接受
 centered true-overlap：两条相邻真实视频流必须完整覆盖交集窗口，backend 不用 held-frame `tpad` 补端点。
 
 核心代数为：
@@ -29,6 +29,8 @@ reference 由 grammar position 定型，例如 `resource`、`sequence`、`layer`
 `angle`、`track`、`bus`。未知 kind/field、重复字段、错误单位和未解析引用都会失败。
 
 - [Project 与 resources](project.md)
+- [工程工作区、target DAG、素材派生与 CAS](project-workspaces.md)
+- [EvidenceSuite、证据 bundle 与验收 gate](evidence.md)
 - 版本化语法机器合同：[Versioned language vocabulary](vocabulary.md)
 - [标准库名字、Domain 类型与 numeric opset](standard-library.md)
 - [可执行 Build、Core v10、Effect/Stage 与 graph transaction](executable-build.md)
@@ -48,7 +50,7 @@ reference 由 grammar position 定型，例如 `resource`、`sequence`、`layer`
 - [Text、captions 与 audio](text-caption-audio.md)
 - [Deliveries 与 artifacts](outputs.md)
 
-当前 executable opset v7 是 214 个 DomainType/581 个 operation 的闭合 registry；标准库 symbol
+当前 executable opset v8 是 214 个 DomainType/582 个 operation 的闭合 registry；标准库 symbol
 不计入 keyword，机器客户端通过 `veac language-spec` 读取合同。typed `animate` declaration 已发布，
 Surface 不得把表达式字符串或 property bag 写入 canonical IR。每个公开机制都应在
 [`examples/`](../../examples/) 中有可执行 source。`make check-examples` 会解析 source graph、

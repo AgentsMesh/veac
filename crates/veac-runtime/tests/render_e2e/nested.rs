@@ -48,6 +48,8 @@ fn nested_sequence_is_composited_only_inside_parent_record_range() {
     assert_blue(rgb_at(&output, 1.75, WIDTH / 2, HEIGHT / 2));
     let graph = rendered.command.filter_graph.as_deref().unwrap();
     assert!(graph.contains("s=48x36:r=5/1"), "{graph}");
+    assert!(graph.contains("maskedmerge=planes=7:enable="), "{graph}");
+    assert!(graph.contains("unpremultiply=planes=7"), "{graph}");
 }
 
 #[test]

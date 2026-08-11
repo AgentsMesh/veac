@@ -18,6 +18,7 @@ pub(super) fn successful_filters() -> BTreeSet<String> {
         "format",
         "fps",
         "geq",
+        "maskedmerge",
         "mergeplanes",
         "negate",
         "overlay",

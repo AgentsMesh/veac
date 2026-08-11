@@ -41,7 +41,7 @@ pub struct SourceIndex {
 }
 
 impl SourceIndex {
-    pub(crate) fn build(sources: &BTreeMap<String, String>) -> Result<Self, Diagnostics> {
+    pub fn build(sources: &BTreeMap<String, String>) -> Result<Self, Diagnostics> {
         let modules = sources
             .iter()
             .map(|(path, source)| SourceModule::utf8(path, source))

@@ -50,7 +50,7 @@ pub(super) fn delivery(path: &[&str]) -> veac_ir::RenderConfigId {
     veac_ir::RenderConfigId::from_digest(stable("delivery", path))
 }
 
-pub(super) fn deliverable(path: &[&str]) -> veac_ir::DeliverableId {
+pub(in crate::program::executable) fn deliverable(path: &[&str]) -> veac_ir::DeliverableId {
     veac_ir::DeliverableId::from_digest(stable("deliverable", path))
 }
 
@@ -91,8 +91,5 @@ fn frame(digest: &mut Sha256, value: &[u8]) {
 }
 
 fn encoded_len(value: usize) -> u64 {
-    match u64::try_from(value) {
-        Ok(value) => value,
-        Err(_) => u64::MAX,
-    }
+    u64::try_from(value).unwrap_or(u64::MAX)
 }

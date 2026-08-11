@@ -60,7 +60,30 @@ fn every_built_in_video_curve_parameter_accepts_keyframes() {
             covered += 1;
         }
     }
-    assert_eq!(covered, 14);
+    assert_eq!(covered, 16);
+}
+
+#[test]
+fn directional_blur_rejects_backend_unsafe_bounds() {
+    let mut project = sample_project();
+    effect_mut(&mut project).effect = Effect::VideoDirectionalBlur {
+        angle_degrees: Animatable::constant(360.0),
+        radius: Animatable::constant(100.0),
+    };
+    validate(&project).unwrap();
+
+    let Effect::VideoDirectionalBlur { angle_degrees, .. } = &mut effect_mut(&mut project).effect
+    else {
+        unreachable!()
+    };
+    *angle_degrees = Animatable::constant(360.1);
+    assert_effect_code(&project, "EFFECT_PARAMETER_RANGE");
+
+    effect_mut(&mut project).effect = Effect::VideoDirectionalBlur {
+        angle_degrees: Animatable::constant(90.0),
+        radius: Animatable::constant(100.1),
+    };
+    assert_effect_code(&project, "EFFECT_PARAMETER_RANGE");
 }
 
 #[test]

@@ -53,3 +53,7 @@ pub(super) fn tool_error(binary: &Path, error: crate::RuntimeError) -> ProbeErro
         }
     }
 }
+
+#[cfg(test)]
+#[path = "version/tests.rs"]
+mod tests;

@@ -1,10 +1,13 @@
 use veac_plan::canonical::{Animatable, Mask};
-use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedClipSource};
+use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedClipSource, ResolvedSequence};
 
 use super::{
     animation, color, effects, mask, process_owner::ProcessOwner, time, visual_frame, visual_pivot,
     visual_shear, CodegenErrors, EmitContext,
 };
+
+#[path = "visual_pipeline/scale.rs"]
+mod scale;
 
 pub(super) struct PreparedLayer {
     pub label: String,
@@ -14,6 +17,7 @@ pub(super) struct PreparedLayer {
 
 pub(super) fn apply(
     context: &mut EmitContext<'_>,
+    sequence: &ResolvedSequence,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     label: String,
@@ -24,17 +28,18 @@ pub(super) fn apply(
         } else {
             visual_frame::SourceGeometry::framed(visual.transform.anchor)
         };
-    apply_source(context, clip, visual, label, geometry)
+    apply_source(context, sequence, clip, visual, label, geometry)
 }
 
 pub(super) fn apply_source(
     context: &mut EmitContext<'_>,
+    sequence: &ResolvedSequence,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     label: String,
     geometry: visual_frame::SourceGeometry,
 ) -> Result<PreparedLayer, CodegenErrors> {
-    apply_inner(context, clip, visual, label, geometry)
+    apply_inner(context, sequence, clip, visual, label, geometry)
 }
 
 pub(super) fn apply_alpha(
@@ -50,6 +55,7 @@ pub(super) fn apply_alpha(
 
 fn apply_inner(
     context: &mut EmitContext<'_>,
+    sequence: &ResolvedSequence,
     clip: &ResolvedClip,
     visual: &EffectiveVisualProperties,
     mut label: String,
@@ -64,11 +70,23 @@ fn apply_inner(
     let owner = ProcessOwner::clip(clip);
     label = super::visual_crop::apply(context, owner, &label, &visual.transform.crop);
     label = visual_frame::apply(context, &label, visual, geometry.mode);
+    label = context
+        .graph
+        .filter(&[&label], "format=gbrap16le", "visualworkingv");
     label = effects::video(context, clip, label)?;
     label = flip(context, &label, visual);
-    label = scale(context, owner, &label, visual);
+    label = scale::apply(context, owner, &label, visual);
     label = corners(context, &label, visual);
     label = mask::apply(context, owner, &label, &visual.masks);
+    label = scale::stabilize(
+        context,
+        sequence,
+        clip,
+        visual,
+        &label,
+        geometry.pivot_x,
+        geometry.pivot_y,
+    );
     let (sheared, pivot_x, pivot_y) = visual_shear::apply(
         context,
         &label,
@@ -96,26 +114,6 @@ fn flip(context: &mut EmitContext<'_>, input: &str, visual: &EffectiveVisualProp
         (true, true) => "hflip,vflip",
     };
     context.graph.filter(&[input], filter, "flipv")
-}
-
-fn scale(
-    context: &mut EmitContext<'_>,
-    owner: ProcessOwner<'_>,
-    input: &str,
-    visual: &EffectiveVisualProperties,
-) -> String {
-    let x = animation::vec_x(context.plan, owner, &visual.transform.scale, "t");
-    let y = animation::vec_y(context.plan, owner, &visual.transform.scale, "t");
-    if matches!(&visual.transform.scale, Animatable::Constant { value } if value.x == 1.0 && value.y == 1.0)
-    {
-        input.to_owned()
-    } else {
-        context.graph.filter(
-            &[input],
-            format!("scale=w='max(1\\,iw*({x}))':h='max(1\\,ih*({y}))':eval=frame"),
-            "transformscalev",
-        )
-    }
 }
 
 fn rotate(

@@ -31,6 +31,17 @@ pub(in crate::program) fn execute_entry(
     compiled::execute_entry(entry, functions, execution, identity, environment)
 }
 
+pub(in crate::program) fn execute_value_entry(
+    entry: &super::CompiledFunction,
+    functions: &super::FunctionMap,
+    types: &crate::program::TypeRegistry,
+    arguments: &[super::Value],
+    environment: &dyn super::ValueLookup,
+    execution: &super::ExecutionBudget,
+) -> Result<super::Value, super::ExpressionError> {
+    compiled::execute_value_entry(entry, functions, types, arguments, environment, execution)
+}
+
 use super::core::CoreUnaryOperator;
 use super::{ExpressionError, Value, MAX_TEXT_VALUE_BYTES};
 

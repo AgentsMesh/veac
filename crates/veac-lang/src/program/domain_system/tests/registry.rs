@@ -24,7 +24,7 @@ fn unsupported_and_incomplete_opsets_fail_closed() {
     assert_eq!(error.code(), "DOMAIN_OPSET_UNSUPPORTED");
     assert!(error.message().contains("version 4"));
     assert_eq!(error.to_string(), error.message());
-    let current = DomainOperationRegistry::for_version(DomainOpsetVersion::V7).unwrap();
+    let current = DomainOperationRegistry::for_version(DomainOpsetVersion::V8).unwrap();
     assert_eq!(current.version(), DomainOpsetVersion::CURRENT);
 
     let mut incomplete = all_contracts();
@@ -84,6 +84,6 @@ fn registry_digest_is_byte_pinned() {
     let digest = DomainOperationRegistry::standard().digest().to_string();
     assert_eq!(
         digest,
-        "58ba887ccc37ed3ce7d99104b83fc01267e455b1adf6f04e98303e1d33b074ee"
+        "f02bebce0d1b43cc29e6a5aa260e869ede2a8abfeb75f8e6dee0af16859936cb"
     );
 }

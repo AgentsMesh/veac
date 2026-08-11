@@ -23,9 +23,11 @@ fn cubic_extrema(y1: f64, y2: f64) -> Option<Vec<f64>> {
         return None;
     }
     let mut roots = if a.abs() <= EPSILON {
-        (b.abs() > EPSILON)
-            .then(|| vec![-c / b])
-            .unwrap_or_default()
+        if b.abs() > EPSILON {
+            vec![-c / b]
+        } else {
+            Vec::new()
+        }
     } else {
         let discriminant = b * b - 4.0 * a * c;
         if !discriminant.is_finite() {

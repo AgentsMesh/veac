@@ -75,6 +75,7 @@ fn video_stream() -> ProbedStream {
             width: 1920,
             height: 1080,
             frame_rate: Some(Rational::new(30, 1).unwrap()),
+            cadence: VideoCadence::Constant,
             pixel_format: "yuv420p".to_owned(),
             profile: Some("High".to_owned()),
             level: Some(40),

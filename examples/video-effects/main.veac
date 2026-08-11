@@ -1,3 +1,4 @@
+import "./directional.veac" as directional;
 import "./effects.veac" as effects;
 import "./showcase.veac" as showcase;
 
@@ -62,13 +63,23 @@ fn main(context: Context) -> Project {
       plugin_reference_monochrome_v1(), scalar_constant(1.0)
     )
   );
+  let horizontal = directional.horizontal(effects.media(
+    identifier("directional-horizontal"), 10s, 1s, plate
+  ));
+  let vertical = directional.vertical(effects.media(
+    identifier("directional-vertical"), 11s, 1s, plate
+  ));
+  let animated = directional.animated(effects.media(
+    identifier("directional-animated"), 12s, 2s, plate
+  ));
   let background = visual_layer(
     identifier("background"), 0, placement_free(), showcase.state(), track_routing_default()
-  ).with_item(showcase.solid(identifier("reveal"), #d1495bff, 0s, 10s));
+  ).with_item(showcase.solid(identifier("reveal"), #d1495bff, 0s, 14s));
   let visuals = visual_layer(
     identifier("effects"), 1, placement_free(), showcase.state(), track_routing_default()
   ).with_item(focus).with_item(finish).with_item(chroma).with_item(luma)
-    .with_item(before).with_item(after).with_item(plugin_before).with_item(plugin_after);
+    .with_item(before).with_item(after).with_item(plugin_before).with_item(plugin_after)
+    .with_item(horizontal).with_item(vertical).with_item(animated);
   let timeline = sequence(
     identifier("main"), "视频效果与防抖",
     sequence_settings(canvas(640px, 360px), frame_rate(30, 1), 48000)

@@ -4,12 +4,14 @@ use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::tool::{spawn_pinned_until, PinnedSpawnError};
 use crate::RuntimeError;
 
 mod output;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
 pub(super) const MAX_STDOUT_BYTES: u64 = 16 * 1024 * 1024;
+pub(super) const MAX_CAPTURE_BYTES: u64 = 256 * 1024 * 1024;
 pub(super) const MAX_STDERR_BYTES: u64 = veac_artifact::MAX_ARTIFACT_METADATA_BYTES;
 pub(super) const MAX_OUTPUT_BYTES: u64 = veac_artifact::MAX_RENDER_TASK_OUTPUT_BYTES;
 pub(super) const MAX_WALL_TIME: Duration =
@@ -42,7 +44,7 @@ pub(super) fn run(
         command.current_dir(directory);
     }
     crate::process_group::configure(&mut command);
-    let mut child = command.spawn().map_err(io_error)?;
+    let mut child = spawn_pinned_until(&mut command, limits.deadline).map_err(spawn_error)?;
     let status = loop {
         let resources = resource_violation(&stdout, &stderr, &limits);
         let violation = match resources {
@@ -100,7 +102,7 @@ fn validate(limits: &ProcessLimits<'_>) -> Result<(), RuntimeError> {
     }
     if wall_time.is_some_and(|value| value > MAX_WALL_TIME)
         || limits.max_stdout_bytes == 0
-        || limits.max_stdout_bytes > MAX_STDOUT_BYTES
+        || limits.max_stdout_bytes > MAX_CAPTURE_BYTES
         || limits.max_stderr_bytes == 0
         || limits.max_stderr_bytes > MAX_STDERR_BYTES
         || limits.max_output_bytes == 0
@@ -140,6 +142,15 @@ fn stop_with<T>(child: &mut Child, error: RuntimeError) -> Result<T, RuntimeErro
 
 fn io_error(error: std::io::Error) -> RuntimeError {
     RuntimeError::new(error.to_string())
+}
+
+fn spawn_error(error: PinnedSpawnError) -> RuntimeError {
+    match error {
+        PinnedSpawnError::Deadline => {
+            RuntimeError::resource_limit("FFmpeg process launch exceeded its wall-clock limit")
+        }
+        PinnedSpawnError::Io(error) => io_error(error),
+    }
 }
 
 #[cfg(test)]

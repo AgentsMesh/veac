@@ -155,5 +155,5 @@ owner method 接入 graph。factory/method 内可用 owner-relative `animate` at
 closure，freeze 后解析为 canonical absolute sink；没有 source injection、宏展开、字符串 path、隐式
 ID 拼接或独立 component runtime。
 
-当前 opset v7 的 214 个 DomainType 与 581 个 operation 覆盖公开编辑机制。所有 public path 仍受
+当前 opset v8 的 214 个 DomainType 与 582 个 operation 覆盖公开编辑机制。所有 public path 仍受
 [编程资源预算](programming-limits.md)约束。

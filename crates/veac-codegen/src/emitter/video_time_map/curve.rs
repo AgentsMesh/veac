@@ -2,27 +2,34 @@ use veac_artifact::SourceClock;
 use veac_plan::canonical::{SourceTimeInterpolation, SourceTimeSegment, VideoStreamInfo};
 use veac_plan::ResolvedClip;
 
+use super::super::reverse_ledger::VideoFacts;
 use super::super::{source::unsupported, time, video_source, CodegenErrors, EmitContext};
 
 #[cfg(test)]
 #[path = "../../unit_tests/video_curve_internal_tests.rs"]
 mod internal_tests;
 
+pub(super) struct Request<'a> {
+    pub raw: &'a str,
+    pub segments: &'a [SourceTimeSegment],
+    pub clock: SourceClock,
+    pub image: bool,
+    pub info: Option<&'a VideoStreamInfo>,
+    pub reverse_facts: Option<VideoFacts>,
+}
+
 pub(super) fn apply(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
-    raw: &str,
-    segments: &[SourceTimeSegment],
-    clock: SourceClock,
-    image: bool,
-    info: Option<&VideoStreamInfo>,
+    request: Request<'_>,
 ) -> Result<String, CodegenErrors> {
-    if segments.is_empty() {
+    if request.segments.is_empty() {
         return Err(unsupported(clip, "resolved source-time curve is empty"));
     }
-    let labels: Vec<_> = segments
+    let labels: Vec<_> = request
+        .segments
         .iter()
-        .map(|segment| segment_filter(context, clip, raw, segment, clock, image, info))
+        .map(|segment| segment_filter(context, clip, segment, &request))
         .collect::<Result<_, _>>()?;
     if labels.len() == 1 {
         return Ok(labels[0].clone());
@@ -36,20 +43,32 @@ pub(super) fn apply(
 fn segment_filter(
     context: &mut EmitContext<'_>,
     clip: &ResolvedClip,
-    raw: &str,
     segment: &SourceTimeSegment,
-    clock: SourceClock,
-    image: bool,
-    info: Option<&VideoStreamInfo>,
+    request: &Request<'_>,
 ) -> Result<String, CodegenErrors> {
     if segment.record_duration.value <= 0 {
         return Err(unsupported(clip, "source-time segment duration is invalid"));
     }
     let mut label = match segment.interpolation {
-        SourceTimeInterpolation::Hold => hold(context, clip, raw, segment, clock, image)?,
-        SourceTimeInterpolation::Linear => linear(context, clip, raw, segment, clock, image)?,
+        SourceTimeInterpolation::Hold => hold(
+            context,
+            clip,
+            request.raw,
+            segment,
+            request.clock,
+            request.image,
+        )?,
+        SourceTimeInterpolation::Linear => linear(
+            context,
+            clip,
+            request.raw,
+            segment,
+            request.clock,
+            request.image,
+            request.reverse_facts,
+        )?,
     };
-    if let Some(info) = info {
+    if let Some(info) = request.info {
         label = video_source::normalize_geometry(context, &label, info);
     }
     Ok(label)
@@ -62,6 +81,7 @@ fn linear(
     segment: &SourceTimeSegment,
     clock: SourceClock,
     image: bool,
+    reverse_facts: Option<VideoFacts>,
 ) -> Result<String, CodegenErrors> {
     let delta = segment
         .source_end
@@ -109,9 +129,8 @@ fn linear(
         "ramptrimv",
     );
     if delta < 0 && !image {
-        label = super::frame_limit(context, &label, delta.abs(), clock.timescale());
-        let reverse = super::reverse_filter(context);
-        label = context.graph.filter(&[&label], reverse, "rampreversev");
+        label =
+            context.reverse_video(&label, "rampreversev", clip, source_duration, reverse_facts)?;
     }
     Ok(context.graph.filter(
         &[&label],

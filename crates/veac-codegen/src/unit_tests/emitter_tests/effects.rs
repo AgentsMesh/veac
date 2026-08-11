@@ -6,6 +6,7 @@ use super::support::{
 };
 
 mod animated;
+mod directional_blur;
 mod plugin;
 
 #[test]

@@ -66,7 +66,7 @@ fn every_mask_shape_and_inversion_emits_alpha_math() {
     }
     assert!(!graph.contains("if(lte(T\\,0)\\,0.4"), "{graph}");
     assert!(!graph.contains("if(lte(T\\,0)\\,15"), "{graph}");
-    assert!(graph.contains("geq=lum='if(gte(T\\,0)*lt(T\\,1)"));
+    assert!(graph.contains("enable='gte(t,0)*lt(t,1)'"));
     assert!(!graph.contains("enable='between(t,"));
 }
 

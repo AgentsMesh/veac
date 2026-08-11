@@ -10,7 +10,7 @@ fn failure(program: super::super::CoreProgram) -> String {
 }
 
 #[test]
-fn core_v7_pins_verified_domain_registry_identity() {
+fn core_v8_pins_verified_domain_registry_identity() {
     let program = project_program();
     assert_eq!(program.version(), 7);
     assert_eq!(result_domain(&program), DomainType::Project);
@@ -139,10 +139,10 @@ fn opcode_and_registry_identity_are_part_of_core_digest() {
 }
 
 #[test]
-fn raw_resource_emit_and_media_reference_verify_against_v7_contracts() {
+fn raw_resource_emit_and_media_reference_verify_against_v8_contracts() {
     let program = resource_source_program();
     assert_eq!(result_domain(&program), DomainType::Source);
-    assert_eq!(program.domain_opset(), DomainOpsetVersion::V7);
+    assert_eq!(program.domain_opset(), DomainOpsetVersion::V8);
     let identity = &program.blocks[0].instructions[3];
     assert!(matches!(
         identity.kind(),

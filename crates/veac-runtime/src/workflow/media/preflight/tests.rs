@@ -100,7 +100,7 @@ fn clock_selection_and_probe_errors_fail_closed() {
     );
 
     let empty = veac_ir::MediaProbeSnapshot {
-        schema_version: 3,
+        schema_version: veac_ir::MEDIA_PROBE_SCHEMA_VERSION,
         engine: "test".into(),
         selection_policy: "test".into(),
         container_format: "test".into(),

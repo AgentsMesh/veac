@@ -45,14 +45,14 @@ fn language_spec_stdout_is_canonical_deterministic_json() {
             .as_array()
             .unwrap()
             .len(),
-        581
+        582
     );
     assert_eq!(
         value["standard_library"]["free_functions"]
             .as_array()
             .unwrap()
             .len(),
-        558
+        559
     );
     assert_eq!(
         value["standard_library"]["methods"]
@@ -177,8 +177,8 @@ fn language_spec_stdout_maps_every_domain_opcode_without_adding_keywords() {
         )
         .collect::<BTreeSet<_>>();
     assert_eq!(operations, mappings);
-    assert_eq!(operations.len(), 581);
-    assert_eq!(spec.vocabulary.entries.len(), 91);
+    assert_eq!(operations.len(), 582);
+    assert_eq!(spec.vocabulary.entries.len(), 92);
     assert!(spec.vocabulary.lexer_keywords.is_empty());
 }
 

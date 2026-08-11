@@ -1,0 +1,60 @@
+fn workspace() -> ProjectManifest {
+  ProjectManifest {
+    schema: "veac.project",
+    version: 1,
+    id: identifier("derivation-demo"),
+    paths: ProjectPaths {
+      source_base: "sources",
+      material_root: "materials",
+      build_root: "build",
+      cache_root: ".cache/veac",
+      delivery_root: "dist",
+    },
+    defaults: ProjectDefaults {
+      profile: OptionalIdentifier.None,
+      locale: OptionalIdentifier.None,
+      max_instances_per_target: 8,
+      max_total_instances: 8,
+    },
+    locales: [],
+    profiles: [],
+    targets: [
+      ProjectTarget {
+        id: identifier("proxy"),
+        entry: ProjectTargetEntry.MediaDerivation {
+          operation: MediaDerivation.ProxyVideo {
+            source: identifier("source"),
+            source_stream: ProjectStreamSelection { global_index: 0, type_index: 0, },
+            source_clock: ProjectSourceClock.Identity {
+              duration: ProjectRational { numerator: 2, denominator: 5, },
+            },
+            width: 16,
+            height: 16,
+            frame_rate: ProjectRational { numerator: 10, denominator: 1, },
+            crf: 28,
+          },
+        },
+        localized: false,
+        inputs: [
+          ProjectInput {
+            id: identifier("source"),
+            source: ProjectInputSource.ProjectMaterial { path: "source.mp4", },
+          }
+        ],
+        profiles: [],
+        axes: [],
+        needs: [],
+        outputs: [
+          ProjectOutput.Media { id: identifier("video"), media_type: MediaType.Video, }
+        ],
+        deliveries: [
+          ProjectDelivery.File {
+            id: identifier("proxy-file"),
+            output: identifier("video"),
+            destination: "proxy.mp4",
+          }
+        ],
+      }
+    ],
+  }
+}

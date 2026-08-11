@@ -13,6 +13,8 @@ mod identity;
 mod limits;
 #[path = "tests/parsing.rs"]
 mod parsing;
+#[path = "tests/probe_cadence.rs"]
+mod probe_cadence;
 #[path = "tests/probe_limits.rs"]
 mod probe_limits;
 #[path = "tests/probe_process.rs"]

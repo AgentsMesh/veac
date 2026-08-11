@@ -46,7 +46,7 @@ impl<'a> EmitContext<'a> {
         alpha: AlphaMode,
         canvas: Canvas,
     ) -> Result<Self, CodegenErrors> {
-        preflight::validate(plan)?;
+        preflight::validate(plan, bindings)?;
         let input_routes = input::resolve(plan, bindings, deliverable)?;
         output::validate_binding(deliverable, bindings)?;
         Ok(Self {
@@ -57,6 +57,7 @@ impl<'a> EmitContext<'a> {
             input_routes,
             canvas,
             graph: Graph::default(),
+            reverse_ledger: Default::default(),
             filter_bindings: Vec::new(),
             preparations: Vec::new(),
         })

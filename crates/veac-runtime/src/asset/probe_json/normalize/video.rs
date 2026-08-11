@@ -1,4 +1,4 @@
-use veac_ir::VideoStreamInfo;
+use veac_ir::{Rational, VideoCadence, VideoStreamInfo};
 
 use super::{invalid, raw, text};
 use crate::asset::time::{optional_positive_ratio, sample_aspect_ratio};
@@ -12,6 +12,7 @@ pub(super) fn info(
         width: positive(stream.width, "streams[].width")?,
         height: positive(stream.height, "streams[].height")?,
         frame_rate: frame_rate(stream, auxiliary)?,
+        cadence: VideoCadence::Unknown,
         pixel_format: text::pixel_format(stream.pix_fmt.clone())?,
         profile: optional_text(stream.profile.as_deref(), "streams[].profile")?,
         level: level(stream.level)?,
@@ -23,14 +24,15 @@ pub(super) fn info(
 fn frame_rate(
     stream: &raw::FfprobeStream,
     auxiliary: bool,
-) -> Result<Option<veac_ir::Rational>, ProbeError> {
-    let average =
-        optional_positive_ratio("streams[].frame_rate", stream.avg_frame_rate.as_deref())?;
-    let value = match average {
-        Some(value) => Some(value),
-        None => optional_positive_ratio("streams[].frame_rate", stream.r_frame_rate.as_deref())?,
-    };
-    let Some(value) = value else {
+) -> Result<Option<Rational>, ProbeError> {
+    match parsed_rate(stream.avg_frame_rate.as_deref(), auxiliary)? {
+        Some(value) => Ok(Some(value)),
+        None => parsed_rate(stream.r_frame_rate.as_deref(), auxiliary),
+    }
+}
+
+fn parsed_rate(raw: Option<&str>, auxiliary: bool) -> Result<Option<Rational>, ProbeError> {
+    let Some(value) = optional_positive_ratio("streams[].frame_rate", raw)? else {
         return Ok(None);
     };
     let within_limit = i128::from(value.numerator)

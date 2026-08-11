@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use super::*;
 
 #[test]
-fn every_v7_contract_has_one_resolvable_surface_exposure() {
+fn every_v8_contract_has_one_resolvable_surface_exposure() {
     let registry = DomainOperationRegistry::standard();
     let mut resolved = BTreeSet::new();
     for contract in registry.contracts() {
@@ -16,7 +16,7 @@ fn every_v7_contract_has_one_resolvable_surface_exposure() {
         assert_eq!(actual, Some(contract));
         assert!(resolved.insert(contract.id()));
     }
-    assert_eq!(resolved.len(), 581);
+    assert_eq!(resolved.len(), 582);
 }
 
 #[test]

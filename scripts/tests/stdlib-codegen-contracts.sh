@@ -20,8 +20,8 @@ signatures = {operation["signature"] for operation in operations}
 surfaces = {(operation["receiver"], operation["name"]) for operation in operations}
 types = codegen.domain_types(operations)
 
-assert len(operations) == len(signatures) == 581
-assert len(surfaces) == 581, "stdlib v6 may not overload callable surfaces"
+assert len(operations) == len(signatures) == 582
+assert len(surfaces) == 582, "stdlib v6 may not overload callable surfaces"
 assert len(types) == len(codegen.declared_types()) == 214
 
 rendered = codegen.render_all(operations, types, codegen.action, codegen.axis)

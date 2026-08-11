@@ -10,13 +10,38 @@ assert_sharpen_evidence() {
     fail "video-effects sharpen does not produce an edge halo: $clear_halo->$sharp_halo"
 }
 
+assert_directional_blur_evidence() {
+  local video=$1 horizontal vertical early peak
+  local horizontal_x horizontal_y vertical_x vertical_y early_x early_y peak_x peak_y
+  horizontal=$(frame_axis_difference_avg "$video" 10.5) ||
+    fail "video-effects horizontal directional blur pixels are unavailable"
+  vertical=$(frame_axis_difference_avg "$video" 11.5) ||
+    fail "video-effects vertical directional blur pixels are unavailable"
+  early=$(frame_axis_difference_avg "$video" 12.15) ||
+    fail "video-effects early animated directional blur pixels are unavailable"
+  peak=$(frame_axis_difference_avg "$video" 13.15) ||
+    fail "video-effects peak animated directional blur pixels are unavailable"
+  read -r horizontal_x horizontal_y <<<"$horizontal"
+  read -r vertical_x vertical_y <<<"$vertical"
+  read -r early_x early_y <<<"$early"
+  read -r peak_x peak_y <<<"$peak"
+
+  awk -v hx="$horizontal_x" -v hy="$horizontal_y" \
+    -v vx="$vertical_x" -v vy="$vertical_y" '
+    BEGIN { exit !(hy > hx*2.5 && vx > vy*2.5 && hy > vy*2.5 && vx > hx*2.5) }
+  ' || fail "video-effects directional blur axes are not distinct: horizontal=$horizontal vertical=$vertical"
+  awk -v ex="$early_x" -v ey="$early_y" -v px="$peak_x" -v py="$peak_y" '
+    BEGIN { exit !(ex+ey > 1 && px+py > 1 && ex > px*2 && ey > py*2) }
+  ' || fail "video-effects directional blur radius does not animate: early=$early peak=$peak"
+}
+
 check_effects_evidence() {
   local dir="$PREVIEW_ROOT/video-effects"
   [[ -d $dir ]] || return 0
   local video="$dir/rendered/preview.mp4" early_edge clear_edge clear_sat style_sat
   local grain_delta spill_excess plugin_color_sat plugin_mono_sat
   local style_center style_corner clear_green keyed_green keyed_rose luma_rose luma_green
-  video_contract "$video" 3.6
+  video_contract "$video" 13.6
   early_edge=$(frame_edge_avg "$video" 0.1)
   clear_edge=$(frame_edge_avg "$video" 0.9)
   awk -v early="$early_edge" -v clear="$clear_edge" \
@@ -58,4 +83,5 @@ check_effects_evidence() {
   awk -v color="$plugin_color_sat" -v mono="$plugin_mono_sat" \
     'BEGIN { exit !(color > 20 && mono < color * .2) }' ||
     fail "video-effects versioned plugin does not produce monochrome output: $plugin_color_sat->$plugin_mono_sat"
+  assert_directional_blur_evidence "$video"
 }

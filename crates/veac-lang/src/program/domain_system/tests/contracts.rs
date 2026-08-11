@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn every_v7_operation_contract_is_self_consistent() {
+fn every_v8_operation_contract_is_self_consistent() {
     let registry = DomainOperationRegistry::standard();
     for contract in registry.contracts() {
         assert_eq!(contract.name(), contract.id().name());

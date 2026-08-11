@@ -18,12 +18,15 @@ mod units;
 use std::path::Path;
 
 use veac_artifact::ExecutionBindings;
-use veac_plan::{EffectiveVisualProperties, ResolvedClip, ResolvedFont, ResolvedText};
+use veac_plan::{
+    EffectiveVisualProperties, ResolvedClip, ResolvedFont, ResolvedSequence, ResolvedText,
+};
 
 use super::{time, visual_pipeline, BackendFilterEscape, CodegenErrors, EmitContext};
 
 pub(super) fn prepare(
     context: &mut EmitContext<'_>,
+    sequence: &ResolvedSequence,
     clip: &ResolvedClip,
     content: &ResolvedText,
     visual: &EffectiveVisualProperties,
@@ -58,6 +61,7 @@ pub(super) fn prepare(
     );
     visual_pipeline::apply_source(
         context,
+        sequence,
         clip,
         visual,
         source,
