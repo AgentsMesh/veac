@@ -52,7 +52,7 @@ fn declared_rejects_symlinks_and_permission_failures() {
     let original = std::fs::metadata(&blocked).unwrap().permissions();
     let mut denied = original.clone();
     use std::os::unix::fs::PermissionsExt;
-    denied.set_mode(0);
+    denied.set_mode(0o0);
     std::fs::set_permissions(&blocked, denied).unwrap();
     let error = declared(temp.path(), "blocked/child", "root").unwrap_err();
     std::fs::set_permissions(&blocked, original).unwrap();
