@@ -36,6 +36,20 @@ source-edit
   -> revision revalidation + atomic commit
 ```
 
+### Lossless Syntax Contract
+
+The executable parser creates one `SyntaxDocument` per source file. It owns the exact UTF-8 bytes,
+non-trivia tokens, line/block comments, and whitespace gaps as one contiguous sequence of spans.
+`SurfaceFile` declarations retain `SyntaxSlice` ranges into that document; a slice never owns a
+second body or expression string. The document source is therefore byte-identical on roundtrip,
+including comments, unusual spacing, and invalid-but-tokenizable trivia.
+
+Function, method, constant, and `animate` production paths consume their absolute token slices.
+Source indexing reuses the same outer token array instead of lexing the file again. Expression
+parsing may adapt a declaration slice to expression tokens, but must preserve the slice's absolute
+byte origin when reporting diagnostics. Standalone expression-string APIs remain available for
+callers that do not have a `SyntaxDocument`.
+
 `build` 与 `check` 执行 `main`；`fmt`、`source-revision` 和 `source-index` 只 prepare，因此可以检查、
 索引并修复一个包含 runtime failure 的 source graph。`source-edit` 必须执行编辑后的 graph，只有完整
 build 成功才允许发布。

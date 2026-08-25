@@ -77,7 +77,7 @@ impl Lexer<'_> {
     }
 }
 
-fn classify_symbol(value: &str) -> Option<TokenKind> {
+pub(in crate::program::expression) fn classify_symbol(value: &str) -> Option<TokenKind> {
     use crate::vocabulary::control_uses::expression as controls;
     if let Some(literal) = crate::vocabulary::ReservedLiteral::parse(value) {
         Some(TokenKind::Bool(literal.value()))

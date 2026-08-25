@@ -60,6 +60,7 @@ fmt-check: ## Verify Rust formatting without changing files.
 
 structure: ## Enforce file-size and production test-boundary rules.
 	bash scripts/check-rust-structure.sh
+	python3 scripts/check-architecture-dependencies.py
 	bash scripts/check-language-docs.sh
 
 check-stdlib-codegen: ## Verify generated executable standard-library v6 tables.

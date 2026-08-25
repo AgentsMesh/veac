@@ -1,5 +1,14 @@
-use super::lex_with_limit;
 use crate::program::token::TokenKind;
+
+fn lex_with_limit(
+    path: &str,
+    source: &str,
+    token_limit: usize,
+) -> Result<Vec<super::Token>, Vec<crate::program::diagnostic::Diagnostic>> {
+    super::Lexer::new(path, source, token_limit)
+        .scan()
+        .map(|document| document.tokens().to_vec())
+}
 
 #[test]
 fn lexer_emits_function_signature_punctuation() {

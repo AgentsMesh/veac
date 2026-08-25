@@ -131,7 +131,12 @@ fn adapter_roots_and_sources_are_non_symlink_filesystem_authorities() {
     let fixture = Fixture::new();
     let file_root = fixture.temp.path().join("not-a-directory");
     std::fs::write(&file_root, b"file").unwrap();
-    assert!(ProjectGraphAdapter::new(&file_root, &fixture.material).is_err());
+    assert!(ProjectGraphAdapter::new(
+        &file_root,
+        &fixture.material,
+        ProjectPackageSet::capture(&[]).unwrap(),
+    )
+    .is_err());
 
     #[cfg(unix)]
     {

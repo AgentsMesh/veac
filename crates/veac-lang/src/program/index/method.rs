@@ -9,12 +9,13 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
         let receiver = implementation.target.to_string();
         for method in &implementation.methods {
             let target = SourceNodeRef::method(&file.path, &receiver, &method.name);
-            index.register(&file.path, target.clone(), method.span)?;
+            index.register(&file.path, target.clone(), method.syntax.span)?;
+            super::parameter_default::index(index, file, &target, &method.parameters)?;
             index.insert_body(
                 &file.path,
                 target.clone(),
                 BodySite::MethodBody,
-                &method.body.source,
+                file.syntax.slice_text(&method.body.syntax),
                 method.body.span,
             )?;
             super::expression::index(index, file, target.clone(), &method.body)?;

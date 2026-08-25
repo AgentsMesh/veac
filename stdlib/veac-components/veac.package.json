@@ -1,0 +1,1 @@
+{"api_sha256":"b4ff97eb54811ac0f1d7d780653b617e8c3eb6c00e4013e88838aa3683037ada","dependencies":[],"entry":"main.veac","entry_sha256":"fb58e392517e930b934e04b2ce38ccc112912c1710e8927001723aa4d935f582","package":{"name":"veac-components","version":"0.1.0"},"schema":"https://veac.dev/schemas/package-manifest/v1","schema_version":1}

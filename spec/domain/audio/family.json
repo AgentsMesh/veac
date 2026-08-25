@@ -1,0 +1,22 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "audio",  "types": [
+    {"name":"AudioStyle","opcode":28683,"classification":"leaf_value"},
+    {"name":"AudioPlayback","opcode":28674,"classification":"leaf_value"},
+    {"name":"PitchPolicy","opcode":28673,"classification":"leaf_value"},
+    {"name":"AudioProcessor","opcode":28676,"classification":"leaf_value"},
+    {"name":"ParametricEqBand","opcode":28675,"classification":"leaf_value"},
+    {"name":"CompressorSettings","opcode":28677,"classification":"leaf_value"},
+    {"name":"LimiterSettings","opcode":28678,"classification":"leaf_value"},
+    {"name":"GateSettings","opcode":28679,"classification":"leaf_value"},
+    {"name":"LoudnessTarget","opcode":28680,"classification":"leaf_value"},
+    {"name":"AudioCrossfadeChoice","opcode":28682,"classification":"leaf_value"},
+    {"name":"AudioFadeCurve","opcode":28681,"classification":"leaf_value"},
+    {"name":"AudioBus","opcode":8202,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

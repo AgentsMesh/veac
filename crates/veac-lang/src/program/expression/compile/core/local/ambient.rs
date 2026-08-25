@@ -59,9 +59,8 @@ impl Builder<'_> {
                     self.prepare_node(&capture.source);
                 }
             }
-            TypedNodeKind::Call { arguments, .. } | TypedNodeKind::Collection { arguments, .. } => {
-                self.prepare_slice(arguments)
-            }
+            TypedNodeKind::Call { arguments, .. } => self.prepare_arguments(arguments),
+            TypedNodeKind::Collection { arguments, .. } => self.prepare_slice(arguments),
             TypedNodeKind::ForEach { iterable, body, .. } => {
                 self.prepare_node(iterable);
                 self.prepare_node(body);
@@ -72,9 +71,9 @@ impl Builder<'_> {
             }
             TypedNodeKind::MethodCall(call) => {
                 self.prepare_node(&call.receiver);
-                self.prepare_slice(&call.arguments);
+                self.prepare_arguments(&call.arguments);
             }
-            TypedNodeKind::DomainCall(call) => self.prepare_slice(&call.operands),
+            TypedNodeKind::DomainCall(call) => self.prepare_arguments(&call.operands),
             TypedNodeKind::TemporalAttach(value) => {
                 self.prepare_node(&value.owner);
                 self.prepare_slice(&value.selectors);
@@ -130,6 +129,15 @@ impl Builder<'_> {
     fn prepare_slice(&mut self, values: &[TypedNode]) {
         for value in values {
             self.prepare_node(value);
+        }
+    }
+
+    fn prepare_arguments(
+        &mut self,
+        arguments: &[crate::program::expression::hir::TypedCallArgument],
+    ) {
+        for argument in arguments {
+            self.prepare_node(&argument.value);
         }
     }
 

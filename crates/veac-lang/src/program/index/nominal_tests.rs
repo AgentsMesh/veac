@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::source_edit::{
-    validate_source_edit_batch, DeclarationSite, DeclarationSource, SourceEditBatch,
-    SourceEditOperation, SourceNodeRef, SourcePrecondition, SourceSnapshot,
+    DeclarationSite, DeclarationSource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
+    SourcePrecondition, SourceSnapshot,
 };
 
 const SOURCE: &str = r#"module {
@@ -18,7 +18,7 @@ const SOURCE: &str = r#"module {
 
 #[test]
 fn indexes_every_nominal_declaration_with_exact_authored_ranges() {
-    let index = super::SourceIndex::build(&sources()).unwrap();
+    let index = super::SourceIndex::build_snapshot(&sources()).unwrap();
     let cases = [
         (
             SourceNodeRef::structure("types.veac", "Timing"),
@@ -59,10 +59,11 @@ fn indexes_every_nominal_declaration_with_exact_authored_ranges() {
 
 #[test]
 fn inventory_and_preconditions_expose_the_same_declaration_source() {
-    let index = super::SourceIndex::build(&sources()).unwrap();
+    let index = super::super::test_support::index(&sources());
+    let revision = super::super::test_revision(&index);
     let target = SourceNodeRef::enum_variant("types.veac", "Placement", "Center");
     let site = DeclarationSite::EnumVariantDeclaration;
-    let inventory = index.inventory();
+    let inventory = index.inventory(&revision).unwrap();
     let node = inventory
         .nodes
         .iter()
@@ -75,7 +76,7 @@ fn inventory_and_preconditions_expose_the_same_declaration_source() {
 
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_nominal_precondition").unwrap(),
-        index.revision().clone(),
+        revision.clone(),
     );
     batch
         .preconditions
@@ -93,7 +94,7 @@ fn inventory_and_preconditions_expose_the_same_declaration_source() {
             source: "Middle".into(),
         },
     });
-    validate_source_edit_batch(&batch, index.revision(), &index).unwrap();
+    crate::source_edit::validate_source_edit_batch(&batch, &revision, &index).unwrap();
 }
 
 fn sources() -> BTreeMap<String, String> {

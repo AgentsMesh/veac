@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::authoring::Span;
-use crate::program::expression::{FunctionEffect, PrimitiveType, ValueType};
+use veac_lang_model::{FunctionEffect, PrimitiveType, ValueType};
 
 use super::TypeRef;
 

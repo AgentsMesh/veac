@@ -11,7 +11,7 @@ fn constant_span_includes_semicolon_and_expression_span_is_trimmed() {
         &source[value.expression_span.start..value.expression_span.end],
         "1s + 2s"
     );
-    assert_eq!(value.expression, "1s + 2s");
+    assert_eq!(file.syntax.slice_text(&value.expression), "1s + 2s");
 }
 
 #[test]

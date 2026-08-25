@@ -16,12 +16,24 @@ fn fixture() -> (
     ProjectFileSnapshot,
     ProjectSourceGraphRevision,
 ) {
+    fixture_at("")
+}
+
+fn fixture_at(
+    directory: &str,
+) -> (
+    tempfile::TempDir,
+    ProjectFileSnapshot,
+    ProjectSourceGraphRevision,
+) {
     let temp = tempfile::tempdir().unwrap();
-    std::fs::write(temp.path().join("main.veac"), ENTRY).unwrap();
-    std::fs::write(temp.path().join("title.veac"), MODULE).unwrap();
-    let prepared = veac_lang::program::prepare_path(&temp.path().join("main.veac")).unwrap();
-    let modules = prepared
-        .sources()
+    let root = temp.path().join(directory);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("main.veac"), ENTRY).unwrap();
+    std::fs::write(root.join("title.veac"), MODULE).unwrap();
+    let prepared = veac_lang::program::prepare_path(&root.join("main.veac")).unwrap();
+    let authored_sources = prepared.source_graph().project_sources();
+    let modules = authored_sources
         .iter()
         .map(|(path, source)| veac_lang::source_edit::SourceModule::utf8(path, source))
         .collect::<Vec<_>>();
@@ -29,25 +41,39 @@ fn fixture() -> (
     (
         temp,
         ProjectFileSnapshot {
-            path: "main.veac".to_owned(),
+            path: if directory.is_empty() {
+                "main.veac".to_owned()
+            } else {
+                format!("{directory}/main.veac")
+            },
             content: veac_artifact::ContentDigest::sha256(ENTRY.as_bytes()),
             size_bytes: ENTRY.len() as u64,
         },
         ProjectSourceGraphRevision {
             root_module: "main.veac".to_owned(),
-            source_graph_sha256: revision.source_graph_sha256,
-            module_count: 2,
-            modules: vec!["main.veac".to_owned(), "title.veac".to_owned()],
+            authored_source_graph_sha256: revision.source_graph_sha256,
+            complete_source_graph_sha256: prepared
+                .source_graph()
+                .complete_revision()
+                .sha256()
+                .to_owned(),
+            authored_module_count: 2,
+            authored_modules: vec!["main.veac".to_owned(), "title.veac".to_owned()],
         },
     )
+}
+
+fn packages() -> veac_build::ProjectPackageSet {
+    veac_build::ProjectPackageSet::capture(&[]).unwrap()
 }
 
 #[test]
 fn prepared_graph_must_match_the_closed_revision() {
     let (temp, entry, revision) = fixture();
-    let prepared = prepare(temp.path(), &entry, &revision).unwrap();
+    let packages = packages();
+    let prepared = prepare(temp.path(), &packages, &entry, &revision).unwrap();
     verify_prepared(&prepared, &entry, &revision).unwrap();
-    verify(temp.path(), &entry, &revision).unwrap();
+    verify(temp.path(), &packages, &entry, &revision).unwrap();
 
     let mut changed = revision.clone();
     changed.root_module = "other.veac".to_owned();
@@ -56,23 +82,29 @@ fn prepared_graph_must_match_the_closed_revision() {
         .message()
         .contains("root"));
     changed = revision.clone();
-    changed.module_count = 1;
+    changed.authored_module_count = 1;
     assert!(verify_prepared(&prepared, &entry, &changed)
         .unwrap_err()
         .message()
         .contains("inventory"));
     changed = revision.clone();
-    changed.modules.pop();
+    changed.authored_modules.pop();
     assert!(verify_prepared(&prepared, &entry, &changed)
         .unwrap_err()
         .message()
         .contains("inventory"));
     changed = revision.clone();
-    changed.source_graph_sha256 = "0".repeat(64);
+    changed.authored_source_graph_sha256 = "0".repeat(64);
     assert!(verify_prepared(&prepared, &entry, &changed)
         .unwrap_err()
         .message()
         .contains("revision"));
+    changed = revision.clone();
+    changed.complete_source_graph_sha256 = "0".repeat(64);
+    assert!(verify_prepared(&prepared, &entry, &changed)
+        .unwrap_err()
+        .message()
+        .contains("complete"));
 }
 
 #[test]
@@ -83,21 +115,37 @@ fn imported_module_changes_are_detected_before_execution() {
         "module { export fn value() -> text { \"Two\" } }\n",
     )
     .unwrap();
-    let error = prepare(temp.path(), &entry, &revision).unwrap_err();
+    let error = prepare(temp.path(), &packages(), &entry, &revision).unwrap_err();
     assert!(error.message().contains("revision"));
+}
+
+#[test]
+fn nested_target_keeps_entry_local_module_identity() {
+    let (temp, entry, revision) = fixture_at("nested");
+    let prepared = prepare(temp.path(), &packages(), &entry, &revision).unwrap();
+    assert_eq!(prepared.root_module(), "main.veac");
+    assert_eq!(
+        prepared
+            .source_graph()
+            .project_sources()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(),
+        ["main.veac", "title.veac"]
+    );
 }
 
 #[test]
 fn entry_snapshot_and_language_errors_fail_closed() {
     let (temp, mut entry, revision) = fixture();
     entry.content = veac_artifact::ContentDigest::sha256(b"wrong");
-    assert!(prepare(temp.path(), &entry, &revision).is_err());
+    assert!(prepare(temp.path(), &packages(), &entry, &revision).is_err());
 
     let broken = "fn main(context: Context) -> Project { missing }\n";
     std::fs::write(temp.path().join("main.veac"), broken).unwrap();
     entry.content = veac_artifact::ContentDigest::sha256(broken.as_bytes());
     entry.size_bytes = broken.len() as u64;
-    assert!(prepare(temp.path(), &entry, &revision)
+    assert!(prepare(temp.path(), &packages(), &entry, &revision)
         .unwrap_err()
         .message()
         .contains("preparation"));

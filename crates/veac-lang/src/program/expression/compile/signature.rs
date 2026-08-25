@@ -29,10 +29,15 @@ impl FunctionSignature {
     }
 
     pub(super) fn from_definition(definition: &FunctionDefinition) -> Self {
+        let id = function_id::identity(definition);
+        let mut parameters = definition.parameters.clone();
+        for (slot, parameter) in parameters.iter_mut().enumerate() {
+            parameter.bind_default(id, slot);
+        }
         Self::new(
-            function_id::identity(definition),
+            id,
             definition.name.clone(),
-            definition.parameters.clone(),
+            parameters,
             definition.return_type.clone(),
         )
     }
@@ -62,4 +67,20 @@ pub(super) fn declarations(definitions: &[FunctionDefinition]) -> FunctionSignat
             (definition.name.clone(), signature)
         })
         .collect()
+}
+
+pub(super) fn method(
+    signature: &crate::program::MethodSignature,
+    display_name: String,
+) -> FunctionSignature {
+    let mut parameters = signature.parameters_with_receiver().to_vec();
+    for (slot, parameter) in parameters.iter_mut().enumerate().skip(1) {
+        parameter.bind_default(signature.function_id(), slot);
+    }
+    FunctionSignature::new(
+        signature.function_id(),
+        display_name,
+        parameters,
+        signature.return_type().clone(),
+    )
 }

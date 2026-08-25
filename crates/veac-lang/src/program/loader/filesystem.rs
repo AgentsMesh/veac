@@ -77,6 +77,10 @@ impl SourceLoader for FileSystemLoader {
             source: opened.source,
         })
     }
+
+    fn authority(&self, _source_id: &str) -> super::SourceAuthority {
+        super::SourceAuthority::Project
+    }
 }
 
 struct OpenedSource {

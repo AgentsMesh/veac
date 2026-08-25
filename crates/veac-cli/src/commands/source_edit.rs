@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use serde::Serialize;
 
@@ -21,6 +22,7 @@ pub(crate) fn run(
     batch: &Path,
     inputs: Option<&Path>,
     inline_inputs: &[String],
+    package_roots: &[PathBuf],
     output: Option<&Path>,
     dry_run: bool,
 ) -> CliResult {
@@ -28,23 +30,28 @@ pub(crate) fn run(
     let json = crate::fs::read_utf8(&batch_file, "source edit batch")?;
     let batch = veac_lang::source_edit::decode_source_edit_batch_json(&json)
         .map_err(|error| CliError::new("SOURCE_EDIT_BATCH_JSON", error.to_string()))?;
-    let (root, preview) = crate::frontend::read_source_graph(source, |location| {
-        let (_, candidate) = veac_lang::program::prepare_executable_source_edit_path_with_root(
-            location.path(),
-            &batch,
-        )
-        .map_err(|error| transaction_error(source, error))?;
-        let inputs = crate::frontend::build_inputs(inputs, inline_inputs, candidate.program())?;
-        candidate
-            .execute(&inputs)
-            .map_err(|error| transaction_error(source, error))
-    })?;
+    let (root, preview) =
+        crate::frontend::read_source_graph(source, package_roots, |_location, entry, loader| {
+            let prepared = veac_lang::program::prepare_with_loader(entry, loader)
+                .map_err(|errors| crate::diagnostic::program(source, errors))?;
+            let candidate = veac_lang::program::prepare_executable_source_edit_with_loader(
+                &prepared, &batch, loader,
+            )
+            .map_err(|error| transaction_error(source, error))?;
+            let inputs = crate::frontend::build_inputs(inputs, inline_inputs, candidate.program())?;
+            candidate
+                .execute(&inputs)
+                .map_err(|error| transaction_error(source, error))
+        })?;
     let entry = root.join(preview.built.root_module());
     let destinations = output::publish(
-        &root,
-        &entry,
-        &batch_file,
-        inputs,
+        output::Context {
+            root: &root,
+            entry: &entry,
+            batch: &batch_file,
+            inputs,
+            package_roots,
+        },
         &preview,
         output,
         dry_run,
@@ -57,6 +64,10 @@ fn transaction_error(entry: &Path, error: veac_lang::program::SourceTransactionE
         veac_lang::program::SourceTransactionError::Program(errors) => {
             crate::diagnostic::program(entry, errors)
         }
+        veac_lang::program::SourceTransactionError::ReadOnlySource { module } => CliError::new(
+            "SOURCE_EDIT_READ_ONLY_DEPENDENCY",
+            format!("source module {module:?} is a read-only dependency"),
+        ),
         other => CliError::new("SOURCE_EDIT_REJECTED", other.to_string()),
     }
 }

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::path;
-use super::stage::Staged;
+use super::stage::{ExpectedTarget, Staged};
 use super::SourceGraphLock;
 use crate::error::{CliError, CliResult};
 
@@ -22,13 +22,22 @@ pub(crate) struct SourceModuleGuard<'a> {
 }
 
 impl SourceGraphLock {
-    pub(crate) fn commit_modules(
+    pub(crate) fn commit_modules_with(
         &self,
         root: &Path,
         replacements: &[SourceModuleReplacement<'_>],
         guards: &[SourceModuleGuard<'_>],
+        before_publish: impl FnOnce() -> CliResult,
+        after_publish: impl FnOnce() -> CliResult,
     ) -> CliResult {
-        batch::commit(self, root, replacements, guards)
+        batch::commit(
+            self,
+            root,
+            replacements,
+            guards,
+            before_publish,
+            after_publish,
+        )
     }
 
     pub(crate) fn commit_module(
@@ -72,7 +81,7 @@ impl SourceGraphLock {
             ));
         }
         require_source(&label, &current.bytes, expected.as_bytes())?;
-        staged.publish(&parent, &label)?;
+        staged.publish(&parent, &ExpectedTarget::from_target(&original), &label)?;
         after_publish();
         self.revalidate(root).map_err(committed)?;
         path::require_parent(&self.directory, module, parent.identity, &label).map_err(committed)

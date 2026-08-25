@@ -128,6 +128,21 @@ fn every_expression_and_statement_path_is_unique_within_its_owner() {
 }
 
 #[test]
+fn named_call_arguments_use_labels_as_stable_paths() {
+    let source = "{ let result = pair(second: 2, first: 1); result }";
+    let sites = indexed_body_sites(source).unwrap();
+    for (name, value) in [("second", "2"), ("first", "1")] {
+        assert!(sites.expressions.iter().any(|entry| {
+            &source[entry.span.clone()] == value
+                && entry.path.steps.last()
+                    == Some(&Step::NamedCallArgument {
+                        name: name.to_owned(),
+                    })
+        }));
+    }
+}
+
+#[test]
 fn valid_parser_nesting_can_exceed_the_old_path_limit_deterministically() {
     let mut expression = "1".to_owned();
     for _ in 0..24 {

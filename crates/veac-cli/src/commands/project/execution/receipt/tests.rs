@@ -36,9 +36,10 @@ fn receipt_destination_rejects_a_hard_link_to_an_input() {
     std::fs::hard_link(&protected, &alias).unwrap();
     let revision = veac_build::ProjectSourceGraphRevision {
         root_module: "main.veac".to_owned(),
-        source_graph_sha256: "0".repeat(64),
-        module_count: 2,
-        modules: vec!["helper.veac".to_owned(), "main.veac".to_owned()],
+        authored_source_graph_sha256: "0".repeat(64),
+        complete_source_graph_sha256: "1".repeat(64),
+        authored_module_count: 2,
+        authored_modules: vec!["helper.veac".to_owned(), "main.veac".to_owned()],
     };
     let protected =
         render_source_graph_inputs(&temp.path().join("source"), "nested/main.veac", &revision);
@@ -61,9 +62,10 @@ fn nested_evidence_modules_are_protected_from_receipt_aliases() {
     std::fs::hard_link(&helper, &alias).unwrap();
     let revision = veac_build::ProjectSourceGraphRevision {
         root_module: "contracts/evidence.veac".to_owned(),
-        source_graph_sha256: "0".repeat(64),
-        module_count: 2,
-        modules: vec![
+        authored_source_graph_sha256: "0".repeat(64),
+        complete_source_graph_sha256: "1".repeat(64),
+        authored_module_count: 2,
+        authored_modules: vec![
             "contracts/evidence.veac".to_owned(),
             "contracts/helper.veac".to_owned(),
         ],

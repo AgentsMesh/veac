@@ -11,7 +11,7 @@ fn source_edit_decodes_inline_values_from_the_candidate_declaration() {
     let prepared = veac_lang::program::prepare_path(&source).unwrap();
     let mut batch = veac_lang::source_edit::SourceEditBatch::new(
         veac_ir::OperationId::new("op_inline_candidate_type").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(
         veac_lang::source_edit::SourceEditOperation::SetDeclaration {
@@ -54,7 +54,7 @@ fn source_edit_merges_manifest_and_inline_against_candidate_imported_enum() {
     let prepared = veac_lang::program::prepare_path(&source).unwrap();
     let mut batch = veac_lang::source_edit::SourceEditBatch::new(
         veac_ir::OperationId::new("op_inline_candidate_enum").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(
         veac_lang::source_edit::SourceEditOperation::SetDeclaration {

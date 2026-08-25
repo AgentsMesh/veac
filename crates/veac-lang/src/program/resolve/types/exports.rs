@@ -22,6 +22,7 @@ pub(super) fn definitions(
         roots.push(ValueType::nominal(reference.clone()));
     }
     collect_public_syntax_roots(file, scope, &mut roots)?;
+    collect_execution_roots(scope, &mut roots);
     let mut retained = BTreeSet::new();
     for root in &roots {
         collect_type(root, scope, &mut retained, &file.path)?;
@@ -35,6 +36,29 @@ pub(super) fn definitions(
                 .expect("collected type belongs to resolved registry")
         })
         .collect())
+}
+
+fn collect_execution_roots(scope: &Scope, roots: &mut Vec<ValueType>) {
+    for (_, function) in scope.functions.iter() {
+        roots.extend(
+            function
+                .parameters()
+                .iter()
+                .map(|parameter| parameter.value_type.clone()),
+        );
+        roots.push(function.return_type().clone());
+    }
+    for method in scope.methods.definitions() {
+        let signature = method.signature();
+        roots.push(ValueType::nominal(signature.receiver().clone()));
+        roots.extend(
+            signature
+                .explicit_parameters()
+                .iter()
+                .map(|parameter| parameter.value_type.clone()),
+        );
+        roots.push(signature.return_type().clone());
+    }
 }
 
 fn collect_public_syntax_roots(

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use veac_project::{AuthoredProjectManifest, ProjectAuthoringError, ProjectIssues};
 
@@ -10,27 +10,53 @@ mod execution;
 
 pub(crate) fn run(command: ProjectCommand) -> CliResult {
     match command {
-        ProjectCommand::Check { project } => check(&project),
-        ProjectCommand::Inspect { project } => inspect(&project),
-        ProjectCommand::Graph { project } => graph(&project),
-        ProjectCommand::Build { project, receipt } => execution::run(
+        ProjectCommand::Check {
+            project,
+            package_roots,
+        } => check(&project, &package_roots),
+        ProjectCommand::Inspect {
+            project,
+            package_roots,
+        } => inspect(&project, &package_roots),
+        ProjectCommand::Graph {
+            project,
+            package_roots,
+        } => graph(&project, &package_roots),
+        ProjectCommand::Build {
+            project,
+            receipt,
+            package_roots,
+        } => execution::run(
             &project,
             receipt.as_deref(),
+            &package_roots,
             execution::ExecutionMode::Build,
         ),
-        ProjectCommand::Evidence { project, receipt } => execution::run(
+        ProjectCommand::Evidence {
+            project,
+            receipt,
+            package_roots,
+        } => execution::run(
             &project,
             receipt.as_deref(),
+            &package_roots,
             execution::ExecutionMode::Evidence,
         ),
-        ProjectCommand::Test { project, receipt } => {
-            execution::run(&project, receipt.as_deref(), execution::ExecutionMode::Test)
-        }
+        ProjectCommand::Test {
+            project,
+            receipt,
+            package_roots,
+        } => execution::run(
+            &project,
+            receipt.as_deref(),
+            &package_roots,
+            execution::ExecutionMode::Test,
+        ),
     }
 }
 
-fn check(path: &Path) -> CliResult {
-    let (project, graph) = load(path)?;
+fn check(path: &Path, package_roots: &[PathBuf]) -> CliResult {
+    let (_, project, graph, _) = load(path, package_roots)?;
     crate::fs::write_stdout(&format!(
         "Project is valid: {} (project {}, {} target instance(s), manifest {})\n",
         path.display(),
@@ -40,8 +66,8 @@ fn check(path: &Path) -> CliResult {
     ))
 }
 
-fn inspect(path: &Path) -> CliResult {
-    let (project, _) = load(path)?;
+fn inspect(path: &Path, package_roots: &[PathBuf]) -> CliResult {
+    let (_, project, _, _) = load(path, package_roots)?;
     let mut json = match veac_project::canonical_manifest_json(&project.manifest) {
         Ok(json) => json,
         Err(error) => return Err(CliError::new("PROJECT_SERIALIZATION", error.to_string())),
@@ -50,8 +76,8 @@ fn inspect(path: &Path) -> CliResult {
     crate::fs::write_stdout(&json)
 }
 
-fn graph(path: &Path) -> CliResult {
-    let (_, graph) = load(path)?;
+fn graph(path: &Path, package_roots: &[PathBuf]) -> CliResult {
+    let (_, _, graph, _) = load(path, package_roots)?;
     let mut json = match serde_json_canonicalizer::to_string(&graph) {
         Ok(json) => json,
         Err(error) => return Err(CliError::new("PROJECT_SERIALIZATION", error.to_string())),
@@ -60,13 +86,34 @@ fn graph(path: &Path) -> CliResult {
     crate::fs::write_stdout(&json)
 }
 
-fn load(path: &Path) -> CliResult<(AuthoredProjectManifest, veac_project::ResolvedTargetGraph)> {
-    let (_, project) = match veac_project::build_project_path(path) {
-        Ok(project) => project,
-        Err(error) => return Err(authoring_error(path, error)),
-    };
+fn load(
+    path: &Path,
+    package_roots: &[PathBuf],
+) -> CliResult<(
+    PathBuf,
+    AuthoredProjectManifest,
+    veac_project::ResolvedTargetGraph,
+    veac_build::ProjectPackageSet,
+)> {
+    let packages =
+        veac_build::ProjectPackageSet::capture(package_roots).map_err(project_package_error)?;
+    packages.revalidate().map_err(project_package_error)?;
+    let (project_loader, entry) = veac_lang::program::FileSystemLoader::for_entry(path)
+        .map_err(|message| CliError::new("PROJECT_SOURCE_LOAD", message))?;
+    let root = project_loader.root().to_owned();
+    let loader = packages
+        .loader(project_loader)
+        .map_err(project_package_error)?;
+    let project = veac_project::build_project_with_loader(entry, &loader)
+        .map_err(|error| authoring_error(path, error))?;
+    packages.revalidate().map_err(project_package_error)?;
     let graph = veac_project::resolve_manifest(&project.manifest).map_err(project_issues)?;
-    Ok((project, graph))
+    execution::validate_package_authorities(&root, &project.manifest.paths, &packages)?;
+    Ok((root, project, graph, packages))
+}
+
+fn project_package_error(error: veac_build::BuildError) -> CliError {
+    CliError::new("PROJECT_PACKAGE_CONTRACT", error.to_string())
 }
 
 fn authoring_error(path: &Path, error: ProjectAuthoringError) -> CliError {
@@ -113,3 +160,7 @@ fn issue_code(code: veac_project::IssueCode) -> String {
         .expect("IssueCode uses a string representation")
         .to_owned()
 }
+
+#[cfg(test)]
+#[path = "project_tests.rs"]
+mod tests;

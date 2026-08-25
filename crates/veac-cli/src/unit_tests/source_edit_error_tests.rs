@@ -14,7 +14,8 @@ fn source_edit_maps_malformed_batches() {
     let batch = temp.path().join("malformed-source-edit.json");
     std::fs::write(&batch, r#"{"atomic":true}"#).unwrap();
 
-    let error = crate::commands::source_edit(&source, &batch, None, &[], None, true).unwrap_err();
+    let error =
+        crate::commands::source_edit(&source, &batch, None, &[], &[], None, true).unwrap_err();
     assert!(error.to_string().contains("SOURCE_EDIT_BATCH_JSON"));
 }
 
@@ -24,7 +25,8 @@ fn source_edit_maps_program_failures_from_the_transaction() {
     let batch = write_valid_batch(&temp);
     let missing = temp.path().join("missing.veac");
 
-    let error = crate::commands::source_edit(&missing, &batch, None, &[], None, true).unwrap_err();
+    let error =
+        crate::commands::source_edit(&missing, &batch, None, &[], &[], None, true).unwrap_err();
     assert!(error.to_string().contains("PATH_UNAVAILABLE"));
 }
 
@@ -32,7 +34,8 @@ fn write_valid_batch(temp: &TempDir) -> std::path::PathBuf {
     let mut batch = SourceEditBatch::new(
         OperationId::new("op_missing_source").unwrap(),
         SourceRevision {
-            source_graph_sha256: "0".repeat(64),
+            authored_source_graph_sha256: "0".repeat(64),
+            complete_source_graph_sha256: "0".repeat(64),
         },
     );
     batch.operations.push(SourceEditOperation::SetExpression {

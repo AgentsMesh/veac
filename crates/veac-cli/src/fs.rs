@@ -10,7 +10,7 @@ mod source_graph;
 mod source_location;
 mod source_lock;
 
-pub(crate) use source_graph::{ensure_source_graph_unchanged, ensure_source_modules_unchanged};
+pub(crate) use source_graph::ensure_source_modules_unchanged;
 pub(crate) use source_location::SourceLocation;
 pub(crate) use source_lock::SOURCE_LOCK_NAME;
 pub(crate) use source_lock::{

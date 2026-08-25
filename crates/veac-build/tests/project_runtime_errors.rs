@@ -129,6 +129,24 @@ fn delivery_failure_is_atomic_and_skips_later_publications() {
 }
 
 #[test]
+fn delivery_referencing_a_missing_output_fails_closed() {
+    let fixture = Fixture::new();
+    let mut plan = fixture.adapter().adapt(&single_graph()).unwrap();
+    plan.deliveries[0].delivery.output = OutputId::from("missing");
+    let receipt = fixture
+        .runtime(TestBackend::new(BackendMode::Good))
+        .build(&plan, CancellationToken::new())
+        .unwrap();
+    assert_eq!(receipt.outcome, ProjectBuildOutcome::DeliveryFailed);
+    assert_eq!(receipt.deliveries[0].status, DeliveryStatus::Failed);
+    assert!(receipt.deliveries[0]
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("missing project output"));
+}
+
+#[test]
 fn runtime_roots_reject_non_directory_authorities() {
     let fixture = Fixture::new();
     let file = fixture.temp.path().join("file-root");

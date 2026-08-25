@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use sha2::{Digest, Sha256};
 
-use super::{SourceEditError, SourceRevision};
+use super::{AuthoredSourceRevision, SourceEditError};
 
 const HASH_DOMAIN: &[u8] = b"veac-source-graph-v1\0";
 
@@ -24,7 +24,7 @@ impl<'a> SourceModule<'a> {
 
 pub fn source_graph_revision(
     modules: &[SourceModule<'_>],
-) -> Result<SourceRevision, SourceEditError> {
+) -> Result<AuthoredSourceRevision, SourceEditError> {
     if modules.is_empty() {
         return Err(SourceEditError::EmptySourceGraph);
     }
@@ -41,7 +41,7 @@ pub fn source_graph_revision(
         hash_framed(&mut hash, module.path.as_bytes());
         hash_framed(&mut hash, module.bytes);
     }
-    Ok(SourceRevision {
+    Ok(AuthoredSourceRevision {
         source_graph_sha256: hex(hash.finalize()),
     })
 }

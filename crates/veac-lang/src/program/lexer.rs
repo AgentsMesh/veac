@@ -2,23 +2,29 @@ mod cursor;
 mod number;
 mod operator;
 mod output;
+mod trivia;
 
 use crate::authoring::Span;
 
 use super::diagnostic::Diagnostic;
 use super::limits::{check_source_size, MAX_SOURCE_TOKENS};
+use super::syntax_document::{SyntaxDocument, SyntaxElement, SyntaxElementKind};
 use super::token::{is_word_continue, is_word_start, Token, TokenKind};
 
 pub(crate) fn lex(path: &str, source: &str) -> Result<Vec<Token>, Vec<Diagnostic>> {
-    check_source_size(path, source, Span::default()).map_err(|error| vec![error])?;
-    lex_with_limit(path, source, MAX_SOURCE_TOKENS)
+    lex_document(path, source).map(|document| document.tokens().to_vec())
 }
 
-pub(crate) fn lex_with_limit(
+pub(crate) fn lex_document(path: &str, source: &str) -> Result<SyntaxDocument, Vec<Diagnostic>> {
+    check_source_size(path, source, Span::default()).map_err(|error| vec![error])?;
+    lex_document_with_limit(path, source, MAX_SOURCE_TOKENS)
+}
+
+fn lex_document_with_limit(
     path: &str,
     source: &str,
     token_limit: usize,
-) -> Result<Vec<Token>, Vec<Diagnostic>> {
+) -> Result<SyntaxDocument, Vec<Diagnostic>> {
     Lexer::new(path, source, token_limit).scan()
 }
 
@@ -27,6 +33,7 @@ struct Lexer<'a> {
     source: &'a str,
     offset: usize,
     tokens: Vec<Token>,
+    elements: Vec<SyntaxElement>,
     diagnostics: Vec<Diagnostic>,
     token_limit: usize,
     token_limit_reported: bool,
@@ -40,6 +47,7 @@ impl<'a> Lexer<'a> {
             source,
             offset: 0,
             tokens: Vec::new(),
+            elements: Vec::new(),
             diagnostics: Vec::new(),
             token_limit,
             token_limit_reported: false,
@@ -47,13 +55,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn scan(mut self) -> Result<Vec<Token>, Vec<Diagnostic>> {
+    fn scan(mut self) -> Result<SyntaxDocument, Vec<Diagnostic>> {
         while let Some(value) = self.current() {
             if self.token_limit_reported || self.diagnostic_limit_reported {
                 break;
             }
             if value.is_whitespace() {
-                self.advance();
+                self.whitespace();
             } else if value == '/' && self.next() == Some('/') {
                 self.line_comment();
             } else if value == '/' && self.next() == Some('*') {
@@ -64,7 +72,7 @@ impl<'a> Lexer<'a> {
         }
         self.push(TokenKind::Eof, self.offset, self.offset);
         if self.diagnostics.is_empty() {
-            Ok(self.tokens)
+            Ok(SyntaxDocument::new(self.source, self.tokens, self.elements))
         } else {
             Err(self.diagnostics)
         }
@@ -168,25 +176,6 @@ impl<'a> Lexer<'a> {
             start,
             self.offset,
         );
-    }
-
-    fn line_comment(&mut self) {
-        self.take_while(|value| value != '\n');
-    }
-
-    fn block_comment(&mut self) {
-        let start = self.offset;
-        self.advance();
-        self.advance();
-        while self.current().is_some() {
-            if self.current() == Some('*') && self.next() == Some('/') {
-                self.advance();
-                self.advance();
-                return;
-            }
-            self.advance();
-        }
-        self.invalid('/', start);
     }
 }
 

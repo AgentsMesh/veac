@@ -1,6 +1,7 @@
 //! Deterministic executable modules, expressions, nominal types, and source editing.
 
 mod build_input;
+mod compiler_database;
 mod dependency_budget;
 mod diagnostic;
 pub mod domain_system;
@@ -16,10 +17,13 @@ mod limits;
 mod loader;
 pub mod method_system;
 mod model;
+mod module_interface;
 mod parser;
+mod prepared_source_graph;
 mod resolve;
 mod source_transaction;
 mod source_unit;
+mod syntax_document;
 mod token;
 pub mod type_system;
 
@@ -29,6 +33,10 @@ pub use build_input::{
     BuildInputDeclaration, BuildInputManifestV1, BuildInputManifestValue, BuildInputRole,
     BuildInputsError, MaterialInputAuthority, MaterialInputKind, BUILD_INPUT_MANIFEST_SCHEMA,
     BUILD_INPUT_MANIFEST_VERSION, MAX_BUILD_INPUTS, MAX_BUILD_INPUT_MANIFEST_BYTES,
+};
+pub use compiler_database::{
+    CompilerDatabase, CompilerDatabaseLimits, CompilerDatabaseStatistics, CompilerDependencyRoute,
+    CompilerDependencySnapshot, CompilerSourceRevision,
 };
 pub use diagnostic::{Diagnostic, Diagnostics};
 pub use domain_system::{
@@ -52,21 +60,34 @@ pub use host_entry::{
     EvaluatedHostEntry, PreparedHostEntry,
 };
 pub use index::*;
-pub use loader::{FileSystemLoader, LoadedSource, SourceLoader};
+pub use loader::{
+    CompositeSourceLoader, FileSystemLoader, LoadedSource, SourceAuthority, SourceLoader,
+};
 pub use method_system::{
     MethodBody, MethodDefinition, MethodRegistry, MethodRegistryBuilder, MethodRegistryError,
     MethodSignature, MethodVisibility, MAX_METHODS_PER_TYPE, MAX_METHOD_REGISTRY_BYTES,
     MAX_METHOD_REGISTRY_DEFINITIONS,
 };
+pub use module_interface::{
+    ModuleCallableSemantics, ModuleConstantInterface, ModuleDomainCapability,
+    ModuleEnumVariantInterface, ModuleFieldInterface, ModuleFunctionInterface, ModuleInterface,
+    ModuleInterfaceType, ModuleMethodInterface, ModuleParameterDependency,
+    ModuleParameterInterface, ModuleResultSemantics, ModuleTypeDefinitionInterface,
+    ModuleTypeInterface, ModuleTypeName,
+};
 pub(crate) use parser::{
     validate_fragment as validate_type_declaration_fragment, TypeDeclarationFragmentKind,
 };
+pub use prepared_source_graph::{PreparedSourceGraph, PreparedSourceGraphRevision};
 pub use source_transaction::{
     apply_executable_source_edit_path, apply_executable_source_edit_path_with_inputs,
     apply_executable_source_edit_path_with_root,
     apply_executable_source_edit_path_with_root_and_inputs,
-    prepare_executable_source_edit_path_with_root, ExecutableSourceEditCandidate,
-    ExecutableSourceEditPreview, SourceModuleChange, SourceTransactionError,
+    prepare_executable_source_edit_path_with_root,
+    prepare_executable_source_edit_path_with_root_and_database,
+    prepare_executable_source_edit_with_loader, reprepare_executable_source_edit_preview,
+    ExecutableSourceEditCandidate, ExecutableSourceEditPreview, SourceModuleChange,
+    SourceTransactionError,
 };
 pub use source_unit::{classify_source_unit, SourceUnitKind};
 pub use type_system::{

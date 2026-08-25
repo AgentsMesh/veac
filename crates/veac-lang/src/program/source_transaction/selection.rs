@@ -5,44 +5,60 @@ use crate::source_edit::{
     SourceModuleAnchor, SourceRevision, TextEdit, TextRange,
 };
 
-use super::super::SourceIndex;
+use super::super::{PreparedSourceGraph, SourceAuthority, SourceIndex};
 use super::model::{SourceModuleChange, SourceTransactionError};
 
 pub(super) struct Selection {
     pub(super) previous_revision: SourceRevision,
     pub(super) previous_modules: Vec<String>,
+    pub(super) previous_sources: BTreeMap<String, String>,
     pub(super) changes: Vec<SourceModuleChange>,
-    pub(super) sources: BTreeMap<String, String>,
+    pub(super) overlay: BTreeMap<String, String>,
 }
 
 pub(super) fn apply(
-    sources: &BTreeMap<String, String>,
-    index: &SourceIndex,
+    graph: &PreparedSourceGraph,
+    authored_revision: &SourceRevision,
+    complete: &SourceIndex,
     batch: &SourceEditBatch,
 ) -> Result<Selection, SourceTransactionError> {
-    validate_source_edit_batch(batch, index.revision(), index)
+    validate_source_edit_batch(batch, authored_revision, complete)
         .map_err(SourceTransactionError::Contract)?;
     let mut grouped = BTreeMap::<String, Vec<TextEdit>>::new();
     for (operation_index, operation) in batch.operations.iter().enumerate() {
-        let (module, edit) = replacement(index, operation, operation_index)?;
+        let (module, edit) = replacement(complete, operation, operation_index)?;
+        if graph.authority(&module) == SourceAuthority::ReadOnlyDependency {
+            return Err(SourceTransactionError::ReadOnlySource { module });
+        }
         grouped.entry(module).or_default().push(edit);
     }
-    let mut next = sources.clone();
+    let mut overlay = BTreeMap::new();
     let mut changes = Vec::with_capacity(grouped.len());
     for (module, edits) in grouped {
-        let current = sources
+        let current = graph
+            .sources()
             .get(&module)
             .ok_or(SourceTransactionError::TargetNotFound { operation: 0 })?;
         let source = apply_text_edits(current, &edits).map_err(SourceTransactionError::Contract)?;
-        next.insert(module.clone(), source.clone());
+        overlay.insert(module.clone(), source.clone());
         changes.push(SourceModuleChange::new(module, current.clone(), source));
     }
     Ok(Selection {
-        previous_revision: index.revision().clone(),
-        previous_modules: sources.keys().cloned().collect(),
+        previous_revision: authored_revision.clone(),
+        previous_modules: project_modules(graph),
+        previous_sources: graph.project_sources(),
         changes,
-        sources: next,
+        overlay,
     })
+}
+
+fn project_modules(graph: &PreparedSourceGraph) -> Vec<String> {
+    graph
+        .sources()
+        .keys()
+        .filter(|id| graph.authority(id) == SourceAuthority::Project)
+        .cloned()
+        .collect()
 }
 
 fn replacement(

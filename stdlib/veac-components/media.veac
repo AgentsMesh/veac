@@ -1,0 +1,6 @@
+module {
+  export fn solid(key: identifier, fill: color, at: time, duration: time = 3s) -> Item {
+    item(key, item_enabled(), during(at, duration),
+      source_generated(generator_solid(fill)), source_timing_native())
+  }
+}

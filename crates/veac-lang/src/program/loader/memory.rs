@@ -33,6 +33,10 @@ impl SourceLoader for MemoryLoader {
                 )
             })
     }
+
+    fn authority(&self, _source_id: &str) -> super::SourceAuthority {
+        super::SourceAuthority::Project
+    }
 }
 
 #[cfg(test)]

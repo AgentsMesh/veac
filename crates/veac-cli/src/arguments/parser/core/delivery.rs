@@ -7,7 +7,7 @@ use super::super::shared::{
 use crate::arguments::{Command, PlanFormat, SubstitutionPolicy};
 
 pub(super) fn commands() -> [ClapCommand; 5] {
-    [plan(), manifest(), package(), render(), probe()]
+    [plan(), manifest(), bundle(), render(), probe()]
 }
 
 fn config() -> Arg {
@@ -45,10 +45,10 @@ fn manifest() -> ClapCommand {
     .arg(path_option("output").short('o').long("output"))
 }
 
-fn package() -> ClapCommand {
+fn bundle() -> ClapCommand {
     input_resolution(
-        ClapCommand::new("package")
-            .about("Package reachable, identity-verified inputs for one resolved output")
+        ClapCommand::new("bundle")
+            .about("Bundle reachable, identity-verified inputs for one resolved output")
             .arg(path("project"))
             .arg(config()),
     )
@@ -113,7 +113,7 @@ pub(super) fn from_matches(name: &str, matches: &ArgMatches) -> Command {
             material_root: path_value(matches, "material_root"),
             output: path_value(matches, "output"),
         },
-        "package" => Command::Package {
+        "bundle" => Command::Bundle {
             project: required_path_value(matches, "project"),
             config: string_value(matches, "config"),
             bindings: path_value(matches, "bindings"),

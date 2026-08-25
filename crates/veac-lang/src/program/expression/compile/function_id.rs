@@ -5,8 +5,8 @@ use super::super::{
     FunctionDefinition, FunctionEffect, MapKeyType, PrimitiveType, ValueType, ValueTypeKind,
 };
 
-const ID_DOMAIN: &[u8] = b"veac.function-identity.v5\0";
-const CONTENT_DOMAIN: &[u8] = b"veac.function-content.v5\0";
+const ID_DOMAIN: &[u8] = b"veac.function-identity.v6\0";
+const CONTENT_DOMAIN: &[u8] = b"veac.function-content.v6\0";
 const SYNTHETIC_NAMESPACE: &[u8] = b"veac:synthetic-api";
 
 pub(super) fn identity(definition: &FunctionDefinition) -> FunctionId {
@@ -24,13 +24,19 @@ pub(super) fn identity(definition: &FunctionDefinition) -> FunctionId {
 pub(super) fn content_body(
     source: &str,
     program: &CoreProgram,
+    parameters: &[super::super::FunctionParameter],
     registry: &FunctionRegistry,
 ) -> CoreDigest {
     let mut digest = Sha256::new();
     digest.update(CONTENT_DOMAIN);
     digest.update(CORE_VERSION.to_be_bytes());
     field(&mut digest, source.as_bytes());
-    for target in program.called_functions() {
+    let targets = program.called_functions().into_iter().chain(
+        parameters
+            .iter()
+            .filter_map(|parameter| parameter.default().map(|value| value.thunk())),
+    );
+    for target in targets {
         digest.update(target.as_bytes());
         let function = registry
             .get(target)
@@ -46,6 +52,13 @@ fn declaration(digest: &mut Sha256, definition: &FunctionDefinition) {
     for parameter in &definition.parameters {
         field(digest, parameter.name.as_bytes());
         value_type(digest, &parameter.value_type);
+        match parameter.default() {
+            Some(value) => {
+                digest.update([1]);
+                field(digest, value.source().as_bytes());
+            }
+            None => digest.update([0]),
+        }
     }
     value_type(digest, &definition.return_type);
 }

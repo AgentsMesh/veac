@@ -1,5 +1,5 @@
 use super::Lowerer;
-use crate::program::expression::ast::Expression;
+use crate::program::expression::ast::{CallArgument, Expression};
 use crate::program::expression::hir::{TypedMethodCall, TypedNodeKind};
 use crate::program::expression::{ExpressionError, ValueType, ValueTypeKind};
 
@@ -9,7 +9,7 @@ impl Lowerer<'_> {
         receiver: &Expression,
         name: &str,
         name_span: &std::ops::Range<usize>,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         let receiver = self.lower(receiver)?;
@@ -38,27 +38,22 @@ impl Lowerer<'_> {
                 .function_field_or_unknown(receiver, name, name_span, arguments, expression);
         };
         let signature = definition.signature().clone();
-        super::typing::require_arity(
-            name,
-            arguments.len(),
-            signature.explicit_parameters().len(),
-            expression.span.clone(),
-        )?;
-        let lowered = arguments
+        let parameters = signature
+            .explicit_parameters()
             .iter()
-            .zip(signature.explicit_parameters())
-            .enumerate()
-            .map(|(index, (argument, parameter))| {
-                let value = self.lower_context(argument, Some(&parameter.value_type))?;
-                super::call::check_value_argument(index, &value, &parameter.value_type, argument)?;
-                Ok(value)
+            .map(|parameter| super::call::DeclaredParameter {
+                name: &parameter.name,
+                value_type: parameter.value_type.clone(),
+                default: parameter.default().map(|value| value.thunk()),
             })
-            .collect::<Result<Vec<_>, ExpressionError>>()?;
+            .collect::<Vec<_>>();
+        let lowered = self.bind_call_arguments(name, arguments, &parameters, 0, expression)?;
         Ok((
             TypedNodeKind::MethodCall(TypedMethodCall {
                 target: signature.function_id(),
                 receiver: Box::new(receiver),
-                arguments: lowered,
+                arguments: lowered.explicit,
+                defaults: lowered.defaults,
             }),
             signature.return_type().clone(),
         ))
@@ -69,7 +64,7 @@ impl Lowerer<'_> {
         receiver: crate::program::expression::hir::TypedNode,
         name: &str,
         name_span: &std::ops::Range<usize>,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         match self.projected_node(receiver, name, name_span, expression) {

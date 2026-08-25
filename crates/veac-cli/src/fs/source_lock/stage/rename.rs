@@ -1,8 +1,7 @@
 use std::ffi::OsString;
-use std::path::Path;
 
 use rustix::fd::OwnedFd;
-use rustix::fs::{renameat, statat, AtFlags};
+use rustix::fs::{renameat_with, statat, AtFlags, RenameFlags};
 use rustix::io::Errno;
 
 use super::super::path::{self, Identity, Parent};
@@ -15,22 +14,18 @@ pub(super) fn system(
     target_directory: &OwnedFd,
     target_name: &OsString,
 ) -> Result<(), Errno> {
-    renameat(source_directory, source_name, target_directory, target_name)
+    renameat_with(
+        source_directory,
+        source_name,
+        target_directory,
+        target_name,
+        RenameFlags::EXCHANGE,
+    )
 }
 
-pub(super) fn looks_committed(
-    source_directory: &OwnedFd,
-    source_name: &OsString,
-    target: &Parent,
-    expected: Identity,
-    label: &Path,
-) -> bool {
-    let Ok(actual) = path::path_identity(target, label) else {
+pub(super) fn replacement_visible(target: &Parent, expected: Identity) -> bool {
+    let Ok(actual) = statat(&target.descriptor, &target.name, AtFlags::SYMLINK_NOFOLLOW) else {
         return false;
     };
-    actual == expected
-        && matches!(
-            statat(source_directory, source_name, AtFlags::SYMLINK_NOFOLLOW),
-            Err(Errno::NOENT)
-        )
+    path::identity(&actual) == expected
 }

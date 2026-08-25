@@ -6,15 +6,20 @@ typed, verified program model before canonical JSON IR, planning, bundling, and 
 ## Source Commands
 
 ```bash
-veac check <source.veac> [--inputs <manifest.json>] [--input NAME=VALUE]...
-veac fmt <source.veac> [--check | --stdout]
+veac check <source.veac> [--inputs <manifest.json>] [--input NAME=VALUE]... \
+  [--package-root <package-root>]...
+veac fmt <source.veac> [--check | --stdout] [--package-root <package-root>]...
 veac build <source.veac> --emit-ir <project.json> [--inputs <manifest.json>] \
-  [--input NAME=VALUE]... [--material-root <dir>] [--revision N]
-veac source-revision <source.veac>
-veac source-index <source.veac>
+  [--input NAME=VALUE]... [--material-root <dir>] [--package-root <package-root>]... [--revision N]
+veac source-revision <source.veac> [--package-root <package-root>]...
+veac source-index <source.veac> [--package-root <package-root>]...
 veac source-edit <source.veac> <source-edit-batch.json> \
-  [--inputs <manifest.json>] [--input NAME=VALUE]... [--output <source.veac>] [--dry-run]
+  [--inputs <manifest.json>] [--input NAME=VALUE]... [--package-root <package-root>]... \
+  [--output <source.veac>] [--dry-run]
 veac language-spec [--schema]
+veac package api <package-root>
+veac package inspect <package-root>
+veac package search <local-store> <query>
 ```
 
 含 `input` 声明的 source 必须向 `build`、`check` 和 `source-edit` 显式绑定完整值。
@@ -45,13 +50,20 @@ result again. It is deterministic, idempotent, and emits exactly one trailing ne
 returns `FORMAT_REQUIRED` instead of writing when layout differs; `--stdout` prints the formatted
 source without writing; the default mode publishes one atomic in-place replacement.
 
-`source-revision` prints the exact graph SHA-256. `source-index` is static introspection: it needs no
-runtime bindings and prints the same revision, the resolved Build-input signature (including nominal
-type identity and payloadless enum variants), and a deterministic inventory of module-qualified source
-targets and editable expressions.
+`source-revision` prints `authored_source_graph_sha256` for editable project bytes and
+`complete_source_graph_sha256` for the frozen project/package/ABI source graph, authority, and routes.
+`source-index` v11 is static introspection: it needs no runtime bindings, embeds that same dual revision,
+and publishes the resolved Build-input signature plus a deterministic inventory of editable project targets.
 `source-edit` applies a revisioned, preconditioned edit and rebuilds the executable graph before
 atomic commit. Every accepted edit re-runs verified Core, graph lowering, and canonical IR
 validation. It never reconstructs source from IR.
+All six source commands accept repeatable `--package-root` flags. Each root is a complete, exact,
+locally verified package contract; no environment store, network, install hook, version solving, or
+`latest` fallback is consulted. The supplied root list is the source-resolution contract and must be
+repeated consistently across `build`, `check`, `fmt`, `source-revision`, `source-index`, and
+`source-edit`. Mounted package bytes, authority, and routes contribute to the complete compilation
+identity, while the index's editable modules exclude them. Source-edit v9 can diagnose a targeted
+`packages/name@version/...` module as read-only and never writes a package root.
 所有 source graph reader 会在 reserved `.veac-source.lock` 上持有 shared snapshot lock，in-place
 writer 在完整 publish 期间持有 exclusive lock。因此多模块加载不会观察到不同 transaction generation。
 read-only 命令、dry run 或独立 output 可以创建这个持久 coordination 文件，但不会修改 `.veac`；
@@ -61,20 +73,29 @@ See [Source-Of-Truth Editing](language-reference/source-editing.md).
 as canonical JSON; `--schema` prints its strict JSON Schema in the same canonical encoding. See
 [Language Vocabulary](language-reference/vocabulary.md).
 
+`package api` 验证 manifest、lock、完整源码闭包和 compiler-derived module interface，然后输出签入的
+canonical API metadata。`package inspect` 输出 root 与精确依赖的身份、入口、content digest 和 API；
+`package search` 只扫描显式给出的本地 store 一级目录，并按 exact package identity 排序。三个命令均不
+读取环境变量、联网、执行 install hook 或选择隐式 `latest`。参见
+[Package 合同](language-reference/packages.md)。
+
 ## 工程工作区命令
 
 ```bash
-veac project check <project.veac>
-veac project inspect <project.veac>
-veac project graph <project.veac>
-veac project build <project.veac> [--receipt <path>]
-veac project evidence <project.veac> [--receipt <path>]
-veac project test <project.veac> [--receipt <path>]
+veac project check <project.veac> [--package-root <package-root>]...
+veac project inspect <project.veac> [--package-root <package-root>]...
+veac project graph <project.veac> [--package-root <package-root>]...
+veac project build <project.veac> [--receipt <path>] [--package-root <package-root>]...
+veac project evidence <project.veac> [--receipt <path>] [--package-root <package-root>]...
+veac project test <project.veac> [--receipt <path>] [--package-root <package-root>]...
 ```
 
 `check` 验证 authored manifest 和 resolved DAG；`inspect`、`graph` 输出 canonical 中间合同。
-三个执行命令都运行完整 DAG、verified CAS 和 delivery。`evidence` 保留失败断言而不做 gate；`test`
-在 bundle 和 receipt 发布后对 `fail`/`error` 返回非零状态。参见
+三个执行命令都运行完整 DAG、verified CAS 和 delivery。六个命令均只挂载重复
+`--package-root` 显式给出的 exact package；manifest、target planning 与 backend execution 使用同一
+集合，不读取环境 store 或隐式搜索目录。package root 不能与 source、material、build、cache 或
+delivery authority 重叠。`evidence` 保留失败断言而不做 gate；`test` 在 bundle 和 receipt 发布后对
+`fail`/`error` 返回非零状态。参见
 [工程工作区](language-reference/project-workspaces.md)和[证据与验收](language-reference/evidence.md)。
 
 ## Canonical Commands
@@ -98,7 +119,7 @@ veac derive <media> <media-artifact-request.json> --store <artifact-store>
 veac ingest-analysis <media> <analysis-ingestion-request.json> --store <artifact-store>
 veac plan <project.json> [--material-root <dir> | --bindings <bindings.json>] [--config <id>]
 veac manifest <project.json> [--material-root <dir> | --bindings <bindings.json>] [-o <manifest.json>]
-veac package <project.json> --destination <dir> [--material-root <dir> | --bindings <bindings.json>] [--config <id>]
+veac bundle <project.json> --destination <dir> [--material-root <dir> | --bindings <bindings.json>] [--config <id>]
 ```
 
 Probe snapshots bind media identity and stream metadata. With `--material`, `probe` strictly decodes
@@ -107,7 +128,7 @@ SHA-256 identity, and applies its typed video/audio stream intent. Without `--ma
 the deterministic automatic-selection behavior for a direct media path. Plan consumes canonical
 intent plus verified bindings and prints the resolved plan. `derive` executes only locally supported FFmpeg derivations.
 `ingest-analysis` validates a closed typed external analysis result, its source identity, producer,
-canonical digest, and cache identity before publication. Manifest and package capture reproducible
+canonical digest, and cache identity before publication. Manifest and bundle capture reproducible
 dependencies.
 
 Canonical consumers default the material root to the project JSON directory. Pass `--material-root`

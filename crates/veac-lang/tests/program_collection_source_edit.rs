@@ -26,9 +26,11 @@ fn editing_a_collection_function_reexecutes_every_call_site() {
     assert_eq!(durations(&built), ["330ms", "330ms"]);
 
     let index = built.source_index().unwrap();
+    let revision = built.source_revision().unwrap();
     let target = SourceNodeRef::function("main.veac", "aggregate");
     let (site, original) = index
-        .inventory()
+        .inventory(&revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == target)
@@ -41,7 +43,7 @@ fn editing_a_collection_function_reexecutes_every_call_site() {
     assert!(matches!(site, StatementSite::BodyStatement { .. }));
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_collection_function_body").unwrap(),
-        index.revision().clone(),
+        revision,
     );
     batch
         .preconditions
@@ -76,9 +78,11 @@ fn standalone_valid_statement_still_requires_a_valid_owner_scope() {
     fs::write(&entry, &original_source).unwrap();
     let built = build_path(&entry).unwrap();
     let index = built.source_index().unwrap();
+    let revision = built.source_revision().unwrap();
     let target = SourceNodeRef::function("main.veac", "aggregate");
     let statement = index
-        .inventory()
+        .inventory(&revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == target)
@@ -89,7 +93,7 @@ fn standalone_valid_statement_still_requires_a_valid_owner_scope() {
         .unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_collection_invalid_scope").unwrap(),
-        index.revision().clone(),
+        revision,
     );
     batch.operations.push(SourceEditOperation::SetStatement {
         target,

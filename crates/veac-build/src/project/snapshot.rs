@@ -12,18 +12,27 @@ use veac_project::ProjectPath;
 use crate::{BuildError, BuildResult, ProjectFileSnapshot};
 
 mod evidence_graph;
+mod package;
 mod source_graph;
+
+pub use package::ProjectPackageSet;
 
 pub(super) struct ProjectRoots {
     source: PathBuf,
     material: PathBuf,
+    packages: ProjectPackageSet,
 }
 
 impl ProjectRoots {
-    pub fn new(source: impl Into<PathBuf>, material: impl Into<PathBuf>) -> BuildResult<Self> {
+    pub fn new(
+        source: impl Into<PathBuf>,
+        material: impl Into<PathBuf>,
+        packages: ProjectPackageSet,
+    ) -> BuildResult<Self> {
         Ok(Self {
             source: checked_root(source.into(), "source base")?,
             material: checked_root(material.into(), "material root")?,
+            packages,
         })
     }
 
@@ -31,18 +40,26 @@ impl ProjectRoots {
         snapshot(&self.material, path)
     }
 
+    pub fn package_revision(&self) -> Vec<crate::ProjectPackageMountRevision> {
+        self.packages.revision().to_vec()
+    }
+
+    pub fn revalidate_packages(&self) -> BuildResult<()> {
+        self.packages.revalidate()
+    }
+
     pub fn source_graph(
         &self,
         path: &ProjectPath,
     ) -> BuildResult<(ProjectFileSnapshot, crate::ProjectSourceGraphRevision)> {
-        source_graph::capture(&self.source, path)
+        source_graph::capture(&self.source, path, &self.packages)
     }
 
     pub fn evidence_graph(
         &self,
         path: &ProjectPath,
     ) -> BuildResult<(ProjectFileSnapshot, crate::ProjectSourceGraphRevision)> {
-        evidence_graph::capture(&self.source, path)
+        evidence_graph::capture(&self.source, path, &self.packages)
     }
 }
 

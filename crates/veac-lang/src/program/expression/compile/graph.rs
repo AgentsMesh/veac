@@ -56,7 +56,13 @@ fn checked_calls(
     local: &BTreeMap<FunctionId, usize>,
     body: &ResolvedBody,
 ) -> Result<Vec<CallSite>, ExpressionError> {
-    let calls = walk::calls(body.typed());
+    let mut calls = walk::calls(body.typed());
+    calls.extend(body.parameters().iter().filter_map(|parameter| {
+        parameter.default().map(|value| CallSite {
+            target: value.thunk(),
+            span: body.typed().root.span.clone(),
+        })
+    }));
     for call in &calls {
         if !local.contains_key(&call.target) && imported.get(call.target).is_none() {
             return Err(body.decorate(ExpressionError::new(

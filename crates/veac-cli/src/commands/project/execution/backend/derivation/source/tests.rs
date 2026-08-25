@@ -16,6 +16,7 @@ fn computation(inputs: Vec<ResolvedInput>) -> ProjectComputation {
         inputs,
         outputs: Vec::new(),
         bound_sources: Vec::new(),
+        package_mounts: Vec::new(),
     }
 }
 

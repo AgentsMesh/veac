@@ -1,12 +1,20 @@
 mod body;
 mod core;
+mod defaults;
 mod function_id;
 mod functions;
 mod graph;
 mod known_type;
 mod lower;
+mod query;
+mod query_key;
+mod query_retained;
 mod signature;
+mod syntax;
 mod typing;
+
+#[cfg(test)]
+pub(crate) mod test_support;
 
 use std::sync::Arc;
 
@@ -15,6 +23,11 @@ use super::{
     CoreTemporalInputIdentity, ExpressionContext, ExpressionError, FunctionDefinition,
     TypeEnvironment, ValueLookup, ValueType,
 };
+pub(crate) use query::{lower as lower_function_batch, prepare as prepare_function_batch};
+pub(crate) use query::{CompiledFunctionBatch, TypedFunctionBatch};
+pub(crate) use query_key::FunctionQueryKey;
+pub(super) use syntax::compile_slice_with_values;
+pub(crate) use syntax::{compile_expression_slice, compile_temporal_slice};
 
 pub fn compile_expression(
     source: &str,
@@ -68,7 +81,7 @@ pub fn compile_temporal_expression(
     )
 }
 
-fn build_input_id(context: &ExpressionContext, name: &str) -> CoreBuildInputId {
+pub(super) fn build_input_id(context: &ExpressionContext, name: &str) -> CoreBuildInputId {
     context
         .build_input(name)
         .map_or_else(|| CoreBuildInputId::for_symbol(name), |input| input.id())
@@ -91,15 +104,6 @@ pub fn compile_functions(
     definitions: &[FunctionDefinition],
 ) -> Result<ExpressionContext, ExpressionError> {
     let functions = functions::compile(context, definitions)?;
-    Ok(context.clone().with_functions(functions))
-}
-
-pub(crate) fn compile_functions_bounded(
-    context: &ExpressionContext,
-    definitions: &[FunctionDefinition],
-    retained_limit: usize,
-) -> Result<ExpressionContext, ExpressionError> {
-    let functions = functions::compile_bounded(context, definitions, retained_limit)?;
     Ok(context.clone().with_functions(functions))
 }
 
@@ -126,8 +130,25 @@ fn compile_with_types(
     input_identity: &dyn Fn(&str) -> CoreInputIdentity,
     context: &ExpressionContext,
 ) -> Result<CompiledExpression, ExpressionError> {
+    compile_parsed_with_types(
+        super::cst_adapter::parse(source, None)?,
+        environment,
+        trusted_functions,
+        callable_inputs,
+        input_identity,
+        context,
+    )
+}
+
+pub(super) fn compile_parsed_with_types(
+    expression: super::ast::Expression,
+    environment: &dyn Fn(&str) -> Option<ValueType>,
+    trusted_functions: &dyn Fn(&str) -> bool,
+    callable_inputs: &dyn Fn(&str) -> Option<CoreCallableInput>,
+    input_identity: &dyn Fn(&str) -> CoreInputIdentity,
+    context: &ExpressionContext,
+) -> Result<CompiledExpression, ExpressionError> {
     known_type::context(context)?;
-    let expression = super::parser::parse(super::lexer::lex(source)?)?;
     let typed = lower::expression(
         &expression,
         &|name| {

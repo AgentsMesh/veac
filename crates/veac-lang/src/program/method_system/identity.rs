@@ -6,7 +6,7 @@ use crate::program::expression::{
 };
 use crate::program::TypeId;
 
-const ID_DOMAIN: &[u8] = b"veac.nominal-method-identity.v3\0";
+const ID_DOMAIN: &[u8] = b"veac.nominal-method-identity.v4\0";
 
 pub(super) fn derive(
     receiver: TypeId,
@@ -23,6 +23,13 @@ pub(super) fn derive(
     for parameter in parameters {
         field(&mut digest, parameter.name.as_bytes());
         value_type(&mut digest, &parameter.value_type);
+        match parameter.default() {
+            Some(value) => {
+                digest.update([1]);
+                field(&mut digest, value.source().as_bytes());
+            }
+            None => digest.update([0]),
+        }
     }
     value_type(&mut digest, result);
     FunctionId::from_bytes(digest.finalize().into())

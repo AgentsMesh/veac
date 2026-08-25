@@ -114,6 +114,10 @@ impl SourceLoader for SnapshotLoader {
             .map(|source| LoadedSource { id, source })
             .ok_or_else(|| format!("missing snapshot module {requested}"))
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }
 
 fn build_example(path: &Path) -> Result<BuiltProgram, veac_lang::program::Diagnostics> {

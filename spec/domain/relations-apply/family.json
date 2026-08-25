@@ -1,0 +1,26 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "relations-apply",  "types": [
+    {"name":"Transition","opcode":32773,"classification":"leaf_value"},
+    {"name":"FadeColor","opcode":32769,"classification":"leaf_value"},
+    {"name":"CardinalDirection","opcode":32770,"classification":"leaf_value"},
+    {"name":"ZoomDirection","opcode":32771,"classification":"leaf_value"},
+    {"name":"CircleDirection","opcode":32772,"classification":"leaf_value"},
+    {"name":"MatteMode","opcode":32774,"classification":"leaf_value"},
+    {"name":"SidechainSettings","opcode":32776,"classification":"leaf_value"},
+    {"name":"SidechainWindow","opcode":32775,"classification":"leaf_value"},
+    {"name":"Relation","opcode":8217,"classification":"graph_entity"},
+    {"name":"Apply","opcode":8218,"classification":"graph_entity"},
+    {"name":"ApplyTarget","opcode":32777,"classification":"leaf_value"},
+    {"name":"ApplyState","opcode":32778,"classification":"leaf_value"},
+    {"name":"ApplyStage","opcode":32781,"classification":"leaf_value"},
+    {"name":"ApplyStageState","opcode":32780,"classification":"leaf_value"},
+    {"name":"ApplyStageWindow","opcode":32779,"classification":"leaf_value"},
+    {"name":"ApplyMix","opcode":32782,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

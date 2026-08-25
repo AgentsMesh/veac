@@ -49,8 +49,12 @@ impl MethodSignature {
             ValueType::nominal(receiver.clone()),
         ));
         parameters.extend(explicit_parameters.iter().cloned());
+        let provisional: Arc<[FunctionParameter]> = parameters.clone().into();
+        let function_id = identity::derive(receiver.id(), &name, &provisional, &return_type);
+        for (slot, parameter) in parameters.iter_mut().enumerate().skip(1) {
+            parameter.bind_default(function_id, slot);
+        }
         let parameters: Arc<[FunctionParameter]> = parameters.into();
-        let function_id = identity::derive(receiver.id(), &name, &parameters, &return_type);
         Self {
             receiver,
             name,

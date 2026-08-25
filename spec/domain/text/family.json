@@ -1,0 +1,37 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "text",  "types": [
+    {"name":"TextStyle","opcode":12290,"classification":"leaf_value"},
+    {"name":"FontRef","opcode":24577,"classification":"leaf_value"},
+    {"name":"FontStack","opcode":24578,"classification":"leaf_value"},
+    {"name":"FontWeight","opcode":24579,"classification":"leaf_value"},
+    {"name":"FontStyle","opcode":24580,"classification":"leaf_value"},
+    {"name":"TextMetrics","opcode":24581,"classification":"leaf_value"},
+    {"name":"TextBox","opcode":24582,"classification":"leaf_value"},
+    {"name":"TextWrap","opcode":24583,"classification":"leaf_value"},
+    {"name":"TextOverflow","opcode":24584,"classification":"leaf_value"},
+    {"name":"HorizontalTextAlignment","opcode":24585,"classification":"leaf_value"},
+    {"name":"VerticalTextAlignment","opcode":24586,"classification":"leaf_value"},
+    {"name":"TextWritingMode","opcode":24587,"classification":"leaf_value"},
+    {"name":"TextOrientation","opcode":24588,"classification":"leaf_value"},
+    {"name":"TextLayout","opcode":24589,"classification":"leaf_value"},
+    {"name":"TextPath","opcode":24591,"classification":"leaf_value"},
+    {"name":"TextPathChoice","opcode":24592,"classification":"leaf_value"},
+    {"name":"TextPathAlignment","opcode":24590,"classification":"leaf_value"},
+    {"name":"TextBackgroundChoice","opcode":24593,"classification":"leaf_value"},
+    {"name":"TextOutlineChoice","opcode":24594,"classification":"leaf_value"},
+    {"name":"TextDecoration","opcode":24595,"classification":"leaf_value"},
+    {"name":"TextRunStyle","opcode":24596,"classification":"leaf_value"},
+    {"name":"TextSpan","opcode":24597,"classification":"leaf_value"},
+    {"name":"TextAnimation","opcode":24601,"classification":"leaf_value"},
+    {"name":"TextAnimationChoice","opcode":24602,"classification":"leaf_value"},
+    {"name":"TextGranularity","opcode":24598,"classification":"leaf_value"},
+    {"name":"TextUnitTransform","opcode":24599,"classification":"leaf_value"},
+    {"name":"TextHighlightChoice","opcode":24600,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

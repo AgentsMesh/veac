@@ -4,8 +4,10 @@ mod collection_operation;
 mod compile;
 mod context;
 mod core;
+mod cst_adapter;
 mod definition;
 mod error;
+pub(crate) mod evaluate;
 mod exact;
 mod execution_budget;
 mod hir;
@@ -26,9 +28,14 @@ mod value_type;
 
 pub use builtin::BuiltinFunction;
 pub use collection_operation::CollectionOperation;
-pub(crate) use compile::compile_functions_bounded;
+#[cfg(test)]
+pub(crate) use compile::test_support::compile_functions_bounded;
 pub use compile::{
     compile_expression, compile_function, compile_functions, compile_temporal_expression,
+};
+pub(crate) use compile::{
+    compile_expression_slice, compile_temporal_slice, lower_function_batch, prepare_function_batch,
+    CompiledFunctionBatch, FunctionQueryKey, TypedFunctionBatch,
 };
 pub use context::{BuildInputSlot, ExpressionContext};
 pub use core::{
@@ -44,9 +51,11 @@ pub use core::{
     CORE_VERSION,
 };
 pub use definition::{
-    FunctionDefinition, FunctionMap, FunctionOrigin, FunctionParameter, TypeEnvironment,
+    FunctionDefault, FunctionDefinition, FunctionMap, FunctionOrigin, FunctionParameter,
+    TypeEnvironment,
 };
 pub use error::{ExpressionCallFrame, ExpressionError};
+pub use evaluate::{compiled as evaluate_compiled, in_context as evaluate_in, source as evaluate};
 pub use exact::ExactNumber;
 pub(crate) use execution_budget::ExecutionBudget;
 pub(in crate::program) use execution_budget::ResidualLedger;
@@ -56,7 +65,9 @@ pub(crate) use index::indexed_temporal_attachments;
 pub use iteration::{ExpressionLoopFrame, LoopLogicalKey};
 pub(crate) use provenance::{DomainOrigin, ExecutionDefinition, ExecutionFrame, ProgramIdentity};
 pub use references::referenced_symbols;
+#[cfg(test)]
 pub(crate) use references::referenced_value_symbols;
+pub(crate) use references::referenced_value_symbols_slice;
 pub(in crate::program) use residual::{
     residualize_closure_with_ledger, residualize_expression_with_ledger,
 };
@@ -154,42 +165,10 @@ pub const MAX_CALL_ARGUMENTS: usize = 64;
 pub const MAX_CLOSURE_CAPTURES: usize = 64;
 pub(crate) const MAX_TEXT_VALUE_BYTES: usize = 1024 * 1024;
 
-pub fn evaluate(source: &str, env: &Environment) -> Result<Value, ExpressionError> {
-    evaluate_in(source, env, &ExpressionContext::empty())
-}
-
-pub(crate) fn evaluate_lookup_with_functions(
-    source: &str,
-    env: &dyn ValueLookup,
-    context: &ExpressionContext,
-) -> Result<Value, ExpressionError> {
-    evaluate_lookup_with_budget(source, env, context, &ExecutionBudget::default())
-}
-
-pub(crate) fn evaluate_lookup_with_budget(
-    source: &str,
-    env: &dyn ValueLookup,
-    context: &ExpressionContext,
-    execution: &ExecutionBudget,
-) -> Result<Value, ExpressionError> {
-    let expression = compile::compile_with_values(source, env, context)?;
-    runtime::execute(&expression, env, execution)
-}
-
-pub fn evaluate_in(
-    source: &str,
-    env: &Environment,
-    context: &ExpressionContext,
-) -> Result<Value, ExpressionError> {
-    evaluate_lookup_with_functions(source, env, context)
-}
-
-pub fn evaluate_compiled(
-    expression: &CompiledExpression,
-    env: &Environment,
-) -> Result<Value, ExpressionError> {
-    runtime::execute(expression, env, &ExecutionBudget::default())
-}
+#[cfg(test)]
+pub(crate) use evaluate::{
+    lookup as evaluate_lookup_with_functions, lookup_with_budget as evaluate_lookup_with_budget,
+};
 
 #[cfg(test)]
 mod tests;

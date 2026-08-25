@@ -9,7 +9,7 @@ mod type_table;
 mod verify;
 
 pub use compiled::{CompiledExpression, CompiledFunction};
-pub(crate) use digest::{closure_digest, input_declarations_digest};
+pub(crate) use digest::{closure_digest, encode_value_type, input_declarations_digest};
 pub use id::{
     BlockId, ClosureDefinitionId, CoreDigest, CoreInputDeclarationDigest, CoreTypeId, FunctionId,
     InputId, LocalSlotId, ValueId,

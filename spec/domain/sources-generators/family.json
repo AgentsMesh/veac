@@ -1,0 +1,27 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "sources-generators",  "types": [
+    {"name":"Source","opcode":8212,"classification":"topology_value"},
+    {"name":"SourceTiming","opcode":8213,"classification":"topology_value"},
+    {"name":"SourceMapping","opcode":12292,"classification":"topology_value"},
+    {"name":"SourceTimeMap","opcode":12297,"classification":"topology_value"},
+    {"name":"SourceTimeSegment","opcode":12298,"classification":"topology_value"},
+    {"name":"PlaybackDirection","opcode":12293,"classification":"leaf_value"},
+    {"name":"FrameSynthesis","opcode":12294,"classification":"leaf_value"},
+    {"name":"OutOfRangePolicy","opcode":12295,"classification":"leaf_value"},
+    {"name":"SegmentInterpolation","opcode":12296,"classification":"leaf_value"},
+    {"name":"Generator","opcode":12291,"classification":"topology_value"},
+    {"name":"Gradient","opcode":12300,"classification":"leaf_value"},
+    {"name":"GradientStop","opcode":12299,"classification":"leaf_value"},
+    {"name":"Paint","opcode":12301,"classification":"leaf_value"},
+    {"name":"PaintChoice","opcode":12302,"classification":"leaf_value"},
+    {"name":"StrokeChoice","opcode":12303,"classification":"leaf_value"},
+    {"name":"VectorGeometry","opcode":12304,"classification":"leaf_value"},
+    {"name":"PathCommand","opcode":12305,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

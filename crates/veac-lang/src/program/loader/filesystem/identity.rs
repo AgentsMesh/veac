@@ -39,3 +39,7 @@ impl IdentityRegistry {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "identity/tests.rs"]
+mod tests;

@@ -12,7 +12,12 @@ impl Resolver<'_> {
     ) -> Result<Scope, Diagnostic> {
         let mut scope = Scope::default();
         for requested in preludes {
-            let imported = self.module(&file.path, requested, Span::default())?;
+            let (imported, resolved_source_id) =
+                self.module(&file.path, requested, Span::default())?;
+            self.routes
+                .entry(file.path.clone())
+                .or_default()
+                .insert(requested.clone(), resolved_source_id);
             super::names::prelude_types(
                 &file.path,
                 imported.as_ref(),

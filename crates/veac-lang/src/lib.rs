@@ -5,6 +5,7 @@ extern crate self as veac_lang;
 
 mod authoring;
 mod name;
+pub mod package;
 pub mod program;
 pub mod source_edit;
 mod string_codec;

@@ -39,7 +39,7 @@ fn structural_input_edit_rebuilds_with_the_same_verified_manifest() {
 
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_input_role").unwrap(),
-        index.revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetDeclaration {
         target,
@@ -83,7 +83,7 @@ fn source_edit_does_not_fall_back_to_ambient_or_empty_inputs() {
     let prepared = prepare_path(&entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_missing_input").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetDeclaration {
         target: SourceNodeRef::input("main.veac", "duration"),

@@ -8,7 +8,18 @@ impl Walker {
         match expression {
             ExpressionKind::Call { callee, arguments } => {
                 self.child(callee, path, Step::CallCallee);
-                self.indexed(arguments, path, |ordinal| Step::CallArgument { ordinal });
+                for (ordinal, argument) in arguments.iter().enumerate() {
+                    let step = argument.label.as_ref().map_or_else(
+                        || Step::CallArgument {
+                            ordinal: u32::try_from(ordinal)
+                                .expect("expression node limit fits u32"),
+                        },
+                        |label| Step::NamedCallArgument {
+                            name: label.name.clone(),
+                        },
+                    );
+                    self.child(&argument.value, path, step);
+                }
             }
             ExpressionKind::FieldProject { receiver, .. } => {
                 self.child(receiver, path, Step::FieldReceiver)

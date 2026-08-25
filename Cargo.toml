@@ -7,6 +7,8 @@ members = [
     "crates/veac-caption",
     "crates/veac-otio",
     "crates/veac-template",
+    "crates/veac-lang-model",
+    "crates/veac-domain-spec",
     "crates/veac-lang",
     "crates/veac-codegen",
     "crates/veac-runtime",

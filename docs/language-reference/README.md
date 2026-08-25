@@ -39,6 +39,7 @@ reference 由 grammar position 定型，例如 `resource`、`sequence`、`layer`
 - [可执行 Temporal residualization、typed binding 与 cache identity](executable-temporal.md)
 - [Temporal 动态叶 target 与属性矩阵](executable-temporal-sinks.md)
 - [Modules、typed functions、values 与 executable 编程模型](programming.md)
+- [Package 合同、锁定依赖与本地发现](packages.md)
 - [有界集合操作与 lexical iteration](programming-collections.md)
 - [Nominal value、exhaustive match 与静态 method](programming-nominal.md)
 - [Typed component、模块工厂与复用](programming-components.md)

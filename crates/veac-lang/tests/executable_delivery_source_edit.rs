@@ -86,7 +86,7 @@ fn batch(entry: &std::path::Path, body: &str, operation: &str) -> SourceEditBatc
     let prepared = prepare_path(entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new(operation).unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("main.veac", "movie_target"),

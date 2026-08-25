@@ -14,9 +14,12 @@ struct UnreachableBackend;
 impl ProjectBackend for UnreachableBackend {
     fn implementation_identity(
         &self,
-        action: crate::ProjectActionKind,
+        action: &ProjectAction,
     ) -> Result<crate::ProjectBackendIdentity, crate::ProjectBackendError> {
-        Ok(test_identity(action, ContentDigest::sha256(b"unreachable")))
+        Ok(test_identity(
+            action.kind(),
+            ContentDigest::sha256(b"unreachable"),
+        ))
     }
 
     fn execute(
@@ -59,6 +62,7 @@ fn action() -> ProjectAction {
                 media_type: MediaType::Video,
             }],
             bound_sources: Vec::new(),
+            package_mounts: Vec::new(),
         },
         source: ProjectFileSnapshot {
             path: "main.veac".to_owned(),
@@ -67,9 +71,10 @@ fn action() -> ProjectAction {
         },
         source_graph: ProjectSourceGraphRevision {
             root_module: "main.veac".to_owned(),
-            source_graph_sha256: "0".repeat(64),
-            module_count: 1,
-            modules: vec!["main.veac".to_owned()],
+            authored_source_graph_sha256: "0".repeat(64),
+            complete_source_graph_sha256: "1".repeat(64),
+            authored_module_count: 1,
+            authored_modules: vec!["main.veac".to_owned()],
         },
     }
 }

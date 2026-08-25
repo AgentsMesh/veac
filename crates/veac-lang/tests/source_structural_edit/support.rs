@@ -32,10 +32,10 @@ impl Fixture {
     }
 
     pub fn batch(&self, id: &str) -> SourceEditBatch {
-        let index = prepare_path(&self.entry).unwrap().source_index().unwrap();
+        let prepared = prepare_path(&self.entry).unwrap();
         SourceEditBatch::new(
             veac_ir::OperationId::new(id).unwrap(),
-            index.revision().clone(),
+            prepared.source_revision().unwrap(),
         )
     }
 

@@ -51,32 +51,42 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
         Command::Artifact { command } => commands::artifact(command),
         Command::PackageBindings(arguments) => commands::package_bindings(arguments),
         Command::Relink(arguments) => commands::relink(arguments),
-        Command::Build {
+        Command::Build(arguments::BuildSourceArgs {
             source,
             emit_ir,
             inputs,
             inline_inputs,
             material_root,
+            package_roots,
             revision,
-        } => commands::build(
+        }) => commands::build(
             &source,
             emit_ir.as_deref(),
             inputs.as_deref(),
             &inline_inputs,
             material_root.as_deref(),
+            &package_roots,
             revision,
         ),
-        Command::Check {
+        Command::Check(arguments::CheckSourceArgs {
             source,
             inputs,
             inline_inputs,
+            package_roots,
             revision,
-        } => commands::check(&source, inputs.as_deref(), &inline_inputs, revision),
-        Command::Fmt {
+        }) => commands::check(
+            &source,
+            inputs.as_deref(),
+            &inline_inputs,
+            &package_roots,
+            revision,
+        ),
+        Command::Fmt(arguments::FormatSourceArgs {
             source,
             check,
             stdout,
-        } => commands::format(&source, check, stdout),
+            package_roots,
+        }) => commands::format(&source, check, stdout, &package_roots),
         Command::CheckIr { project } => commands::check_ir(&project),
         Command::Edit {
             project,
@@ -84,25 +94,34 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             output,
             dry_run,
         } => commands::edit(&project, &edit_batch, output.as_deref(), dry_run),
-        Command::SourceRevision { source } => commands::source_revision(&source),
-        Command::SourceIndex { source } => commands::source_index(&source),
-        Command::SourceEdit {
+        Command::SourceRevision(arguments::SourceGraphArgs {
+            source,
+            package_roots,
+        }) => commands::source_revision(&source, &package_roots),
+        Command::SourceIndex(arguments::SourceGraphArgs {
+            source,
+            package_roots,
+        }) => commands::source_index(&source, &package_roots),
+        Command::SourceEdit(arguments::SourceEditArgs {
             source,
             source_edit_batch,
             inputs,
             inline_inputs,
+            package_roots,
             output,
             dry_run,
-        } => commands::source_edit(
+        }) => commands::source_edit(
             &source,
             &source_edit_batch,
             inputs.as_deref(),
             &inline_inputs,
+            &package_roots,
             output.as_deref(),
             dry_run,
         ),
         Command::Schema { contract, format } => commands::schema(contract, format),
         Command::LanguageSpec { schema } => commands::language_spec(schema),
+        Command::LanguagePackage { command } => commands::language_package(command),
         Command::Plan {
             project,
             config,
@@ -131,13 +150,13 @@ fn execute_with_environment(cli: Cli, environment: &dyn environment::Environment
             output.as_deref(),
             environment,
         ),
-        Command::Package {
+        Command::Bundle {
             project,
             config,
             bindings,
             material_root,
             destination,
-        } => commands::package(
+        } => commands::bundle(
             &project,
             config.as_deref(),
             bindings.as_deref(),

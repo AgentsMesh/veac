@@ -34,7 +34,7 @@ fn editing_a_structural_function_body_reexecutes_every_call_site() {
     );
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_structural_function_body").unwrap(),
-        index.revision().clone(),
+        built.source_revision().unwrap(),
     );
     batch.preconditions.push(SourcePrecondition::BodyEquals {
         target: target.clone(),

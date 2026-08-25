@@ -26,6 +26,10 @@ impl SourceLoader for Loader {
             .map(|source| LoadedSource { id, source })
             .ok_or_else(|| "missing test module".to_owned())
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }
 
 #[test]
@@ -58,6 +62,10 @@ impl SourceLoader for InvalidIdLoader {
             id: "../escaped.veac".to_owned(),
             source: "module {}".to_owned(),
         })
+    }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
     }
 }
 

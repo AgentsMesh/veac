@@ -42,7 +42,7 @@ fn collect(expression: &Expression, output: &mut Vec<IndexedTemporalAttachment>)
         }
         ExpressionKind::Call { callee, arguments } => {
             collect(callee, output);
-            collect_many(arguments, output);
+            collect_many(arguments.iter().map(|argument| &argument.value), output);
         }
         ExpressionKind::FieldProject { receiver, .. } => collect(receiver, output),
         ExpressionKind::NominalConstruct { fields, .. } => {

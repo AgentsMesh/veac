@@ -1,0 +1,10 @@
+module {
+  export fn style(font: Resource, size: length) -> TextStyle {
+    text_style(text_metrics(font_stack(font_resource_ref(font), []), weight_bold(),
+      font_style_normal(), size, 0px, 1.2, #ffffffff),
+      text_layout(text_box_width(1100px), text_wrap_word(), text_overflow_visible(),
+        text_align_center(), text_align_bottom(), writing_horizontal_tb(), orientation_mixed()),
+      text_path_none(), text_decoration(text_background_present(#07131dcc, 10px),
+        text_outline_present(#07131dff, 1px), shadow_none()), [], text_animation_none())
+  }
+}

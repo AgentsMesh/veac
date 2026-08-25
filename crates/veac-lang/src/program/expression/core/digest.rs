@@ -10,6 +10,7 @@ mod tests;
 mod value;
 mod value_type;
 pub(crate) use input::digest as input_declarations_digest;
+pub(crate) use value_type::encode as encode_value_type;
 
 const DOMAIN: &[u8] = b"veac.core-closure.v10-for-each\0";
 

@@ -1,0 +1,32 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "values-animation",  "types": [
+    {"name":"Canvas","opcode":4097,"classification":"topology_value"},
+    {"name":"FrameRate","opcode":4098,"classification":"topology_value"},
+    {"name":"TimeRange","opcode":4099,"classification":"leaf_value"},
+    {"name":"Point","opcode":4100,"classification":"leaf_value"},
+    {"name":"Vector","opcode":4101,"classification":"leaf_value"},
+    {"name":"Rect","opcode":4102,"classification":"leaf_value"},
+    {"name":"ContentIdentity","opcode":4103,"classification":"topology_value"},
+    {"name":"Interpolation","opcode":4104,"classification":"leaf_value"},
+    {"name":"ScalarAnimation","opcode":4105,"classification":"leaf_value"},
+    {"name":"ScalarKeyframe","opcode":4106,"classification":"leaf_value"},
+    {"name":"LengthAnimation","opcode":4107,"classification":"leaf_value"},
+    {"name":"LengthKeyframe","opcode":4108,"classification":"leaf_value"},
+    {"name":"PercentAnimation","opcode":4109,"classification":"leaf_value"},
+    {"name":"PercentKeyframe","opcode":4110,"classification":"leaf_value"},
+    {"name":"AngleAnimation","opcode":4111,"classification":"leaf_value"},
+    {"name":"AngleKeyframe","opcode":4112,"classification":"leaf_value"},
+    {"name":"PointAnimation","opcode":4113,"classification":"leaf_value"},
+    {"name":"PointKeyframe","opcode":4114,"classification":"leaf_value"},
+    {"name":"VectorAnimation","opcode":4115,"classification":"leaf_value"},
+    {"name":"VectorKeyframe","opcode":4116,"classification":"leaf_value"},
+    {"name":"RectAnimation","opcode":4117,"classification":"leaf_value"},
+    {"name":"RectKeyframe","opcode":4118,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

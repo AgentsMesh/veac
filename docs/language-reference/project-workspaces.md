@@ -139,13 +139,26 @@ clock 只能是带 duration 的 `Identity` 或带 start/duration 的 `Bounded`�
 ## 构建、缓存与交付
 
 ```bash
-veac project check project.veac
-veac project inspect project.veac
-veac project graph project.veac
-veac project build project.veac --receipt build/receipt.json
+veac project check project.veac --package-root ../packages/components
+veac project inspect project.veac --package-root ../packages/components
+veac project graph project.veac --package-root ../packages/components
+veac project build project.veac --package-root ../packages/components \
+  --receipt build/receipt.json
 ```
 
-调度器只运行依赖已满足且资源预算允许的节点。action、完整 source graph revision、typed inputs、
+`--package-root` 可重复，且是唯一 package 发现入口。CLI 先验证每个 manifest/lock/API trust loop，
+再按 exact `name@version` 排序并拒绝重复 identity、互相重叠的 root，以及同一闭包 identity 对应
+不同 content/API 合同的 split-brain 集合。工程 manifest、每个 target source graph、backend
+identity 和 backend execution 始终复用同一个显式集合；缺少 root 不会回退到环境 store、网络或
+当前目录发现。
+
+宿主 package 路径只保存在本次进程的 `ProjectPackageSet`，不会写入 action 或 cache identity。
+action v6 为每个 mount 固定 exact identity、package-relative entry、entry/content/API SHA-256、
+排序的直接依赖和完整 locked closure，因此移动同内容 package 不会改变 action，内容、API 或闭包
+变化则必然使 action 或执行校验失败。规划前后、loader 构造前后、backend identity 前后和执行前后
+都会重做 discovery；计划完成后的漂移会在 cache lookup 之前失败。
+
+调度器只运行依赖已满足且资源预算允许的节点。action、complete source graph revision、typed inputs、
 上游 artifact 和实现版本共同形成 cache key。跨进程 computation lease 保证同一 key 只有一个 owner；
 其他进程等待后重新读取 cache。receipt 固定记录 manifest/graph digest、执行或 cache-hit 状态、artifact
 身份、交付状态和失败原因。显式 receipt 只能写入 `build_root`，并对 workspace、目标源码图和素材输入
@@ -158,9 +171,12 @@ veac project build project.veac --receipt build/receipt.json
 ## 真源与安全边界
 
 `.veac` source graph 是唯一 authored source of truth。canonical JSON 只是严格版本化、可重建的 IR、
-resolved graph 或 receipt，不应手写回工程。每个 `VeacRender`/`Evidence` root 和所有可达 import 的字节
-共同进入 source graph revision；任一对应 helper 修改都会 cache miss。执行前后都重新核对 revision，
-防止检查与执行之间被替换；宿主 builtin prelude 不伪装成用户源码。
+resolved graph 或 receipt，不应手写回工程。action 同时记录两种身份：authored revision 只覆盖
+`Project` authority 的可编辑模块和清单；complete revision 覆盖 root、所有可达源码字节、authority 与
+`(importer, requested, resolved)` route。package、builtin prelude 等只读依赖不进入编辑和 receipt 的
+路径清单，但其 portable package revision 会直接进入每个 computation。backend 执行前重新准备
+source graph 并核对 authored/complete revision 与 package revision，防止检查与执行之间被替换，
+也不把宿主 ABI 或机器绝对路径伪装成用户源码。
 
 工程动作不接受任意 shell、argv、FFmpeg filter 字符串或 property bag。它们会绕过类型检查、资源预算、
 内容身份、cache key、平台一致性和输出验证。新能力必须先成为闭合的 nominal variant，并在 planner、

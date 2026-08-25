@@ -89,7 +89,7 @@ fn render_source_graph_inputs(
     let entry = source_root.join(entry);
     let root = entry.parent().unwrap_or(source_root);
     revision
-        .modules
+        .authored_modules
         .iter()
         .map(|module| root.join(module))
         .collect()
@@ -100,7 +100,7 @@ fn root_source_graph_inputs(
     revision: &veac_build::ProjectSourceGraphRevision,
 ) -> Vec<PathBuf> {
     revision
-        .modules
+        .authored_modules
         .iter()
         .map(|module| source_root.join(module))
         .collect()

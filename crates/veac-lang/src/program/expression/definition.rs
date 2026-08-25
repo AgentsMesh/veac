@@ -1,65 +1,15 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::ops::Range;
 use std::sync::Arc;
 
 use super::core::{FunctionId, FunctionRegistry};
 use super::{CompiledFunction, ValueType};
 
+mod parameter;
+pub use parameter::{FunctionDefault, FunctionParameter};
+mod origin;
+pub use origin::FunctionOrigin;
+
 pub type TypeEnvironment = BTreeMap<String, ValueType>;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FunctionOrigin {
-    source_id: String,
-    body_span: Range<usize>,
-}
-
-impl FunctionOrigin {
-    pub fn new(source_id: impl Into<String>, body_span: Range<usize>) -> Self {
-        Self {
-            source_id: source_id.into(),
-            body_span,
-        }
-    }
-
-    pub fn source_id(&self) -> &str {
-        &self.source_id
-    }
-
-    pub fn body_span(&self) -> Range<usize> {
-        self.body_span.clone()
-    }
-
-    pub fn absolute_span(&self, relative: Range<usize>) -> Range<usize> {
-        let body_end = self.body_span.end.max(self.body_span.start);
-        let start = self
-            .body_span
-            .start
-            .saturating_add(relative.start)
-            .min(body_end);
-        let end = self
-            .body_span
-            .start
-            .saturating_add(relative.end)
-            .min(body_end)
-            .max(start);
-        start..end
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FunctionParameter {
-    pub name: String,
-    pub value_type: ValueType,
-}
-
-impl FunctionParameter {
-    pub fn new(name: impl Into<String>, value_type: ValueType) -> Self {
-        Self {
-            name: name.into(),
-            value_type,
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionDefinition {
@@ -120,6 +70,20 @@ impl FunctionMap {
 
     pub fn is_empty(&self) -> bool {
         self.visible.is_empty()
+    }
+
+    pub(crate) fn namespaces(&self) -> impl Iterator<Item = &str> {
+        self.namespaces.iter().map(String::as_str)
+    }
+
+    pub(crate) fn visible_bindings(&self) -> impl Iterator<Item = (&str, FunctionId)> {
+        self.visible.iter().map(|(name, id)| (name.as_str(), *id))
+    }
+
+    pub(crate) fn registry_functions(
+        &self,
+    ) -> impl Iterator<Item = (FunctionId, &Arc<CompiledFunction>)> {
+        self.registry.iter_with_ids()
     }
 
     pub(crate) fn register_namespace(&mut self, name: impl Into<String>) {

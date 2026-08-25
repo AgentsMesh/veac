@@ -45,6 +45,23 @@ fn generic_types_and_method_names_remain_glued() {
 }
 
 #[test]
+fn named_call_labels_format_canonically_and_idempotently() {
+    let source = "module{export fn pair(first:int,second:int)->int{first*10+second}export const int result=pair(second:2,first:1);}";
+    let once = format_source(source).unwrap();
+    assert!(once.contains("pair(second: 2, first: 1)"));
+    assert_eq!(format_source(&once).unwrap(), once);
+}
+
+#[test]
+fn parameter_defaults_format_canonically_and_idempotently() {
+    let source =
+        "module{export fn card(title:text,duration:time=3s,color:color=#202124ff)->time{duration}}";
+    let once = format_source(source).unwrap();
+    assert!(once.contains("title: text, duration: time = 3s, color: color = #202124ff"));
+    assert_eq!(format_source(&once).unwrap(), once);
+}
+
+#[test]
 fn standalone_module_imports_are_resolved_before_and_after_formatting() {
     let temp = tempdir().unwrap();
     fs::write(

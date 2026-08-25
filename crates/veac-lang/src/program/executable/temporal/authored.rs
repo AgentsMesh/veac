@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use crate::program::diagnostic::{Diagnostic, Diagnostics};
-use crate::program::expression::{compile_temporal_expression, ExpressionContext, TypeEnvironment};
+use crate::program::expression::{compile_temporal_slice, ExpressionContext, TypeEnvironment};
 use crate::program::model::{SurfaceFile, TemporalDecl};
 
 use super::ExecutableTemporalLeaf;
@@ -71,8 +71,9 @@ fn one(
         Some(item_id) => input::clip_clocks(item_id, &sequence_id, source_id),
         None => input::sequence_clocks(&sequence_id),
     };
-    let expression = compile_temporal_expression(
-        &declaration.body.source,
+    let expression = compile_temporal_slice(
+        &file.syntax,
+        &declaration.body.syntax,
         &TypeEnvironment::new(),
         &inputs,
         context,

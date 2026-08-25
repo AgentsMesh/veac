@@ -8,17 +8,16 @@ use crate::vocabulary::control_uses::static_program as controls;
 use super::{IndexedImport, IndexedTopLevelDeclaration, SourceIndex};
 
 pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), Diagnostic> {
-    let tokens = crate::program::lexer::lex(&file.path, &file.source)
-        .map_err(|errors| first_diagnostic(errors, file))?;
+    let tokens = file.syntax.tokens();
     index
         .modules
-        .insert(file.path.clone(), module_range(file, &tokens)?);
+        .insert(file.path.clone(), module_range(file, tokens)?);
     for value in &file.imports {
         let target = SourceImportRef::new(&file.path, &value.alias);
         let range = range(value.span);
         let indexed = IndexedImport {
             path: value.path.clone(),
-            source: file.source[range.start..range.end].to_owned(),
+            source: file.source()[range.start..range.end].to_owned(),
             range,
         };
         if index.imports.insert(target, indexed).is_some() {
@@ -29,7 +28,7 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
         insert(
             index,
             file,
-            &tokens,
+            tokens,
             SourceNodeRef::input(&file.path, &value.name),
             value.span,
             false,
@@ -39,7 +38,7 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
         insert(
             index,
             file,
-            &tokens,
+            tokens,
             SourceNodeRef::constant(&file.path, &value.name),
             value.span,
             value.exported,
@@ -49,7 +48,7 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
         insert(
             index,
             file,
-            &tokens,
+            tokens,
             SourceNodeRef::function(&file.path, &value.name),
             value.span,
             value.exported,
@@ -58,19 +57,19 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
     for value in &file.implementations {
         let target =
             SourceNodeRef::implementation(&file.path, value.target.to_string(), &value.identity);
-        index.register(&file.path, target.clone(), value.span)?;
-        insert(index, file, &tokens, target, value.span, false)?;
+        index.register(&file.path, target.clone(), value.syntax.span)?;
+        insert(index, file, tokens, target, value.syntax.span, false)?;
     }
     for value in &file.types {
         let target = match value.kind {
             TypeDeclKind::Struct(_) => SourceNodeRef::structure(&file.path, &value.name),
             TypeDeclKind::Enum(_) => SourceNodeRef::enumeration(&file.path, &value.name),
         };
-        insert(index, file, &tokens, target, value.span, value.exported)?;
+        insert(index, file, tokens, target, value.span, value.exported)?;
     }
     for value in &file.temporal {
         let target = super::temporal::target(&file.path, value);
-        insert(index, file, &tokens, target, value.span, false)?;
+        insert(index, file, tokens, target, value.syntax.span, false)?;
     }
     Ok(())
 }
@@ -87,7 +86,7 @@ fn insert(
         .ok_or_else(|| failure(file, span, "exported declaration has no export modifier"))?;
     let range = range(span);
     let value = IndexedTopLevelDeclaration {
-        source: file.source[range.start..range.end].to_owned(),
+        source: file.source()[range.start..range.end].to_owned(),
         range,
     };
     if index.top_levels.insert(target.clone(), value).is_some() {
@@ -121,7 +120,7 @@ fn module_range(
     if file.kind == FileKind::Entry {
         return Ok(TextRange {
             start: 0,
-            end: file.source.len(),
+            end: file.source().len(),
         });
     }
     let start = tokens
@@ -137,14 +136,6 @@ fn module_range(
             end: end.span.start,
         }),
         _ => Err(failure(file, Span::default(), "module body is unavailable")),
-    }
-}
-
-fn first_diagnostic(mut errors: Vec<Diagnostic>, file: &SurfaceFile) -> Diagnostic {
-    if errors.is_empty() {
-        failure(file, Span::default(), "source tokens are unavailable")
-    } else {
-        errors.remove(0)
     }
 }
 

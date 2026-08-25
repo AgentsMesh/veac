@@ -37,6 +37,16 @@ module {
     clamp(add_padding(base, padding), 2s, 3s)
   }
 
+  export fn card(
+    key: identifier, at: time, title: text, detail: text,
+    duration: time = 3s, mood: Mood = Mood.Calm,
+  ) -> Card {
+    Card {
+      key: key, at: at, duration: duration,
+      topic: title, detail: detail, mood: mood,
+    }
+  }
+
   export fn component_prefix(locale: Locale) -> text {
     match locale {
       Locale.zh-Hans => "组件化：",
@@ -47,18 +57,18 @@ module {
   fn add_padding(base: time, padding: time) -> time { base + padding }
 
   export fn first_card(duration: time) -> Card {
-    Card {
-      key: identifier("first"), at: 0s, duration: duration,
-      topic: "结构与方法", detail: "静态类型组件", mood: Mood.Calm,
-    }
+    card(
+      key: identifier("first"), at: 0s, title: "结构与方法",
+      detail: "静态类型组件", duration: duration,
+    )
   }
 
   export fn second_card(duration: time, accent: color) -> Card {
-    Card {
-      key: identifier("second"), at: duration, duration: duration,
-      topic: "枚举与控制流", detail: "穷尽匹配生成",
+    card(
+      key: identifier("second"), at: duration, title: "枚举与控制流",
+      detail: "穷尽匹配生成", duration: duration,
       mood: Mood.Accent { color: accent, },
-    }
+    )
   }
 
   export fn backdrop(card: Card) -> Item {

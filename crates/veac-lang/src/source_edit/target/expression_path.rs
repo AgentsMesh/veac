@@ -66,6 +66,10 @@ pub enum SourceExpressionStep {
     CallArgument {
         ordinal: u32,
     },
+    NamedCallArgument {
+        #[schemars(with = "super::schema::CanonicalNameSchema")]
+        name: String,
+    },
     FieldReceiver,
     NominalField {
         #[schemars(with = "super::schema::CanonicalNameSchema")]
@@ -99,9 +103,9 @@ pub enum SourceExpressionStep {
 impl SourceExpressionStep {
     fn is_valid(&self) -> bool {
         match self {
-            Self::LocalValue { binding, .. } | Self::NominalField { field: binding } => {
-                crate::name::is_name(binding)
-            }
+            Self::LocalValue { binding, .. }
+            | Self::NominalField { field: binding }
+            | Self::NamedCallArgument { name: binding } => crate::name::is_name(binding),
             Self::MatchArm { pattern } => valid_pattern(pattern),
             _ => true,
         }

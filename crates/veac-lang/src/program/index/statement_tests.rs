@@ -19,9 +19,11 @@ impl Timing @timing {
 
 #[test]
 fn statement_inventory_keeps_exact_utf8_byte_ranges_and_semicolons() {
-    let index = super::SourceIndex::build(&sources()).unwrap();
+    let index = super::test_support::index(&sources());
+    let revision = super::test_revision(&index);
     let node = index
-        .inventory()
+        .inventory(&revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == function())
@@ -50,10 +52,13 @@ fn statement_inventory_keeps_exact_utf8_byte_ranges_and_semicolons() {
 
 #[test]
 fn identical_function_and_method_paths_are_owner_isolated_and_stable() {
-    let first = super::SourceIndex::build(&sources()).unwrap();
-    let second = super::SourceIndex::build(&sources()).unwrap();
+    let first = super::test_support::index(&sources());
+    let second = super::test_support::index(&sources());
+    let first_revision = super::test_revision(&first);
+    let second_revision = super::test_revision(&second);
     let function_site = first
-        .inventory()
+        .inventory(&first_revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == function())
@@ -62,7 +67,8 @@ fn identical_function_and_method_paths_are_owner_isolated_and_stable() {
         .site
         .clone();
     let method_site = first
-        .inventory()
+        .inventory(&first_revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == method())
@@ -82,6 +88,10 @@ fn identical_function_and_method_paths_are_owner_isolated_and_stable() {
     assert_eq!(
         first.statement(&function(), &function_site),
         second.statement(&function(), &function_site)
+    );
+    assert_eq!(
+        first.inventory(&first_revision).unwrap(),
+        second.inventory(&second_revision).unwrap()
     );
 }
 

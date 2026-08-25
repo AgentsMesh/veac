@@ -15,6 +15,8 @@ pub(super) fn resolve(
     file: &SurfaceFile,
     scope: &mut Scope,
     retained: &mut retained::Budget,
+    database: &crate::program::CompilerDatabase,
+    admission: &crate::program::compiler_database::DependencyRouteAdmission,
 ) -> Result<BTreeSet<String>, Diagnostic> {
     validate_unique(file, scope)?;
     let definitions = file
@@ -24,8 +26,10 @@ pub(super) fn resolve(
         .collect::<Result<Vec<_>, _>>()?;
     let payload_limit = retained.function_payload_limit(&definitions);
     let context = scope.expression_context();
-    let compiled = expression::compile_functions_bounded(&context, &definitions, payload_limit)
+    let compiled = database
+        .compile_functions(&context, &definitions, payload_limit)
         .map_err(|error| diagnostic(file, error))?;
+    database.consume_invalidation(admission);
     retained.functions(file, compiled.functions(), compiled.methods())?;
     scope.functions = compiled.functions_arc();
     Ok(file
@@ -123,8 +127,21 @@ fn definition(
         .parameters
         .iter()
         .map(|parameter| {
-            type_annotations::resolve(file, scope, &parameter.type_syntax)
-                .map(|value| FunctionParameter::new(&parameter.name, value))
+            type_annotations::resolve(file, scope, &parameter.type_syntax).map(|value| {
+                let resolved = FunctionParameter::new(&parameter.name, value);
+                parameter
+                    .default
+                    .as_ref()
+                    .map_or(resolved.clone(), |default| {
+                        resolved.with_default(
+                            file.syntax.slice_text(&default.syntax),
+                            Some(FunctionOrigin::new(
+                                &file.path,
+                                default.span.start..default.span.end,
+                            )),
+                        )
+                    })
+            })
         })
         .collect::<Result<Vec<_>, _>>()?;
     let return_type = type_annotations::resolve(file, scope, &function.return_type_syntax)?;
@@ -132,12 +149,12 @@ fn definition(
         &function.name,
         parameters,
         return_type,
-        &function.body.source,
+        file.syntax.slice_text(&function.body.syntax),
     )
-    .with_origin(FunctionOrigin::new(
-        &file.path,
-        function.body.span.start..function.body.span.end,
-    )))
+    .with_origin(
+        FunctionOrigin::new(&file.path, function.body.span.start..function.body.span.end)
+            .with_syntax(&file.syntax, &function.body.syntax),
+    ))
 }
 
 fn diagnostic(file: &SurfaceFile, error: expression::ExpressionError) -> Diagnostic {

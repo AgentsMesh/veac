@@ -78,6 +78,9 @@ impl fmt::Display for SourceEditError {
                 formatter.write_str("target is not a removable top-level declaration")
             }
             Self::InvalidImport(value) => write!(formatter, "invalid import: {value}"),
+            Self::UnboundSourceIndex => {
+                formatter.write_str("source index is not bound to a prepared source graph")
+            }
             Self::AnchorModuleMismatch {
                 module,
                 anchor_module,

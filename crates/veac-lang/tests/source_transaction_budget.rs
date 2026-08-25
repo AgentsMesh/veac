@@ -19,7 +19,7 @@ fn transaction_rejects_oversized_edited_module_before_overlay_compilation() {
     let built = build_path(&entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_source_output_budget").unwrap(),
-        built.source_index().unwrap().revision().clone(),
+        built.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("main.veac", "duration"),

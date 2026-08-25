@@ -1,5 +1,6 @@
 use super::*;
 use crate::program::{TypeId, TypeRef};
+use std::collections::BTreeSet;
 
 #[test]
 fn default_builder_finishes_as_an_empty_registry() {
@@ -98,7 +99,7 @@ fn exported_and_reachable_snapshots_are_closed_and_stable() {
     let registry = builder.finish();
     let receiver = types.resolve("Brand").unwrap().id();
 
-    let exported = registry.exported();
+    let exported = registry.exported_for(&BTreeSet::from([receiver]));
     assert_eq!(exported.len(), 1);
     assert!(exported.lookup(receiver, "title").unwrap().body().is_none());
     assert!(exported.lookup(receiver, "helper").is_none());

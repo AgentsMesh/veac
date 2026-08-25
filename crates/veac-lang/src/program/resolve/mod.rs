@@ -1,9 +1,11 @@
 mod active;
 mod constants;
+mod dependency_routes;
 mod entry;
 mod functions;
 mod inputs;
 mod methods;
+mod module;
 mod names;
 mod prelude;
 mod retained;
@@ -14,42 +16,57 @@ mod types;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+use super::compiler_database::DependencyRouteAdmission;
 use super::diagnostic::Diagnostic;
 use super::expression::ExecutionBudget;
 use super::limits::SourceBudget;
-use super::loader::{validate_source_id, LoadedSource, SourceLoader};
-use super::model::{FileKind, Scope, SurfaceFile};
-use super::parser;
+use super::loader::{LoadedSource, SourceLoader};
+use super::model::{Scope, SurfaceFile};
+use super::CompilerDatabase;
 
-pub(crate) use entry::resolve as contract_entry;
+pub(crate) use entry::resolve_with_database as contract_entry_with_database;
 pub(crate) use standalone::resolve as standalone_module;
 
-pub(crate) fn executable_entry(
+pub(crate) fn module_interface_scope(
     root: LoadedSource,
     loader: &dyn SourceLoader,
     execution: &ExecutionBudget,
+    database: &CompilerDatabase,
+) -> Result<Scope, Vec<Diagnostic>> {
+    standalone::resolve_with_database(root, loader, execution, database, true)
+}
+
+pub(crate) fn executable_entry_with_database(
+    root: LoadedSource,
+    loader: &dyn SourceLoader,
+    execution: &ExecutionBudget,
+    database: &CompilerDatabase,
 ) -> Result<Resolution, Vec<Diagnostic>> {
-    entry::resolve(
+    entry::resolve_with_database(
         root,
         loader,
         execution,
         &crate::program::EntryContract::video(),
+        database,
     )
 }
 
 pub(crate) struct Resolution {
     pub entry: SurfaceFile,
     pub scope: Scope,
-    pub sources: BTreeMap<String, String>,
 }
 struct Resolver<'a> {
     loader: &'a dyn SourceLoader,
     cache: BTreeMap<String, Arc<Scope>>,
+    routes: BTreeMap<String, BTreeMap<String, String>>,
+    route_admissions: BTreeMap<String, DependencyRouteAdmission>,
+    retry_required: bool,
     active: Vec<String>,
     sources: BTreeMap<String, String>,
     budget: SourceBudget,
     retained: retained::Budget,
     execution: &'a ExecutionBudget,
+    database: &'a CompilerDatabase,
 }
 
 impl<'a> Resolver<'a> {
@@ -57,15 +74,20 @@ impl<'a> Resolver<'a> {
         loader: &'a dyn SourceLoader,
         budget: SourceBudget,
         execution: &'a ExecutionBudget,
+        database: &'a CompilerDatabase,
     ) -> Self {
         Self {
             loader,
             cache: BTreeMap::new(),
+            routes: BTreeMap::new(),
+            route_admissions: BTreeMap::new(),
+            retry_required: false,
             active: Vec::new(),
             sources: BTreeMap::new(),
             budget,
             retained: retained::Budget::default(),
             execution,
+            database,
         }
     }
 
@@ -94,10 +116,20 @@ impl<'a> Resolver<'a> {
             provisional_functions,
             constant_types,
         )?;
-        let exported_functions = functions::resolve(file, &mut scope, &mut self.retained)?;
+        let admission = self
+            .route_admissions
+            .get(&file.path)
+            .expect("parsed file has dependency route admission");
+        let exported_functions = functions::resolve(
+            file,
+            &mut scope,
+            &mut self.retained,
+            self.database,
+            admission,
+        )?;
         if exports_only {
             types::retain_exports(file, &mut scope, &exported_types)?;
-            methods::retain_exports(&mut scope);
+            methods::retain_exports(file, &mut scope, &exported_types);
             functions::retain_exports(&mut scope, &exported_functions);
             Arc::make_mut(&mut scope.values).retain(|name, _| exported_values.contains(name));
         }
@@ -106,6 +138,7 @@ impl<'a> Resolver<'a> {
 
     fn imports(&mut self, file: &SurfaceFile, scope: &mut Scope) -> Result<(), Diagnostic> {
         let mut aliases = BTreeSet::new();
+        let mut routes = self.routes.remove(&file.path).unwrap_or_default();
         for import in &file.imports {
             if !aliases.insert(import.alias.clone()) {
                 return Err(Diagnostic::new(
@@ -115,7 +148,9 @@ impl<'a> Resolver<'a> {
                     import.span,
                 ));
             }
-            let imported = self.module(&file.path, &import.path, import.span)?;
+            let (imported, resolved_source_id) =
+                self.module(&file.path, &import.path, import.span)?;
+            routes.insert(import.path.clone(), resolved_source_id);
             names::namespace(
                 &file.path,
                 &import.alias,
@@ -125,63 +160,7 @@ impl<'a> Resolver<'a> {
                 &mut self.retained,
             )?;
         }
+        self.commit_dependency_routes(file, routes);
         Ok(())
-    }
-
-    fn module(
-        &mut self,
-        importer: &str,
-        requested: &str,
-        span: crate::authoring::Span,
-    ) -> Result<Arc<Scope>, Diagnostic> {
-        let loaded = self
-            .loader
-            .load(importer, requested)
-            .map_err(|message| Diagnostic::new("PROGRAM_IMPORT_LOAD", importer, message, span))?;
-        validate_source_id(&loaded.id)
-            .map_err(|message| Diagnostic::new("PROGRAM_SOURCE_ID", importer, message, span))?;
-        if self
-            .sources
-            .get(&loaded.id)
-            .is_some_and(|source| source != &loaded.source)
-        {
-            return Err(Diagnostic::new(
-                "PROGRAM_SOURCE_ID_COLLISION",
-                importer,
-                format!("source ID `{}` resolved to different contents", loaded.id),
-                span,
-            ));
-        }
-        if let Some(scope) = self.cache.get(&loaded.id) {
-            return Ok(Arc::clone(scope));
-        }
-        active::check(&self.active, importer, &loaded.id, span)?;
-        self.budget.add(&loaded.id, &loaded.source, span)?;
-        self.active.push(loaded.id.clone());
-        self.sources
-            .insert(loaded.id.clone(), loaded.source.clone());
-        let result = self.load_module(importer, &loaded, span);
-        self.active.pop();
-        let scope = Arc::new(result?);
-        self.cache.insert(loaded.id, Arc::clone(&scope));
-        Ok(scope)
-    }
-
-    fn load_module(
-        &mut self,
-        importer: &str,
-        loaded: &LoadedSource,
-        span: crate::authoring::Span,
-    ) -> Result<Scope, Diagnostic> {
-        let file = parser::parse(&loaded.id, &loaded.source).map_err(|errors| errors[0].clone())?;
-        if !matches!(file.kind, FileKind::Module) {
-            return Err(Diagnostic::new(
-                "PROGRAM_IMPORT_PROJECT",
-                importer,
-                "imported file must contain a module",
-                span,
-            ));
-        }
-        self.scope(&file, true)
     }
 }

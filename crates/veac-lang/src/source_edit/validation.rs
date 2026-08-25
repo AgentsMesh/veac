@@ -81,8 +81,8 @@ pub fn validate_source_edit_batch(
     validate_digest(current)?;
     if batch.base_revision != *current {
         return Err(SourceEditError::StaleRevision {
-            expected: batch.base_revision.source_graph_sha256.clone(),
-            actual: current.source_graph_sha256.clone(),
+            expected: describe_revision(&batch.base_revision),
+            actual: describe_revision(current),
         });
     }
     precondition::require_satisfied(batch, snapshot)
@@ -146,11 +146,20 @@ pub(super) fn validate_target(target: &SourceNodeRef) -> Result<(), SourceEditEr
 }
 
 fn validate_digest(value: &SourceRevision) -> Result<(), SourceEditError> {
-    if valid_sha256(&value.source_graph_sha256) {
-        Ok(())
-    } else {
-        Err(SourceEditError::InvalidDigest(
-            value.source_graph_sha256.clone(),
-        ))
+    for digest in [
+        &value.authored_source_graph_sha256,
+        &value.complete_source_graph_sha256,
+    ] {
+        if !valid_sha256(digest) {
+            return Err(SourceEditError::InvalidDigest(digest.clone()));
+        }
     }
+    Ok(())
+}
+
+fn describe_revision(value: &SourceRevision) -> String {
+    format!(
+        "authored={}, complete={}",
+        value.authored_source_graph_sha256, value.complete_source_graph_sha256
+    )
 }

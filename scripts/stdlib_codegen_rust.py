@@ -7,9 +7,9 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TYPE_ROOT = ROOT / "crates/veac-lang/src/program/domain_system/domain_type/generated"
-OP_ROOT = ROOT / "crates/veac-lang/src/program/domain_system/operation_id/generated"
-CONTRACT_ROOT = ROOT / "crates/veac-lang/src/program/domain_system/catalog/generated"
+TYPE_ROOT = ROOT / "crates/veac-lang-model/src/domain_type/generated"
+OP_ROOT = ROOT / "crates/veac-domain-spec/src/operation_id/generated"
+CONTRACT_ROOT = ROOT / "crates/veac-domain-spec/src/catalog/generated"
 IR_OPCODE_ROOT = ROOT / "crates/veac-ir/src/validation/provenance/generated"
 PRIMITIVE_RUST = {
     "int": "Integer", "scalar": "Scalar", "time": "Time", "length": "Length",
@@ -37,3 +37,17 @@ def family_groups(operations):
     for operation in operations:
         values[operation["family"]].append(operation)
     return values
+
+
+def opcode_ranges(opcodes):
+    output = []
+    start = previous = opcodes[0]
+    for value in opcodes[1:] + [None]:
+        if value is not None and value == previous + 1:
+            previous = value
+            continue
+        output.append(
+            f"0x{start:04x}" if start == previous else f"0x{start:04x}..=0x{previous:04x}"
+        )
+        start = previous = value
+    return output

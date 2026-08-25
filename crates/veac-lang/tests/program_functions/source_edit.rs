@@ -56,11 +56,10 @@ fn editing_a_function_body_reexecutes_every_call_site() {
     let built = build_path(&entry).unwrap();
     assert_eq!(durations(&built), ["2s", "5s", "4s", "5s"]);
 
-    let index = built.source_index().unwrap();
     let target = SourceNodeRef::function("main.veac", "offset");
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_function_integration").unwrap(),
-        index.revision().clone(),
+        built.source_revision().unwrap(),
     );
     batch.preconditions.push(SourcePrecondition::BodyEquals {
         target: target.clone(),
@@ -96,8 +95,7 @@ fn editing_an_imported_function_is_a_revision_bound_preview() {
     let built = build_path(&entry).unwrap();
     assert_eq!(imported_durations(&built), ["2s", "4s"]);
 
-    let index = built.source_index().unwrap();
-    let revision = index.revision().clone();
+    let revision = built.source_revision().unwrap();
     let target = SourceNodeRef::function("timing.veac", "stretch");
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_imported_function").unwrap(),

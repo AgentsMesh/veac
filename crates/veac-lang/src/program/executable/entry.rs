@@ -12,8 +12,8 @@ pub(crate) fn validate(file: &SurfaceFile) -> Result<(), Diagnostic> {
             "PROGRAM_EXECUTABLE_MAIN_MISSING",
             "executable entry requires one root-local `fn main(context: Context) -> Project`",
             Span {
-                start: file.source.len(),
-                end: file.source.len(),
+                start: file.source().len(),
+                end: file.source().len(),
             },
         )
     })?;

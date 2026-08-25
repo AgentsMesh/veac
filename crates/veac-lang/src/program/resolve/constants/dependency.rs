@@ -3,15 +3,18 @@ use std::collections::BTreeSet;
 use crate::program::expression::{
     self, CoreProgram, ExpressionContext, ExpressionError, TypeEnvironment,
 };
+use crate::program::syntax_document::{SyntaxDocument, SyntaxSlice};
 
 pub(super) fn names(
-    source: &str,
+    document: &SyntaxDocument,
+    slice: &SyntaxSlice,
     declarations: &TypeEnvironment,
     context: &ExpressionContext,
 ) -> Result<BTreeSet<String>, ExpressionError> {
-    let mut names =
-        expression::referenced_value_symbols(source, &|name| declarations.contains_key(name))?;
-    let compiled = expression::compile_expression(source, declarations, context)?;
+    let mut names = expression::referenced_value_symbols_slice(document, slice, &|name| {
+        declarations.contains_key(name)
+    })?;
+    let compiled = expression::compile_expression_slice(document, slice, declarations, context)?;
     collect_inputs(compiled.core(), declarations, &mut names);
     let mut pending = compiled.core().called_functions();
     let mut visited = BTreeSet::new();

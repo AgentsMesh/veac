@@ -39,7 +39,7 @@ fn batch(entry: &std::path::Path, body: &str) -> SourceEditBatch {
     let prepared = prepare_path(entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_executable_source_edit").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("timing.veac", "rate"),
@@ -156,7 +156,7 @@ fn resource_batch(entry: &std::path::Path, body: &str) -> SourceEditBatch {
     let prepared = prepare_path(entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_resource_path_edit").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("images.veac", "hero"),

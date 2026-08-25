@@ -48,7 +48,7 @@ impl<B: ProjectBackend> NodeExecutor<ProjectAction> for ProjectNodeExecutor<B> {
         action: &ProjectAction,
     ) -> crate::BuildResult<veac_artifact::ContentDigest> {
         self.backend
-            .implementation_identity(action.kind())
+            .implementation_identity(action)
             .map_err(identity_error)?
             .digest_for(action.kind())
     }

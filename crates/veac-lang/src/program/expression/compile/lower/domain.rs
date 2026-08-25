@@ -1,6 +1,8 @@
 use super::Lowerer;
-use crate::program::expression::ast::Expression;
-use crate::program::expression::hir::{TypedDomainCall, TypedNode, TypedNodeKind};
+use crate::program::expression::ast::{CallArgument, Expression};
+use crate::program::expression::hir::{
+    TypedCallArgument, TypedDomainCall, TypedNode, TypedNodeKind,
+};
 use crate::program::expression::{ExpressionError, ValueType};
 use crate::program::{DomainOperationContract, DomainType};
 
@@ -8,15 +10,9 @@ impl Lowerer<'_> {
     pub(super) fn domain_function(
         &mut self,
         contract: &DomainOperationContract,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
-        super::typing::require_arity(
-            contract.name(),
-            arguments.len(),
-            contract.operands().len(),
-            expression.span.clone(),
-        )?;
         self.typed_domain_call(contract, Vec::new(), arguments, expression)
     }
 
@@ -25,7 +21,7 @@ impl Lowerer<'_> {
         receiver: TypedNode,
         receiver_type: DomainType,
         name: &str,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         let contract = self
@@ -39,33 +35,37 @@ impl Lowerer<'_> {
                     expression.span.clone(),
                 )
             })?;
-        super::typing::require_arity(
-            name,
-            arguments.len(),
-            contract.operands().len() - 1,
-            expression.span.clone(),
-        )?;
-        self.typed_domain_call(&contract, vec![receiver], arguments, expression)
+        self.typed_domain_call(
+            &contract,
+            vec![TypedCallArgument {
+                slot: 0,
+                value: receiver,
+            }],
+            arguments,
+            expression,
+        )
     }
 
     fn typed_domain_call(
         &mut self,
         contract: &DomainOperationContract,
-        mut operands: Vec<TypedNode>,
-        arguments: &[Expression],
-        _expression: &Expression,
+        mut operands: Vec<TypedCallArgument>,
+        arguments: &[CallArgument],
+        expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         let offset = operands.len();
-        for (index, (argument, specification)) in arguments
+        let parameters = contract.operands()[offset..]
             .iter()
-            .zip(&contract.operands()[offset..])
-            .enumerate()
-        {
-            let expected = specification.shape().value_type();
-            let value = self.lower_context(argument, Some(&expected))?;
-            super::call::check_value_argument(index, &value, &expected, argument)?;
-            operands.push(value);
-        }
+            .map(|specification| super::call::DeclaredParameter {
+                name: specification.name(),
+                value_type: specification.shape().value_type(),
+                default: None,
+            })
+            .collect::<Vec<_>>();
+        let bound =
+            self.bind_call_arguments(contract.name(), arguments, &parameters, offset, expression)?;
+        debug_assert!(bound.defaults.is_empty());
+        operands.extend(bound.explicit);
         Ok((
             TypedNodeKind::DomainCall(TypedDomainCall {
                 opcode: contract.id().opcode(),

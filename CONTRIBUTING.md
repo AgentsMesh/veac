@@ -50,10 +50,11 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 Please run both commands before submitting a pull request.
 
-Every Rust source file, including tests, must remain strictly below 200 lines. Split
-modules along coherent responsibilities using ordinary Rust submodules; `include!`
-and simultaneous `name.rs`/`name/mod.rs` module layouts are rejected by CI. Run the
-same structural check locally with:
+Every controlled implementation, test, documentation, example, specification, standard-library,
+and tooling file must remain strictly below 200 lines. This includes package manifests and
+extensionless `veac.package.lock` files under `stdlib/`. Split Rust modules along coherent
+responsibilities using ordinary submodules; `include!` and simultaneous `name.rs`/`name/mod.rs`
+module layouts are rejected by CI. Run the same structural check locally with:
 
 ```bash
 bash scripts/check-rust-structure.sh

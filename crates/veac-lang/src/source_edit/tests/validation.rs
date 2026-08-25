@@ -156,7 +156,7 @@ fn contract_rejects_bad_schema_digest_target_and_expression() {
         Err(SourceEditError::InvalidSchema)
     );
     value = batch();
-    value.base_revision.source_graph_sha256 = "ABC".to_owned();
+    value.base_revision.authored_source_graph_sha256 = "ABC".to_owned();
     assert!(matches!(
         validate_source_edit_contract(&value),
         Err(SourceEditError::InvalidDigest(_))

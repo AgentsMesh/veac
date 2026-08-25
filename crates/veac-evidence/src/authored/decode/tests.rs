@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use veac_lang::program::expression::{ExactNumber, Value};
 use veac_lang::program::{
     prepare_host_source, prepare_host_with_loader, EntryContract, EntryValueType, LoadedSource,
-    SourceLoader, TypeRegistry,
+    SourceAuthority, SourceLoader, TypeRegistry,
 };
 
 use super::value::{unknown_variant, Decoder};
@@ -141,5 +141,9 @@ impl SourceLoader for AbiLoader {
                 source: (*source).to_owned(),
             })
             .ok_or_else(|| format!("unknown source {requested}"))
+    }
+
+    fn authority(&self, _source_id: &str) -> SourceAuthority {
+        SourceAuthority::ReadOnlyDependency
     }
 }

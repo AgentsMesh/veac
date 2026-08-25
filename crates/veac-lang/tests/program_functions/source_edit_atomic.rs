@@ -30,7 +30,7 @@ fn two_function_body_replacements_share_one_atomic_revision() {
     let built = build_path(&entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_atomic_body_expression").unwrap(),
-        built.source_index().unwrap().revision().clone(),
+        built.source_revision().unwrap(),
     );
     batch.operations = vec![
         SourceEditOperation::SetBody {

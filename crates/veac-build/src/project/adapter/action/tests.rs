@@ -38,9 +38,10 @@ fn captured() -> CapturedGraph {
         },
         ProjectSourceGraphRevision {
             root_module: "evidence.veac".to_owned(),
-            source_graph_sha256: "1".repeat(64),
-            module_count: 2,
-            modules: vec!["evidence.veac".to_owned(), "helper.veac".to_owned()],
+            authored_source_graph_sha256: "1".repeat(64),
+            complete_source_graph_sha256: "2".repeat(64),
+            authored_module_count: 2,
+            authored_modules: vec!["evidence.veac".to_owned(), "helper.veac".to_owned()],
         },
     )
 }

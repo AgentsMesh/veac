@@ -97,15 +97,21 @@ impl Constants<'_> {
     }
 
     fn evaluate(&mut self, declaration: &ConstDecl) -> Result<Value, Diagnostic> {
-        let references = dependency::names(&declaration.expression, &self.types, &self.context)
-            .map_err(|error| expression_error(self.file, declaration, error))?;
+        let references = dependency::names(
+            &self.file.syntax,
+            &declaration.expression,
+            &self.types,
+            &self.context,
+        )
+        .map_err(|error| expression_error(self.file, declaration, error))?;
         for dependency in references {
             if self.declarations.contains_key(&dependency) {
                 self.value(&dependency)?;
             }
         }
         let trusted = expression::TrustedValueLookup::new(self.values);
-        let value = expression::evaluate_lookup_with_budget(
+        let value = expression::evaluate::lookup_slice_with_budget(
+            &self.file.syntax,
             &declaration.expression,
             &trusted,
             &self.context,

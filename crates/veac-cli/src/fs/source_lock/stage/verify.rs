@@ -7,6 +7,7 @@ use veac_artifact::ContentDigest;
 
 use crate::error::{CliError, CliResult};
 
+#[derive(Clone)]
 pub(super) struct ExpectedContent {
     digest: String,
     size: usize,

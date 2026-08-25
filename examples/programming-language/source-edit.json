@@ -1,9 +1,10 @@
 {
   "schema": "https://veac.dev/schemas/source-edit",
-  "schema_version": 6,
+  "schema_version": 9,
   "operation_id": "op_programming_language_statement_structural_batch",
   "base_revision": {
-    "source_graph_sha256": "0a6de945927fa224e3766dd5793a3dc6cd2e66e4995a661a8ba7fdf2e8a1f62b"
+    "authored_source_graph_sha256": "f6b3ff73e64e547d14c997d832da4192983b244d4c0b1e2bb05d2282c66570c4",
+    "complete_source_graph_sha256": "1e20d31a72310629feb8917443c7fa2424c2e8d245a6ca23e814961354966162"
   },
   "atomic": true,
   "preconditions": [

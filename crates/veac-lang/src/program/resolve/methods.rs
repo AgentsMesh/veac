@@ -55,8 +55,16 @@ pub(super) fn declare(
     Ok(())
 }
 
-pub(super) fn retain_exports(scope: &mut Scope) {
-    scope.methods = Arc::new(scope.methods.exported());
+pub(super) fn retain_exports(
+    file: &SurfaceFile,
+    scope: &mut Scope,
+    exported_types: &BTreeSet<String>,
+) {
+    let receivers = exported_types
+        .iter()
+        .map(|name| TypeId::derive(&file.path, name))
+        .collect();
+    scope.methods = Arc::new(scope.methods.exported_for(&receivers));
 }
 
 fn resolve_method(
@@ -69,8 +77,21 @@ fn resolve_method(
         .parameters
         .iter()
         .map(|parameter| {
-            type_annotations::resolve(file, scope, &parameter.type_syntax)
-                .map(|value| FunctionParameter::new(&parameter.name, value))
+            type_annotations::resolve(file, scope, &parameter.type_syntax).map(|value| {
+                let resolved = FunctionParameter::new(&parameter.name, value);
+                parameter
+                    .default
+                    .as_ref()
+                    .map_or(resolved.clone(), |default| {
+                        resolved.with_default(
+                            file.syntax.slice_text(&default.syntax),
+                            Some(FunctionOrigin::new(
+                                &file.path,
+                                default.span.start..default.span.end,
+                            )),
+                        )
+                    })
+            })
         })
         .collect::<Result<Vec<_>, _>>()?;
     let result = type_annotations::resolve(file, scope, &method.return_type_syntax)?;
@@ -84,8 +105,9 @@ fn resolve_method(
     Ok(
         MethodDefinition::new(signature, file.path.as_str(), visibility).with_body(
             MethodBody::new(
-                method.body.source.as_str(),
-                FunctionOrigin::new(&file.path, method.body.span.start..method.body.span.end),
+                file.syntax.slice_text(&method.body.syntax),
+                FunctionOrigin::new(&file.path, method.body.span.start..method.body.span.end)
+                    .with_syntax(&file.syntax, &method.body.syntax),
             ),
         ),
     )

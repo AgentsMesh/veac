@@ -36,7 +36,7 @@ fn temporal_body_is_indexed_and_rebuilt_from_source_truth() {
 
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_temporal_source_edit").unwrap(),
-        indexed.revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target,

@@ -99,7 +99,7 @@ pub(super) fn batch(entry: &Path, function: &str, body: &str) -> SourceEditBatch
     let prepared = prepare_path(entry).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_media_caption_source_edit").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("library.veac", function),

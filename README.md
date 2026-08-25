@@ -124,7 +124,7 @@ veac caption import captions.srt --format srt -o captions.json # Loss-aware side
 veac otio export project.json -o timeline.otio --allow-lossy --loss-report otio-loss.json
 veac plan build/project.json --material-root . --format json # Inspect detached IR
 veac manifest project.json -o build.json          # Capture reproducible dependencies
-veac package project.json --destination bundle    # Package reachable verified inputs
+veac bundle project.json --destination bundle     # Bundle reachable verified inputs
 veac package-bindings bundle -o bindings.json     # Restore verified package bindings
 veac relink project.json --search assets -o bindings.json     # Find SHA-256 matches
 veac artifact inspect .veac-artifacts <key>        # Revalidate one cache entry

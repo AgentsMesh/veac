@@ -1,5 +1,7 @@
 use std::fmt;
 
+use std::collections::BTreeMap;
+
 use crate::source_edit::{SourceEditError, SourceRevision};
 
 use super::super::{BuiltProgram, Diagnostics, ExecutableBuild};
@@ -8,8 +10,10 @@ use super::super::{BuiltProgram, Diagnostics, ExecutableBuild};
 pub enum SourceTransactionError {
     Program(Diagnostics),
     Contract(SourceEditError),
+    ReadOnlySource { module: String },
     TargetNotFound { operation: usize },
     ChangedModuleUnreachable { module: String },
+    RootChanged { expected: String, actual: String },
 }
 
 impl fmt::Display for SourceTransactionError {
@@ -17,6 +21,12 @@ impl fmt::Display for SourceTransactionError {
         match self {
             Self::Program(error) => write!(formatter, "{error}"),
             Self::Contract(error) => write!(formatter, "{error}"),
+            Self::ReadOnlySource { module } => {
+                write!(
+                    formatter,
+                    "source module {module:?} is a read-only dependency"
+                )
+            }
             Self::TargetNotFound { operation } => write!(
                 formatter,
                 "source-edit operation {operation} has no authored source site"
@@ -24,6 +34,10 @@ impl fmt::Display for SourceTransactionError {
             Self::ChangedModuleUnreachable { module } => write!(
                 formatter,
                 "changed source module {module:?} is unreachable in the candidate graph"
+            ),
+            Self::RootChanged { expected, actual } => write!(
+                formatter,
+                "source root changed from canonical module {expected:?} to {actual:?}"
             ),
         }
     }
@@ -38,6 +52,8 @@ pub struct ExecutableSourceEditPreview {
     pub new_revision: SourceRevision,
     pub built: BuiltProgram,
     pub(super) previous_modules: Vec<String>,
+    pub(super) previous_sources: BTreeMap<String, String>,
+    pub(super) candidate_sources: BTreeMap<String, String>,
 }
 
 #[derive(Debug)]
@@ -46,6 +62,7 @@ pub struct ExecutableSourceEditCandidate {
     pub(super) prepared: ExecutableBuild,
     pub(super) previous_revision: SourceRevision,
     pub(super) previous_modules: Vec<String>,
+    pub(super) previous_sources: BTreeMap<String, String>,
 }
 
 impl ExecutableSourceEditCandidate {
@@ -54,12 +71,14 @@ impl ExecutableSourceEditCandidate {
         prepared: ExecutableBuild,
         previous_revision: SourceRevision,
         previous_modules: Vec<String>,
+        previous_sources: BTreeMap<String, String>,
     ) -> Self {
         Self {
             changes,
             prepared,
             previous_revision,
             previous_modules,
+            previous_sources,
         }
     }
 
@@ -104,6 +123,8 @@ impl ExecutableSourceEditPreview {
         new_revision: SourceRevision,
         built: BuiltProgram,
         previous_modules: Vec<String>,
+        previous_sources: BTreeMap<String, String>,
+        candidate_sources: BTreeMap<String, String>,
     ) -> Self {
         Self {
             changes,
@@ -111,6 +132,8 @@ impl ExecutableSourceEditPreview {
             new_revision,
             built,
             previous_modules,
+            previous_sources,
+            candidate_sources,
         }
     }
 
@@ -135,6 +158,14 @@ impl ExecutableSourceEditPreview {
 
     pub fn previous_modules(&self) -> &[String] {
         &self.previous_modules
+    }
+
+    pub fn previous_sources(&self) -> &BTreeMap<String, String> {
+        &self.previous_sources
+    }
+
+    pub fn candidate_sources(&self) -> &BTreeMap<String, String> {
+        &self.candidate_sources
     }
 
     fn only_change(&self) -> Option<&SourceModuleChange> {

@@ -21,10 +21,10 @@ fn function_effect_syntax_has_typed_sources_of_truth() {
         LanguageLayer::ExecutableExpression
     );
     for effect in FunctionEffect::ALL {
-        assert_eq!(FunctionEffect::parse(effect.as_str()), Some(*effect));
+        assert_eq!(FunctionEffect::parse(effect.as_str()), Some(effect));
         assert_eq!(
             <FunctionEffect as SyntaxToken>::parse(effect.as_str()),
-            Some(*effect)
+            Some(effect)
         );
     }
 }

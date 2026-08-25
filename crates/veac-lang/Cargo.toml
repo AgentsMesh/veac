@@ -16,6 +16,8 @@ serde_json = "1"
 serde_json_canonicalizer = "0.3"
 sha2 = "0.10"
 veac-ir = { path = "../veac-ir" }
+veac-domain-spec = { path = "../veac-domain-spec" }
+veac-lang-model = { path = "../veac-lang-model" }
 
 [dev-dependencies]
 tempfile = "3"

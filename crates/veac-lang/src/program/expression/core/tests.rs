@@ -1,6 +1,7 @@
 mod aggregate_verifier;
 mod closure_verifier;
 mod for_each;
+mod for_each_contracts;
 mod input_type_order;
 mod internal_escape;
 mod local_mutation;

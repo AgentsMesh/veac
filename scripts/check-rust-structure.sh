@@ -5,6 +5,10 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/coverage-policy.sh"
 
 "$SCRIPT_DIR/check-file-size.sh"
+"$SCRIPT_DIR/tests/file-size-contracts.sh"
+"$SCRIPT_DIR/tests/architecture-dependency-contracts.sh"
+python3 "$SCRIPT_DIR/check-architecture-boundaries.py"
+"$SCRIPT_DIR/tests/architecture-boundary-contracts.sh"
 "$SCRIPT_DIR/tests/stdlib-codegen-contracts.sh"
 "$SCRIPT_DIR/tests/project-backend-identity-contracts.sh"
 "$SCRIPT_DIR/check-capability-evidence.sh"

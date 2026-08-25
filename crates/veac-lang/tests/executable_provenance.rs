@@ -2,8 +2,7 @@ use std::fs;
 use std::process::Command;
 
 use tempfile::tempdir;
-use veac_lang::program::{build_path, DomainOperationId as Op};
-use veac_lang::source_edit::{source_graph_revision, SourceModule};
+use veac_lang::program::{build_path, BuiltProgram, DomainOperationId as Op};
 
 const ENTRY: &str = r#"import "./library.veac" as library;
 fn main(context: Context) -> Project {
@@ -52,7 +51,7 @@ fn executable_authorship_tracks_modules_pure_maps_updates_and_identity() {
         veac_ir::canonical_json(second.envelope()).unwrap()
     );
     let project = &first.envelope().project;
-    assert_program_identity(first.envelope());
+    assert_program_identity(&first);
     let authorship = project.authorship.as_ref().unwrap();
     assert_path(&authorship.entity, &["project"]);
 
@@ -128,8 +127,8 @@ fn preview_lookup_helpers_consume_real_v10_authorship() {
     );
 }
 
-fn assert_program_identity(value: &veac_ir::ProjectEnvelope) {
-    let executable = &value.executable;
+fn assert_program_identity(value: &BuiltProgram) {
+    let executable = &value.envelope().executable;
     assert_eq!(executable.core_version, veac_ir::CURRENT_CORE_VERSION);
     assert_eq!(
         executable.domain_opset_version,
@@ -138,14 +137,9 @@ fn assert_program_identity(value: &veac_ir::ProjectEnvelope) {
     assert_eq!(executable.digests.domain_registry_sha256.len(), 64);
     assert_eq!(executable.digests.main_core_sha256.len(), 64);
     assert_eq!(executable.digests.source_graph_sha256.len(), 64);
-    let expected = source_graph_revision(&[
-        SourceModule::utf8("library.veac", MODULE),
-        SourceModule::utf8("main.veac", ENTRY),
-    ])
-    .unwrap();
     assert_eq!(
         executable.digests.source_graph_sha256,
-        expected.source_graph_sha256
+        value.source_graph().complete_revision().sha256()
     );
 }
 

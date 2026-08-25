@@ -1,5 +1,4 @@
-use crate::program::expression::{ValueType, ValueTypeError};
-use crate::program::DomainType;
+use veac_lang_model::{DomainType, ValueType, ValueTypeError};
 
 use super::{TypeRef, TypeSyntax, TypeSyntaxError, TypeSyntaxKind};
 

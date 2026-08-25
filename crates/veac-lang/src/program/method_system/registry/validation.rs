@@ -59,6 +59,7 @@ fn signature_contract(
         ));
     }
     let mut names = BTreeSet::from(["self"]);
+    let mut found_default = false;
     for parameter in &parameters[1..] {
         if !crate::name::is_name(&parameter.name)
             || parameter.name == "self"
@@ -66,6 +67,13 @@ fn signature_contract(
         {
             return Err(signature_error(
                 "method explicit parameter names must be unique canonical identifiers",
+            ));
+        }
+        if parameter.has_default() {
+            found_default = true;
+        } else if found_default {
+            return Err(signature_error(
+                "required method parameters cannot follow a parameter with a default",
             ));
         }
         known_type(&parameter.value_type, types)?;

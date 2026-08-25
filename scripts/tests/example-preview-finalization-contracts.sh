@@ -42,8 +42,8 @@ cat >"$SOURCE/brand.veac" <<'VEAC'
 module { export const time duration = 1s; }
 VEAC
 cat >"$SOURCE/source-edit.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-edit","schema_version":6,
-"operation_id":"op_finalization","base_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+{"schema":"https://veac.dev/schemas/source-edit","schema_version":9,
+"operation_id":"op_finalization","base_revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
 "atomic":true,"preconditions":[],"operations":[{"type":"set_expression",
 "target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
 "site":{"type":"constant_value"},"expression":{"source":"2s"}}]}
@@ -51,11 +51,11 @@ JSON
 cp "$SOURCE/main.veac" "$SOURCE/brand.veac" "$ENTRY/project/"
 cp "$SOURCE/source-edit.json" "$ENTRY/project/source-edit.json"
 cat >"$ENTRY/project/source.revision.json" <<'JSON'
-{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}
 JSON
 cat >"$ENTRY/project/source.index.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-index","schema_version":8,"build_inputs":[],
-"revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+{"schema":"https://veac.dev/schemas/source-index","schema_version":11,"build_inputs":[],
+"revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
 "modules":[{"module":"main.veac","range":{"start":0,"end":1},"imports":[],
 "declarations":[{"target":{"module":"main.veac","path":{"kind":"constant","constant":"duration"}},
 "source":"const time duration = brand.duration;","range":{"start":0,"end":1}}]}],
@@ -65,8 +65,8 @@ cat >"$ENTRY/project/source.index.json" <<'JSON'
 JSON
 cat >"$ENTRY/project/source-edit.outcome.json" <<'JSON'
 {"modules":["main.veac"],
-"previous_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
-"new_revision":{"source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+"previous_revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
+"new_revision":{"authored_source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","complete_source_graph_sha256":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},
 "destinations":[],"dry_run":true}
 JSON
 for evidence in edit.batch.json edit.outcome.json edit.replay.outcome.json \
@@ -83,7 +83,7 @@ cp -R "$ENTRY" "$BASELINE"
 rm "$ENTRY/project/source.index.json"
 expect_guard_failure "missing source index"
 restore_entry
-jq '.schema_version = 7' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
+jq '.schema_version = 10' "$ENTRY/project/source.index.json" >"$TMP/source.index.json"
 mv "$TMP/source.index.json" "$ENTRY/project/source.index.json"
 expect_guard_failure "legacy source index"
 restore_entry

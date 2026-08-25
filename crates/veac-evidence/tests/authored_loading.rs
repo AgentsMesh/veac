@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use veac_evidence::*;
-use veac_lang::program::{LoadedSource, SourceLoader};
+use veac_lang::program::{LoadedSource, SourceAuthority, SourceLoader};
 
 const ALL_FEATURES: &str = include_str!("fixtures/authored_all_features.veac");
 const HELPER: &str = r#"module {
@@ -41,6 +41,29 @@ fn delegated_loader_preserves_authored_graph_and_owns_the_builtin_module() {
 }
 
 #[test]
+fn arbitrary_read_only_dependencies_only_affect_complete_identity() {
+    let entry = LoadedSource {
+        id: "evidence.veac".to_owned(),
+        source: imported_source(),
+    };
+    let build = |helper: String| {
+        build_evidence_with_loader(
+            entry.clone(),
+            &ReadOnlyHelperLoader(BTreeMap::from([("helper.veac".to_owned(), helper)])),
+        )
+        .unwrap()
+    };
+    let first = build(HELPER.to_owned());
+    let second = build(format!("{HELPER}\n"));
+    assert_eq!(first.sources.keys().collect::<Vec<_>>(), ["evidence.veac"]);
+    assert_eq!(first.source_revision, second.source_revision);
+    assert_ne!(
+        first.complete_source_graph_revision,
+        second.complete_source_graph_revision
+    );
+}
+
+#[test]
 fn path_and_explicit_root_apis_keep_stable_source_ids() {
     let temp = tempfile::tempdir().unwrap();
     let contracts = temp.path().join("contracts");
@@ -76,6 +99,8 @@ fn explicit_root_rejects_entry_escape_and_missing_files() {
 
 struct MapLoader(BTreeMap<String, String>);
 
+struct ReadOnlyHelperLoader(BTreeMap<String, String>);
+
 impl SourceLoader for MapLoader {
     fn load(&self, importer: &str, requested: &str) -> Result<LoadedSource, String> {
         let id = if requested == "./helper.veac" {
@@ -90,5 +115,23 @@ impl SourceLoader for MapLoader {
                 source: source.clone(),
             })
             .ok_or_else(|| format!("{importer} cannot resolve {requested}"))
+    }
+
+    fn authority(&self, _source_id: &str) -> SourceAuthority {
+        SourceAuthority::Project
+    }
+}
+
+impl SourceLoader for ReadOnlyHelperLoader {
+    fn load(&self, importer: &str, requested: &str) -> Result<LoadedSource, String> {
+        MapLoader(self.0.clone()).load(importer, requested)
+    }
+
+    fn authority(&self, source_id: &str) -> SourceAuthority {
+        if source_id == "helper.veac" {
+            SourceAuthority::ReadOnlyDependency
+        } else {
+            SourceAuthority::Project
+        }
     }
 }

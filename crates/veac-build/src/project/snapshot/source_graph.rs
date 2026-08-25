@@ -7,14 +7,23 @@ use crate::{BuildError, BuildResult, ProjectFileSnapshot, ProjectSourceGraphRevi
 pub(super) fn capture(
     root: &Path,
     path: &ProjectPath,
+    packages: &super::ProjectPackageSet,
 ) -> BuildResult<(ProjectFileSnapshot, ProjectSourceGraphRevision)> {
     let entry_path = super::checked_file(root, path)?;
-    let prepared = veac_lang::program::prepare_path(&entry_path).map_err(|error| {
-        BuildError::invalid(format!(
-            "project VEAC source graph {} is invalid: {error}",
-            path.as_str()
-        ))
-    })?;
+    packages.revalidate()?;
+    let (project, entry_source) = veac_lang::program::FileSystemLoader::for_entry(&entry_path)
+        .map_err(|error| {
+            BuildError::invalid(format!("cannot load project source graph: {error}"))
+        })?;
+    let loader = packages.loader(project)?;
+    let prepared =
+        veac_lang::program::prepare_with_loader(entry_source, &loader).map_err(|error| {
+            BuildError::invalid(format!(
+                "project VEAC source graph {} is invalid: {error}",
+                path.as_str()
+            ))
+        })?;
+    packages.revalidate()?;
     let root_module = prepared.root_module();
     let Some(entry_name) = entry_path.file_name() else {
         return Err(BuildError::invalid("project VEAC entry has no file name"));
@@ -31,8 +40,8 @@ pub(super) fn capture(
         content: veac_artifact::ContentDigest::sha256(source.as_bytes()),
         size_bytes: source.len() as u64,
     };
-    let modules = prepared
-        .sources()
+    let authored_sources = prepared.source_graph().project_sources();
+    let modules = authored_sources
         .iter()
         .map(|(module, source)| veac_lang::source_edit::SourceModule::utf8(module, source))
         .collect::<Vec<_>>();
@@ -44,15 +53,20 @@ pub(super) fn capture(
             )))
         }
     };
-    let module_count = super::graph_module_count(modules.len(), "project VEAC")?;
-    let module_paths = prepared.sources().keys().cloned().collect();
+    let authored_module_count = super::graph_module_count(modules.len(), "project VEAC")?;
+    let authored_modules = authored_sources.keys().cloned().collect();
     Ok((
         entry,
         ProjectSourceGraphRevision {
             root_module: root_module.to_owned(),
-            source_graph_sha256: revision.source_graph_sha256,
-            module_count,
-            modules: module_paths,
+            authored_source_graph_sha256: revision.source_graph_sha256,
+            complete_source_graph_sha256: prepared
+                .source_graph()
+                .complete_revision()
+                .sha256()
+                .to_owned(),
+            authored_module_count,
+            authored_modules,
         },
     ))
 }

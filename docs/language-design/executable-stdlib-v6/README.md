@@ -4,10 +4,12 @@ Status: Implemented normative v6 Surface contract.
 
 ## Purpose
 
-This directory fixes the complete executable video-domain API before numeric operation IDs are
-allocated. It is the machine-facing contract for Surface resolution, typed HIR, Core verification,
-runtime graph construction, source indexing, and canonical lowering. Canonical JSON is an output of
-this API, never an authoring model.
+This directory documents the complete executable video-domain API. All eleven families use the
+versioned machine-readable files in [`spec/domain`](../../../spec/domain) as their sole identity,
+classification, operand-axis, and execution-semantics source; these Markdown pages are parity-checked
+signature projections.
+Canonical project JSON is an output of this API, never an authoring model. Each family manifest points
+to operation shards so the machine contract remains reviewable and below the file-size limit.
 
 The API is a closed algebra. Every choice has a named descriptor type and constructor. Descriptors
 are immutable and opaque. Aggregate methods attach a whole semantic value to its owner; there are no
@@ -31,9 +33,10 @@ new handle in the same transaction. No graph handle is serializable or valid out
 Every owned attachment boundary has singular and ordered-list methods; list attachment is atomic and
 does not weaken static topology, single ownership, stale-handle, stage, or transaction rules.
 
-Each callable receives one numeric v6 domain operation before implementation. The generated language
-spec pins name, signature, receiver, result, effect, stage, topology operands, leaf operands, and
-registry digest. This document deliberately does not guess numeric IDs.
+Each callable and Domain type owns an explicit stable opcode in the JSON v3 source. Operations also
+declare receiver and parameter axes plus instruction, runtime action, effect, stage, and temporal
+lowering. The generator sorts by opcode and projects those values without order- or name-based
+inference; the generated language spec and registry digest preserve the same contract.
 
 ## Families
 

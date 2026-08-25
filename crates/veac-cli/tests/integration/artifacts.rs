@@ -37,14 +37,14 @@ fn package_contains_only_reachable_identity_verified_inputs() {
     let package = temp.path().join("bundle");
     veac()
         .args([
-            "package",
+            "bundle",
             project.to_str().unwrap(),
             "--destination",
             package.to_str().unwrap(),
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Packaged:"));
+        .stdout(predicate::str::contains("Bundled:"));
     let manifest: serde_json::Value =
         serde_json::from_slice(&std::fs::read(package.join("package.json")).unwrap()).unwrap();
     assert_eq!(manifest["entries"].as_array().unwrap().len(), 1);
@@ -62,7 +62,7 @@ fn package_bindings_restore_render_without_the_original_media() {
     let package = temp.path().join("bundle");
     veac()
         .args([
-            "package",
+            "bundle",
             project.to_str().unwrap(),
             "--destination",
             package.to_str().unwrap(),
@@ -138,7 +138,7 @@ fn relink_discovers_exact_identity_and_rejects_ambiguity() {
     let package = temp.path().join("bundle");
     veac()
         .args([
-            "package",
+            "bundle",
             project.to_str().unwrap(),
             "--destination",
             package.to_str().unwrap(),

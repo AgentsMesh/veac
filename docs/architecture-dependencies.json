@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "dependency_kinds": ["normal", "build"],
+  "unlisted_packages": "forbidden",
+  "cycles": "forbidden",
+  "layers": [
+    {
+      "name": "canonical-model",
+      "packages": ["veac-ir"],
+      "planned_packages": [],
+      "may_depend_on": []
+    },
+    {
+      "name": "language-model",
+      "packages": ["veac-lang-model"],
+      "planned_packages": [],
+      "may_depend_on": []
+    },
+    {
+      "name": "language-syntax",
+      "packages": [],
+      "planned_packages": ["veac-syntax"],
+      "may_depend_on": ["language-model"]
+    },
+    {
+      "name": "language-source",
+      "packages": [],
+      "planned_packages": ["veac-source"],
+      "may_depend_on": ["canonical-model", "language-model", "language-syntax"]
+    },
+    {
+      "name": "language-domain-spec",
+      "packages": ["veac-domain-spec"],
+      "planned_packages": [],
+      "may_depend_on": ["language-model"]
+    },
+    {
+      "name": "language-core",
+      "packages": [],
+      "planned_packages": ["veac-core"],
+      "may_depend_on": ["language-domain-spec", "language-model"]
+    },
+    {
+      "name": "language-eval",
+      "packages": [],
+      "planned_packages": ["veac-eval"],
+      "may_depend_on": ["language-core", "language-domain-spec", "language-model"]
+    },
+    {
+      "name": "language-compiler",
+      "packages": [],
+      "planned_packages": ["veac-compiler"],
+      "may_depend_on": ["language-core", "language-eval", "language-source", "language-syntax"]
+    },
+    {
+      "name": "language-domain",
+      "packages": [],
+      "planned_packages": ["veac-domain"],
+      "may_depend_on": ["language-domain-spec", "language-eval", "language-model"]
+    },
+    {
+      "name": "language-temporal",
+      "packages": [],
+      "planned_packages": ["veac-temporal"],
+      "may_depend_on": ["canonical-model", "language-core", "language-domain", "language-eval"]
+    },
+    {
+      "name": "language-lower",
+      "packages": [],
+      "planned_packages": ["veac-lower"],
+      "may_depend_on": ["canonical-model", "language-domain", "language-temporal"]
+    },
+    {
+      "name": "language-facade",
+      "packages": ["veac-lang"],
+      "planned_packages": [],
+      "may_depend_on": ["canonical-model", "language-compiler", "language-core", "language-domain", "language-domain-spec", "language-eval", "language-lower", "language-model", "language-source", "language-syntax", "language-temporal"]
+    },
+    {
+      "name": "planning",
+      "packages": ["veac-plan"],
+      "planned_packages": [],
+      "may_depend_on": ["canonical-model"]
+    },
+    {
+      "name": "artifact",
+      "packages": ["veac-artifact"],
+      "planned_packages": [],
+      "may_depend_on": ["canonical-model", "planning"]
+    },
+    {
+      "name": "canonical-adapter",
+      "packages": ["veac-caption", "veac-otio", "veac-template"],
+      "planned_packages": [],
+      "may_depend_on": ["canonical-model"]
+    },
+    {
+      "name": "backend-codegen",
+      "packages": ["veac-codegen"],
+      "planned_packages": [],
+      "may_depend_on": ["artifact", "canonical-model", "planning"]
+    },
+    {
+      "name": "artifact-provider",
+      "packages": ["veac-provider"],
+      "planned_packages": [],
+      "may_depend_on": ["artifact", "canonical-model"]
+    },
+    {
+      "name": "runtime",
+      "packages": ["veac-runtime"],
+      "planned_packages": [],
+      "may_depend_on": ["artifact", "artifact-provider", "backend-codegen", "canonical-model"]
+    },
+    {
+      "name": "project",
+      "packages": ["veac-project"],
+      "planned_packages": [],
+      "may_depend_on": ["language-facade"]
+    },
+    {
+      "name": "evidence",
+      "packages": ["veac-evidence"],
+      "planned_packages": [],
+      "may_depend_on": ["canonical-model", "language-facade", "runtime"]
+    },
+    {
+      "name": "build",
+      "packages": ["veac-build"],
+      "planned_packages": [],
+      "may_depend_on": ["artifact", "evidence", "language-facade", "project"]
+    },
+    {
+      "name": "cli",
+      "packages": ["veac-cli"],
+      "planned_packages": [],
+      "may_depend_on": ["artifact", "artifact-provider", "backend-codegen", "build", "canonical-adapter", "canonical-model", "evidence", "language-facade", "planning", "project", "runtime"]
+    }
+  ]
+}

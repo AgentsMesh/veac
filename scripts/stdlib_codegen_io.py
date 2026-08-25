@@ -9,9 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUTS = (
-    ROOT / "crates/veac-lang/src/program/domain_system/domain_type/generated",
-    ROOT / "crates/veac-lang/src/program/domain_system/operation_id/generated",
-    ROOT / "crates/veac-lang/src/program/domain_system/catalog/generated",
+    ROOT / "crates/veac-lang-model/src/domain_type/generated",
+    ROOT / "crates/veac-domain-spec/src/operation_id/generated",
+    ROOT / "crates/veac-domain-spec/src/catalog/generated",
     ROOT / "crates/veac-ir/src/validation/provenance/generated",
 )
 

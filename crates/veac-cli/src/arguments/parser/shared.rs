@@ -58,6 +58,15 @@ pub(super) fn string_values(matches: &ArgMatches, id: &str) -> Vec<String> {
         .collect()
 }
 
+pub(super) fn path_values(matches: &ArgMatches, id: &str) -> Vec<PathBuf> {
+    matches
+        .get_many::<PathBuf>(id)
+        .into_iter()
+        .flatten()
+        .cloned()
+        .collect()
+}
+
 pub(super) fn flag_value(matches: &ArgMatches, id: &str) -> bool {
     matches.get_flag(id)
 }
@@ -88,6 +97,8 @@ fn value_name(id: &str) -> &'static str {
         "inline_inputs" => "NAME=VALUE",
         "key" => "KEY",
         "package" => "PACKAGE",
+        "root" => "PACKAGE_ROOT",
+        "query" => "QUERY",
         "search" => "SEARCH",
         "track" => "TRACK",
         "sequence" => "SEQUENCE",
@@ -104,6 +115,7 @@ fn value_name(id: &str) -> &'static str {
         "media" => "MEDIA",
         "material" => "MATERIAL_ID",
         "material_root" => "MATERIAL_ROOT",
+        "package_roots" => "PACKAGE_ROOT",
         _ => unreachable!("all parser value identifiers have display names"),
     }
 }

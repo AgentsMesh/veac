@@ -29,6 +29,9 @@ fn invalid_nested_paths_fail_before_source_lookup() {
         SourceExpressionPath::new(vec![SourceExpressionStep::NominalField {
             field: "not a name".to_owned(),
         }]),
+        SourceExpressionPath::new(vec![SourceExpressionStep::NamedCallArgument {
+            name: "not a name".to_owned(),
+        }]),
         SourceExpressionPath::new(vec![SourceExpressionStep::MatchArm {
             pattern: "Choice..Broken".to_owned(),
         }]),
@@ -47,4 +50,19 @@ fn invalid_nested_paths_fail_before_source_lookup() {
             Err(SourceEditError::InvalidExpressionPath)
         );
     }
+}
+
+#[test]
+fn named_call_paths_roundtrip_as_closed_schema_values() {
+    let path = SourceExpressionPath::new(vec![SourceExpressionStep::NamedCallArgument {
+        name: "duration".to_owned(),
+    }]);
+    assert!(path.is_valid());
+    let json = serde_json::to_value(&path).unwrap();
+    assert_eq!(json["steps"][0]["step"], "named_call_argument");
+    assert_eq!(json["steps"][0]["name"], "duration");
+    assert_eq!(
+        serde_json::from_value::<SourceExpressionPath>(json).unwrap(),
+        path
+    );
 }

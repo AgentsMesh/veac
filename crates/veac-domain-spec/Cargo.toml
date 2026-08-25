@@ -1,0 +1,9 @@
+[package]
+name = "veac-domain-spec"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sha2 = "0.10"
+veac-lang-model = { path = "../veac-lang-model" }

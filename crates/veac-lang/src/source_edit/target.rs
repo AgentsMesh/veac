@@ -97,7 +97,13 @@ impl SourceNodeRef {
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ExpressionSite {
     ConstantValue,
-    BodyExpression { path: SourceExpressionPath },
+    ParameterDefault {
+        #[schemars(with = "schema::CanonicalNameSchema")]
+        parameter: String,
+    },
+    BodyExpression {
+        path: SourceExpressionPath,
+    },
 }
 
 #[derive(

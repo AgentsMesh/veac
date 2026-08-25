@@ -11,10 +11,15 @@ veac source-index main.veac
 veac schema --contract source-index
 ```
 
-revision 是所有已加载 module 的 canonical source ID 与精确 UTF-8 字节的 SHA-256。空白和注释也参与
-并发控制；inode、mode 与 parent identity 不进入可移植 revision，而由提交期 filesystem 护栏验证。
+revision 同时发布 `authored_source_graph_sha256` 与 `complete_source_graph_sha256`。前者只覆盖所有
+`Project` authority module 的 canonical source ID 与精确 UTF-8 字节，是可写 inventory 和乐观并发控制；
+后者还覆盖只读 package/ABI module、authority 与完整 import route，是编译、执行和防篡改身份。空白与
+注释参与两者；inode、mode 与 parent identity 不进入可移植 revision，由提交期 filesystem 护栏验证。
+`SourceIndex` 只能从同一个已冻结 source graph 构建，并在内部绑定该 graph 的完整身份。inventory 发布前
+会同时比对 authored 与 complete digest；仅格式合法但不属于该 graph 的 complete digest 会被当作 stale
+revision 拒绝，调用方不能为相同可写源码拼接另一个依赖图身份。
 
-`source-index` v8 是无需 Build input 值的静态 Agent discovery boundary。输出固定包含 graph
+`source-index` v11 是无需 Build input 值的静态 Agent discovery boundary。输出固定包含双字段 graph
 `revision`、按名字排序的 `build_inputs`、按 module 排序的 `modules` 和按 typed path 排序的 `nodes`：
 
 - Build input 发布 name、role 和闭合 value type；payloadless enum 还发布 nominal TypeId、definition
@@ -33,15 +38,16 @@ revision 是所有已加载 module 的 canonical source ID 与精确 UTF-8 字�
 member 的 range 不包含分隔逗号。Agent 应把 inventory 的 revision、target 和当前 source 放入 batch
 precondition，不应缓存 byte offset 或执行后生成的 canonical entity ID。
 
-## Source-Edit v6
+## Source-Edit v9
 
 ```json,source-edit-batch
 {
   "schema": "https://veac.dev/schemas/source-edit",
-  "schema_version": 6,
+  "schema_version": 9,
   "operation_id": "op_change_section_duration",
   "base_revision": {
-    "source_graph_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    "authored_source_graph_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "complete_source_graph_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
   },
   "atomic": true,
   "preconditions": [
@@ -69,7 +75,7 @@ precondition，不应缓存 byte offset 或执行后生成的 canonical entity I
 }
 ```
 
-机器 schema 由 `veac schema --contract source-edit-batch` 生成。v6 的操作分成三组：
+机器 schema 由 `veac schema --contract source-edit-batch` 生成。v9 的局部操作分成四组：
 
 - `expression_equals`/`set_expression` 编辑 const，或 function/method body 中由
   `body_expression` + `SourceExpressionPath` 寻址的 pure expression；
@@ -112,11 +118,12 @@ function 或 synthetic `.veac` program。这个局部检查只确认恰好存在
 ## 多模块事务
 
 ```bash
-veac source-edit main.veac source-edit.json --dry-run
-veac source-edit main.veac source-edit.json
-veac source-edit main.veac source-edit.json --inputs build-inputs.json
-veac source-edit main.veac source-edit.json --inputs build-inputs.json --input locale=zh-Hans
-veac source-edit main.veac source-edit.json --output revised.veac
+veac source-edit main.veac source-edit.json --dry-run --package-root packages/components
+veac source-edit main.veac source-edit.json --package-root packages/components
+veac source-edit main.veac source-edit.json --inputs build-inputs.json --package-root packages/components
+veac source-edit main.veac source-edit.json --inputs build-inputs.json --input locale=zh-Hans \
+  --package-root packages/components
+veac source-edit main.veac source-edit.json --output revised.veac --package-root packages/components
 ```
 
 一个 batch 可同时修改多个 module，例如在被导入模块 rename API，同时替换 entry 的 import alias 与调用
@@ -125,9 +132,27 @@ body。所有 operation 使用同一 base revision；VEAC 按 module 生成 dete
 写源码。Build input 项目必须通过 `--inputs`、可重复的 `--input NAME=VALUE` 或两者组合，提供与候选
 执行相同的完整 typed bindings，不能回退为空值或 ambient state；inline 同名值显式覆盖 manifest base。
 
+长驻编辑器或 Agent 服务应复用同一个 `CompilerDatabase`：先用它准备 source graph 和 source index，
+再用同一个实例准备候选 batch。当前可复用的是相同完整 source graph 的 lossless syntax、完整 graph-bound
+interface，以及相同 function batch/context 的 HIR/Core；这不是按未变化 module 或 declaration 的增量复用。
+依赖变化会按 route 图失效受影响的语义缓存。数据库统计中的 hit/miss、累计 `semantic_invalidations` 与 pending 数量可用于
+编辑器诊断；`clear()` 会释放 retained query 和当前依赖图，但保留累计 telemetry。
+
+缓存不拥有执行态。每次 preview 或 commit 都重新绑定 build inputs，执行新的 graph transaction，完成
+freeze、Temporal residualization、canonical lowering 和 IR validation。`ExecutableBuild`、`BuiltProgram`
+及 runtime budget 只能由当前调用持有；同一个 candidate 先 preview 再 consuming execute 时，两个结果
+必须 canonical 等价，且不会改变 CompilerDatabase 的 query statistics。
+
 新插入的 import 可以加载 source root 中原 graph 未触达的既存 module。候选 build 的全部未编辑依赖也
 会成为 commit guard；preview 后这些依赖发生 byte、path type、parent 或可观察 identity 变化时，提交拒绝。
 移除 import 的旧 graph 仍由 previous revision 保守复核。
+
+Package module 是不可变依赖，不是 source-edit destination。其命名空间源码字节、authority 与 import
+route 进入 `base_revision.complete_source_graph_sha256`，但不进入 authored 字段和公开可编辑 inventory；
+候选编译通过已验证的 fallback loader 重新加载未修改 package。编辑 package target 返回
+`SOURCE_EDIT_READ_ONLY_DEPENDENCY`，向已挂载 package root 发布也会 fail closed。preview 和 publish
+必须使用同一组显式 package root；package 篡改或 lock identity 漂移会使 batch 失效，不能被仅校验
+project source 的流程隐藏。
 
 build、check、format、source-index、source-revision 和 source-edit preview 在加载整个 module graph 时，
 会在 `.veac-source.lock` 持有 shared snapshot lock；in-place commit 在同一文件持有 exclusive lock。

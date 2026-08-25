@@ -12,6 +12,8 @@ mod error_paths;
 mod path_races;
 #[path = "tests/read.rs"]
 mod read;
+#[path = "tests/stage_cas.rs"]
+mod stage_cas;
 #[path = "tests/stage_races.rs"]
 mod stage_races;
 

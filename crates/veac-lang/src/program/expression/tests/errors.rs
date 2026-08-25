@@ -44,7 +44,8 @@ fn parser_and_resolution_errors_are_fail_closed() {
         ("1 2", "EXPRESSION_TRAILING_TOKEN"),
         ("(1", "EXPRESSION_EXPECTED_TOKEN"),
         ("min(1", "EXPRESSION_EXPECTED_TOKEN"),
-        ("min(1,)", "EXPRESSION_EXPECTED_VALUE"),
+        // A trailing comma is valid call syntax; arity checking owns the diagnostic.
+        ("min(1,)", "EXPRESSION_CALL_ARITY"),
         ("watts", "EXPRESSION_UNKNOWN_SYMBOL"),
         ("1fortnight", "EXPRESSION_UNIT"),
         ("1db", "EXPRESSION_UNIT"),

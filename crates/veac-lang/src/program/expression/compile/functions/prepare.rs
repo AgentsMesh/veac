@@ -9,7 +9,7 @@ use super::super::body::ResolvedBody;
 use super::super::lower::{self, SymbolTarget};
 use super::super::signature::{FunctionSignature, FunctionSignatures};
 
-pub(super) fn all(
+pub(crate) fn all(
     context: &ExpressionContext,
     definitions: &[FunctionDefinition],
     signatures: &FunctionSignatures,
@@ -18,6 +18,14 @@ pub(super) fn all(
         .iter()
         .map(|definition| regular(context, definition, signatures))
         .collect::<Result<Vec<_>, _>>()?;
+    for definition in definitions {
+        let signature = signatures
+            .get(&definition.name)
+            .expect("validated local signature is registered");
+        output.extend(super::super::defaults::prepare(
+            context, signature, signatures,
+        )?);
+    }
     output.extend(
         context
             .methods()
@@ -26,6 +34,20 @@ pub(super) fn all(
             .map(|definition| method(context, definition, signatures))
             .collect::<Result<Vec<_>, _>>()?,
     );
+    for definition in context
+        .methods()
+        .definitions()
+        .filter(|definition| definition.body().is_some())
+    {
+        let signature = definition.signature();
+        let owner = super::super::signature::method(
+            signature,
+            format!("{}.{}", signature.receiver(), signature.name()),
+        );
+        output.extend(super::super::defaults::prepare(
+            context, &owner, signatures,
+        )?);
+    }
     Ok(output)
 }
 
@@ -55,12 +77,7 @@ fn method(
     let method = definition.body().expect("filtered authored method body");
     let signature = definition.signature();
     let display_name = format!("{}.{}", signature.receiver(), signature.name());
-    let local = FunctionSignature::new(
-        signature.function_id(),
-        display_name,
-        signature.parameters_with_receiver().to_vec(),
-        signature.return_type().clone(),
-    );
+    let local = super::super::signature::method(signature, display_name);
     resolved(
         context,
         &local,
@@ -79,7 +96,8 @@ fn resolved(
     visible: bool,
     signatures: &FunctionSignatures,
 ) -> Result<ResolvedBody, ExpressionError> {
-    let parsed = parse(source).map_err(|error| decorate(error, signature.name(), origin))?;
+    let parsed =
+        parse(source, origin).map_err(|error| decorate(error, signature.name(), origin))?;
     let parameters = parameter_symbols(signature.parameters());
     let typed = lower::function_with_signatures(
         &parsed,
@@ -117,9 +135,9 @@ fn resolved(
     Ok(ResolvedBody::new(signature, source, origin, visible, typed))
 }
 
-fn parse(source: &str) -> Result<Expression, ExpressionError> {
-    let expression =
-        super::super::super::lexer::lex(source).and_then(super::super::super::parser::parse)?;
+fn parse(source: &str, origin: Option<&FunctionOrigin>) -> Result<Expression, ExpressionError> {
+    let syntax = origin.and_then(FunctionOrigin::syntax);
+    let expression = super::super::super::cst_adapter::parse(source, syntax)?;
     matches!(&expression.kind, ExpressionKind::Block(_))
         .then_some(expression)
         .ok_or_else(|| {

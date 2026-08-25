@@ -1,17 +1,44 @@
-use std::fmt;
+pub use veac_lang_model::{
+    FunctionEffect, MapKeyType, ValueType, ValueTypeError, ValueTypeKind, ValueTypeParseError,
+    MAX_VALUE_TYPE_ARITY, MAX_VALUE_TYPE_DEPTH,
+};
 
-mod capabilities;
-mod display;
-mod effect;
-mod model;
-mod parse;
-mod validation;
+pub(crate) fn retained_shape_bytes(value: &ValueType) -> Option<usize> {
+    use std::mem::size_of;
 
-use super::value::PrimitiveType;
-pub use effect::FunctionEffect;
-pub use model::{MapKeyType, ValueType, ValueTypeKind};
-pub use parse::ValueTypeParseError;
-pub use validation::{ValueTypeError, MAX_VALUE_TYPE_ARITY, MAX_VALUE_TYPE_DEPTH};
+    match value.kind() {
+        ValueTypeKind::Primitive(_) | ValueTypeKind::Domain(_) => Some(0),
+        ValueTypeKind::Nominal(value) => Some(value.diagnostic_name().len()),
+        ValueTypeKind::List(value)
+        | ValueTypeKind::Range(value)
+        | ValueTypeKind::Map { value, .. } => {
+            size_of::<ValueType>().checked_add(retained_shape_bytes(value)?)
+        }
+        ValueTypeKind::Tuple(values) => retained_sequence_bytes(values),
+        ValueTypeKind::Function {
+            parameters, result, ..
+        } => retained_sequence_bytes(parameters)?
+            .checked_add(size_of::<ValueType>())?
+            .checked_add(retained_shape_bytes(result)?),
+    }
+}
+
+pub(crate) fn retained_sequence_bytes(values: &[ValueType]) -> Option<usize> {
+    use std::mem::size_of;
+
+    values.iter().try_fold(
+        values.len().checked_mul(size_of::<ValueType>())?,
+        |bytes, value| bytes.checked_add(retained_shape_bytes(value)?),
+    )
+}
+
+crate::impl_syntax_tokens!(
+    FunctionEffect,
+    FunctionEffect::Pure => "pure",
+    FunctionEffect::Local => "local",
+    FunctionEffect::Emit => "emit",
+    FunctionEffect::Any => "any",
+);
 
 crate::define_syntax_tokens! {
     array
@@ -22,21 +49,3 @@ crate::define_syntax_tokens! {
         Function => "fn",
     }
 }
-
-impl PrimitiveType {
-    pub(crate) fn is_numeric(self) -> bool {
-        matches!(
-            self,
-            Self::Integer | Self::Scalar | Self::Time | Self::Length | Self::Percent | Self::Angle
-        )
-    }
-}
-
-impl fmt::Display for PrimitiveType {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.as_str())
-    }
-}
-
-#[cfg(test)]
-mod tests;

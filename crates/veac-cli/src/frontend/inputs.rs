@@ -128,7 +128,16 @@ fn decode(declaration: &BuildInputDeclaration, raw: &str) -> CliResult<BuildInpu
         ValueTypeKind::Nominal(_) => BuildInputManifestValue::Enum {
             value: raw.to_owned(),
         },
-        _ => return Err(type_error(declaration)),
+        _ => {
+            return Err(CliError::new(
+                "PROGRAM_INPUT_TYPE_MISMATCH",
+                format!(
+                    "Build input `{}` has unsupported inline type {}",
+                    declaration.name(),
+                    declaration.value_type()
+                ),
+            ))
+        }
     };
     Ok(value)
 }
@@ -151,17 +160,6 @@ fn value_error(declaration: &BuildInputDeclaration, raw: &str) -> CliError {
             "invalid {} literal `{raw}` for Build input `{}`",
             declaration.value_type(),
             declaration.name()
-        ),
-    )
-}
-
-fn type_error(declaration: &BuildInputDeclaration) -> CliError {
-    CliError::new(
-        "PROGRAM_INPUT_TYPE_MISMATCH",
-        format!(
-            "Build input `{}` has unsupported inline type {}",
-            declaration.name(),
-            declaration.value_type()
         ),
     )
 }

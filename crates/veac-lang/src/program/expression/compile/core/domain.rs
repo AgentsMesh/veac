@@ -5,11 +5,7 @@ use crate::program::DomainInstructionKind;
 
 impl Builder<'_> {
     pub(super) fn domain_call(&mut self, call: &TypedDomainCall, node: &TypedNode) -> ValueId {
-        let operands = call
-            .operands
-            .iter()
-            .map(|operand| self.node(operand))
-            .collect::<Vec<_>>();
+        let operands = self.complete_arguments(&call.operands);
         let contract = self
             .domain
             .lookup_opcode(call.opcode)

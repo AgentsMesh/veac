@@ -58,7 +58,7 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
     ));
     assert!(matches!(
         parse(&["veac", "build", "main.veac"]).command,
-        Command::Build { emit_ir: None, .. }
+        Command::Build(crate::arguments::BuildSourceArgs { emit_ir: None, .. })
     ));
     assert!(matches!(
         parse(&[
@@ -113,11 +113,11 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
     ));
     assert!(matches!(
         parse(&["veac", "check", "main.veac", "--revision", "7"]).command,
-        Command::Check { revision: 7, .. }
+        Command::Check(crate::arguments::CheckSourceArgs { revision: 7, .. })
     ));
     assert!(matches!(
         parse(&["veac", "fmt", "main.veac", "--check"]).command,
-        Command::Fmt { check: true, .. }
+        Command::Fmt(crate::arguments::FormatSourceArgs { check: true, .. })
     ));
     assert!(matches!(
         parse(&["veac", "check-ir", "project.json"]).command,
@@ -167,8 +167,8 @@ fn clap_exposes_only_the_canonical_pipeline_shapes() {
         }
     ));
     assert!(matches!(
-        parse(&["veac", "package", "project.json", "--destination", "bundle"]).command,
-        Command::Package { .. }
+        parse(&["veac", "bundle", "project.json", "--destination", "bundle"]).command,
+        Command::Bundle { .. }
     ));
     assert!(matches!(
         parse(&["veac", "probe", "clip.mp4"]).command,

@@ -46,13 +46,15 @@ impl ProjectGraphAdapter {
     pub fn new(
         source_base: impl Into<PathBuf>,
         material_root: impl Into<PathBuf>,
+        packages: crate::ProjectPackageSet,
     ) -> BuildResult<Self> {
         Ok(Self {
-            roots: ProjectRoots::new(source_base, material_root)?,
+            roots: ProjectRoots::new(source_base, material_root, packages)?,
         })
     }
 
     pub fn adapt(&self, resolved: &ResolvedTargetGraph) -> BuildResult<ProjectBuildPlan> {
+        self.roots.revalidate_packages()?;
         if resolved.version != RESOLVED_GRAPH_VERSION {
             return Err(BuildError::invalid(
                 "unsupported resolved project graph version",
@@ -97,6 +99,7 @@ impl ProjectGraphAdapter {
         deliveries.sort_by(|left, right| {
             (&left.instance, &left.delivery.id).cmp(&(&right.instance, &right.delivery.id))
         });
+        self.roots.revalidate_packages()?;
         Ok(ProjectBuildPlan {
             graph,
             manifest_digest,

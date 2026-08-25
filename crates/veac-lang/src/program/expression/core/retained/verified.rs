@@ -7,7 +7,7 @@ impl VerifiedCoreProgram {
         let bytes = size_of::<Self>()
             .checked_sub(size_of::<CoreProgram>())?
             .checked_add(self.core().retained_bytes()?)?
-            .checked_add(self.nominal_types().len().checked_mul(64)?)?;
+            .checked_add(self.nominal_types().retained_bytes())?;
         self.closures().iter().try_fold(
             bytes.checked_add(
                 self.closures()

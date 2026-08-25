@@ -35,14 +35,19 @@ fn node(value: &TypedNode, output: &mut Vec<CallSite>) {
             }
             block(body, output);
         }
-        TypedNodeKind::Call { target, arguments } => {
+        TypedNodeKind::Call {
+            target,
+            arguments,
+            defaults,
+        } => {
             if let CallTarget::User(target) = target {
                 output.push(CallSite {
                     target: *target,
                     span: value.span.clone(),
                 });
             }
-            nodes(arguments, output);
+            arguments_nodes(arguments, output);
+            default_calls(defaults, value, output);
         }
         TypedNodeKind::Invoke { callee, arguments } => {
             node(callee, output);
@@ -54,9 +59,10 @@ fn node(value: &TypedNode, output: &mut Vec<CallSite>) {
                 span: value.span.clone(),
             });
             node(&call.receiver, output);
-            nodes(&call.arguments, output);
+            arguments_nodes(&call.arguments, output);
+            default_calls(&call.defaults, value, output);
         }
-        TypedNodeKind::DomainCall(call) => nodes(&call.operands, output),
+        TypedNodeKind::DomainCall(call) => arguments_nodes(&call.operands, output),
         TypedNodeKind::TemporalAttach(value) => {
             node(&value.owner, output);
             nodes(&value.selectors, output);
@@ -96,6 +102,17 @@ fn node(value: &TypedNode, output: &mut Vec<CallSite>) {
     }
 }
 
+fn default_calls(
+    values: &[crate::program::expression::hir::TypedDefaultArgument],
+    node: &TypedNode,
+    output: &mut Vec<CallSite>,
+) {
+    output.extend(values.iter().map(|value| CallSite {
+        target: value.target,
+        span: node.span.clone(),
+    }));
+}
+
 fn block(value: &TypedBlock, output: &mut Vec<CallSite>) {
     for statement in &value.statements {
         use crate::program::expression::hir::TypedStatement;
@@ -111,6 +128,15 @@ fn block(value: &TypedBlock, output: &mut Vec<CallSite>) {
 fn nodes(values: &[TypedNode], output: &mut Vec<CallSite>) {
     for value in values {
         node(value, output);
+    }
+}
+
+fn arguments_nodes(
+    values: &[crate::program::expression::hir::TypedCallArgument],
+    output: &mut Vec<CallSite>,
+) {
+    for value in values {
+        node(&value.value, output);
     }
 }
 

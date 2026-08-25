@@ -1,9 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Effect {
-    Pure,
-    LocalMutation,
-    GraphEmit,
-}
+use veac_lang_model::Effect;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct EffectEvidence {

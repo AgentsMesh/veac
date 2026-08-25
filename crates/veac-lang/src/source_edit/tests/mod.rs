@@ -25,7 +25,8 @@ use super::*;
 
 fn revision(value: char) -> SourceRevision {
     SourceRevision {
-        source_graph_sha256: value.to_string().repeat(64),
+        authored_source_graph_sha256: value.to_string().repeat(64),
+        complete_source_graph_sha256: value.to_string().repeat(64),
     }
 }
 

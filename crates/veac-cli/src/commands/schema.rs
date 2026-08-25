@@ -116,7 +116,10 @@ pub(crate) fn encode(contract: SchemaContract, format: SchemaFormat) -> CliResul
     } else {
         serde_json::to_string_pretty(&schema)
     };
-    let mut json = encoded.map_err(|error| CliError::new("SCHEMA_ENCODE", error.to_string()))?;
+    let mut json = match encoded {
+        Ok(json) => json,
+        Err(error) => return Err(CliError::new("SCHEMA_ENCODE", error.to_string())),
+    };
     json.push('\n');
     Ok(json)
 }

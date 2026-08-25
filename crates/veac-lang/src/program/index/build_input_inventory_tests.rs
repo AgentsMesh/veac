@@ -13,8 +13,7 @@ fn executable_inventory_describes_every_primitive_build_input() {
          input parameter h_time: time;\n{PROJECT}"
     );
     let prepared = prepare_source(&source).unwrap();
-    let inventory = prepared.source_index().unwrap().inventory();
-    assert_eq!(inventory, prepared.source_inventory().unwrap());
+    let inventory = prepared.source_inventory().unwrap();
     let found = inventory
         .build_inputs
         .into_iter()
@@ -46,7 +45,6 @@ fn built_program_preserves_the_same_build_input_inventory() {
         value: crate::program::BuildInputManifestValue::Bool { value: true },
     });
     let built = prepared.execute_with_inputs(&inputs).unwrap();
-    assert_eq!(built.source_index().unwrap().inventory(), expected);
     assert_eq!(built.source_inventory().unwrap(), expected);
 }
 

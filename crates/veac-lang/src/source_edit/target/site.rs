@@ -31,6 +31,8 @@ impl ExpressionSite {
         matches!(
             (self, kind),
             (Self::ConstantValue, SourceNodeKind::Constant)
+                | (Self::ParameterDefault { .. }, SourceNodeKind::Function)
+                | (Self::ParameterDefault { .. }, SourceNodeKind::Method)
                 | (Self::BodyExpression { .. }, SourceNodeKind::Function)
                 | (Self::BodyExpression { .. }, SourceNodeKind::Method)
         )
@@ -39,6 +41,7 @@ impl ExpressionSite {
     pub fn is_valid(&self) -> bool {
         match self {
             Self::ConstantValue => true,
+            Self::ParameterDefault { parameter } => crate::name::is_name(parameter),
             Self::BodyExpression { path } => path.is_valid(),
         }
     }

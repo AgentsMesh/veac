@@ -21,6 +21,13 @@ verify_source_edit_json() {
     source_edit_evidence_error "invalid $label JSON: $file"
 }
 
+verify_source_revision_json() {
+  jq -e '
+    keys == ["authored_source_graph_sha256", "complete_source_graph_sha256"] and
+    all(.[]; test("^[0-9a-f]{64}$"))
+  ' "$1" >/dev/null
+}
+
 verify_example_source_edit_evidence() {
   local entry=$1 revision index batch outcome
   revision=$(example_source_revision "$entry")
@@ -31,19 +38,16 @@ verify_example_source_edit_evidence() {
   verify_source_edit_json "$index" "source index" || return 1
   verify_source_edit_json "$batch" "source edit batch" || return 1
   verify_source_edit_json "$outcome" "source edit outcome" || return 1
-  jq -e '
-    keys == ["source_graph_sha256"] and
-    (.source_graph_sha256 | test("^[0-9a-f]{64}$"))
-  ' "$revision" >/dev/null ||
+  verify_source_revision_json "$revision" ||
     source_edit_evidence_error "invalid source revision contract" || return 1
   jq -e '
     .schema == "https://veac.dev/schemas/source-index" and
-    .schema_version == 8 and
+    .schema_version == 11 and
     (.build_inputs | type == "array") and
     (.modules | type == "array" and length > 0) and
     (.nodes | type == "array" and length > 0)
   ' "$index" >/dev/null ||
-    source_edit_evidence_error "invalid source index v8 contract" || return 1
+    source_edit_evidence_error "invalid source index v11 contract" || return 1
   jq -e --slurpfile revision "$revision" '.revision == $revision[0]' \
     "$index" >/dev/null ||
     source_edit_evidence_error "source index does not match the revision" || return 1
@@ -80,7 +84,7 @@ verify_example_source_edit_evidence() {
       elif $operation.type == "remove_import" then import_exists($operation.target)
       else false end;
     .schema == "https://veac.dev/schemas/source-edit" and
-    .schema_version == 6 and .atomic == true and
+    .schema_version == 9 and .atomic == true and
     .base_revision == $revision[0] and
     (.operations | type == "array" and length > 0) and
     all(.operations[]; addressable(.))
@@ -92,7 +96,11 @@ verify_example_source_edit_evidence() {
     .previous_revision == $revision[0] and .new_revision != .previous_revision and
     .destinations == [] and .dry_run == true
   ' "$outcome" >/dev/null ||
-    source_edit_evidence_error "source edit dry-run outcome is inconsistent"
+    source_edit_evidence_error "source edit dry-run outcome is inconsistent" || return 1
+  verify_source_revision_json <(jq '.previous_revision' "$outcome") ||
+    source_edit_evidence_error "invalid previous source revision contract" || return 1
+  verify_source_revision_json <(jq '.new_revision' "$outcome") ||
+    source_edit_evidence_error "invalid new source revision contract"
 }
 
 source_edit_evidence_oid() {

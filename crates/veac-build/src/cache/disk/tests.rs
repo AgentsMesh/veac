@@ -33,3 +33,17 @@ fn disk_cache_maps_artifact_store_failures() {
     let error = cache.get(&key()).unwrap_err();
     assert!(error.message().contains("artifact cache failure"));
 }
+
+#[test]
+fn disk_cache_rejects_a_non_json_computation_record() {
+    let temp = tempfile::tempdir().unwrap();
+    let store = ArtifactStore::new(temp.path().join("artifacts"));
+    let cache = DiskBuildCache::new(store, temp.path().join("leases")).unwrap();
+    let cache_key = key();
+    cache
+        .artifact_store()
+        .put(cache_key.descriptor(), b"not-json")
+        .unwrap();
+    let error = cache.get(&cache_key).unwrap_err();
+    assert!(error.message().contains("invalid computation record"));
+}
