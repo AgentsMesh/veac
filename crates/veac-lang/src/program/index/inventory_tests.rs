@@ -2,7 +2,7 @@ use crate::program::{prepare_source, source_index_json_schema, SourceIndexInvent
 use crate::source_edit::{BodySite, ExpressionSite, SourceNodeRef};
 use std::collections::BTreeMap;
 
-const SOURCE: &str = r#"fn passthrough(value: time) -> time { value }
+pub(super) const SOURCE: &str = r#"fn passthrough(value: time) -> time { value }
 const text title = "inventory";
 fn main(context: Context) -> Project {
   let timeline = sequence(identifier("main"), "索引测试",
@@ -13,8 +13,9 @@ fn main(context: Context) -> Project {
 
 #[test]
 fn inventory_is_stable_complete_and_json_round_trippable() {
-    let index = prepare_source(SOURCE).unwrap().source_index().unwrap();
-    let inventory = index.inventory();
+    let prepared = prepare_source(SOURCE).unwrap();
+    let inventory = prepared.source_inventory().unwrap();
+    assert_eq!(inventory.revision, prepared.source_revision().unwrap());
     assert_eq!(inventory.schema, super::SOURCE_INDEX_SCHEMA);
     assert_eq!(inventory.schema_version, super::SOURCE_INDEX_SCHEMA_VERSION);
     assert!(inventory.build_inputs.is_empty());
@@ -60,17 +61,16 @@ fn inventory_is_stable_complete_and_json_round_trippable() {
         );
     }
     assert!(schema.contains(r#""const":"https://veac.dev/schemas/source-index""#));
-    assert!(schema.contains(r#""const":8"#));
+    assert!(schema.contains(&format!(
+        r#""const":{}"#,
+        super::SOURCE_INDEX_SCHEMA_VERSION
+    )));
     assert!(schema.contains("build_inputs"));
 }
 
 #[test]
 fn inventory_preserves_function_body_source_and_range() {
-    let inventory = prepare_source(SOURCE)
-        .unwrap()
-        .source_index()
-        .unwrap()
-        .inventory();
+    let inventory = prepare_source(SOURCE).unwrap().source_inventory().unwrap();
     let body = node(&inventory, SourceNodeRef::function("main.veac", "main"))
         .bodies
         .iter()
@@ -84,7 +84,10 @@ fn inventory_preserves_function_body_source_and_range() {
 fn direct_index_build_rejects_invalid_graphs_and_ambiguous_targets() {
     let invalid = BTreeMap::from([(".veac-source.lock".to_owned(), "module {}".to_owned())]);
     assert_eq!(
-        super::SourceIndex::build(&invalid).unwrap_err().as_slice()[0].code,
+        super::SourceIndex::build_snapshot(&invalid)
+            .unwrap_err()
+            .as_slice()[0]
+            .code,
         "SOURCE_GRAPH_REVISION"
     );
 
@@ -93,7 +96,7 @@ fn direct_index_build_rejects_invalid_graphs_and_ambiguous_targets() {
         "const int same = 1; const int same = 2;".to_owned(),
     )]);
     assert_eq!(
-        super::SourceIndex::build(&duplicate)
+        super::SourceIndex::build_snapshot(&duplicate)
             .unwrap_err()
             .as_slice()[0]
             .code,
@@ -109,7 +112,9 @@ fn constant_ranges_separate_complete_declarations_from_expressions() {
         ("main.veac".to_owned(), entry.to_owned()),
         ("timing.veac".to_owned(), module.to_owned()),
     ]);
-    let inventory = super::SourceIndex::build(&sources).unwrap().inventory();
+    let index = super::test_support::index(&sources);
+    let revision = super::test_revision(&index);
+    let inventory = index.inventory(&revision).unwrap();
 
     assert_constant_ranges(&inventory, "main.veac", "base", entry, entry, "1s + 2s");
     assert_constant_ranges(

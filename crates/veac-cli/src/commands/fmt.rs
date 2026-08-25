@@ -1,10 +1,11 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use crate::error::{CliError, CliResult};
 
-pub(crate) fn run(file: &Path, check: bool, stdout: bool) -> CliResult {
+pub(crate) fn run(file: &Path, check: bool, stdout: bool, package_roots: &[PathBuf]) -> CliResult {
     let location = crate::fs::SourceLocation::resolve(file)?;
-    let (source, formatted) = crate::frontend::format(location.path())?;
+    let (source, formatted) = crate::frontend::format(location.path(), package_roots)?;
     if check {
         if source == formatted {
             println!("Source is canonically formatted: {}", file.display());

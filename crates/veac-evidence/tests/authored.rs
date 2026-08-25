@@ -9,7 +9,11 @@ fn authored_suite_executes_decodes_validates_and_records_provenance() {
     assert_eq!(authored.sources.len(), 1);
     assert_eq!(authored.sources["evidence.veac"], ALL_FEATURES);
     assert!(!authored.sources.contains_key(EVIDENCE_MODULE_ID));
-    assert_eq!(authored.source_index.inventory().modules.len(), 1);
+    let inventory = authored
+        .source_index
+        .inventory(&authored.source_revision())
+        .unwrap();
+    assert_eq!(inventory.modules.len(), 1);
     assert_eq!(authored.suite.id, "all-features");
     assert_eq!(authored.suite.sources.len(), 3);
     assert_eq!(authored.suite.samples.len(), 6);

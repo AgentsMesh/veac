@@ -1,6 +1,6 @@
 use clap::{ArgMatches, Command as ClapCommand};
 
-use super::shared::{path, path_option, path_value, required_path_value};
+use super::shared::{path, path_option, path_value, path_values, required_path_value};
 use crate::arguments::{Command, ProjectCommand};
 
 pub(super) fn command() -> ClapCommand {
@@ -34,24 +34,30 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
     let command = match name {
         "check" => ProjectCommand::Check {
             project: required_path_value(matches, "project"),
+            package_roots: path_values(matches, "package_roots"),
         },
         "inspect" => ProjectCommand::Inspect {
             project: required_path_value(matches, "project"),
+            package_roots: path_values(matches, "package_roots"),
         },
         "graph" => ProjectCommand::Graph {
             project: required_path_value(matches, "project"),
+            package_roots: path_values(matches, "package_roots"),
         },
         "build" => ProjectCommand::Build {
             project: required_path_value(matches, "project"),
             receipt: path_value(matches, "receipt"),
+            package_roots: path_values(matches, "package_roots"),
         },
         "evidence" => ProjectCommand::Evidence {
             project: required_path_value(matches, "project"),
             receipt: path_value(matches, "receipt"),
+            package_roots: path_values(matches, "package_roots"),
         },
         "test" => ProjectCommand::Test {
             project: required_path_value(matches, "project"),
             receipt: path_value(matches, "receipt"),
+            package_roots: path_values(matches, "package_roots"),
         },
         _ => unreachable!("project command was validated by clap"),
     };
@@ -59,7 +65,17 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
 }
 
 fn leaf(name: &'static str, about: &'static str) -> ClapCommand {
-    ClapCommand::new(name).about(about).arg(path("project"))
+    ClapCommand::new(name)
+        .about(about)
+        .arg(path("project"))
+        .arg(package_root())
+}
+
+fn package_root() -> clap::Arg {
+    path_option("package_roots")
+        .long("package-root")
+        .action(clap::ArgAction::Append)
+        .help("Mount one exact verified package root; repeat to mount more")
 }
 
 fn execution_leaf(name: &'static str, about: &'static str) -> ClapCommand {

@@ -36,11 +36,12 @@ fn imported_module_change_after_snapshot_is_rejected() {
     write_helper(temp.path(), "suite");
     let (entry, revision) = capture(temp.path());
 
-    prepare(temp.path(), &entry, &revision).unwrap();
+    let packages = veac_build::ProjectPackageSet::capture(&[]).unwrap();
+    prepare(temp.path(), &packages, &entry, &revision).unwrap();
     write_helper(temp.path(), "changed-suite");
     assert_eq!(ContentDigest::sha256(ENTRY.as_bytes()), entry.content);
 
-    let error = verify(temp.path(), &entry, &revision).unwrap_err();
+    let error = verify(temp.path(), &packages, &entry, &revision).unwrap_err();
     assert!(error.message().contains("source graph revision changed"));
 }
 
@@ -75,13 +76,13 @@ fn verification_rejects_each_closed_revision_mismatch() {
     );
 
     let mut wrong_count = expected.clone();
-    wrong_count.module_count += 1;
+    wrong_count.authored_module_count += 1;
     assert_error(
         verify_authored(&authored, &entry, &wrong_count),
         "graph revision changed",
     );
     let mut wrong_modules = expected.clone();
-    wrong_modules.modules.pop();
+    wrong_modules.authored_modules.pop();
     assert_error(
         verify_authored(&authored, &entry, &wrong_modules),
         "graph revision changed",
@@ -108,9 +109,13 @@ fn captured(
         },
         ProjectSourceGraphRevision {
             root_module: authored.root_module.clone(),
-            source_graph_sha256: authored.source_revision.source_graph_sha256.clone(),
-            module_count: authored.sources.len() as u32,
-            modules: authored.sources.keys().cloned().collect(),
+            authored_source_graph_sha256: authored.source_revision.source_graph_sha256.clone(),
+            complete_source_graph_sha256: authored
+                .complete_source_graph_revision
+                .sha256()
+                .to_owned(),
+            authored_module_count: authored.sources.len() as u32,
+            authored_modules: authored.sources.keys().cloned().collect(),
         },
     )
 }

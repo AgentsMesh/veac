@@ -12,8 +12,9 @@ pub(super) fn index(
     target: SourceNodeRef,
     body: &FunctionBodyBinding,
 ) -> Result<(), Diagnostic> {
-    let attachments = indexed_temporal_attachments(&body.source)
-        .map_err(|error| diagnostic(file, body, error))?;
+    let body_source = file.syntax.slice_text(&body.syntax);
+    let attachments =
+        indexed_temporal_attachments(body_source).map_err(|error| diagnostic(file, body, error))?;
     for (ordinal, attachment) in attachments.into_iter().enumerate() {
         let ordinal = u32::try_from(ordinal).expect("expression node limit fits u32");
         let declaration = absolute(body.span, attachment.declaration);
@@ -22,7 +23,7 @@ pub(super) fn index(
             &file.path,
             target.clone(),
             DeclarationSite::ComponentAnimation { ordinal },
-            &file.source,
+            file.source(),
             declaration,
         )?;
         index.insert_body(
@@ -32,7 +33,7 @@ pub(super) fn index(
                 ordinal,
                 property: super::temporal::property(attachment.property),
             },
-            &file.source[animation_body.start..animation_body.end],
+            &file.source()[animation_body.start..animation_body.end],
             animation_body,
         )?;
     }

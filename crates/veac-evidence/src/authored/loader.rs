@@ -1,4 +1,4 @@
-use veac_lang::program::{LoadedSource, SourceLoader};
+use veac_lang::program::{LoadedSource, SourceAuthority, SourceLoader};
 
 use super::{EVIDENCE_MODULE_ID, EVIDENCE_MODULE_SOURCE};
 
@@ -23,6 +23,14 @@ impl SourceLoader for EvidenceLoader<'_> {
             self.delegate.load(importer, requested)
         }
     }
+
+    fn authority(&self, source_id: &str) -> SourceAuthority {
+        if source_id == EVIDENCE_MODULE_ID {
+            SourceAuthority::ReadOnlyDependency
+        } else {
+            self.delegate.authority(source_id)
+        }
+    }
 }
 
 pub(super) struct RejectLoader;
@@ -32,5 +40,9 @@ impl SourceLoader for RejectLoader {
         Err(format!(
             "source-string evidence cannot resolve import `{requested}`"
         ))
+    }
+
+    fn authority(&self, _source_id: &str) -> SourceAuthority {
+        SourceAuthority::Project
     }
 }

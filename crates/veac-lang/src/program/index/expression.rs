@@ -12,7 +12,8 @@ pub(super) fn index(
     target: SourceNodeRef,
     body: &FunctionBodyBinding,
 ) -> Result<(), Diagnostic> {
-    let sites = indexed_body_sites(&body.source).map_err(|error| diagnostic(file, body, error))?;
+    let source = file.syntax.slice_text(&body.syntax);
+    let sites = indexed_body_sites(source).map_err(|error| diagnostic(file, body, error))?;
     for expression in sites.expressions {
         let relative = expression.span;
         let absolute = Span {
@@ -25,7 +26,7 @@ pub(super) fn index(
             ExpressionSite::BodyExpression {
                 path: expression.path,
             },
-            &body.source[relative],
+            &source[relative],
             absolute,
         )?;
     }
@@ -41,7 +42,7 @@ pub(super) fn index(
             StatementSite::BodyStatement {
                 path: statement.path,
             },
-            &body.source[relative],
+            &source[relative],
             absolute,
         )?;
     }

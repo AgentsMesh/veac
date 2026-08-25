@@ -1,0 +1,30 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "multicam-template-annotation",  "types": [
+    {"name":"MulticamGroup","opcode":8214,"classification":"graph_entity"},
+    {"name":"MulticamAngle","opcode":36866,"classification":"leaf_value"},
+    {"name":"MulticamSwitch","opcode":12289,"classification":"leaf_value"},
+    {"name":"MulticamSync","opcode":36867,"classification":"leaf_value"},
+    {"name":"MulticamSyncBasis","opcode":36865,"classification":"leaf_value"},
+    {"name":"TemplateContract","opcode":36872,"classification":"leaf_value"},
+    {"name":"SlotKind","opcode":36868,"classification":"leaf_value"},
+    {"name":"FillMode","opcode":36869,"classification":"leaf_value"},
+    {"name":"SourceDurationPolicy","opcode":36870,"classification":"leaf_value"},
+    {"name":"TemplateTextPolicy","opcode":36871,"classification":"leaf_value"},
+    {"name":"Annotation","opcode":8215,"classification":"graph_entity"},
+    {"name":"AnnotationTarget","opcode":36873,"classification":"leaf_value"},
+    {"name":"AnnotationSpan","opcode":36874,"classification":"leaf_value"},
+    {"name":"AnnotationPayload","opcode":36881,"classification":"leaf_value"},
+    {"name":"AnnotationProvenance","opcode":36875,"classification":"leaf_value"},
+    {"name":"AnnotationProvenanceChoice","opcode":36876,"classification":"leaf_value"},
+    {"name":"MarkerColor","opcode":36877,"classification":"leaf_value"},
+    {"name":"LanguageConfidence","opcode":36878,"classification":"leaf_value"},
+    {"name":"FillerSuggestion","opcode":36879,"classification":"leaf_value"},
+    {"name":"ReviewAction","opcode":36880,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

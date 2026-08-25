@@ -8,6 +8,7 @@ mod property;
 mod target;
 
 pub(super) fn parse(parser: &mut Parser<'_>) -> Result<TemporalDecl, Diagnostic> {
+    let syntax_start = parser.mark();
     let start = parser.expect_control(controls::TEMPORAL_DECLARATION)?;
     let property = property::parse(parser)?;
     parser.expect_control(controls::TEMPORAL_TARGET_CLAUSE)?;
@@ -20,15 +21,17 @@ pub(super) fn parse(parser: &mut Parser<'_>) -> Result<TemporalDecl, Diagnostic>
         None
     };
     let block = parser.raw_block()?;
+    let span = start.join(block.span);
     Ok(TemporalDecl {
         property,
         target,
         source,
         body: FunctionBodyBinding {
-            source: parser.source[block.span.start..block.span.end].to_owned(),
             span: block.span,
+            syntax: block.syntax,
         },
-        span: start.join(block.span),
+        span,
+        syntax: parser.slice_from(syntax_start, span),
     })
 }
 

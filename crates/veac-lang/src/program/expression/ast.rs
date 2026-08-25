@@ -3,12 +3,14 @@ use std::ops::Range;
 use super::Value;
 use crate::program::TypeSyntax;
 
+mod call;
 mod nominal;
 mod path;
 
 #[cfg(test)]
 mod tests;
 
+pub(super) use call::{CallArgument, CallArgumentLabel};
 pub(super) use nominal::{MatchArm, MatchPattern, NominalField, PatternField};
 pub(super) use path::{join_path, static_path, PathSegment};
 
@@ -134,7 +136,7 @@ pub(super) enum ExpressionKind {
     },
     Call {
         callee: Box<Expression>,
-        arguments: Vec<Expression>,
+        arguments: Vec<CallArgument>,
     },
     FieldProject {
         receiver: Box<Expression>,

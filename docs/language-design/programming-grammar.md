@@ -16,7 +16,7 @@ typed-const = "const" , value-type , identifier , "=" , expression , ";" ;
 function    = "fn" , identifier , "(" , [ function-parameter
             , { "," , function-parameter } ] , ")"
             , "->" , value-type , function-body ;
-function-parameter = identifier , ":" , value-type ;
+function-parameter = identifier , ":" , value-type , [ "=" , expression ] ;
 function-body = "{" , { block-statement } , expression , "}" ;
 block-statement = let-statement | var-statement | set-statement ;
 let-statement = "let" , identifier , [ ":" , value-type ]
@@ -111,7 +111,18 @@ punctuation `:` 与 `->` 不是 keyword 或 vocabulary entry。
 必须恰好为 `int`；省略步长在执行时解释为 `1`。`..` 非结合，优先级低于 additive、高于
 ordering。零步长及计数或算术溢出在执行时失败，方向背离终点产生空范围。
 
-函数只有 typed block body，不接受旧的 `= expression;` 形式。parameter 和 `let` binding 均为
+函数只有 typed block body，不接受旧的 `= expression;` 形式。parameter 可以声明 exact-type 的
+默认表达式；必填参数必须位于默认参数之前。位置调用只能省略末尾默认参数，命名调用可以省略任意
+带默认值的参数。显式实参先按调用源码顺序各执行一次，随后缺失默认值按声明顺序求值并按参数 slot
+组装调用。默认表达式在声明模块作用域解析，不能捕获函数参数、method `self` 或 mutable local，且
+verified Core summary 必须为 `Pure`、不含 local mutation。编译器把默认值降为隐藏的零参数 Core
+thunk；公开函数本体仍保持 fixed arity，因此 evaluator 和 Core ABI 不引入可变参数语义。
+
+函数调用允许在最后一个显式实参后使用一个尾逗号，例如
+`card(title: "标题", duration: 3s,)`。尾逗号只改变源码分隔，不产生额外实参；缺失实参、
+重复命名和类型错误仍由静态调用检查报告。集合字面量沿用各自的闭合分隔合同，不因调用语法自动放宽。
+
+parameter 和 `let` binding 均为
 immutable；`var` 声明 lexical mutable local，`set` 只能按 exact type 更新已声明的 `var`。三种
 statement 按 source order 执行，最后一个无分号 expression 是 block 的类型和值。`let`/`var` 的
 可选 annotation 提供 expected type，不是 cast。declared return type 必须与 block tail 的 inferred
@@ -154,6 +165,11 @@ binding，后续 typed sink resolution 仍会拒绝 owner、selector、property 
 constant 允许 forward reference 和 exact pure expression。expression token 之间允许 `//` 与
 `/* ... */` comment。组件复用由 module、typed function、nominal value 和 method 表达，不存在
 `${expression}` source injection 或生成源码后重解析。
+
+每个 source file 只建立一个 lossless syntax document：原始 UTF-8 bytes、token、comment 和
+whitespace gap 使用连续 byte spans 保存。函数、method、const 与 animate 的 declaration 只
+持有该文档的 token slice；expression adapter 必须沿用 slice 的绝对 origin，不能重新扫描
+body 字符串来制造第二份 source ownership。
 
 当前 grammar 已包含 block control flow、immutable list/map/tuple value、有限范围、typed closure、
 有界 iteration、nominal struct/enum、exhaustive match 与静态 method。`animate` body 可以调用 Pure

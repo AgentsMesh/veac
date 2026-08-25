@@ -4,6 +4,8 @@ mod literal;
 mod operator;
 mod token;
 
+pub(in crate::program::expression) use lexeme::classify_symbol;
+pub(in crate::program::expression) use literal::{decode_string, validate_color};
 pub(super) use token::{Token, TokenKind};
 
 use super::ExpressionError;

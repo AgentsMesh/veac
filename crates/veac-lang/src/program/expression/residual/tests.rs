@@ -28,6 +28,8 @@ mod for_each;
 mod for_each_defenses;
 #[path = "tests/identity.rs"]
 mod identity;
+#[path = "tests/instruction_dispatch.rs"]
+mod instruction_dispatch;
 #[path = "tests/map_corruption.rs"]
 mod map_corruption;
 #[path = "tests/operation_coverage.rs"]

@@ -165,7 +165,7 @@ impl PackageFixture {
         environment.observed = veac_runtime::asset::sha256_identity(&media).unwrap();
         pin_first_material(&project, environment.observed.clone());
         let package = temp.path().join("package");
-        crate::commands::package(&project, None, None, None, &package, &environment).unwrap();
+        crate::commands::bundle(&project, None, None, None, &package, &environment).unwrap();
         let manifest =
             serde_json::from_slice(&std::fs::read(package.join("package.json")).unwrap()).unwrap();
         Self {

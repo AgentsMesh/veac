@@ -123,7 +123,8 @@ fn contract_rejects_empty_large_nul_and_invalid_current_revision() {
         ));
     }
     let current = SourceRevision {
-        source_graph_sha256: "BAD".to_owned(),
+        authored_source_graph_sha256: "BAD".to_owned(),
+        complete_source_graph_sha256: "0".repeat(64),
     };
     assert!(matches!(
         validate_source_edit_batch(&batch(), &current, &EmptySnapshot),

@@ -167,6 +167,8 @@ fn rejected_source_edit_never_changes_source_or_overwrites_its_batch() {
     assert_eq!(std::fs::read_to_string(source).unwrap(), original);
 }
 
+#[path = "source_program/candidate_output.rs"]
+mod candidate_output;
 #[path = "source_program/closures.rs"]
 mod closures;
 #[path = "source_program/collections.rs"]

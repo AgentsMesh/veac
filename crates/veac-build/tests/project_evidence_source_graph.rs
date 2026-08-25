@@ -83,11 +83,18 @@ fn builtin_evidence_module_is_excluded_from_authored_revision() {
 
     let plan = fixture.adapter().adapt(&graph()).unwrap();
     let (_, revision) = evidence_source(evidence_action(&plan));
-    assert_eq!(revision.module_count, 2);
-    assert_eq!(revision.modules, ["evidence-helper.veac", "evidence.veac"]);
+    assert_eq!(revision.authored_module_count, 2);
     assert_eq!(
-        revision.source_graph_sha256,
+        revision.authored_modules,
+        ["evidence-helper.veac", "evidence.veac"]
+    );
+    assert_eq!(
+        revision.authored_source_graph_sha256,
         authored.source_revision.source_graph_sha256
+    );
+    assert_eq!(
+        revision.complete_source_graph_sha256,
+        authored.complete_source_graph_revision.sha256()
     );
 }
 

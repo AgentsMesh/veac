@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use veac_lang::program::{LoadedSource, SourceLoader};
+use veac_lang::program::{LoadedSource, SourceAuthority, SourceLoader};
 use veac_project::*;
 
 const MINIMAL: &str = include_str!("fixtures/authored_minimal.veac");
@@ -13,11 +13,12 @@ fn project_source_executes_decodes_validates_and_records_provenance() {
     assert_eq!(project.sources.len(), 1);
     assert_eq!(project.sources["project.veac"], MINIMAL);
     assert!(!project.sources.contains_key(PROJECT_MODULE_ID));
-    assert_eq!(project.source_index.inventory().modules.len(), 1);
-    assert_eq!(
-        project.source_index.inventory().modules[0].module,
-        "project.veac"
-    );
+    let inventory = project
+        .source_index
+        .inventory(&project.source_revision())
+        .unwrap();
+    assert_eq!(inventory.modules.len(), 1);
+    assert_eq!(inventory.modules[0].module, "project.veac");
     assert_eq!(
         project.manifest_digest,
         manifest_digest(&project.manifest).unwrap()
@@ -62,6 +63,34 @@ fn delegated_loader_preserves_authored_module_graph() {
 }
 
 #[test]
+fn arbitrary_read_only_dependencies_only_affect_complete_identity() {
+    let entry = LoadedSource {
+        id: "project.veac".to_owned(),
+        source: format!(
+            "import \"./helper.veac\" as helper;\n{}",
+            MINIMAL.replace("identifier(\"demo\")", "helper.project_id()")
+        ),
+    };
+    let source = "module { export fn project_id() -> identifier { identifier(\"demo\") } }";
+    let build = |helper: String| {
+        build_project_with_loader(
+            entry.clone(),
+            &ReadOnlyHelperLoader(BTreeMap::from([("helper.veac".to_owned(), helper)])),
+        )
+        .unwrap()
+    };
+    let first = build(source.to_owned());
+    let second = build(format!("{source}\n"));
+    assert_eq!(first.sources.keys().collect::<Vec<_>>(), ["project.veac"]);
+    assert_eq!(first.source_revision, second.source_revision);
+    assert_ne!(
+        first.complete_source_graph_revision,
+        second.complete_source_graph_revision
+    );
+    assert_ne!(first.source_revision(), second.source_revision());
+}
+
+#[test]
 fn checked_integer_decode_reports_the_logical_field_path() {
     let source = MINIMAL.replace("version: 1", "version: -1");
     let ProjectAuthoringError::Decode(error) = build_project_source(&source).unwrap_err() else {
@@ -86,6 +115,8 @@ fn project_contract_schema_entry_points_are_stable() {
 
 struct MapLoader(BTreeMap<String, String>);
 
+struct ReadOnlyHelperLoader(BTreeMap<String, String>);
+
 impl SourceLoader for MapLoader {
     fn load(&self, importer: &str, requested: &str) -> Result<LoadedSource, String> {
         let id = if requested == "./helper.veac" {
@@ -100,5 +131,23 @@ impl SourceLoader for MapLoader {
                 source: source.clone(),
             })
             .ok_or_else(|| format!("{importer} cannot resolve {requested}"))
+    }
+
+    fn authority(&self, _source_id: &str) -> SourceAuthority {
+        SourceAuthority::Project
+    }
+}
+
+impl SourceLoader for ReadOnlyHelperLoader {
+    fn load(&self, importer: &str, requested: &str) -> Result<LoadedSource, String> {
+        MapLoader(self.0.clone()).load(importer, requested)
+    }
+
+    fn authority(&self, source_id: &str) -> SourceAuthority {
+        if source_id == "helper.veac" {
+            SourceAuthority::ReadOnlyDependency
+        } else {
+            SourceAuthority::Project
+        }
     }
 }

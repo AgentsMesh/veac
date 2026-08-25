@@ -51,6 +51,7 @@ impl ProjectGraphAdapter {
             inputs: instance.inputs.clone(),
             outputs: instance.outputs.clone(),
             bound_sources: self.bound_sources(instance)?,
+            package_mounts: self.roots.package_revision(),
         };
         Ok(match &instance.entry {
             ProjectTargetEntry::Veac { source } => {

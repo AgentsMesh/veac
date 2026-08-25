@@ -1,5 +1,6 @@
 use serde::Serialize;
 use veac_artifact::ContentDigest;
+use veac_lang::package::{PackageIdentity, Sha256Digest};
 use veac_project::{
     InputId, LocaleId, MatrixAssignment, MediaDerivation, ProfileId, ProjectOutput, ResolvedInput,
     TargetId, TargetInstanceId,
@@ -7,7 +8,7 @@ use veac_project::{
 
 use crate::{BuildAction, BuildError, BuildResult};
 
-pub const PROJECT_ACTION_VERSION: u32 = 4;
+pub const PROJECT_ACTION_VERSION: u32 = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -96,6 +97,7 @@ pub struct ProjectComputation {
     pub inputs: Vec<ResolvedInput>,
     pub outputs: Vec<ProjectOutput>,
     pub bound_sources: Vec<ProjectBoundSource>,
+    pub package_mounts: Vec<ProjectPackageMountRevision>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -108,9 +110,26 @@ pub struct ProjectFileSnapshot {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ProjectSourceGraphRevision {
     pub root_module: String,
-    pub source_graph_sha256: String,
-    pub module_count: u32,
-    pub modules: Vec<String>,
+    pub authored_source_graph_sha256: String,
+    pub complete_source_graph_sha256: String,
+    pub authored_module_count: u32,
+    pub authored_modules: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ProjectPackageMountRevision {
+    pub root: ProjectPackageRevision,
+    pub dependencies: Vec<ProjectPackageRevision>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct ProjectPackageRevision {
+    pub package: PackageIdentity,
+    pub entry_module: String,
+    pub entry_sha256: Sha256Digest,
+    pub content_sha256: Sha256Digest,
+    pub api_sha256: Sha256Digest,
+    pub dependencies: Vec<PackageIdentity>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

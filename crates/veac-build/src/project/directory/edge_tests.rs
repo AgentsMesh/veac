@@ -78,6 +78,7 @@ fn directory_paths_and_publication_reject_unsafe_authorities() {
     let root = std::fs::canonicalize(root).unwrap();
     assert!(relative_text(&root, temp.path()).is_err());
     assert!(relative_text(&root, &root).is_err());
+    assert!(relative_text(&root, &root.join("nested/../file")).is_err());
 
     #[cfg(unix)]
     {

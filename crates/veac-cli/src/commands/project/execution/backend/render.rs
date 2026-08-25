@@ -21,7 +21,12 @@ pub(super) fn execute(
     artifacts: &[ProjectArtifactInput],
     cancellation: &CancellationToken,
 ) -> Result<Vec<ProducedProjectOutput>, ProjectBackendError> {
-    let prepared = source_graph::prepare(&backend.source_root, snapshot, source_graph)?;
+    let prepared = source_graph::prepare(
+        &backend.source_root,
+        &backend.packages,
+        snapshot,
+        source_graph,
+    )?;
     let bound = inputs::bind(&prepared, computation, artifacts, &backend.material_root)?;
     let built = prepared
         .execute_with_inputs(&bound.manifest)
@@ -52,7 +57,12 @@ pub(super) fn execute(
             "project execution was cancelled during render",
         ));
     }
-    source_graph::verify(&backend.source_root, snapshot, source_graph)?;
+    source_graph::verify(
+        &backend.source_root,
+        &backend.packages,
+        snapshot,
+        source_graph,
+    )?;
     Ok(produced)
 }
 

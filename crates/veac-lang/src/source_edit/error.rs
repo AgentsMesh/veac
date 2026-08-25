@@ -48,6 +48,7 @@ pub enum SourceEditError {
     InvalidTopLevelDeclaration(String),
     IncompatibleTopLevelDeclarationTarget,
     InvalidImport(String),
+    UnboundSourceIndex,
     AnchorModuleMismatch {
         module: String,
         anchor_module: String,

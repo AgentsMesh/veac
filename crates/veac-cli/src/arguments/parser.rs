@@ -5,6 +5,7 @@ use crate::arguments::Command;
 mod artifact;
 mod caption;
 mod core;
+mod language_package;
 mod otio;
 mod project;
 mod shared;
@@ -30,6 +31,7 @@ pub(super) fn command() -> ClapCommand {
         .subcommands(artifact::commands())
         .subcommand(otio::command())
         .subcommand(project::command())
+        .subcommand(language_package::command())
         .subcommands(workflow::commands())
         .subcommands(core::commands())
 }
@@ -44,6 +46,7 @@ pub(super) fn from_matches(matches: &ArgMatches) -> Command {
         "artifact" | "package-bindings" | "relink" => artifact::from_matches(name, matches),
         "otio" => otio::from_matches(matches),
         "project" => project::from_matches(matches),
+        "package" => language_package::from_matches(matches),
         "derive" | "ingest-analysis" | "provider-run" | "provider-propose" => {
             workflow::from_matches(name, matches)
         }

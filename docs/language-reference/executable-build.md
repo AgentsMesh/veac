@@ -167,8 +167,8 @@ veac source-index main.veac
 veac source-edit main.veac edit.json --dry-run
 ```
 
-Agent 通过 source-index v8 的 module-qualified semantic target 修改 expression、callable body、
-declaration、import 或 typed anchor。source-edit v6 校验 revision 与 fragment，并以一个 transaction
+Agent 通过 source-index v11 的 module-qualified semantic target 修改 expression、callable body、
+declaration、import 或 typed anchor。source-edit v9 校验 authored/complete 双 revision 与 fragment，并以一个 transaction
 重新执行完整 executable build；多模块任一环节失败都不写源码。不要修改生成的 canonical entity ID，
 也不要从 JSON IR 反编译 `.veac`。
 

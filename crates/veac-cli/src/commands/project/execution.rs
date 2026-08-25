@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use veac_artifact::ArtifactStore;
 use veac_build::{
@@ -23,16 +23,13 @@ pub(super) enum ExecutionMode {
 pub(super) fn run(
     project_path: &Path,
     receipt_path: Option<&Path>,
+    package_roots: &[PathBuf],
     mode: ExecutionMode,
 ) -> CliResult {
-    let (root, authored) = match veac_project::build_project_path(project_path) {
-        Ok(authored) => authored,
-        Err(error) => return Err(super::authoring_error(project_path, error)),
-    };
-    let graph =
-        veac_project::resolve_manifest(&authored.manifest).map_err(super::project_issues)?;
+    let (root, authored, graph, packages) = super::load(project_path, package_roots)?;
     let roots = paths::ProjectExecutionRoots::resolve(&root, &authored.manifest.paths)?;
-    let plan = ProjectGraphAdapter::new(&roots.source, &roots.material)
+    roots.validate_package_roots(&packages)?;
+    let plan = ProjectGraphAdapter::new(&roots.source, &roots.material, packages.clone())
         .map_err(build_error)?
         .adapt(&graph)
         .map_err(build_error)?;
@@ -40,6 +37,7 @@ pub(super) fn run(
     let backend = backend::CliProjectBackend::new(
         roots.source.clone(),
         roots.material.clone(),
+        packages.clone(),
         store.clone(),
         plan.manifest_digest.clone(),
     );
@@ -55,6 +53,7 @@ pub(super) fn run(
     let receipt = runtime
         .build(&plan, CancellationToken::new())
         .map_err(build_error)?;
+    packages.revalidate().map_err(build_error)?;
     receipt::write(
         &receipt,
         receipt_path,
@@ -75,6 +74,14 @@ pub(super) fn run(
         ExecutionMode::Evidence => evidence_result::inspect(&receipt, &store).map(|_| ()),
         ExecutionMode::Test => gate_evidence(evidence_result::inspect(&receipt, &store)?),
     }
+}
+
+pub(super) fn validate_package_authorities(
+    root: &Path,
+    paths: &veac_project::ProjectPaths,
+    packages: &veac_build::ProjectPackageSet,
+) -> CliResult {
+    paths::validate_package_authorities(root, paths, packages)
 }
 
 fn gate_evidence(summary: evidence_result::EvidenceSummary) -> CliResult {

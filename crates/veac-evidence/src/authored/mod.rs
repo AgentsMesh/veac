@@ -10,9 +10,9 @@ pub use error::{EvidenceAuthoringError, EvidenceDecodeError};
 use loader::EvidenceLoader;
 use veac_lang::program::{
     prepare_host_with_loader, EntryContract, EntryValueType, FileSystemLoader, LoadedSource,
-    SourceIndex, SourceLoader,
+    PreparedSourceGraphRevision, SourceIndex, SourceLoader,
 };
-use veac_lang::source_edit::SourceRevision;
+use veac_lang::source_edit::{AuthoredSourceRevision, SourceRevision};
 
 use crate::EvidenceSuiteV1;
 
@@ -24,9 +24,19 @@ pub struct AuthoredEvidenceSuite {
     pub suite: EvidenceSuiteV1,
     pub root_module: String,
     pub sources: BTreeMap<String, String>,
-    pub source_revision: SourceRevision,
+    pub source_revision: AuthoredSourceRevision,
+    pub complete_source_graph_revision: PreparedSourceGraphRevision,
     pub source_index: SourceIndex,
     pub suite_sha256: String,
+}
+
+impl AuthoredEvidenceSuite {
+    pub fn source_revision(&self) -> SourceRevision {
+        SourceRevision::new(
+            &self.source_revision,
+            self.complete_source_graph_revision.sha256(),
+        )
+    }
 }
 
 pub fn evidence_entry_contract() -> EntryContract {
@@ -73,10 +83,8 @@ pub fn build_evidence_with_loader(
 ) -> Result<AuthoredEvidenceSuite, EvidenceAuthoringError> {
     let overlay = EvidenceLoader::new(loader);
     let prepared = prepare_host_with_loader(entry, &overlay, &evidence_entry_contract())?;
-    let root_module = prepared.root_module().to_owned();
-    let sources = provenance::authored_sources(prepared.sources());
     let evaluated = prepared.execute(&[])?;
     let suite = decode::suite(evaluated.value(), evaluated.type_registry())?;
     let suite = crate::validate(suite)?.into_suite();
-    provenance::finish(suite, root_module, sources)
+    provenance::finish(suite, prepared.source_graph())
 }

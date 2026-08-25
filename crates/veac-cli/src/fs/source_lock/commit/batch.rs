@@ -2,11 +2,13 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use super::super::path::{self, Parent, Target};
-use super::super::stage::Staged;
+use super::super::stage::{ExpectedTarget, Staged};
 use super::super::SourceGraphLock;
 use super::guard;
 use super::{SourceModuleGuard, SourceModuleReplacement};
 use crate::error::{CliError, CliResult};
+
+mod publish;
 
 struct Prepared {
     module: String,
@@ -20,6 +22,8 @@ pub(super) fn commit(
     root: &Path,
     values: &[SourceModuleReplacement<'_>],
     guards: &[SourceModuleGuard<'_>],
+    before_publish: impl FnOnce() -> CliResult,
+    after_publish: impl FnOnce() -> CliResult,
 ) -> CliResult {
     if values.is_empty() {
         return Err(CliError::new(
@@ -33,16 +37,14 @@ pub(super) fn commit(
     let prepared = prepare(lock, root, values)?;
     let replacements = stage(&prepared, values, false)?;
     let rollbacks = stage(&prepared, values, true)?;
+    before_publish()?;
     final_check(lock, root, &prepared, values)?;
     guard::verify(lock, &guarded, guards)?;
-    publish(
-        lock,
-        root,
-        &prepared,
+    publish::run(
+        publish::Context::new(lock, root, &prepared, &guarded, guards),
         replacements,
         rollbacks,
-        &guarded,
-        guards,
+        after_publish,
     )
 }
 
@@ -116,57 +118,6 @@ fn final_check(
         super::require_source(&item.label, &current.bytes, value.expected.as_bytes())?;
     }
     Ok(())
-}
-
-fn publish(
-    lock: &SourceGraphLock,
-    root: &Path,
-    prepared: &[Prepared],
-    replacements: Vec<Staged<'_>>,
-    rollbacks: Vec<Staged<'_>>,
-    guarded: &[guard::Guarded],
-    guards: &[SourceModuleGuard<'_>],
-) -> CliResult {
-    let mut rollbacks = rollbacks.into_iter().map(Some).collect::<Vec<_>>();
-    let mut published = 0usize;
-    for (index, (staged, item)) in replacements.into_iter().zip(prepared).enumerate() {
-        if let Err(error) = staged.publish(&item.parent, &item.label) {
-            let uncertain = error.diagnostics()[0].code == "WRITE_COMMIT_UNCERTAIN";
-            let count = published + usize::from(uncertain);
-            return rollback(prepared, &mut rollbacks, count, error);
-        }
-        published = index + 1;
-    }
-    lock.revalidate(root).map_err(super::committed)?;
-    for item in prepared {
-        path::require_parent(
-            &lock.directory,
-            &item.module,
-            item.parent.identity,
-            &item.label,
-        )
-        .map_err(super::committed)?;
-    }
-    guard::verify(lock, guarded, guards).map_err(super::committed)?;
-    Ok(())
-}
-
-fn rollback(
-    prepared: &[Prepared],
-    rollbacks: &mut [Option<Staged<'_>>],
-    published: usize,
-    original: CliError,
-) -> CliResult {
-    for index in (0..published).rev() {
-        let staged = rollbacks[index].take().expect("rollback stage is present");
-        if let Err(error) = staged.publish(&prepared[index].parent, &prepared[index].label) {
-            return Err(CliError::new(
-                "WRITE_COMMIT_UNCERTAIN",
-                format!("{original}; batch rollback also failed: {error}"),
-            ));
-        }
-    }
-    Err(original)
 }
 
 fn require_unique(

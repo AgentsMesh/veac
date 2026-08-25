@@ -10,8 +10,10 @@ pub(crate) fn encode(schema: bool) -> CliResult<String> {
         return super::schema::encode(SchemaContract::LanguageSpec, SchemaFormat::JsonSchema);
     }
     let spec = veac_lang::vocabulary::language_spec();
-    let mut json = serde_json_canonicalizer::to_string(&spec)
-        .map_err(|error| CliError::new("LANGUAGE_SPEC_ENCODE", error.to_string()))?;
+    let mut json = match serde_json_canonicalizer::to_string(&spec) {
+        Ok(json) => json,
+        Err(error) => return Err(CliError::new("LANGUAGE_SPEC_ENCODE", error.to_string())),
+    };
     json.push('\n');
     Ok(json)
 }

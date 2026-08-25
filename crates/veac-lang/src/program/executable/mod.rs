@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use super::diagnostic::{Diagnostic, Diagnostics};
 use super::expression::ExecutionBudget;
 use super::loader::{FileSystemLoader, LoadedSource, MemoryLoader, SourceLoader};
-use super::resolve;
+use super::{resolve, CompilerDatabase};
 
 mod entry;
 mod identity;
@@ -21,10 +21,24 @@ pub(crate) use temporal::{
 };
 
 pub fn prepare_path(path: &Path) -> Result<ExecutableBuild, Diagnostics> {
-    prepare_path_with_root(path).map(|(_, build)| build)
+    prepare_path_with_database(path, &CompilerDatabase::default())
 }
 
 pub fn prepare_path_with_root(path: &Path) -> Result<(PathBuf, ExecutableBuild), Diagnostics> {
+    prepare_path_with_root_and_database(path, &CompilerDatabase::default())
+}
+
+pub(crate) fn prepare_path_with_database(
+    path: &Path,
+    database: &CompilerDatabase,
+) -> Result<ExecutableBuild, Diagnostics> {
+    prepare_path_with_root_and_database(path, database).map(|(_, build)| build)
+}
+
+pub(crate) fn prepare_path_with_root_and_database(
+    path: &Path,
+    database: &CompilerDatabase,
+) -> Result<(PathBuf, ExecutableBuild), Diagnostics> {
     let (loader, entry) = FileSystemLoader::for_entry(path).map_err(|message| {
         Diagnostics::one(Diagnostic::new(
             "PROGRAM_ENTRY_LOAD",
@@ -34,18 +48,26 @@ pub fn prepare_path_with_root(path: &Path) -> Result<(PathBuf, ExecutableBuild),
         ))
     })?;
     let root = loader.root().to_owned();
-    prepare_with_loader(entry, &loader).map(|build| (root, build))
+    prepare_with_loader_and_database(entry, &loader, database).map(|build| (root, build))
 }
 
 pub fn prepare_source(source: &str) -> Result<ExecutableBuild, Diagnostics> {
+    prepare_source_with_database(source, &CompilerDatabase::default())
+}
+
+pub(crate) fn prepare_source_with_database(
+    source: &str,
+    database: &CompilerDatabase,
+) -> Result<ExecutableBuild, Diagnostics> {
     super::limits::check_source_size("main.veac", source, crate::authoring::Span::default())
         .map_err(Diagnostics::one)?;
-    prepare_with_loader(
+    prepare_with_loader_and_database(
         LoadedSource {
             id: "main.veac".to_owned(),
             source: source.to_owned(),
         },
         &MemoryLoader::default(),
+        database,
     )
 }
 
@@ -53,9 +75,24 @@ pub fn prepare_with_loader(
     entry: LoadedSource,
     loader: &dyn SourceLoader,
 ) -> Result<ExecutableBuild, Diagnostics> {
-    let root_module = entry.id.clone();
-    let resolution = resolve::executable_entry(entry, loader, &ExecutionBudget::default())
+    prepare_with_loader_and_database(entry, loader, &CompilerDatabase::default())
+}
+
+pub(crate) fn prepare_with_loader_and_database(
+    entry: LoadedSource,
+    loader: &dyn SourceLoader,
+    database: &CompilerDatabase,
+) -> Result<ExecutableBuild, Diagnostics> {
+    let source_graph = database
+        .prepare_source_graph(entry, loader, &[])
         .map_err(Diagnostics)?;
+    let resolution = resolve::executable_entry_with_database(
+        source_graph.root(),
+        &source_graph,
+        &ExecutionBudget::default(),
+        database,
+    )
+    .map_err(Diagnostics)?;
     let main = resolution
         .scope
         .functions
@@ -65,8 +102,7 @@ pub fn prepare_with_loader(
     let temporal_leaves =
         temporal::compile_authored(&resolution.entry, &resolution.scope.expression_context())?;
     Ok(ExecutableBuild::new(
-        root_module,
-        resolution.sources,
+        source_graph,
         main,
         ExecutableRegistries::new(
             resolution.scope.functions,

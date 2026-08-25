@@ -118,8 +118,8 @@ pub(crate) fn validate_fragment(
     kind: TypeDeclarationFragmentKind,
 ) -> Result<(), String> {
     const PATH: &str = "<source-edit-declaration>";
-    let tokens = lexer::lex(PATH, source).map_err(|errors| errors[0].message.clone())?;
-    let mut parser = Parser::new(PATH, source, tokens);
+    let document = lexer::lex_document(PATH, source).map_err(|errors| errors[0].message.clone())?;
+    let mut parser = Parser::new(PATH, document);
     let parsed = match kind {
         TypeDeclarationFragmentKind::Struct => structure(&mut parser, false).map(|_| ()),
         TypeDeclarationFragmentKind::StructField

@@ -10,9 +10,9 @@ pub use error::{ProjectAuthoringError, ProjectDecodeError};
 use loader::ProjectLoader;
 use veac_lang::program::{
     prepare_host_with_loader, EntryContract, EntryValueType, FileSystemLoader, LoadedSource,
-    SourceIndex, SourceLoader,
+    PreparedSourceGraphRevision, SourceIndex, SourceLoader,
 };
-use veac_lang::source_edit::SourceRevision;
+use veac_lang::source_edit::{AuthoredSourceRevision, SourceRevision};
 
 use crate::ProjectManifestV1;
 
@@ -24,9 +24,19 @@ pub struct AuthoredProjectManifest {
     pub manifest: ProjectManifestV1,
     pub root_module: String,
     pub sources: BTreeMap<String, String>,
-    pub source_revision: SourceRevision,
+    pub source_revision: AuthoredSourceRevision,
+    pub complete_source_graph_revision: PreparedSourceGraphRevision,
     pub source_index: SourceIndex,
     pub manifest_digest: String,
+}
+
+impl AuthoredProjectManifest {
+    pub fn source_revision(&self) -> SourceRevision {
+        SourceRevision::new(
+            &self.source_revision,
+            self.complete_source_graph_revision.sha256(),
+        )
+    }
 }
 
 pub fn project_entry_contract() -> EntryContract {
@@ -72,10 +82,8 @@ pub fn build_project_with_loader(
 ) -> Result<AuthoredProjectManifest, ProjectAuthoringError> {
     let overlay = ProjectLoader::new(loader);
     let prepared = prepare_host_with_loader(entry, &overlay, &project_entry_contract())?;
-    let root_module = prepared.root_module().to_owned();
-    let sources = provenance::authored_sources(prepared.sources());
     let evaluated = prepared.execute(&[])?;
     let manifest = decode::manifest(evaluated.value(), evaluated.type_registry())?;
     crate::validate_manifest(&manifest)?;
-    provenance::finish(manifest, root_module, sources)
+    provenance::finish(manifest, prepared.source_graph())
 }

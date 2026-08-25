@@ -99,7 +99,7 @@ fn executable_source_edit_dry_run_repairs_runtime_without_writing() {
     let prepared = veac_lang::program::prepare_path(&source).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_cli_executable_repair").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("main.veac", "rate"),

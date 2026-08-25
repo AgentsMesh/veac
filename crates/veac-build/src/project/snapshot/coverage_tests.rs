@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use super::{fingerprint, graph_module_count, graph_root_source, io_error, ProjectRoots};
+use super::{
+    fingerprint, graph_module_count, graph_root_source, io_error, ProjectPackageSet, ProjectRoots,
+};
 use veac_project::ProjectPath;
 
 #[test]
@@ -12,7 +14,8 @@ fn malformed_source_graphs_keep_their_action_context() {
     std::fs::create_dir(&material).unwrap();
     std::fs::write(source.join("main.veac"), "{").unwrap();
     std::fs::write(source.join("evidence.veac"), "{").unwrap();
-    let roots = ProjectRoots::new(&source, &material).unwrap();
+    let roots =
+        ProjectRoots::new(&source, &material, ProjectPackageSet::capture(&[]).unwrap()).unwrap();
 
     let render = roots
         .source_graph(&ProjectPath::new("main.veac"))

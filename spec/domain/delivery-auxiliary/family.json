@@ -1,0 +1,22 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "delivery-auxiliary",  "types": [
+    {"name":"ImageFormat","opcode":45057,"classification":"leaf_value"},
+    {"name":"CaptionSidecarFormat","opcode":45058,"classification":"leaf_value"},
+    {"name":"AudioStemFormat","opcode":45059,"classification":"leaf_value"},
+    {"name":"AudioMixSource","opcode":45060,"classification":"leaf_value"},
+    {"name":"VideoScope","opcode":45061,"classification":"leaf_value"},
+    {"name":"AudioChannelLayout","opcode":45062,"classification":"leaf_value"},
+    {"name":"GifPlayback","opcode":45063,"classification":"leaf_value"},
+    {"name":"GifDither","opcode":45064,"classification":"leaf_value"},
+    {"name":"HlsAudioChoice","opcode":45065,"classification":"leaf_value"},
+    {"name":"HlsRendition","opcode":45068,"classification":"leaf_value"},
+    {"name":"HlsProfile","opcode":45066,"classification":"leaf_value"},
+    {"name":"HlsProfileChoice","opcode":45067,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

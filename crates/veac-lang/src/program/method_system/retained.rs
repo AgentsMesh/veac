@@ -17,6 +17,12 @@ pub(super) fn definition(value: &MethodDefinition) -> Option<usize> {
             .checked_add(size_of_val(parameter))?
             .checked_add(parameter.name.len())?
             .checked_add(value_type(&parameter.value_type)?)?;
+        if let Some(default) = parameter.default() {
+            bytes = bytes.checked_add(default.source().len())?;
+            if let Some(origin) = default.origin() {
+                bytes = bytes.checked_add(origin.source_id().len())?;
+            }
+        }
     }
     bytes = bytes.checked_add(value_type(signature.return_type())?)?;
     if let Some(body) = value.body() {

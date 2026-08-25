@@ -1,5 +1,7 @@
 use super::Parser;
-use crate::program::expression::ast::{Expression, ExpressionKind};
+use crate::program::expression::ast::{
+    CallArgument, CallArgumentLabel, Expression, ExpressionKind,
+};
 use crate::program::expression::lexer::TokenKind;
 use crate::program::expression::{ExpressionError, MAX_CALL_ARGUMENTS};
 
@@ -56,23 +58,35 @@ impl Parser {
         self.enter_depth(opening)?;
         let mut arguments = Vec::new();
         while !self.at(&TokenKind::RightParen) {
-            let argument = self.expression()?;
+            let label = if matches!(self.current().kind, TokenKind::Symbol(_))
+                && self.next_at(&TokenKind::Colon)
+            {
+                let token = self.advance();
+                let TokenKind::Symbol(name) = token.kind else {
+                    unreachable!("named argument lookahead requires a symbol")
+                };
+                self.advance();
+                Some(CallArgumentLabel {
+                    name,
+                    span: token.span,
+                })
+            } else {
+                None
+            };
+            let value = self.expression()?;
             if arguments.len() >= MAX_CALL_ARGUMENTS {
                 return Err(ExpressionError::new(
                     "EXPRESSION_CALL_ARGUMENT_LIMIT",
                     format!("function call exceeds the {MAX_CALL_ARGUMENTS} argument limit"),
-                    argument.span,
+                    value.span,
                 ));
             }
-            arguments.push(argument);
+            arguments.push(CallArgument { label, value });
             if self.take(&TokenKind::Comma).is_none() {
                 break;
             }
             if self.at(&TokenKind::RightParen) {
-                return Err(self.error(
-                    "EXPRESSION_EXPECTED_VALUE",
-                    "trailing call separators are not supported",
-                ));
+                break;
             }
         }
         let closing = self.expect(&TokenKind::RightParen, ")")?;
@@ -87,3 +101,7 @@ impl Parser {
         )
     }
 }
+
+#[cfg(test)]
+#[path = "postfix/tests.rs"]
+mod tests;

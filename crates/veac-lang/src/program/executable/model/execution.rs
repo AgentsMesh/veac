@@ -32,7 +32,7 @@ impl ExecutableBuild {
         VerifiedBuildInputs::bind(&self.build_inputs, &self.types, manifest).map_err(|error| {
             Diagnostics::one(Diagnostic::new(
                 error.code(),
-                &self.root_module,
+                self.root_module(),
                 error.message(),
                 Span::default(),
             ))
@@ -54,14 +54,8 @@ impl ExecutableBuild {
             &self.temporal_leaves,
             inputs.digest(),
         );
-        let identity = super::super::identity::read(
-            &self.main,
-            &self.sources,
-            &self.root_module,
-            declared_inputs,
-            fallback,
-        )
-        .map_err(Diagnostics::one)?;
+        let identity =
+            super::super::identity::read(&self.main, self.source_graph(), declared_inputs);
         ledger.transaction(|| {
             let graph = expression::runtime::execute_entry(
                 &self.main,
@@ -79,8 +73,7 @@ impl ExecutableBuild {
             )
             .map_err(|error| self.lower_error(fallback, error))?;
             Ok(BuiltProgram {
-                root_module: self.root_module.clone(),
-                sources: self.sources.clone(),
+                source_graph: self.source_graph.clone(),
                 main: Arc::clone(&self.main),
                 methods: Arc::clone(&self.methods),
                 types: Arc::clone(&self.types),
@@ -101,7 +94,7 @@ impl ExecutableBuild {
     fn runtime_error(&self, fallback: Span, error: expression::ExpressionError) -> Diagnostics {
         Diagnostics::one(super::super::super::expression_diagnostic::runtime(
             "PROGRAM_EXECUTABLE_RUNTIME",
-            &self.root_module,
+            self.root_module(),
             fallback,
             error,
         ))
@@ -114,7 +107,7 @@ impl ExecutableBuild {
     ) -> Diagnostics {
         Diagnostics::one(Diagnostic::new(
             error.diagnostic_code(),
-            &self.root_module,
+            self.root_module(),
             format!("{}: {error}", error.reason_code()),
             fallback,
         ))

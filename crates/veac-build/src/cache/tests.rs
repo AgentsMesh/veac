@@ -27,6 +27,21 @@ fn cache_keys_are_ordered_by_digest_and_expose_their_contract() {
 }
 
 #[test]
+fn computation_keys_reject_invalid_configuration_digests() {
+    let error = NodeCacheKey::computation(
+        "invalid",
+        1,
+        ContentDigest {
+            algorithm: veac_artifact::DigestAlgorithm::Sha256,
+            value: "invalid".to_owned(),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), BuildErrorKind::InvalidContract);
+    assert!(error.message().contains("invalid computation key"));
+}
+
+#[test]
 fn default_reservation_distinguishes_cancelled_hit_and_owner() {
     let cache = MemoryBuildCache::new();
     let cache_key = key("cache");

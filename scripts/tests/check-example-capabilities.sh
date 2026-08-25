@@ -9,7 +9,8 @@ CATALOG="$ROOT/examples/capabilities.json"
 tmp="$(mktemp -d)"
 gallery_test="$ROOT/examples/catalog/.gallery-contract-test.$$.json"
 mechanism_test="$ROOT/examples/catalog/.mechanism-contract-test.$$.json"
-trap 'rm -rf "$tmp"; rm -f "$gallery_test" "$mechanism_test"' EXIT
+cleanup() { rm -rf "$tmp" "$gallery_test" "$mechanism_test"; }
+trap cleanup EXIT INT TERM
 
 expect_failure() {
   local name="$1"
@@ -29,7 +30,7 @@ expect_gallery_failure() {
   local name=$1
   local filter=$2
   local catalog="$tmp/$name-catalog.json"
-  jq "$filter" "$ROOT/examples/catalog/gallery.json" > "$gallery_test"
+  jq -c "$filter" "$ROOT/examples/catalog/gallery.json" > "$gallery_test"
   jq --arg gallery "examples/catalog/$(basename "$gallery_test")" \
     '.gallery_catalog = $gallery' "$CATALOG" > "$catalog"
   expect_failure "$name" "$catalog"
@@ -39,7 +40,7 @@ expect_mechanism_failure() {
   local name=$1
   local filter=$2
   local catalog="$tmp/$name-catalog.json"
-  jq "$filter" "$ROOT/examples/catalog/mechanisms/delivery-workflows.json" \
+  jq -c "$filter" "$ROOT/examples/catalog/mechanisms/delivery-workflows.json" \
     > "$mechanism_test"
   jq --arg fragment "examples/catalog/$(basename "$mechanism_test")" \
     '.mechanism_catalogs[0] = $fragment' "$CATALOG" > "$catalog"
@@ -48,10 +49,10 @@ expect_mechanism_failure() {
 
 "$CHECKER" "$CATALOG" >/dev/null
 
-jq '.examples[0].summary =
+jq -c '.examples[0].summary =
   "交付 MOV、HEVC Main10、HDR PQ、VP9 Opus、WebM、BT.2020 与 H.265。"' \
   "$ROOT/examples/catalog/gallery.json" >"$gallery_test"
-jq --arg gallery "examples/catalog/$(basename "$gallery_test")" \
+jq -c --arg gallery "examples/catalog/$(basename "$gallery_test")" \
   '.gallery_catalog = $gallery' "$CATALOG" >"$tmp/standard-token-catalog.json"
 "$CHECKER" "$tmp/standard-token-catalog.json" >/dev/null
 
@@ -195,5 +196,3 @@ for id in mask.star animation.interpolation-spring audio.high-pass generator.sha
     exit 1
   fi
 done
-
-echo "Example capability checker tests passed."

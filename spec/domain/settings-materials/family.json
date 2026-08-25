@@ -1,0 +1,29 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "settings-materials",  "types": [
+    {"name":"Context","opcode":1,"classification":"topology_value"},
+    {"name":"ProjectSettings","opcode":8193,"classification":"topology_value"},
+    {"name":"SequenceSettings","opcode":8194,"classification":"topology_value"},
+    {"name":"Project","opcode":8208,"classification":"container"},
+    {"name":"Sequence","opcode":8209,"classification":"container"},
+    {"name":"Layer","opcode":8210,"classification":"container"},
+    {"name":"Item","opcode":8211,"classification":"container"},
+    {"name":"PlacementMode","opcode":8195,"classification":"leaf_value"},
+    {"name":"TrackState","opcode":8200,"classification":"topology_value"},
+    {"name":"TrackPlayback","opcode":8196,"classification":"topology_value"},
+    {"name":"TrackAudioState","opcode":8197,"classification":"leaf_value"},
+    {"name":"TrackIsolation","opcode":8198,"classification":"topology_value"},
+    {"name":"TrackEditing","opcode":8199,"classification":"topology_value"},
+    {"name":"TrackRouting","opcode":8201,"classification":"topology_value"},
+    {"name":"ItemState","opcode":8203,"classification":"leaf_value"},
+    {"name":"Resource","opcode":8207,"classification":"graph_entity"},
+    {"name":"ResourceLocation","opcode":8204,"classification":"topology_value"},
+    {"name":"StreamChoice","opcode":8205,"classification":"topology_value"},
+    {"name":"StreamIntent","opcode":8206,"classification":"topology_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

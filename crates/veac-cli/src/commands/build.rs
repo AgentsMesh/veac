@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use crate::error::{CliError, CliResult};
 
@@ -8,14 +9,17 @@ pub(crate) fn run(
     inputs: Option<&Path>,
     inline_inputs: &[String],
     requested_material_root: Option<&Path>,
+    package_roots: &[PathBuf],
     revision: u64,
 ) -> CliResult {
     let (envelope, program, root) =
-        crate::frontend::build_graph(source, inputs, inline_inputs, revision)?;
+        crate::frontend::build_graph(source, inputs, inline_inputs, package_roots, revision)?;
     let material_root =
         crate::material_root::MaterialRoot::for_build(&root, requested_material_root)?;
-    let mut json = veac_ir::canonical_json(&envelope)
-        .map_err(|error| CliError::new("CANONICAL_ENCODE", error.to_string()))?;
+    let mut json = match veac_ir::canonical_json(&envelope) {
+        Ok(json) => json,
+        Err(error) => return Err(CliError::new("CANONICAL_ENCODE", error.to_string())),
+    };
     json.push('\n');
     let Some(destination) = emit_ir else {
         return crate::fs::write_stdout(&json);
@@ -26,6 +30,7 @@ pub(crate) fn run(
     let mut protected = program
         .sources()
         .keys()
+        .filter(|module| !module.starts_with("packages/"))
         .map(|module| root.join(module))
         .collect::<Vec<_>>();
     if let Some(inputs) = inputs {

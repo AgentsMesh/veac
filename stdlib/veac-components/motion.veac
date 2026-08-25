@@ -1,0 +1,8 @@
+module {
+  export fn fade(item_value: Item) -> Item {
+    animate visual-opacity on clip(item_value) {
+      sample_curve_ease_in_out(clamp(progress * 1.5, 0.0, 1.0),
+        [(0.0, 0.0), (1.0, 1.0)])
+    }
+  }
+}

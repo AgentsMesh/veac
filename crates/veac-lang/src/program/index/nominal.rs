@@ -91,7 +91,7 @@ fn register_declaration(
     span: crate::authoring::Span,
 ) -> Result<(), Diagnostic> {
     index.register(&file.path, target.clone(), span)?;
-    index.insert_declaration(&file.path, target, site, &file.source, span)
+    index.insert_declaration(&file.path, target, site, file.source(), span)
 }
 
 #[cfg(test)]

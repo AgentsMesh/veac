@@ -80,7 +80,7 @@ fn edit_file(temp: &TempDir, source: &std::path::Path, body: &str) -> std::path:
     let prepared = veac_lang::program::prepare_path(source).unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_cli_transform_edit").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target: SourceNodeRef::function("main.veac", "motion"),

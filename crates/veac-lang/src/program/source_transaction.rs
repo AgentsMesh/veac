@@ -4,8 +4,8 @@ use super::BuildInputManifestV1;
 use crate::source_edit::SourceEditBatch;
 
 mod executable;
+mod loader;
 mod model;
-mod revision;
 mod selection;
 
 pub use model::{
@@ -53,11 +53,40 @@ pub fn prepare_executable_source_edit_path_with_root(
     entry: &Path,
     batch: &SourceEditBatch,
 ) -> Result<(PathBuf, ExecutableSourceEditCandidate), SourceTransactionError> {
-    let (root, prepared) =
-        super::prepare_path_with_root(entry).map_err(SourceTransactionError::Program)?;
+    prepare_executable_source_edit_path_with_root_and_database(
+        entry,
+        batch,
+        &super::CompilerDatabase::default(),
+    )
+}
+
+pub fn prepare_executable_source_edit_path_with_root_and_database(
+    entry: &Path,
+    batch: &SourceEditBatch,
+    database: &super::CompilerDatabase,
+) -> Result<(PathBuf, ExecutableSourceEditCandidate), SourceTransactionError> {
+    let (root, prepared) = super::executable::prepare_path_with_root_and_database(entry, database)
+        .map_err(SourceTransactionError::Program)?;
     let (fallback, _) = super::FileSystemLoader::for_entry(entry)
         .map_err(|message| SourceTransactionError::Program(load_error(entry, message)))?;
-    executable::prepare(&prepared, batch, &fallback).map(|candidate| (root, candidate))
+    executable::prepare_with_database(&prepared, batch, &fallback, database)
+        .map(|candidate| (root, candidate))
+}
+
+pub fn prepare_executable_source_edit_with_loader(
+    prepared: &super::ExecutableBuild,
+    batch: &SourceEditBatch,
+    loader: &dyn super::SourceLoader,
+) -> Result<ExecutableSourceEditCandidate, SourceTransactionError> {
+    executable::prepare_with_database(prepared, batch, loader, &super::CompilerDatabase::default())
+}
+
+pub fn reprepare_executable_source_edit_preview(
+    preview: &ExecutableSourceEditPreview,
+    current_root: super::LoadedSource,
+    loader: &dyn super::SourceLoader,
+) -> Result<super::ExecutableBuild, SourceTransactionError> {
+    executable::reprepare(preview, current_root, loader)
 }
 
 fn load_error(entry: &Path, message: String) -> super::Diagnostics {

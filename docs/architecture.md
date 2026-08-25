@@ -1,7 +1,6 @@
 # Architecture
 
 ## Pipeline
-
 ```text
 .veac entry + confined imported modules
   -> executable Surface -> typed HIR -> verified Core v10
@@ -21,7 +20,6 @@ AST, Typed HIR, Core, graph handles, or compile-time declarations. The executabl
 validated canonical result before planning.
 
 ## 工程编排层
-
 `project.veac` 通过 `workspace() -> ProjectManifest` 在视频程序之上建立 profile/locale/matrix 实例、
 target DAG、typed inputs、CAS 和 delivery。target action 只允许 `VeacRender`、`MediaDerivation` 和
 `Evidence`；工程运行时不会执行任意 shell。完整 source graph revision、输入内容身份、上游 artifact
@@ -33,12 +31,16 @@ outcome 的 typed directory artifact。assertion failure 与 build execution fai
 [证据与验收](language-reference/evidence.md)。
 
 ## Crate Ownership
-
 | Crate | Owns | Does not own |
 | --- | --- | --- |
-| `veac-lang` | source graph, Typed HIR/Core v10, bounded evaluator, temporal residualization, graph transaction/freeze, direct lowering, source transactions | probing, render policy, FFmpeg strings |
+| `veac-lang-model` | execution-free primitive/effect/stage/value and `DomainType`/nominal identities | parsing, evaluation, operation catalog, source graph |
+| `veac-domain-spec` | generated Domain operation identities/catalog/contracts, opset registry, validation and digest; reexports `DomainType` | parser/runtime execution, plugin implementation, FFmpeg policy |
+| `veac-lang` | source graph, Typed HIR/Core v10, bounded evaluator, temporal residualization, graph transaction/freeze, direct lowering, source transactions; facade over language model/domain spec | probing, render policy, FFmpeg strings |
 | `veac-ir` | canonical serde model, IDs, invariants, edit contracts | surface syntax, filesystem access |
 | `veac-artifact` | probe snapshots, source clocks, artifact identity | timeline semantics |
+| `veac-caption` | backend-neutral subtitle interchange, validation, import and export | timeline authoring, render policy |
+| `veac-otio` | loss-aware canonical OpenTimelineIO interchange and edit proposals | source mutation, backend execution |
+| `veac-provider` | versioned deterministic external analysis/model request, response and proposal contracts | provider execution, secret or network ownership |
 | `veac-project` | authored workspace ABI、matrix expansion、target graph resolution | target execution、media I/O |
 | `veac-build` | typed DAG、scheduler、cache/lease、CAS publication、delivery、receipt | VEAC authoring、FFmpeg policy |
 | `veac-evidence` | authored suite ABI、observation plan、pure evaluation、evidence bundle | timeline construction、media process execution |
@@ -47,6 +49,23 @@ outcome 的 typed directory artifact。assertion failure 与 build execution fai
 | `veac-runtime` | task execution, locks, checkpoints, output verification | authoring interpretation |
 | `veac-template` | inventory, typed bindings, atomic fill proposals | planner behavior |
 | `veac-cli` | command orchestration and stable diagnostics | duplicate compiler logic |
+
+## Dependency Contract
+
+[`architecture-dependencies.json`](architecture-dependencies.json) is the machine-readable source of
+truth for workspace dependency direction. Required packages must exist; planned language packages (`veac-syntax`, `veac-source`,
+`veac-core`, `veac-eval`, `veac-compiler`, `veac-domain`, `veac-temporal`, `veac-lower`) become enforced as they enter the workspace. Normal and build dependencies may target only declared
+lower layers; dev dependencies remain outside the production graph. `make structure` checks complete
+package classification and rejects cycles in both the contract and current Cargo graph.
+
+`veac-domain-spec` is the single machine-generated Domain source consumed by the compiler facade.
+Its operation catalog is generated from `spec/domain`; generated Rust is never edited manually and
+the codegen contract checks that the projection is deterministic. Runtime/plugin identity is supplied
+as a typed digest input, so the specification crate does not depend on `veac-ir` or backend code.
+Surface v6, Core v10, Domain opset v8 and canonical schema v10 are independent version axes.
+
+Long-lived hosts use the bounded query model defined in [Compiler Query Database](rfcs/compiler-query-database.md). Cached syntax is a performance layer;
+clean compilation remains the semantic oracle, and graph-affine execution values are never retained.
 
 ## Executable Programming Boundary
 
@@ -82,9 +101,9 @@ The user-facing contract is [Executable Build](language-reference/executable-bui
 
 ## Source-Of-Truth Boundary
 
-The exact `.veac` source graph remains the authoring source of truth. A graph revision hashes every
-source byte. `SourceEditBatch` addresses typed source nodes and closed expression/body/declaration
-sites, preserves untouched bytes, and must re-resolve, execute, lower, and validate under
+The exact `.veac` source graph remains the authoring source of truth. The authored revision hashes only project-authority
+source bytes for editing; the complete revision also binds root, read-only dependency bytes, authority and exact import routes.
+`SourceEditBatch` addresses typed source nodes and closed expression/body/declaration sites, preserves untouched bytes, and must re-resolve, execute, lower, and validate under
 an exclusive source-root advisory lock. Commit revalidates root, lock, parent, and target identities
 plus every module byte before descriptor-relative staged replacement. VEAC never decompiles an
 edited canonical project back into source.

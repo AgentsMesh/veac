@@ -35,7 +35,7 @@ fn editing_a_method_body_retypes_and_reexecutes_from_source() {
     );
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_method_body_edit").unwrap(),
-        index.revision().clone(),
+        built.source_revision().unwrap(),
     );
     batch.preconditions.push(SourcePrecondition::BodyEquals {
         target: target.clone(),

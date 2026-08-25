@@ -22,8 +22,10 @@ fn v8_inventory_publishes_modules_imports_and_all_top_level_kinds() {
         ),
         ("main.veac".to_owned(), ENTRY.to_owned()),
     ]);
-    let inventory = SourceIndex::build(&sources).unwrap().inventory();
-    assert_eq!(inventory.schema_version, 8);
+    let index = super::test_support::index(&sources);
+    let revision = super::test_revision(&index);
+    let inventory = index.inventory(&revision).unwrap();
+    assert_eq!(inventory.schema_version, super::SOURCE_INDEX_SCHEMA_VERSION);
     assert_eq!(
         inventory
             .modules
@@ -82,9 +84,10 @@ fn named_impl_blocks_for_one_receiver_have_distinct_stable_targets() {
 impl Card @first { fn first(self) -> time { 1s } }
 impl Card @second { fn second(self) -> time { 2s } }
 fn main(context: Context) -> Project { context.empty_project() }"#;
-    let inventory = SourceIndex::build(&BTreeMap::from([("main.veac".into(), source.into())]))
-        .unwrap()
-        .inventory();
+    let sources = BTreeMap::from([("main.veac".into(), source.into())]);
+    let index = super::test_support::index(&sources);
+    let revision = super::test_revision(&index);
+    let inventory = index.inventory(&revision).unwrap();
     let declarations = &inventory.modules[0].declarations;
     for target in [
         SourceNodeRef::implementation("main.veac", "Card", "first"),
@@ -99,7 +102,7 @@ fn duplicate_impl_identity_for_one_receiver_fails_closed() {
     let source = r#"struct Card {}
 impl Card @shared { fn first(self) -> time { 1s } }
 impl Card @shared { fn second(self) -> time { 2s } }"#;
-    let error =
-        SourceIndex::build(&BTreeMap::from([("main.veac".into(), source.into())])).unwrap_err();
+    let error = SourceIndex::build_snapshot(&BTreeMap::from([("main.veac".into(), source.into())]))
+        .unwrap_err();
     assert_eq!(error.as_slice()[0].code, "SOURCE_INDEX_AMBIGUOUS_TARGET");
 }

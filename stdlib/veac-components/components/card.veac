@@ -1,0 +1,17 @@
+module {
+  export fn panel(card: Item) -> Item {
+    let faded = animate visual-opacity on clip(card) {
+      sample_curve_ease_in_out(clamp(progress * 1.5, 0.0, 1.0),
+        [(0.0, 0.0), (1.0, 1.0)])
+    };
+    faded.with_visual(visual_style(
+      visual_layout(placement_anchor(anchor_center(), vector(0.0, 0.0)),
+        frame_sized(720px, 380px, fit_fill()),
+        transform_2d(transform_motion(point_constant(point(0px, 0px)),
+          vector_constant(vector(1.0, 1.0)), angle_constant(0deg)),
+          transform_geometry(vector(0.0, 0.0), flip_none(), vector(0.5, 0.5), crop_none()))),
+      visual_surface(percent_constant(92%), compositing(10, blend_normal()),
+        card_present(36px, shadow_present(28px, 38%, vector(0.0, 16.0), #000000ff))),
+      [], color_pipeline_none()))
+  }
+}

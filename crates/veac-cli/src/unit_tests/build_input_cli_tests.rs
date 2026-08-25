@@ -135,7 +135,7 @@ fn source_edit_rebuilds_with_the_explicit_input_manifest() {
     let prepared = veac_lang::program::prepare_path(&source).unwrap();
     let mut batch = veac_lang::source_edit::SourceEditBatch::new(
         veac_ir::OperationId::new("op_cli_input").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(
         veac_lang::source_edit::SourceEditOperation::SetDeclaration {

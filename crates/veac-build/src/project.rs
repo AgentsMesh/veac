@@ -13,3 +13,4 @@ pub use adapter::*;
 pub use backend::*;
 pub use receipt::*;
 pub use runtime::*;
+pub use snapshot::ProjectPackageSet;

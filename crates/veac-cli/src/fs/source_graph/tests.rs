@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use tempfile::tempdir;
 
-use super::{ensure_source_graph_unchanged, ensure_source_modules_unchanged};
+use super::ensure_source_modules_unchanged;
 
 const ENTRY_SOURCE: &str =
     "fn main(context: Context) -> Project { project(identifier(\"main\"), project_settings(600)) }\n";
@@ -14,14 +14,6 @@ fn graph_check_rejects_changed_missing_and_escaping_modules() {
     std::fs::write(&module, "module {}\n").unwrap();
     let expected = BTreeMap::from([("brand.veac".into(), "module {}\n".into())]);
     check(temp.path(), "brand.veac", &expected).unwrap();
-    assert_eq!(
-        check(temp.path(), "brand.veac", &BTreeMap::new())
-            .unwrap_err()
-            .diagnostics()[0]
-            .code,
-        "SOURCE_CHANGED"
-    );
-
     std::fs::write(&module, "module { /* changed */ }\n").unwrap();
     let changed = check(temp.path(), "brand.veac", &expected).unwrap_err();
     assert_eq!(changed.diagnostics()[0].code, "SOURCE_CHANGED");
@@ -74,15 +66,6 @@ fn module_check_maps_entry_path_and_import_failures() {
     ));
 
     std::fs::write(temp.path().join("main.veac"), ENTRY_SOURCE).unwrap();
-    let duplicated = ["main.veac".to_owned(), "main.veac".to_owned()];
-    assert_source_changed(ensure_source_graph_unchanged(
-        temp.path(),
-        "main.veac",
-        &duplicated,
-        &veac_lang::source_edit::SourceRevision {
-            source_graph_sha256: "0".repeat(64),
-        },
-    ));
     assert_source_changed(ensure_source_modules_unchanged(
         temp.path(),
         "main.veac",
@@ -138,17 +121,11 @@ fn check(
     entry: &str,
     expected: &BTreeMap<String, String>,
 ) -> crate::error::CliResult {
-    let modules = expected.keys().cloned().collect::<Vec<_>>();
-    let source_modules = expected
+    let modules = expected
         .iter()
-        .map(|(path, source)| veac_lang::source_edit::SourceModule::utf8(path, source))
+        .map(|(path, source)| (path.as_str(), source.as_str()))
         .collect::<Vec<_>>();
-    let revision = veac_lang::source_edit::source_graph_revision(&source_modules).unwrap_or(
-        veac_lang::source_edit::SourceRevision {
-            source_graph_sha256: "0".repeat(64),
-        },
-    );
-    ensure_source_graph_unchanged(root, entry, &modules, &revision)
+    ensure_source_modules_unchanged(root, entry, &modules)
 }
 
 fn assert_source_changed(result: crate::error::CliResult) {

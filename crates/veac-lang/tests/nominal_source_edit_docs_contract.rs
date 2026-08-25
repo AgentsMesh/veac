@@ -5,20 +5,22 @@ use veac_lang::source_edit::SOURCE_EDIT_SCHEMA_VERSION;
 
 #[test]
 fn source_edit_references_track_nominal_declaration_contracts() {
-    assert_eq!(SOURCE_INDEX_SCHEMA_VERSION, 8);
-    assert_eq!(SOURCE_EDIT_SCHEMA_VERSION, 6);
+    assert_eq!(SOURCE_INDEX_SCHEMA_VERSION, 11);
+    assert_eq!(SOURCE_EDIT_SCHEMA_VERSION, 9);
     let editing = read("docs/language-reference/source-editing.md");
     let addressing = read("docs/language-reference/source-addressing.md");
     let nominal = read("docs/language-reference/programming-nominal.md");
     for token in [
-        "source-index v8",
-        "source-edit v6",
+        "source-index v11",
+        "source-edit v9",
         "`DeclarationSite`",
         "`declaration_equals`/`set_declaration`",
     ] {
         assert!(nominal.contains(token), "nominal reference omitted {token}");
     }
-    assert!(editing.contains("`source-index` v8"));
+    assert!(editing.contains("`source-index` v11"));
+    assert!(editing.contains("`authored_source_graph_sha256`"));
+    assert!(editing.contains("`complete_source_graph_sha256`"));
     assert!(editing.contains("declaration_equals`/`set_declaration"));
     assert!(editing.contains("statement_equals`/`set_statement"));
     for path in [

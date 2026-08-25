@@ -149,6 +149,12 @@ impl Parser {
         discriminant(&self.current().kind) == discriminant(expected)
     }
 
+    fn next_at(&self, expected: &TokenKind) -> bool {
+        self.tokens
+            .get(self.cursor + 1)
+            .is_some_and(|token| discriminant(&token.kind) == discriminant(expected))
+    }
+
     fn take(&mut self, expected: &TokenKind) -> Option<Range<usize>> {
         self.at(expected).then(|| self.advance().span)
     }

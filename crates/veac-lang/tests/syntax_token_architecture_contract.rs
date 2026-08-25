@@ -47,11 +47,9 @@ fn program_token_types_use_the_shared_declaration_primitive() {
         let path = manifest_dir().join(relative);
         let source = read(&path);
         let normalized = source.split_whitespace().collect::<Vec<_>>().join(" ");
-        assert!(
-            source.contains("define_syntax_tokens!"),
-            "{}",
-            path.display()
-        );
+        let uses_shared_declaration =
+            source.contains("define_syntax_tokens!") || source.contains("impl_syntax_tokens!");
+        assert!(uses_shared_declaration, "{}", path.display());
         assert!(
             !normalized.contains("Self::ALL.into_iter().find"),
             "{} mirrors parse",

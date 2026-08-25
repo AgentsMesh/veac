@@ -39,6 +39,17 @@ fn snapshot_rejects_a_replaced_path_after_reading() {
 }
 
 #[test]
+fn snapshot_rejects_a_path_removed_after_reading() {
+    let (_temp, directory, file, path) = fixture();
+    let result = read_regular_with(file, &directory, Path::new("source.veac"), &path, || {
+        std::fs::remove_file(&path).unwrap();
+    });
+    let error = result.err().expect("removed path must invalidate snapshot");
+    assert!(error.contains("changed while it was read"));
+    assert!(error.contains("source.veac"));
+}
+
+#[test]
 fn snapshot_io_errors_retain_the_source_label() {
     let label = Path::new("nested/source.veac");
     assert!(inspect_error(label, rustix::io::Errno::IO).contains("nested/source.veac"));

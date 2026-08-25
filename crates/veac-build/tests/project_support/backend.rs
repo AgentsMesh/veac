@@ -53,10 +53,10 @@ impl TestBackend {
 impl ProjectBackend for TestBackend {
     fn implementation_identity(
         &self,
-        action: ProjectActionKind,
+        action: &ProjectAction,
     ) -> Result<ProjectBackendIdentity, ProjectBackendError> {
         let value = self.identity.clone();
-        Ok(match action {
+        Ok(match action.kind() {
             ProjectActionKind::VeacRender => ProjectBackendIdentity::VeacRender {
                 project_backend: value.clone(),
                 build: value.clone(),

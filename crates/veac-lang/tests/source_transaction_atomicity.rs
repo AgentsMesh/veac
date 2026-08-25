@@ -117,12 +117,7 @@ impl Fixture {
     }
 
     fn batch(&self, id: &str) -> SourceEditBatch {
-        let revision = build_path(&self.entry)
-            .unwrap()
-            .source_index()
-            .unwrap()
-            .revision()
-            .clone();
+        let revision = build_path(&self.entry).unwrap().source_revision().unwrap();
         SourceEditBatch::new(veac_ir::OperationId::new(id).unwrap(), revision)
     }
 

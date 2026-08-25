@@ -34,7 +34,7 @@ fn imported_payloadless_enum_resolves_by_its_nominal_declaration() {
     let prepared = prepare_path(&entry).unwrap();
     let declaration = &prepared.build_input_declarations()["locale"];
     assert_eq!(declaration.value_type().to_string(), "localization.Locale");
-    let inventory = prepared.source_index().unwrap().inventory();
+    let inventory = prepared.source_inventory().unwrap();
     let [input] = inventory.build_inputs.as_slice() else {
         panic!("expected the imported enum Build input")
     };

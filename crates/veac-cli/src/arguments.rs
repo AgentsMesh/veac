@@ -5,6 +5,8 @@ use crate::diagnostic::DiagnosticFormat;
 
 mod caption;
 pub(crate) use caption::*;
+mod language_package;
+pub(crate) use language_package::*;
 mod artifact;
 pub(crate) use artifact::*;
 mod otio;
@@ -14,6 +16,8 @@ mod project;
 pub(crate) use project::*;
 mod schema_contract;
 pub(crate) use schema_contract::*;
+mod source;
+pub(crate) use source::*;
 mod template;
 pub(crate) use template::*;
 mod workflow;
@@ -82,28 +86,11 @@ pub(super) enum Command {
     /// Discover identity-matched replacement files for one canonical plan.
     Relink(RelinkArgs),
     /// Execute a programmable source entry and publish canonical project JSON.
-    Build {
-        source: PathBuf,
-        /// Write canonical IR to PATH; omit it (or use `-`) for stdout.
-        emit_ir: Option<PathBuf>,
-        inputs: Option<PathBuf>,
-        inline_inputs: Vec<String>,
-        material_root: Option<PathBuf>,
-        revision: u64,
-    },
+    Build(BuildSourceArgs),
     /// Validate executable VEAC source without media I/O.
-    Check {
-        source: PathBuf,
-        inputs: Option<PathBuf>,
-        inline_inputs: Vec<String>,
-        revision: u64,
-    },
+    Check(CheckSourceArgs),
     /// Canonically format syntax-aware executable VEAC source.
-    Fmt {
-        source: PathBuf,
-        check: bool,
-        stdout: bool,
-    },
+    Fmt(FormatSourceArgs),
     /// Validate strict canonical project JSON.
     CheckIr { project: PathBuf },
     /// Apply one atomic typed edit batch to canonical project JSON.
@@ -116,18 +103,11 @@ pub(super) enum Command {
         dry_run: bool,
     },
     /// Print the exact revision of a `.veac` source graph.
-    SourceRevision { source: PathBuf },
+    SourceRevision(SourceGraphArgs),
     /// Print the stable, agent-readable inventory of editable `.veac` source nodes.
-    SourceIndex { source: PathBuf },
+    SourceIndex(SourceGraphArgs),
     /// Apply one atomic typed edit batch to `.veac` source of truth.
-    SourceEdit {
-        source: PathBuf,
-        source_edit_batch: PathBuf,
-        inputs: Option<PathBuf>,
-        inline_inputs: Vec<String>,
-        output: Option<PathBuf>,
-        dry_run: bool,
-    },
+    SourceEdit(SourceEditArgs),
     /// Print one public JSON Schema contract.
     Schema {
         contract: SchemaContract,
@@ -135,6 +115,8 @@ pub(super) enum Command {
     },
     /// Print the versioned VEAC language contract or its JSON Schema.
     LanguageSpec { schema: bool },
+    /// Inspect and discover exact, content-addressed VEAC language packages.
+    LanguagePackage { command: LanguagePackageCommand },
     /// Hydrate media facts and print one backend-neutral render plan.
     Plan {
         project: PathBuf,
@@ -151,8 +133,8 @@ pub(super) enum Command {
         material_root: Option<PathBuf>,
         output: Option<PathBuf>,
     },
-    /// Package reachable, identity-verified inputs for one resolved output.
-    Package {
+    /// Bundle reachable, identity-verified inputs for one resolved output.
+    Bundle {
         project: PathBuf,
         config: Option<String>,
         bindings: Option<PathBuf>,

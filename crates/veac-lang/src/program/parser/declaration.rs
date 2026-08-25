@@ -22,7 +22,8 @@ pub(super) fn constant(parser: &mut Parser<'_>, exported: bool) -> Result<ConstD
     let type_syntax = kind::value(parser)?;
     let (name, _) = parser.identifier("constant name")?;
     parser.expect(TokenKind::Equals, "`=`")?;
-    let (expression, expression_span, end) = parser.expression_until_semicolon()?;
+    let (expression, end) = parser.expression_until_semicolon()?;
+    let expression_span = expression.span;
     Ok(ConstDecl {
         name,
         type_syntax,

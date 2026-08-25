@@ -11,7 +11,8 @@ fn production_decoder_round_trips_canonical_contract_json() {
     );
 
     let schema = source_edit_batch_json_schema().unwrap();
-    assert!(schema.to_string().contains("source_graph_sha256"));
+    assert!(schema.to_string().contains("authored_source_graph_sha256"));
+    assert!(schema.to_string().contains("complete_source_graph_sha256"));
 }
 
 #[test]
@@ -25,9 +26,9 @@ fn production_decoder_rejects_top_level_and_nested_duplicate_names() {
 
     let digest = "a".repeat(64);
     let nested = canonical.replacen(
-        &format!(r#""base_revision":{{"source_graph_sha256":"{digest}"}}"#),
+        &format!(r#""authored_source_graph_sha256":"{digest}""#),
         &format!(
-            r#""base_revision":{{"source_graph_sha256":"{digest}","source_graph_sha256":"{digest}"}}"#
+            r#""authored_source_graph_sha256":"{digest}","authored_source_graph_sha256":"{digest}""#
         ),
         1,
     );

@@ -36,6 +36,10 @@ impl SourceLoader for Modules {
             .map(|source| LoadedSource { id, source })
             .ok_or_else(|| format!("missing {requested}"))
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }
 
 fn loader_error(imports: &str, loader: &dyn SourceLoader) -> &'static str {
@@ -153,6 +157,10 @@ impl SourceLoader for Collision {
             id: "shared.veac".to_owned(),
             source: format!("module {{{suffix}}}"),
         })
+    }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
     }
 }
 

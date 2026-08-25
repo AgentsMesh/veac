@@ -108,7 +108,7 @@ impl Fixture {
         let prepared = veac_lang::program::prepare_path(&self.entry).unwrap();
         let mut batch = SourceEditBatch::new(
             veac_ir::OperationId::new("op_cli_structural_batch").unwrap(),
-            prepared.source_index().unwrap().revision().clone(),
+            prepared.source_revision().unwrap(),
         );
         batch.operations = vec![
             SourceEditOperation::RemoveImport {

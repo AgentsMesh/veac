@@ -8,8 +8,14 @@ use crate::program::DomainOperationRegistry;
 mod feature_matrix;
 #[path = "tests/local_contracts.rs"]
 mod local_contracts;
+#[path = "tests/runtime_aggregate_contracts.rs"]
+mod runtime_aggregate_contracts;
 #[path = "tests/runtime_contracts.rs"]
 mod runtime_contracts;
+#[path = "tests/runtime_execution_contracts.rs"]
+mod runtime_execution_contracts;
+#[path = "tests/runtime_for_each_contracts.rs"]
+mod runtime_for_each_contracts;
 
 #[test]
 fn callback_failure_taints_and_prevents_partial_publication() {

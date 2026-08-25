@@ -107,3 +107,21 @@ fn canonical_root_authorities_reject_aliases_and_nesting() {
     roots.delivery = source;
     assert!(roots.validate_authorities().is_err());
 }
+
+#[test]
+fn execution_roots_reject_a_package_mount_inside_any_authority() {
+    let package_root = std::fs::canonicalize(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../stdlib/veac-components"),
+    )
+    .unwrap();
+    let packages = veac_build::ProjectPackageSet::capture(&[package_root.clone()]).unwrap();
+    let roots = ProjectExecutionRoots {
+        source: package_root,
+        material: std::path::PathBuf::from("/tmp/material"),
+        build: std::path::PathBuf::from("/tmp/build"),
+        cache: std::path::PathBuf::from("/tmp/cache"),
+        delivery: std::path::PathBuf::from("/tmp/delivery"),
+    };
+    let error = roots.validate_package_roots(&packages).unwrap_err();
+    assert_eq!(error.diagnostics()[0].code, "PROJECT_PACKAGE_AUTHORITY");
+}

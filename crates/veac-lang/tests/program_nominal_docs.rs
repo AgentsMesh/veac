@@ -29,6 +29,8 @@ fn checked_in_example_exercises_nominal_values_and_methods_visibly() {
         "export struct Card",
         "export enum Mood",
         "impl Card @presentation",
+        "export fn card(",
+        "duration: time = 3s",
         "match self.mood",
         "card.background()",
         "结构与方法",
@@ -61,9 +63,9 @@ fn checked_in_example_exercises_nominal_values_and_methods_visibly() {
 }
 
 #[test]
-fn source_editing_reference_pins_nominal_index_v8() {
+fn source_editing_reference_pins_nominal_index_v11() {
     let source = read("docs/language-reference/source-editing.md");
-    assert!(source.contains("`source-index` v8"));
+    assert!(source.contains("`source-index` v11"));
     let nominal = read("docs/language-reference/programming-nominal.md");
     assert!(nominal.contains("\"kind\": \"method\""));
     assert!(nominal.contains("{ \"type\": \"method_body\" }"));

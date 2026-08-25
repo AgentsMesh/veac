@@ -39,7 +39,12 @@ impl Fixture {
     }
 
     pub fn adapter(&self) -> ProjectGraphAdapter {
-        ProjectGraphAdapter::new(&self.source, &self.material).unwrap()
+        ProjectGraphAdapter::new(
+            &self.source,
+            &self.material,
+            ProjectPackageSet::capture(&[]).unwrap(),
+        )
+        .unwrap()
     }
 
     pub fn runtime(&self, backend: TestBackend) -> ProjectBuildRuntime<TestBackend> {

@@ -1,4 +1,4 @@
-use super::{fingerprint, snapshot, ProjectRoots};
+use super::{fingerprint, snapshot, ProjectPackageSet, ProjectRoots};
 use crate::BuildErrorKind;
 use veac_project::ProjectPath;
 
@@ -11,7 +11,8 @@ fn roots_snapshot_regular_source_and_material_files() {
     std::fs::create_dir(&material).unwrap();
     std::fs::write(source.join("nested/main.veac"), b"source").unwrap();
     std::fs::write(material.join("asset.bin"), b"asset").unwrap();
-    let roots = ProjectRoots::new(&source, &material).unwrap();
+    let roots =
+        ProjectRoots::new(&source, &material, ProjectPackageSet::capture(&[]).unwrap()).unwrap();
 
     let source = snapshot(&source, &ProjectPath::new("nested/main.veac")).unwrap();
     let material = roots.material(&ProjectPath::new("asset.bin")).unwrap();
@@ -26,8 +27,13 @@ fn roots_and_snapshots_reject_missing_or_non_regular_authorities() {
     std::fs::create_dir(&root).unwrap();
     let file = temp.path().join("file");
     std::fs::write(&file, b"x").unwrap();
-    assert!(ProjectRoots::new(&file, &root).is_err());
-    assert!(ProjectRoots::new(temp.path().join("missing"), &root).is_err());
+    assert!(ProjectRoots::new(&file, &root, ProjectPackageSet::capture(&[]).unwrap()).is_err());
+    assert!(ProjectRoots::new(
+        temp.path().join("missing"),
+        &root,
+        ProjectPackageSet::capture(&[]).unwrap()
+    )
+    .is_err());
 
     for value in ["../escape", "/absolute", "missing"] {
         assert!(snapshot(&root, &ProjectPath::new(value)).is_err());

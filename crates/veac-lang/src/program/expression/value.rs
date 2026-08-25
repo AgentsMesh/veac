@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::{ExactNumber, ValueType};
+pub use veac_lang_model::PrimitiveType;
 mod closure;
 pub(crate) mod domain;
 mod domain_affinity;
@@ -17,21 +18,19 @@ pub use nominal::{EnumValue, StructValue};
 pub use range::RangeValue;
 pub use structural::{ListValue, MapValue, MapValueEntry, TupleValue, ValueConstructionError};
 
-crate::define_syntax_tokens! {
-    array
-    pub enum PrimitiveType {
-        Integer => "int",
-        Scalar => "scalar",
-        Time => "time",
-        Length => "length",
-        Percent => "percent",
-        Angle => "angle",
-        Text => "text",
-        Color => "color",
-        Boolean => "bool",
-        Identifier => "identifier",
-    }
-}
+crate::impl_syntax_tokens!(
+    PrimitiveType,
+    PrimitiveType::Integer => "int",
+    PrimitiveType::Scalar => "scalar",
+    PrimitiveType::Time => "time",
+    PrimitiveType::Length => "length",
+    PrimitiveType::Percent => "percent",
+    PrimitiveType::Angle => "angle",
+    PrimitiveType::Text => "text",
+    PrimitiveType::Color => "color",
+    PrimitiveType::Boolean => "bool",
+    PrimitiveType::Identifier => "identifier",
+);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {

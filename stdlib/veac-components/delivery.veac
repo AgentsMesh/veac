@@ -1,0 +1,12 @@
+module {
+  export fn video(timeline: Sequence, size: Canvas, rate: FrameRate) -> Delivery {
+    let picture = video_output(video_h264(), pixel_yuv420p(), alpha_opaque(),
+      video_color_unspecified(), video_crf(20), gop_auto(), b_frames_auto(),
+      video_profile_present(profile_h264_high()), video_level_auto());
+    let artifact = deliverable_video(identifier("preview"), delivery_file("preview.mp4"),
+      video_delivery(container_mp4(), picture, embedded_audio_none(), true,
+        pass_single(), hardware_software()));
+    delivery(identifier("preview"), timeline, raster_settings(size, rate, caption_discard()),
+      [artifact])
+  }
+}

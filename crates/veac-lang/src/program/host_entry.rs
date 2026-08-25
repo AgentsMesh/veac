@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -6,13 +5,12 @@ use super::diagnostic::{Diagnostic, Diagnostics};
 use super::expression::{self, CompiledFunction, ExecutionBudget, FunctionMap, Value};
 use super::loader::{FileSystemLoader, LoadedSource, MemoryLoader, SourceLoader};
 use super::resolve;
-use super::{EntryContract, TypeRegistry};
+use super::{CompilerDatabase, EntryContract, PreparedSourceGraph, TypeRegistry};
 use crate::authoring::Span;
 
 #[derive(Debug, Clone)]
 pub struct PreparedHostEntry {
-    root_module: String,
-    sources: BTreeMap<String, String>,
+    source_graph: PreparedSourceGraph,
     entry: Arc<CompiledFunction>,
     functions: Arc<FunctionMap>,
     types: Arc<TypeRegistry>,
@@ -65,9 +63,18 @@ pub fn prepare_host_with_loader(
     loader: &dyn SourceLoader,
     contract: &EntryContract,
 ) -> Result<PreparedHostEntry, Diagnostics> {
-    let root_module = entry.id.clone();
-    let resolution = resolve::contract_entry(entry, loader, &ExecutionBudget::default(), contract)
+    let database = CompilerDatabase::default();
+    let source_graph = database
+        .prepare_source_graph(entry, loader, contract.preludes())
         .map_err(Diagnostics)?;
+    let resolution = resolve::contract_entry_with_database(
+        source_graph.root(),
+        &source_graph,
+        &ExecutionBudget::default(),
+        contract,
+        &database,
+    )
+    .map_err(Diagnostics)?;
     let function = resolution
         .scope
         .functions
@@ -78,8 +85,7 @@ pub fn prepare_host_with_loader(
         .validate_compiled(&function, &resolution.scope.types)
         .map_err(Diagnostics::one)?;
     Ok(PreparedHostEntry {
-        root_module,
-        sources: resolution.sources,
+        source_graph,
         entry: function,
         functions: resolution.scope.functions,
         types: resolution.scope.types,
@@ -97,7 +103,7 @@ impl PreparedHostEntry {
             &environment,
             &ExecutionBudget::default(),
         )
-        .map_err(|error| runtime_error(&self.root_module, &self.entry, error))?;
+        .map_err(|error| runtime_error(self.root_module(), &self.entry, error))?;
         Ok(EvaluatedHostEntry {
             value,
             types: Arc::clone(&self.types),
@@ -105,11 +111,15 @@ impl PreparedHostEntry {
     }
 
     pub fn root_module(&self) -> &str {
-        &self.root_module
+        self.source_graph.root_module()
     }
 
-    pub fn sources(&self) -> &BTreeMap<String, String> {
-        &self.sources
+    pub fn sources(&self) -> &std::collections::BTreeMap<String, String> {
+        self.source_graph.sources()
+    }
+
+    pub fn source_graph(&self) -> &PreparedSourceGraph {
+        &self.source_graph
     }
 
     pub fn type_registry(&self) -> &TypeRegistry {

@@ -66,7 +66,7 @@ fn package_rejects_a_file_destination_before_artifact_io() {
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let destination = temp.path().join("file");
     std::fs::write(&destination, "not a directory").unwrap();
-    assert!(crate::commands::package(
+    assert!(crate::commands::bundle(
         &project,
         None,
         None,
@@ -85,7 +85,7 @@ fn package_maps_artifact_publication_failures() {
     let project = canonical_project(&temp, GENERATED_SOURCE);
     let destination = temp.path().join("package");
     std::fs::create_dir_all(destination.join("project.veac.json")).unwrap();
-    let error = crate::commands::package(
+    let error = crate::commands::bundle(
         &project,
         None,
         None,
@@ -94,7 +94,7 @@ fn package_maps_artifact_publication_failures() {
         &FakeEnvironment::success(),
     )
     .unwrap_err();
-    assert!(error.to_string().contains("PACKAGE_FAILED"));
+    assert!(error.to_string().contains("BUNDLE_FAILED"));
 }
 
 #[test]

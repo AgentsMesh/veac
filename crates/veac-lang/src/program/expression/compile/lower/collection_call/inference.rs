@@ -1,6 +1,6 @@
 use super::super::Lowerer;
 use super::typing::{callback_parameter, list_type, type_error};
-use crate::program::expression::ast::{Expression, ExpressionKind};
+use crate::program::expression::ast::{CallArgument, Expression, ExpressionKind};
 use crate::program::expression::hir::TypedNode;
 use crate::program::expression::{CollectionOperation, ExpressionError, ValueType, ValueTypeKind};
 
@@ -8,10 +8,10 @@ impl Lowerer<'_> {
     pub(super) fn collection_input(
         &mut self,
         operation: CollectionOperation,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
     ) -> Result<TypedNode, ExpressionError> {
         let checkpoint = self.checkpoint();
-        match self.lower(&arguments[0]) {
+        match self.lower(&arguments[0].value) {
             Ok(input) => Ok(input),
             Err(error) if is_context_error(&error) => {
                 self.rollback(&checkpoint);
@@ -19,9 +19,9 @@ impl Lowerer<'_> {
                     CollectionOperation::Map | CollectionOperation::Filter => (1, 0, 1),
                     CollectionOperation::Fold => (2, 1, 2),
                 };
-                let element = self.probe_parameter(&arguments[callback], index, arity)?;
-                let expected = expected_container(&arguments[0], &element)?;
-                self.lower_context(&arguments[0], Some(&expected))
+                let element = self.probe_parameter(&arguments[callback].value, index, arity)?;
+                let expected = expected_container(&arguments[0].value, &element)?;
+                self.lower_context(&arguments[0].value, Some(&expected))
             }
             Err(error) => Err(error),
         }
@@ -29,15 +29,15 @@ impl Lowerer<'_> {
 
     pub(super) fn fold_initial(
         &mut self,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
     ) -> Result<TypedNode, ExpressionError> {
         let checkpoint = self.checkpoint();
-        match self.lower(&arguments[1]) {
+        match self.lower(&arguments[1].value) {
             Ok(initial) => Ok(initial),
             Err(error) if is_context_error(&error) => {
                 self.rollback(&checkpoint);
-                let accumulator = self.probe_parameter(&arguments[2], 0, 2)?;
-                self.lower_context(&arguments[1], Some(&accumulator))
+                let accumulator = self.probe_parameter(&arguments[2].value, 0, 2)?;
+                self.lower_context(&arguments[1].value, Some(&accumulator))
             }
             Err(error) => Err(error),
         }

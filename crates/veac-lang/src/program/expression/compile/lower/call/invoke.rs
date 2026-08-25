@@ -1,5 +1,5 @@
 use super::super::Lowerer;
-use crate::program::expression::ast::Expression;
+use crate::program::expression::ast::{CallArgument, Expression};
 use crate::program::expression::hir::{TypedNode, TypedNodeKind};
 use crate::program::expression::{ExpressionError, ValueType, ValueTypeKind};
 
@@ -7,9 +7,10 @@ impl Lowerer<'_> {
     pub(in crate::program::expression::compile::lower) fn invoke(
         &mut self,
         callee: TypedNode,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
+        super::reject_named("function value", arguments, expression)?;
         let ValueTypeKind::Function {
             parameters, result, ..
         } = callee.value_type.kind()
@@ -36,8 +37,8 @@ impl Lowerer<'_> {
             .zip(&parameters)
             .enumerate()
             .map(|(index, (argument, expected))| {
-                let value = self.lower_context(argument, Some(expected))?;
-                check_value_argument(index, &value, expected, argument)?;
+                let value = self.lower_context(&argument.value, Some(expected))?;
+                check_value_argument(index, &value, expected, &argument.value)?;
                 Ok(value)
             })
             .collect::<Result<Vec<_>, ExpressionError>>()?;

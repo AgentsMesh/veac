@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::source_edit::{
-    apply_resolved_text_replacements, resolve_source_edit_text, validate_source_edit_batch,
-    BodySite, BodySource, SourceEditBatch, SourceEditOperation, SourceNodeRef, SourcePrecondition,
-    SourceSnapshot,
+    apply_resolved_text_replacements, resolve_source_edit_text, BodySite, BodySource,
+    SourceEditBatch, SourceEditOperation, SourceNodeRef, SourcePrecondition, SourceSnapshot,
 };
 
 const SOURCE: &str = r#"module {
@@ -17,7 +16,7 @@ const SOURCE: &str = r#"module {
 
 #[test]
 fn indexes_method_nodes_bodies_and_exact_source_ranges() {
-    let index = super::SourceIndex::build(&sources(SOURCE)).unwrap();
+    let index = super::SourceIndex::build_snapshot(&sources(SOURCE)).unwrap();
     let body = index.body(&target(), BodySite::MethodBody).unwrap();
     assert!(index.node_exists(&target()));
     assert_eq!(body.source, "{\n      self.duration + extra\n    }");
@@ -26,11 +25,12 @@ fn indexes_method_nodes_bodies_and_exact_source_ranges() {
 
 #[test]
 fn method_body_edit_round_trips_through_a_rebuilt_index() {
-    let index = super::SourceIndex::build(&sources(SOURCE)).unwrap();
+    let index = super::SourceIndex::build_snapshot(&sources(SOURCE)).unwrap();
+    let revision = super::super::test_revision(&index);
     let operation = set_body("{ self.duration + extra + 250ms }");
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_method_body_index").unwrap(),
-        index.revision().clone(),
+        revision.clone(),
     );
     batch.preconditions.push(SourcePrecondition::BodyEquals {
         target: target(),
@@ -40,11 +40,11 @@ fn method_body_edit_round_trips_through_a_rebuilt_index() {
         },
     });
     batch.operations.push(operation.clone());
-    validate_source_edit_batch(&batch, index.revision(), &index).unwrap();
+    crate::source_edit::validate_source_edit_batch(&batch, &revision, &index).unwrap();
     let range = index.body(&target(), BodySite::MethodBody).unwrap().range;
     let replacement = resolve_source_edit_text(0, &operation, range).unwrap();
     let edited = apply_resolved_text_replacements("brand.veac", SOURCE, &[replacement]).unwrap();
-    let rebuilt = super::SourceIndex::build(&sources(&edited)).unwrap();
+    let rebuilt = super::SourceIndex::build_snapshot(&sources(&edited)).unwrap();
     assert_eq!(
         rebuilt
             .body(&target(), BodySite::MethodBody)
@@ -57,9 +57,9 @@ fn method_body_edit_round_trips_through_a_rebuilt_index() {
 
 #[test]
 fn moving_a_method_between_impl_identities_preserves_its_target() {
-    let first = super::SourceIndex::build(&sources(SOURCE)).unwrap();
+    let first = super::SourceIndex::build_snapshot(&sources(SOURCE)).unwrap();
     let moved = SOURCE.replace("@timing", "@presentation");
-    let second = super::SourceIndex::build(&sources(&moved)).unwrap();
+    let second = super::SourceIndex::build_snapshot(&sources(&moved)).unwrap();
     assert!(first.node_exists(&target()));
     assert!(second.node_exists(&target()));
     assert_eq!(

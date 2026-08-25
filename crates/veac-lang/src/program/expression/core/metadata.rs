@@ -14,24 +14,11 @@ mod temporal;
 mod temporal_attachment;
 pub(crate) use callable::{CallableContract, DeferredCall, DeferredUse};
 pub use dependency::DependencyMask;
-pub use effect::Effect;
 pub(crate) use effect::EffectEvidence;
 pub(crate) use path::{BindingRoot, MetadataPath, ProjectionStep};
 pub(crate) use projection::ProjectionContract;
 pub use summary::FunctionSummary;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Stage {
-    Const,
-    Build,
-    Temporal,
-}
-
-impl Stage {
-    pub(crate) fn join(self, other: Self) -> Self {
-        self.max(other)
-    }
-}
+pub use veac_lang_model::{Effect, Stage};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreValueMetadata {

@@ -1,0 +1,34 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "color-effects",  "types": [
+    {"name":"ColorSpace","opcode":20485,"classification":"leaf_value"},
+    {"name":"ColorPrimaries","opcode":20481,"classification":"leaf_value"},
+    {"name":"ColorTransfer","opcode":20482,"classification":"leaf_value"},
+    {"name":"ColorMatrix","opcode":20483,"classification":"leaf_value"},
+    {"name":"ColorRange","opcode":20484,"classification":"leaf_value"},
+    {"name":"ColorPipeline","opcode":16405,"classification":"leaf_value"},
+    {"name":"ColorStage","opcode":20499,"classification":"leaf_value"},
+    {"name":"BasicColorAdjustment","opcode":20486,"classification":"leaf_value"},
+    {"name":"RgbMatrixAdjustment","opcode":20487,"classification":"leaf_value"},
+    {"name":"HslAdjustment","opcode":20489,"classification":"leaf_value"},
+    {"name":"HueRange","opcode":20488,"classification":"leaf_value"},
+    {"name":"ToneCurve","opcode":20492,"classification":"leaf_value"},
+    {"name":"ToneCurveChannel","opcode":20493,"classification":"leaf_value"},
+    {"name":"ToneInterpolation","opcode":20491,"classification":"leaf_value"},
+    {"name":"CurvePoint","opcode":20490,"classification":"leaf_value"},
+    {"name":"ColorCurves","opcode":20494,"classification":"leaf_value"},
+    {"name":"ColorWheel","opcode":20495,"classification":"leaf_value"},
+    {"name":"LiftGammaGain","opcode":20496,"classification":"leaf_value"},
+    {"name":"LutInterpolation","opcode":20497,"classification":"leaf_value"},
+    {"name":"LutApplication","opcode":20498,"classification":"leaf_value"},
+    {"name":"Effect","opcode":20502,"classification":"leaf_value"},
+    {"name":"EffectState","opcode":20501,"classification":"leaf_value"},
+    {"name":"EffectWindow","opcode":20500,"classification":"leaf_value"},
+    {"name":"PluginEffectDescriptor","opcode":20503,"classification":"topology_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

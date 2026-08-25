@@ -10,6 +10,12 @@ pub(crate) struct FunctionRegistry {
 }
 
 impl FunctionRegistry {
+    pub(crate) fn iter_with_ids(
+        &self,
+    ) -> impl Iterator<Item = (FunctionId, &Arc<CompiledFunction>)> {
+        self.functions.iter().map(|(id, function)| (*id, function))
+    }
+
     pub(crate) fn get(&self, id: FunctionId) -> Option<&Arc<CompiledFunction>> {
         self.functions.get(&id)
     }
@@ -36,6 +42,12 @@ impl FunctionRegistry {
                 continue;
             };
             pending.extend(function.body().called_functions());
+            pending.extend(
+                function
+                    .parameters()
+                    .iter()
+                    .filter_map(|parameter| parameter.default().map(|value| value.thunk())),
+            );
             retained.insert(Arc::clone(function));
         }
         retained

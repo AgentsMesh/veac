@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::super::diagnostic::Diagnostics;
 use super::super::expression::{self, CompiledFunction, FunctionMap};
 use super::super::BuildInputDeclaration;
-use super::super::{MethodRegistry, TypeRegistry};
+use super::super::{MethodRegistry, PreparedSourceGraph, TypeRegistry};
 use super::ExecutableTemporalLeaf;
 
 mod accessors;
@@ -13,8 +13,7 @@ mod outputs;
 
 #[derive(Debug, Clone)]
 pub struct ExecutableBuild {
-    root_module: String,
-    sources: BTreeMap<String, String>,
+    source_graph: PreparedSourceGraph,
     main: Arc<CompiledFunction>,
     functions: Arc<FunctionMap>,
     methods: Arc<MethodRegistry>,
@@ -25,8 +24,7 @@ pub struct ExecutableBuild {
 
 #[derive(Debug)]
 pub struct BuiltProgram {
-    root_module: String,
-    sources: BTreeMap<String, String>,
+    source_graph: PreparedSourceGraph,
     main: Arc<CompiledFunction>,
     methods: Arc<MethodRegistry>,
     types: Arc<TypeRegistry>,
@@ -61,15 +59,13 @@ impl ExecutableRegistries {
 
 impl ExecutableBuild {
     pub(super) fn new(
-        root_module: String,
-        sources: BTreeMap<String, String>,
+        source_graph: PreparedSourceGraph,
         main: Arc<CompiledFunction>,
         registries: ExecutableRegistries,
         temporal_leaves: Vec<ExecutableTemporalLeaf>,
     ) -> Self {
         Self {
-            root_module,
-            sources,
+            source_graph,
             main,
             functions: registries.functions,
             methods: registries.methods,

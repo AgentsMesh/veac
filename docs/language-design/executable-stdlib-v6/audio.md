@@ -1,5 +1,9 @@
 # Audio Processing And Routing
 
+The authoritative machine source for this family is
+[`spec/domain/audio`](../../../spec/domain/audio). The declarations below are its checked
+documentation projection; `scripts/stdlib_codegen.py` rejects any type or signature drift.
+
 ## DomainTypes
 
 ```text

@@ -9,6 +9,7 @@ mod functions_errors;
 mod integers;
 mod literals;
 mod matching_metadata;
+mod named_arguments;
 mod nominal_closures;
 mod operators;
 mod references;

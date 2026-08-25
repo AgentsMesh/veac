@@ -151,7 +151,8 @@ fn source_commands_reject_a_final_symlink_without_touching_its_target() {
     }
 
     let revision = veac_lang::source_edit::SourceRevision {
-        source_graph_sha256: "0".repeat(64),
+        authored_source_graph_sha256: "0".repeat(64),
+        complete_source_graph_sha256: "0".repeat(64),
     };
     let batch_path = temp.path().join("symlink.json");
     std::fs::write(

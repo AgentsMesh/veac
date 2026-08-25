@@ -54,9 +54,12 @@ impl MethodRegistry {
         self.retained_bytes
     }
 
-    pub fn exported(&self) -> Self {
+    pub fn exported_for(&self, receivers: &BTreeSet<TypeId>) -> Self {
         self.filtered(
-            |definition| definition.visibility() == MethodVisibility::Exported,
+            |definition| {
+                definition.visibility() == MethodVisibility::Exported
+                    && receivers.contains(&definition.signature().receiver().id())
+            },
             true,
         )
     }

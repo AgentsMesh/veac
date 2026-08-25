@@ -1,0 +1,31 @@
+{
+  "format": "veac.domain-family",
+  "format_version": 3,
+  "domain_opset_version": 8,
+  "family": "visual-masks",  "types": [
+    {"name":"VisualStyle","opcode":16406,"classification":"leaf_value"},
+    {"name":"VisualLayout","opcode":16394,"classification":"leaf_value"},
+    {"name":"VisualSurface","opcode":16399,"classification":"leaf_value"},
+    {"name":"Placement","opcode":16386,"classification":"leaf_value"},
+    {"name":"Anchor","opcode":16385,"classification":"leaf_value"},
+    {"name":"FrameChoice","opcode":16388,"classification":"leaf_value"},
+    {"name":"FitMode","opcode":16387,"classification":"leaf_value"},
+    {"name":"Transform2D","opcode":16393,"classification":"leaf_value"},
+    {"name":"TransformMotion","opcode":16391,"classification":"leaf_value"},
+    {"name":"TransformGeometry","opcode":16392,"classification":"leaf_value"},
+    {"name":"Flip","opcode":16389,"classification":"leaf_value"},
+    {"name":"CropChoice","opcode":16390,"classification":"leaf_value"},
+    {"name":"Compositing","opcode":16396,"classification":"leaf_value"},
+    {"name":"BlendMode","opcode":16395,"classification":"leaf_value"},
+    {"name":"CardChoice","opcode":16398,"classification":"leaf_value"},
+    {"name":"ShadowChoice","opcode":16397,"classification":"leaf_value"},
+    {"name":"ColorPipelineChoice","opcode":16404,"classification":"leaf_value"},
+    {"name":"Mask","opcode":16403,"classification":"leaf_value"},
+    {"name":"MaskShape","opcode":16400,"classification":"leaf_value"},
+    {"name":"MaskMotion","opcode":16401,"classification":"leaf_value"},
+    {"name":"MaskEdge","opcode":16402,"classification":"leaf_value"}
+  ],
+  "operation_shards": [
+    "operations.json"
+  ]
+}

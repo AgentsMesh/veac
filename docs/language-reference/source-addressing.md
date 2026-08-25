@@ -48,6 +48,11 @@ path 是 precondition 中需要精确比较的 source value，不是 identity。
 `import_equals` 确认 `{ module, alias }` 仍指向预期 path，再在一个 batch 中 remove old alias、insert new
 alias，并更新 use site。被导入 declaration 的 identity 始终使用其真实 source module，不使用调用方 alias。
 
+可执行 project 还可以使用经过 trust loop 验证的 package：`package:name@version/path.veac` 是
+唯一的 package-qualified import value，版本必须是 exact identity。loader 将它映射到
+`packages/name@version/path.veac` 的稳定 source ID；这不是 URI 反射，也不会把 package manifest
+字段注入表达式。package 内部仍只能按 lock 声明的 direct dependency 边解析相对 import。
+
 ## Temporal Path
 
 animate body 使用完整 temporal declaration target：

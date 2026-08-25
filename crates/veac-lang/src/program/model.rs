@@ -4,10 +4,13 @@ use std::sync::Arc;
 use crate::authoring::Span;
 
 use super::expression::{ExpressionContext, FunctionMap, Value};
+use super::syntax_document::{SyntaxDocument, SyntaxSlice};
 use super::{MethodRegistry, TypeRegistry, TypeSyntax};
 
 mod function;
-pub(crate) use function::{FunctionBodyBinding, FunctionDecl, FunctionParameterDecl};
+pub(crate) use function::{
+    FunctionBodyBinding, FunctionDecl, FunctionParameterDecl, ParameterDefaultBinding,
+};
 mod method;
 pub(crate) use method::{ImplDecl, MethodDecl};
 mod type_declaration;
@@ -25,7 +28,7 @@ pub(crate) use build_input::BuildInputDecl;
 #[derive(Debug, Clone)]
 pub(crate) struct SurfaceFile {
     pub path: String,
-    pub source: String,
+    pub syntax: SyntaxDocument,
     pub kind: FileKind,
     pub imports: Vec<ImportDecl>,
     pub inputs: Vec<BuildInputDecl>,
@@ -53,7 +56,7 @@ pub(crate) struct ImportDecl {
 pub(crate) struct ConstDecl {
     pub name: String,
     pub type_syntax: TypeSyntax,
-    pub expression: String,
+    pub expression: SyntaxSlice,
     pub expression_span: Span,
     pub exported: bool,
     pub span: Span,
@@ -62,6 +65,7 @@ pub(crate) struct ConstDecl {
 #[derive(Debug, Clone)]
 pub(crate) struct RawBlock {
     pub span: Span,
+    pub syntax: SyntaxSlice,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -74,6 +78,12 @@ pub(crate) struct Scope {
 }
 
 pub(crate) type ValueMap = BTreeMap<String, Arc<Value>>;
+
+impl SurfaceFile {
+    pub(crate) fn source(&self) -> &str {
+        self.syntax.source()
+    }
+}
 
 impl Scope {
     pub(crate) fn expression_context(&self) -> ExpressionContext {

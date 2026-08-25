@@ -1,6 +1,6 @@
 use crate::authoring::Span;
 
-use super::{Diagnostic, Lexer, Token, TokenKind};
+use super::{Diagnostic, Lexer, SyntaxElementKind, Token, TokenKind};
 
 const MAX_DIAGNOSTICS: usize = 256;
 
@@ -33,10 +33,17 @@ impl Lexer<'_> {
             }
             return;
         }
+        let index = self.tokens.len();
         self.tokens.push(Token {
             kind,
             span: Span { start, end },
         });
+        if start < end {
+            self.elements.push(super::SyntaxElement {
+                kind: SyntaxElementKind::Token(index),
+                span: Span { start, end },
+            });
+        }
     }
 
     pub(super) fn report(&mut self, diagnostic: Diagnostic) {

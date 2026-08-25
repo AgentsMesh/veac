@@ -5,6 +5,7 @@ mod input;
 pub(crate) mod kind;
 mod method;
 mod name;
+mod slice;
 mod temporal;
 mod type_declaration;
 
@@ -12,7 +13,7 @@ use crate::authoring::Span;
 use crate::vocabulary::ControlUse;
 
 use super::diagnostic::Diagnostic;
-use super::model::RawBlock;
+use super::syntax_document::{SyntaxDocument, SyntaxSlice};
 use super::token::{Token, TokenKind};
 
 pub(crate) use file::{parse, parse_declaration_fragment, parse_executable};
@@ -20,17 +21,15 @@ pub(crate) use type_declaration::{validate_fragment, TypeDeclarationFragmentKind
 
 pub(super) struct Parser<'a> {
     path: &'a str,
-    source: &'a str,
-    tokens: Vec<Token>,
+    document: SyntaxDocument,
     cursor: usize,
 }
 
 impl<'a> Parser<'a> {
-    pub(super) fn new(path: &'a str, source: &'a str, tokens: Vec<Token>) -> Self {
+    pub(super) fn new(path: &'a str, document: SyntaxDocument) -> Self {
         Self {
             path,
-            source,
-            tokens,
+            document,
             cursor: 0,
         }
     }
@@ -50,7 +49,18 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn current(&self) -> &Token {
-        &self.tokens[self.cursor]
+        &self.document.tokens()[self.cursor]
+    }
+
+    pub(super) const fn mark(&self) -> usize {
+        self.cursor
+    }
+
+    pub(super) fn slice_from(&self, start: usize, span: Span) -> SyntaxSlice {
+        SyntaxSlice {
+            span,
+            tokens: start..self.cursor,
+        }
     }
 
     pub(super) fn advance(&mut self) -> Token {
@@ -124,61 +134,6 @@ impl<'a> Parser<'a> {
                 self.current().span,
             ))
         }
-    }
-
-    pub(super) fn expression_until_semicolon(
-        &mut self,
-    ) -> Result<(String, Span, Span), Diagnostic> {
-        let start = self.current().span.start;
-        let mut parentheses = 0usize;
-        let mut braces = 0usize;
-        while !self.at_eof() {
-            match self.current().kind {
-                TokenKind::LeftParen => parentheses += 1,
-                TokenKind::RightParen if parentheses > 0 => parentheses -= 1,
-                TokenKind::LeftBrace | TokenKind::DollarLeftBrace => braces += 1,
-                TokenKind::RightBrace if braces > 0 => braces -= 1,
-                TokenKind::Semicolon if parentheses == 0 && braces == 0 => break,
-                _ => {}
-            }
-            self.advance();
-        }
-        let end = self.current().span.start;
-        let terminator = self.expect(TokenKind::Semicolon, "`;`")?;
-        let raw = &self.source[start..end];
-        let leading = raw.len() - raw.trim_start().len();
-        let value = raw.trim().to_owned();
-        let span = Span {
-            start: start + leading,
-            end: start + leading + value.len(),
-        };
-        if value.is_empty() {
-            return Err(self.error(
-                "PROGRAM_EMPTY_EXPRESSION",
-                "expression cannot be empty",
-                Span { start, end },
-            ));
-        }
-        Ok((value, span, terminator))
-    }
-
-    pub(super) fn raw_block(&mut self) -> Result<RawBlock, Diagnostic> {
-        let left = self.expect(TokenKind::LeftBrace, "`{`")?;
-        let mut depth = 1usize;
-        while depth > 0 && !self.at_eof() {
-            let token = self.advance();
-            match token.kind {
-                TokenKind::LeftBrace | TokenKind::DollarLeftBrace => depth += 1,
-                TokenKind::RightBrace => depth -= 1,
-                _ => {}
-            }
-            if depth == 0 {
-                return Ok(RawBlock {
-                    span: left.join(token.span),
-                });
-            }
-        }
-        Err(self.error("PROGRAM_UNCLOSED_BLOCK", "block is not closed", left))
     }
 
     pub(super) fn error(

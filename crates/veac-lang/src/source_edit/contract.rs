@@ -8,15 +8,33 @@ use super::{
 };
 
 pub const SOURCE_EDIT_SCHEMA: &str = "https://veac.dev/schemas/source-edit";
-pub const SOURCE_EDIT_SCHEMA_VERSION: u32 = 6;
+pub const SOURCE_EDIT_SCHEMA_VERSION: u32 = 9;
 pub const MAX_SOURCE_EDIT_OPERATIONS: usize = 4_096;
 pub const MAX_SOURCE_EDIT_PRECONDITIONS: usize = 4_096;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct SourceRevision {
+pub struct AuthoredSourceRevision {
     #[schemars(regex(pattern = r"^[0-9a-f]{64}$"))]
     pub source_graph_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceRevision {
+    #[schemars(regex(pattern = r"^[0-9a-f]{64}$"))]
+    pub authored_source_graph_sha256: String,
+    #[schemars(regex(pattern = r"^[0-9a-f]{64}$"))]
+    pub complete_source_graph_sha256: String,
+}
+
+impl SourceRevision {
+    pub fn new(authored: &AuthoredSourceRevision, complete_source_graph_sha256: &str) -> Self {
+        Self {
+            authored_source_graph_sha256: authored.source_graph_sha256.clone(),
+            complete_source_graph_sha256: complete_source_graph_sha256.to_owned(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

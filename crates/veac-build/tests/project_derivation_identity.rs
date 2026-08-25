@@ -45,6 +45,7 @@ fn computation() -> ProjectComputation {
         inputs: Vec::new(),
         outputs: Vec::new(),
         bound_sources: Vec::new(),
+        package_mounts: Vec::new(),
     }
 }
 

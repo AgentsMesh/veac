@@ -1,6 +1,6 @@
 use crate::program::{FieldIndex, TypeId, VariantIndex};
 
-use super::{LocalId, TypedBlock, TypedNode};
+use super::{LocalId, TypedBlock, TypedCallArgument, TypedNode};
 use crate::program::expression::core::FunctionId;
 
 #[derive(Debug, Clone)]
@@ -39,5 +39,6 @@ pub(crate) struct TypedMatchArm {
 pub(crate) struct TypedMethodCall {
     pub target: FunctionId,
     pub receiver: Box<TypedNode>,
-    pub arguments: Vec<TypedNode>,
+    pub arguments: Vec<TypedCallArgument>,
+    pub defaults: Vec<super::TypedDefaultArgument>,
 }

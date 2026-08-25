@@ -8,8 +8,8 @@ use crate::vocabulary::control_uses::static_program as controls;
 mod dispatch;
 
 pub(crate) fn parse(path: &str, source: &str) -> Result<SurfaceFile, Vec<Diagnostic>> {
-    let tokens = lexer::lex(path, source)?;
-    let mut parser = Parser::new(path, source, tokens);
+    let document = lexer::lex_document(path, source)?;
+    let mut parser = Parser::new(path, document);
     parse_file(&mut parser).map_err(|error| vec![error])
 }
 
@@ -21,9 +21,9 @@ pub(crate) fn parse_declaration_fragment(
     path: &str,
     source: &str,
 ) -> Result<SurfaceFile, Vec<Diagnostic>> {
-    let tokens = lexer::lex(path, source)?;
-    let mut parser = Parser::new(path, source, tokens);
-    let mut file = empty(path, source, FileKind::Entry);
+    let document = lexer::lex_document(path, source)?;
+    let mut parser = Parser::new(path, document);
+    let mut file = empty(&parser, FileKind::Entry);
     while !parser.at_eof() {
         let exported = if parser.at_control(controls::EXPORT_MODIFIER) {
             parser.advance();
@@ -44,10 +44,10 @@ fn parse_file(parser: &mut Parser<'_>) -> Result<SurfaceFile, Diagnostic> {
     }
 }
 
-fn empty(path: &str, source: &str, kind: FileKind) -> SurfaceFile {
+fn empty(parser: &Parser<'_>, kind: FileKind) -> SurfaceFile {
     SurfaceFile {
-        path: path.to_owned(),
-        source: source.to_owned(),
+        path: parser.path.to_owned(),
+        syntax: parser.document.clone(),
         kind,
         imports: Vec::new(),
         inputs: Vec::new(),
@@ -60,7 +60,7 @@ fn empty(path: &str, source: &str, kind: FileKind) -> SurfaceFile {
 }
 
 fn entry(parser: &mut Parser<'_>) -> Result<SurfaceFile, Diagnostic> {
-    let mut file = empty(parser.path, parser.source, FileKind::Entry);
+    let mut file = empty(parser, FileKind::Entry);
     while !parser.at_eof() {
         dispatch::parse(parser, &mut file, false)?;
     }
@@ -70,7 +70,7 @@ fn entry(parser: &mut Parser<'_>) -> Result<SurfaceFile, Diagnostic> {
 fn module(parser: &mut Parser<'_>) -> Result<SurfaceFile, Diagnostic> {
     parser.expect_control(controls::MODULE_DECLARATION)?;
     parser.expect(TokenKind::LeftBrace, "`{`")?;
-    let mut file = empty(parser.path, parser.source, FileKind::Module);
+    let mut file = empty(parser, FileKind::Module);
     while !parser.at(&TokenKind::RightBrace) && !parser.at_eof() {
         if parser.at_control(controls::INPUT_DECLARATION) {
             return Err(parser.error(
@@ -104,3 +104,7 @@ fn module(parser: &mut Parser<'_>) -> Result<SurfaceFile, Diagnostic> {
     }
     Ok(file)
 }
+
+#[cfg(test)]
+#[path = "file/tests.rs"]
+mod tests;

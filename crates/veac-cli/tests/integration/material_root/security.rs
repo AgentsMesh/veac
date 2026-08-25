@@ -6,7 +6,7 @@ fn material_root_conflicts_with_bindings_for_project_consumers() {
     let cases: &[(&str, &[&str])] = &[
         ("plan", &[]),
         ("manifest", &[]),
-        ("package", &["--destination", "package"]),
+        ("bundle", &["--destination", "package"]),
         ("render", &[]),
     ];
     for (name, tail) in cases {
@@ -94,7 +94,7 @@ fn package_rejects_directories_that_contain_project_inputs() {
     let project_before = std::fs::read(&fixture.project).unwrap();
     for destination in [&fixture.source_root, &fixture.build_root] {
         fixture
-            .command("package")
+            .command("bundle")
             .arg("--destination")
             .arg(destination)
             .assert()

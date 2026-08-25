@@ -88,6 +88,14 @@ impl ExpressionContext {
         self.build_inputs.values()
     }
 
+    pub(crate) fn build_input_bindings(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (&str, &BuildInputSlot)> {
+        self.build_inputs
+            .iter()
+            .map(|(name, slot)| (name.as_str(), slot))
+    }
+
     pub fn with_build_inputs(mut self, inputs: BTreeMap<String, BuildInputSlot>) -> Self {
         self.build_inputs = Arc::new(inputs);
         self

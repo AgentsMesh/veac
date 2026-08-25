@@ -9,7 +9,7 @@ use crate::error::CliResult;
 
 pub(crate) fn canonical_project(temp: &TempDir, source: &str) -> PathBuf {
     let source = source_file(temp, source);
-    let envelope = crate::frontend::check(&source, None, &[], 0).unwrap();
+    let envelope = crate::frontend::check(&source, None, &[], &[], 0).unwrap();
     let path = temp.path().join("project.json");
     std::fs::write(&path, veac_ir::canonical_json(&envelope).unwrap()).unwrap();
     path

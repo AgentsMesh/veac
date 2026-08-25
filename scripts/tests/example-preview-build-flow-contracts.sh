@@ -73,9 +73,9 @@ language "veac" version 6;
 pub let duration: Time = 1s;
 VEAC
 cat >"$TMP/source/demo/source-edit.json" <<'JSON'
-{"schema":"https://veac.dev/schemas/source-edit","schema_version":6,
+{"schema":"https://veac.dev/schemas/source-edit","schema_version":9,
 "operation_id":"op_demo_source_edit",
-"base_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+"base_revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
 "atomic":true,"preconditions":[],"operations":[
 {"type":"insert_import","module":"main.veac","anchor":{"type":"after_import",
 "target":{"module":"main.veac","alias":"brand"}},
@@ -97,12 +97,12 @@ set -euo pipefail
 printf '%s\n' "$*" >>"$VEAC_FAKE_LOG"
 case $1 in
   source-revision)
-    printf '{"source_graph_sha256":"%064d"}\n' 0 | tr '0' 'a' ;;
+    printf '%s\n' '{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}' ;;
   source-index)
-    printf '%s\n' '{"schema":"https://veac.dev/schemas/source-index","schema_version":8,"revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"build_inputs":[],"modules":[{"module":"brand.veac","range":{"start":0,"end":40},"imports":[],"declarations":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"source":"pub let duration: Time = 1s;","range":{"start":0,"end":29}}]},{"module":"main.veac","range":{"start":0,"end":140},"imports":[{"target":{"module":"main.veac","alias":"brand"},"path":"./brand.veac","source":"import \"./brand.veac\" as brand;","range":{"start":0,"end":31}}],"declarations":[]}],"nodes":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"range":{"start":0,"end":29},"expressions":[{"site":{"type":"constant_value"},"source":"1s","range":{"start":26,"end":28}}],"statements":[],"bodies":[],"declarations":[]},{"target":{"module":"main.veac","path":{"kind":"function","function":"main"}},"range":{"start":60,"end":140},"expressions":[],"statements":[{"site":{"type":"body_statement","path":{"steps":[{"step":"local_value","operation":"let","binding":"duration","ordinal":0}]}},"source":"let duration = 1s;","range":{"start":90,"end":109}}],"bodies":[],"declarations":[]}]}' ;;
+    printf '%s\n' '{"schema":"https://veac.dev/schemas/source-index","schema_version":11,"revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},"build_inputs":[],"modules":[{"module":"brand.veac","range":{"start":0,"end":40},"imports":[],"declarations":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"source":"pub let duration: Time = 1s;","range":{"start":0,"end":29}}]},{"module":"main.veac","range":{"start":0,"end":140},"imports":[{"target":{"module":"main.veac","alias":"brand"},"path":"./brand.veac","source":"import \"./brand.veac\" as brand;","range":{"start":0,"end":31}}],"declarations":[]}],"nodes":[{"target":{"module":"brand.veac","path":{"kind":"constant","constant":"duration"}},"range":{"start":0,"end":29},"expressions":[{"site":{"type":"constant_value"},"source":"1s","range":{"start":26,"end":28}}],"statements":[],"bodies":[],"declarations":[]},{"target":{"module":"main.veac","path":{"kind":"function","function":"main"}},"range":{"start":60,"end":140},"expressions":[],"statements":[{"site":{"type":"body_statement","path":{"steps":[{"step":"local_value","operation":"let","binding":"duration","ordinal":0}]}},"source":"let duration = 1s;","range":{"start":90,"end":109}}],"bodies":[],"declarations":[]}]}' ;;
   source-edit)
     : >"$(dirname "$2")/.veac-source.lock"
-    printf '%s\n' '{"modules":["brand.veac","main.veac"],"previous_revision":{"source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"new_revision":{"source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"destinations":[],"dry_run":true}' ;;
+    printf '%s\n' '{"modules":["brand.veac","main.veac"],"previous_revision":{"authored_source_graph_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","complete_source_graph_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},"new_revision":{"authored_source_graph_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","complete_source_graph_sha256":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},"destinations":[],"dry_run":true}' ;;
   build) cp "$VEAC_FAKE_CANONICAL" "$3" ;;
   plan)
     printf '{"output":{"render_config_id":"%s"}}\n' "$3" ;;
@@ -161,7 +161,7 @@ if verify_example_source_edit_evidence "$ENTRY" >/dev/null 2>&1; then
 fi
 cp "$TMP/source-edit.outcome.json" "$ENTRY/project/source-edit.outcome.json"
 cp "$ENTRY/project/source-edit.json" "$TMP/source-edit.json"
-jq '.base_revision.source_graph_sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"' \
+jq '.base_revision.complete_source_graph_sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"' \
   "$TMP/source-edit.json" >"$ENTRY/project/source-edit.json"
 if verify_example_source_edit_evidence "$ENTRY" >/dev/null 2>&1; then
   fail "stale source edit batch was accepted"

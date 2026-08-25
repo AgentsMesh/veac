@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use crate::source_edit::{
-    apply_resolved_text_replacements, resolve_source_edit_text, validate_source_edit_batch,
-    BodySite, BodySource, DeclarationSite, DeclarationSource, SourceEditBatch, SourceEditOperation,
-    SourceNodeRef, SourceTemporalProperty,
+    apply_resolved_text_replacements, resolve_source_edit_text, BodySite, BodySource,
+    DeclarationSite, DeclarationSource, SourceEditBatch, SourceEditOperation, SourceNodeRef,
+    SourceTemporalProperty,
 };
 
 const FUNCTION_SOURCE: &str = r#"module {
@@ -28,7 +28,8 @@ const METHOD_SOURCE: &str = r#"module {
 
 #[test]
 fn indexes_component_animations_in_stable_source_order() {
-    let index = super::SourceIndex::build(&sources("motion.veac", FUNCTION_SOURCE)).unwrap();
+    let index =
+        super::SourceIndex::build_snapshot(&sources("motion.veac", FUNCTION_SOURCE)).unwrap();
     let target = SourceNodeRef::function("motion.veac", "animated");
     let first = body_site(0, SourceTemporalProperty::VisualOpacity);
     let second = body_site(1, SourceTemporalProperty::VisualRotation);
@@ -64,7 +65,7 @@ fn function_animation_body_edit_changes_only_the_authored_block() {
     };
     let edited = apply(FUNCTION_SOURCE, target, operation);
     assert!(edited.contains("clip(card) { clamp(progress * 2.0, 0.0, 1.0) }"));
-    let rebuilt = super::SourceIndex::build(&sources("motion.veac", &edited)).unwrap();
+    let rebuilt = super::SourceIndex::build_snapshot(&sources("motion.veac", &edited)).unwrap();
     assert_eq!(
         rebuilt
             .body(&SourceNodeRef::function("motion.veac", "animated"), site)
@@ -87,7 +88,7 @@ fn method_animation_declaration_edit_round_trips_from_source() {
         },
     };
     let edited = apply(METHOD_SOURCE, target.clone(), operation);
-    let rebuilt = super::SourceIndex::build(&sources("motion.veac", &edited)).unwrap();
+    let rebuilt = super::SourceIndex::build_snapshot(&sources("motion.veac", &edited)).unwrap();
     assert_eq!(
         rebuilt.declaration(&target, site).unwrap().source,
         replacement
@@ -102,13 +103,14 @@ fn method_animation_declaration_edit_round_trips_from_source() {
 }
 
 fn apply(source: &str, target: SourceNodeRef, operation: SourceEditOperation) -> String {
-    let index = super::SourceIndex::build(&sources("motion.veac", source)).unwrap();
+    let index = super::SourceIndex::build_snapshot(&sources("motion.veac", source)).unwrap();
+    let revision = super::super::test_revision(&index);
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_component_animation_edit").unwrap(),
-        index.revision().clone(),
+        revision.clone(),
     );
     batch.operations.push(operation.clone());
-    validate_source_edit_batch(&batch, index.revision(), &index).unwrap();
+    crate::source_edit::validate_source_edit_batch(&batch, &revision, &index).unwrap();
     let range = match &operation {
         SourceEditOperation::SetBody { site, .. } => index.body(&target, *site).unwrap().range,
         SourceEditOperation::SetDeclaration { site, .. } => {

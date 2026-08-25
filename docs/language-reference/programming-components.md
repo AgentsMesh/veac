@@ -96,7 +96,21 @@ function/method 内稳定源码顺序发布 ordinal，source-edit 可直接替�
 
 ## 参数与 Slot
 
-组件参数就是函数参数或 nominal field，default 由普通 pure function 表达。可替换媒体或文本不是
+组件参数就是函数参数或 nominal field。函数与 method 参数可以直接声明 pure、exact-type 默认表达式；
+位置调用只能省略末尾默认参数，命名调用可以只覆盖需要变化的 slot。默认值在组件声明模块中解析，
+不会捕获调用方 local、参数或 `self`，因此同一组件在不同调用点仍保持确定性。例如：
+
+```veac
+export fn card(
+  title: text,
+  duration: time = 3s,
+  background: color = #202124ff,
+) -> Item {
+  card_with_style(title, duration, background)
+}
+```
+
+可替换媒体或文本不是
 语言宏 slot，而是组件构造出的 typed canonical template contract：`slot_video()`、`slot_audio()`、
 `slot_visual()`、`slot_text()`、`slot_caption()` 或 `slot_sequence()`。slot kind、fill mode、material
 约束和 editable text 状态均为闭合值，并由 `veac-template` 原子填充。

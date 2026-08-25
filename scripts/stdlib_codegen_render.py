@@ -12,32 +12,25 @@ from stdlib_codegen_rust import (
     PRIMITIVE_RUST,
     TYPE_ROOT,
     family_groups,
+    opcode_ranges,
     op_constant,
     pascal,
     snake_type,
 )
+from stdlib_codegen_schema import (
+    CLASSIFICATIONS,
+    EFFECTS,
+    INSTRUCTIONS,
+    RUNTIME_ACTIONS,
+    STAGES,
+    TEMPORAL_LOWERINGS,
+)
 
 
-def assign_type_opcodes(types, families):
-    counters = defaultdict(int)
-    output = {"Context": 0x0001}
-    family_index = {name: index + 1 for index, name in enumerate(families)}
-    for name, metadata in types.items():
-        if name == "Context":
-            continue
-        family = metadata["family"]
-        counters[family] += 1
-        output[name] = family_index[family] * 0x1000 + counters[family]
-    return output
-
-
-def render_types(types, families):
-    opcodes = assign_type_opcodes(types, families)
+def render_types(types):
     groups = defaultdict(list)
-    groups["context"].append("Context")
     for name, metadata in types.items():
-        if name != "Context":
-            groups[metadata["family"]].append(name)
+        groups["context" if name == "Context" else metadata["family"]].append(name)
     rendered = {}
     modules = []
     for family, names in groups.items():
@@ -48,27 +41,16 @@ def render_types(types, families):
                      "use super::super::{classification::DomainTypeClassification, DomainType};", "",
                      "declare_domain_types! {"]
             for name in names[start:start + 70]:
-                classification = types[name]["classification"]
-                lines.append(f'    {name} = 0x{opcodes[name]:04x} => "{name}", {classification};')
+                metadata = types[name]
+                classification = CLASSIFICATIONS[metadata["classification"]]
+                lines.append(f'    {name} = 0x{metadata["opcode"]:04x} => "{name}", {classification};')
             lines.append("}")
             rendered[TYPE_ROOT / f"{module}.rs"] = "\n".join(lines) + "\n"
     rendered[TYPE_ROOT / "mod.rs"] = table_module(modules, "DomainTypeIdentity")
     return rendered
 
 
-def assign_operation_opcodes(operations, families):
-    counters = defaultdict(int)
-    family_index = {name: index + 1 for index, name in enumerate(families)}
-    values = {}
-    for operation in operations:
-        family = operation["family"]
-        counters[family] += 1
-        values[operation["signature"]] = family_index[family] * 0x1000 + counters[family]
-    return values
-
-
 def render_operation_ids(operations, families):
-    opcodes = assign_operation_opcodes(operations, families)
     groups = family_groups(operations)
     rendered = {}
     modules = []
@@ -82,9 +64,8 @@ def render_operation_ids(operations, families):
                      f"declare_operations!({pascal(family)} {{"]
             for operation in values[start:start + 70]:
                 constant = op_constant(operation)
-                opcode = opcodes[operation["signature"]]
                 canonical = canonical_name(operation)
-                lines.append(f'    {constant} = 0x{opcode:04x} => "{canonical}";')
+                lines.append(f'    {constant} = 0x{operation["opcode"]:04x} => "{canonical}";')
             lines.append("});")
             rendered[OP_ROOT / f"{module}.rs"] = "\n".join(lines) + "\n"
     rendered[OP_ROOT / "mod.rs"] = table_module(modules, "OperationIdentity")
@@ -92,14 +73,11 @@ def render_operation_ids(operations, families):
 
 
 def render_ir_opcodes(operations, families):
-    values = assign_operation_opcodes(operations, families)
     grouped = family_groups(operations)
     ranges = []
     for family in families:
-        opcodes = sorted(values[value["signature"]] for value in grouped[family])
-        if opcodes != list(range(opcodes[0], opcodes[-1] + 1)):
-            raise ValueError(f"non-contiguous canonical opcode family: {family}")
-        ranges.append(f"0x{opcodes[0]:04x}..=0x{opcodes[-1]:04x}")
+        opcodes = sorted(value["opcode"] for value in grouped[family])
+        ranges.extend(opcode_ranges(opcodes))
     lines = [HEADER.rstrip(), "pub(super) const fn is_current(opcode: u16) -> bool {", "    matches!(", "        opcode,"]
     lines.extend(f"        {value}" + (" |" if index + 1 < len(ranges) else "")
                  for index, value in enumerate(ranges))
@@ -121,7 +99,7 @@ def table_module(modules, identity):
     return "\n".join(lines)
 
 
-def render_contracts(operations, action, axis):
+def render_contracts(operations):
     rendered = {}
     modules = []
     for family, values in family_groups(operations).items():
@@ -130,14 +108,17 @@ def render_contracts(operations, action, axis):
             modules.append(module)
             chunk = values[start:start + 8]
             uses_primitive = any("PrimitiveType" in shape(value)
-                                 for operation in chunk for _, value in operation["args"])
-            lines = contract_header(uses_primitive)
+                                 for operation in chunk for _, value, _ in operation["args"])
+            uses_lowering = any(
+                operation["semantics"]["temporal_lowering"] for operation in chunk
+            )
+            lines = contract_header(uses_primitive, uses_lowering)
             for operation in chunk:
-                lines.extend(contract_arm(operation, action, axis))
+                lines.extend(contract_arm(operation))
             lines += ["        _ => return None,", "    })", "}"]
             rendered[CONTRACT_ROOT / f"{module}.rs"] = "\n".join(lines) + "\n"
     lines = [HEADER.rstrip()] + [f"mod {module};" for module in modules]
-    lines += ["", "use crate::program::domain_system::{DomainOperationContract, DomainOperationId};", "",
+    lines += ["", "use crate::{DomainOperationContract, DomainOperationId};", "",
               "const LOOKUPS: &[fn(DomainOperationId) -> Option<DomainOperationContract>] = &["]
     lines += [f"    {module}::contract," for module in modules]
     lines += ["];", "", "pub(super) fn contract(id: DomainOperationId) -> DomainOperationContract {",
@@ -147,27 +128,42 @@ def render_contracts(operations, action, axis):
     return rendered
 
 
-def contract_header(uses_primitive):
+def contract_header(uses_primitive, uses_lowering):
     lines = [HEADER.rstrip(), "use super::super::builders::*;",
-            "use crate::program::domain_system::{", "    DomainOperationContract as Contract, DomainOperationId as Op,",
-            "    DomainRuntimeAction as Action, DomainType as Type,", "};"]
+            "use crate::{", "    DomainOperationContract as Contract, DomainOperationId as Op,",
+            "    DomainInstructionKind as Instruction, DomainRuntimeAction as Action,",
+            "    DomainType as Type,", "};", "use veac_lang_model::{Effect, Stage};"]
+    if uses_lowering:
+        lines.append("use crate::TemporalLoweringOpcode as Lowering;")
     if uses_primitive:
-        lines.append("use crate::program::expression::PrimitiveType;")
+        lines.append("use veac_lang_model::PrimitiveType;")
     return lines + ["", "pub(super) fn contract(id: Op) -> Option<Contract> {", "    Some(match id {"]
 
 
-def contract_arm(operation, action, axis):
+def contract_arm(operation):
     constant = op_constant(operation)
     exposure = (f'method(Type::{operation["receiver"]}, "{operation["name"]}")'
                 if operation["receiver"] else f'free("{operation["name"]}")')
     args = list(operation["args"])
     if operation["receiver"]:
-        args.insert(0, (snake_type(operation["receiver"]), operation["receiver"]))
+        args.insert(0, (
+            snake_type(operation["receiver"]),
+            operation["receiver"],
+            operation["receiver_axis"],
+        ))
     lines = [f"        Op::{constant} => build(", "            id,", f"            {exposure},", "            vec!["]
-    for index, (name, value) in enumerate(args):
-        lines.append(f'                {axis(operation, index, name, value).lower()}("{name}", {shape(value)}),')
+    for name, value, axis in args:
+        lines.append(f'                {axis}("{name}", {shape(value)}),')
+    semantics = operation["semantics"]
+    lowering = semantics["temporal_lowering"]
+    lowering = "None" if lowering is None else f"Some(Lowering::{TEMPORAL_LOWERINGS[lowering]})"
     lines += ["            ],", f"            Type::{operation['result']},",
-              f"            Action::{action(operation)},", "        ),"]
+              "            semantics(",
+              f"                Instruction::{INSTRUCTIONS[semantics['instruction']]},",
+              f"                Action::{RUNTIME_ACTIONS[semantics['runtime_action']]},",
+              f"                Effect::{EFFECTS[semantics['effect']]},",
+              f"                Stage::{STAGES[semantics['max_stage']]},",
+              f"                {lowering},", "            ),", "        ),"]
     return lines
 
 
@@ -181,13 +177,15 @@ def shape(value):
     return f"{function}(Type::{inner})"
 
 
-def render_all(operations, types, action, axis):
+def render_all(operations, types):
+    operations = sorted(operations, key=lambda operation: operation["opcode"])
+    types = dict(sorted(types.items(), key=lambda item: item[1]["opcode"]))
     families = list(dict.fromkeys(operation["family"] for operation in operations))
     rendered = {}
-    rendered.update(render_types(types, families))
+    rendered.update(render_types(types))
     rendered.update(render_operation_ids(operations, families))
     rendered.update(render_ir_opcodes(operations, families))
-    rendered.update(render_contracts(operations, action, axis))
+    rendered.update(render_contracts(operations))
     oversized = [(path, text.count("\n")) for path, text in rendered.items() if text.count("\n") >= 200]
     if oversized:
         raise ValueError(f"generated files exceed the 199-line limit: {oversized}")

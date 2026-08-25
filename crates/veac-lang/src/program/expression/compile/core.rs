@@ -6,6 +6,7 @@ use super::super::core::{
 use super::super::hir::{CallTarget, TypedExpression, TypedNode, TypedNodeKind};
 
 mod aggregate;
+mod arguments;
 mod builder;
 mod call;
 mod closure;
@@ -101,8 +102,12 @@ impl Builder<'_> {
                 body,
                 non_escaping,
             } => return self.closure(parameters, captures, body, *non_escaping, node),
-            TypedNodeKind::Call { target, arguments } => {
-                let arguments = arguments.iter().map(|value| self.node(value)).collect();
+            TypedNodeKind::Call {
+                target,
+                arguments,
+                defaults,
+            } => {
+                let arguments = self.call_arguments(arguments, defaults, node.span.clone());
                 let target = match target {
                     CallTarget::Builtin(function) => CoreCallTarget::Builtin(*function),
                     CallTarget::User(id) => CoreCallTarget::User(*id),

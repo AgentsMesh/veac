@@ -3,15 +3,15 @@ use std::collections::BTreeSet;
 use super::ast::{Block, Expression, ExpressionKind};
 use super::ExpressionError;
 
+mod syntax;
+pub(crate) use syntax::referenced_value_symbols_slice;
+#[cfg(test)]
+mod test_support;
+#[cfg(test)]
+pub(crate) use test_support::referenced_value_symbols;
+
 pub fn referenced_symbols(source: &str) -> Result<BTreeSet<String>, ExpressionError> {
     referenced(source, &|_| false)
-}
-
-pub(crate) fn referenced_value_symbols(
-    source: &str,
-    is_value: &dyn Fn(&str) -> bool,
-) -> Result<BTreeSet<String>, ExpressionError> {
-    referenced(source, is_value)
 }
 
 fn referenced(
@@ -81,7 +81,7 @@ fn collect(
                 collect(callee, symbols, locals, direct_callee_is_value);
             }
             for argument in arguments {
-                collect(argument, symbols, locals, direct_callee_is_value);
+                collect(&argument.value, symbols, locals, direct_callee_is_value);
             }
         }
         ExpressionKind::FieldProject { receiver, .. } => {

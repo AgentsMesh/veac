@@ -2,6 +2,11 @@ use std::path::Path;
 
 use super::*;
 
+#[path = "tests/cas.rs"]
+mod cas;
+#[path = "tests/post_publish.rs"]
+mod post_publish;
+
 #[test]
 fn guard_verification_rejects_byte_and_same_content_inode_replacement() {
     for same_content in [false, true] {
@@ -33,14 +38,11 @@ fn second_publish_failure_rolls_back_the_first_module() {
     let rollbacks = stage(&prepared, &values, true).unwrap();
     remove_stage_with(&fixture.parts(), b"after-brand");
 
-    let error = publish(
-        &lock,
-        fixture.root(),
-        &prepared,
+    let error = publish::run(
+        publish::Context::new(&lock, fixture.root(), &prepared, &[], &[]),
         replacements,
         rollbacks,
-        &[],
-        &[],
+        || Ok(()),
     )
     .unwrap_err();
 
@@ -59,14 +61,11 @@ fn rollback_failure_reports_commit_uncertainty() {
     remove_stage_with(&fixture.parts(), b"after-brand");
     remove_stage_with(fixture.root(), b"before-main");
 
-    let error = publish(
-        &lock,
-        fixture.root(),
-        &prepared,
+    let error = publish::run(
+        publish::Context::new(&lock, fixture.root(), &prepared, &[], &[]),
         replacements,
         rollbacks,
-        &[],
-        &[],
+        || Ok(()),
     )
     .unwrap_err();
 
@@ -88,7 +87,7 @@ fn final_check_rejects_same_content_target_replacement() {
 }
 
 #[test]
-fn guard_change_after_staging_reports_published_commit_uncertainty() {
+fn guard_change_after_staging_rolls_back_every_published_module() {
     let fixture = Fixture::new();
     let lock = SourceGraphLock::acquire(fixture.root()).unwrap();
     let values = fixture.replacements();
@@ -101,18 +100,15 @@ fn guard_change_after_staging_reports_published_commit_uncertainty() {
     let replacements = stage(&prepared, &values, false).unwrap();
     let rollbacks = stage(&prepared, &values, true).unwrap();
     std::fs::write(fixture.guard(), "other").unwrap();
-    let error = publish(
-        &lock,
-        fixture.root(),
-        &prepared,
+    let error = publish::run(
+        publish::Context::new(&lock, fixture.root(), &prepared, &guarded, &guards),
         replacements,
         rollbacks,
-        &guarded,
-        &guards,
+        || Ok(()),
     )
     .unwrap_err();
-    assert_eq!(error.diagnostics()[0].code, "WRITE_COMMIT_UNCERTAIN");
-    fixture.assert_sources("after-main", "after-brand");
+    assert_eq!(error.diagnostics()[0].code, "SOURCE_CHANGED");
+    fixture.assert_sources("before-main", "before-brand");
 }
 
 struct Fixture {

@@ -3,6 +3,16 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::error::{CliError, CliResult};
 
+mod authority;
+
+pub(super) fn validate_package_authorities(
+    root: &Path,
+    paths: &veac_project::ProjectPaths,
+    packages: &veac_build::ProjectPackageSet,
+) -> CliResult {
+    authority::validate_package_authorities(root, paths, packages)
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct ProjectExecutionRoots {
     pub source: PathBuf,
@@ -40,6 +50,33 @@ impl ProjectExecutionRoots {
                     return Err(CliError::new(
                         "PROJECT_PATH_AUTHORITY",
                         format!("project {name} root overlaps {other_name} root"),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn validate_package_roots(
+        &self,
+        packages: &veac_build::ProjectPackageSet,
+    ) -> CliResult {
+        let authorities = [
+            (&self.source, "source"),
+            (&self.material, "material"),
+            (&self.build, "build"),
+            (&self.cache, "cache"),
+            (&self.delivery, "delivery"),
+        ];
+        for package in packages.host_roots() {
+            for (root, name) in authorities {
+                if package.starts_with(root) || root.starts_with(package) {
+                    return Err(CliError::new(
+                        "PROJECT_PACKAGE_AUTHORITY",
+                        format!(
+                            "package root {} overlaps project {name} root",
+                            package.display()
+                        ),
                     ));
                 }
             }

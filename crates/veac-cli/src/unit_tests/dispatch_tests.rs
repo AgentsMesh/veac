@@ -73,7 +73,7 @@ fn dispatcher_reaches_every_non_compile_command_variant() {
     dispatch(
         &[
             "veac",
-            "package",
+            "bundle",
             project.to_str().unwrap(),
             "--destination",
             package.to_str().unwrap(),

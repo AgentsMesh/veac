@@ -11,6 +11,10 @@ impl SourceLoader for ReturnedId {
             source: "module {}".to_owned(),
         })
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }
 
 fn invalid_ids() -> Vec<String> {

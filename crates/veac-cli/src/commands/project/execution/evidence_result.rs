@@ -69,3 +69,7 @@ fn outcome(store: &ArtifactStore, key: &ContentDigest) -> CliResult<ArtifactEvid
 fn contract(message: String) -> CliError {
     CliError::new("PROJECT_EVIDENCE_CONTRACT", message)
 }
+
+#[cfg(test)]
+#[path = "evidence_result_tests.rs"]
+mod tests;

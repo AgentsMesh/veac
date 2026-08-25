@@ -56,8 +56,9 @@ fn statement_contract_rejects_invalid_paths_targets_and_fragments() {
 
 #[test]
 fn statement_preconditions_compare_exact_authored_source() {
-    let index = crate::program::SourceIndex::build(&sources()).unwrap();
-    let site = statement_site(&index);
+    let index = index();
+    let current = complete_revision(&index);
+    let site = statement_site(&index, &current);
     let mut batch = statement_batch_with_site("let offset = 2s;", site.clone());
     batch
         .preconditions
@@ -68,17 +69,14 @@ fn statement_preconditions_compare_exact_authored_source() {
                 source: "let offset = 1s;".to_owned(),
             },
         });
-    batch.base_revision = index.revision().clone();
-    assert_eq!(
-        validate_source_edit_batch(&batch, index.revision(), &index),
-        Ok(())
-    );
+    batch.base_revision = current.clone();
+    assert_eq!(validate_source_edit_batch(&batch, &current, &index), Ok(()));
     let SourcePrecondition::StatementEquals { statement, .. } = &mut batch.preconditions[0] else {
         unreachable!()
     };
     statement.source = "let offset = 1s ;".to_owned();
     assert_eq!(
-        validate_source_edit_batch(&batch, index.revision(), &index),
+        validate_source_edit_batch(&batch, &current, &index),
         Err(SourceEditError::PreconditionFailed { index: 0 })
     );
 }
@@ -96,10 +94,9 @@ fn statement_range_resolution_uses_the_complete_validated_fragment() {
 }
 
 fn statement_batch(source: &str) -> SourceEditBatch {
-    statement_batch_with_site(
-        source,
-        statement_site(&crate::program::SourceIndex::build(&sources()).unwrap()),
-    )
+    let index = index();
+    let revision = complete_revision(&index);
+    statement_batch_with_site(source, statement_site(&index, &revision))
 }
 
 fn statement_batch_with_site(source: &str, site: StatementSite) -> SourceEditBatch {
@@ -117,9 +114,10 @@ fn statement_batch_with_site(source: &str, site: StatementSite) -> SourceEditBat
     batch
 }
 
-fn statement_site(index: &crate::program::SourceIndex) -> StatementSite {
+fn statement_site(index: &crate::program::SourceIndex, revision: &SourceRevision) -> StatementSite {
     index
-        .inventory()
+        .inventory(revision)
+        .unwrap()
         .nodes
         .into_iter()
         .find(|node| node.target == target())
@@ -129,10 +127,29 @@ fn statement_site(index: &crate::program::SourceIndex) -> StatementSite {
         .clone()
 }
 
+fn complete_revision(index: &crate::program::SourceIndex) -> SourceRevision {
+    index.bound_revision().unwrap()
+}
+
 fn target() -> SourceNodeRef {
     SourceNodeRef::function("main.veac", "amount")
 }
 
 fn sources() -> BTreeMap<String, String> {
     BTreeMap::from([("main.veac".to_owned(), SOURCE.to_owned())])
+}
+
+fn index() -> crate::program::SourceIndex {
+    let sources = sources();
+    let authority = BTreeMap::from([(
+        "main.veac".to_owned(),
+        crate::program::SourceAuthority::Project,
+    )]);
+    let graph = crate::program::PreparedSourceGraph::new(
+        "main.veac".to_owned(),
+        sources,
+        authority,
+        BTreeMap::new(),
+    );
+    crate::program::SourceIndex::build(&graph).unwrap()
 }

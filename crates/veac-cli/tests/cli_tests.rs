@@ -22,6 +22,10 @@ mod executable_temporal;
 mod executable_transform;
 #[path = "integration/inline_inputs.rs"]
 mod inline_inputs;
+#[path = "integration/language_package.rs"]
+mod language_package;
+#[path = "integration/language_package/fixture.rs"]
+mod language_package_fixture;
 #[path = "integration/language_spec.rs"]
 mod language_spec;
 #[path = "integration/material_base.rs"]
@@ -44,6 +48,8 @@ mod project_build_failures;
 mod project_derivation;
 #[path = "integration/project_evidence.rs"]
 mod project_evidence;
+#[path = "integration/project_packages.rs"]
+mod project_packages;
 #[path = "integration/proxy_e2e.rs"]
 mod proxy_e2e;
 #[path = "integration/reachability.rs"]
@@ -64,6 +70,8 @@ mod source_impl_edit;
 mod source_index;
 #[path = "integration/source_nominal_edit.rs"]
 mod source_nominal_edit;
+#[path = "integration/source_package.rs"]
+mod source_package;
 #[path = "integration/source_program.rs"]
 mod source_program;
 #[path = "integration/support/mod.rs"]

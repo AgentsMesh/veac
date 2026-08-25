@@ -45,7 +45,7 @@ pub trait ProjectBackend: Send + Sync {
     /// Return the closed identity contract for the selected project action backend.
     fn implementation_identity(
         &self,
-        action: crate::ProjectActionKind,
+        action: &ProjectAction,
     ) -> Result<ProjectBackendIdentity, ProjectBackendError>;
 
     fn execute(

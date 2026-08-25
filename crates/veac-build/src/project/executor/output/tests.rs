@@ -19,6 +19,7 @@ fn action(output: ProjectOutput) -> ProjectAction {
             inputs: Vec::new(),
             outputs: vec![output],
             bound_sources: Vec::new(),
+            package_mounts: Vec::new(),
         },
         source: ProjectFileSnapshot {
             path: "main.veac".to_owned(),
@@ -27,9 +28,10 @@ fn action(output: ProjectOutput) -> ProjectAction {
         },
         source_graph: ProjectSourceGraphRevision {
             root_module: "main.veac".to_owned(),
-            source_graph_sha256: "0".repeat(64),
-            module_count: 1,
-            modules: vec!["main.veac".to_owned()],
+            authored_source_graph_sha256: "0".repeat(64),
+            complete_source_graph_sha256: "1".repeat(64),
+            authored_module_count: 1,
+            authored_modules: vec!["main.veac".to_owned()],
         },
     }
 }
@@ -53,9 +55,10 @@ fn evidence_semantics_are_closed_and_action_specific() {
         },
         source_graph: ProjectSourceGraphRevision {
             root_module: "contract.veac".to_owned(),
-            source_graph_sha256: "3".repeat(64),
-            module_count: 1,
-            modules: vec!["contract.veac".to_owned()],
+            authored_source_graph_sha256: "3".repeat(64),
+            complete_source_graph_sha256: "4".repeat(64),
+            authored_module_count: 1,
+            authored_modules: vec!["contract.veac".to_owned()],
         },
     };
     assert!(matches!(

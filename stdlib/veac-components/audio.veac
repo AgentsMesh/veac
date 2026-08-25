@@ -1,0 +1,5 @@
+module {
+  export fn bus(key: identifier) -> AudioBus {
+    audio_bus(key)
+  }
+}

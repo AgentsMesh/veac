@@ -1,6 +1,7 @@
 use crate::authoring::Span;
 
 use super::FunctionBodyBinding;
+use crate::program::syntax_document::SyntaxSlice;
 
 mod property;
 pub(crate) use property::TemporalProperty;
@@ -20,6 +21,7 @@ pub(crate) struct TemporalDecl {
     pub source: Option<TemporalResourcePath>,
     pub body: FunctionBodyBinding,
     pub span: Span,
+    pub syntax: SyntaxSlice,
 }
 
 impl TemporalResourcePath {

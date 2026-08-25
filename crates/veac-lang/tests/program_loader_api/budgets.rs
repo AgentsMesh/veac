@@ -15,6 +15,10 @@ impl SourceLoader for GeneratedModules {
             source: "module {}".to_owned(),
         })
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }
 
 impl SourceLoader for LargeModules {
@@ -23,6 +27,10 @@ impl SourceLoader for LargeModules {
             id: requested.trim_start_matches("./").to_owned(),
             source: large_module(),
         })
+    }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
     }
 }
 

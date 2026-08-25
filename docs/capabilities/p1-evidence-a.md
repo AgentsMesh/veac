@@ -64,7 +64,7 @@ or decoded-output observation. The linked tests are entry points into broader mo
 - P1-14 observable: [mask-shape pixel E2E](../../crates/veac-runtime/tests/render_e2e/composition_mask_shapes.rs)
 ### P1-15
 - P1-15 implementation: [card and shadow model](../../crates/veac-ir/src/model/properties/composition.rs)
-- P1-15 language surface: [closed Domain operations](../../crates/veac-lang/src/program/domain_system/registry/surface.rs)
+- P1-15 language surface: [closed Domain operations](../../crates/veac-domain-spec/src/registry/surface.rs)
 - P1-15 lowering: [Domain value to canonical visual surface](../../crates/veac-lang/src/program/executable/lower/visual/surface.rs)
 - P1-15 verification: [executable visual lowering](../../crates/veac-lang/tests/executable_lowering/visual_v6.rs)
 - P1-15 rejection: [typed transform diagnostics](../../crates/veac-lang/tests/executable_lowering/transform/errors.rs)

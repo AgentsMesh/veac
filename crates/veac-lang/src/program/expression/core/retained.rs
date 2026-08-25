@@ -1,10 +1,12 @@
 use std::mem::{size_of, size_of_val};
 
 use super::{CompiledFunction, CoreInstructionKind, CoreProgram, CoreType};
-use crate::program::expression::{ValueType, ValueTypeKind};
 
 mod metadata;
+mod types;
 mod verified;
+
+use types::{sequence_type_bytes, value_type_bytes};
 
 impl CompiledFunction {
     pub(crate) fn retained_bytes(&self) -> Option<usize> {
@@ -20,6 +22,12 @@ impl CompiledFunction {
                 .checked_add(size_of_val(parameter))?
                 .checked_add(parameter.name.len())?
                 .checked_add(value_type_bytes(&parameter.value_type)?)?;
+            if let Some(default) = parameter.default() {
+                bytes = bytes.checked_add(default.source().len())?;
+                if let Some(origin) = default.origin() {
+                    bytes = bytes.checked_add(origin.source_id().len())?;
+                }
+            }
         }
         bytes = bytes.checked_add(value_type_bytes(&self.return_type)?)?;
         bytes = bytes.checked_add(metadata::summary_payload(&self.summary)?)?;
@@ -167,31 +175,6 @@ fn closure_definition_bytes(
         .checked_add(sequence_type_bytes(&definition.capture_types)?)?
         .checked_add(metadata::summary_payload(&definition.summary)?)?
         .checked_add(definition.body.retained_bytes()?)
-}
-
-fn value_type_bytes(value: &ValueType) -> Option<usize> {
-    match value.kind() {
-        ValueTypeKind::Primitive(_) | ValueTypeKind::Domain(_) => Some(0),
-        ValueTypeKind::Nominal(value) => Some(value.diagnostic_name().len()),
-        ValueTypeKind::List(element)
-        | ValueTypeKind::Range(element)
-        | ValueTypeKind::Map { value: element, .. } => {
-            size_of::<ValueType>().checked_add(value_type_bytes(element)?)
-        }
-        ValueTypeKind::Tuple(elements) => sequence_type_bytes(elements),
-        ValueTypeKind::Function {
-            parameters, result, ..
-        } => sequence_type_bytes(parameters)?
-            .checked_add(size_of::<ValueType>())?
-            .checked_add(value_type_bytes(result)?),
-    }
-}
-
-fn sequence_type_bytes(values: &[ValueType]) -> Option<usize> {
-    values.iter().try_fold(
-        values.len().checked_mul(size_of::<ValueType>())?,
-        |bytes, value| bytes.checked_add(value_type_bytes(value)?),
-    )
 }
 
 #[cfg(test)]

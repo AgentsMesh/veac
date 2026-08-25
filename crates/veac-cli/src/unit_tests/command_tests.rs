@@ -48,10 +48,10 @@ fn build_check_and_check_ir_dispatch_end_to_end() {
 fn build_supports_stdout_and_protects_its_source() {
     let temp = tempdir().unwrap();
     let source = source_file(&temp, EXECUTABLE_SOURCE);
-    crate::commands::build(&source, None, None, &[], None, 0).unwrap();
-    crate::commands::build(&source, Some(Path::new("-")), None, &[], None, 0).unwrap();
+    crate::commands::build(&source, None, None, &[], None, &[], 0).unwrap();
+    crate::commands::build(&source, Some(Path::new("-")), None, &[], None, &[], 0).unwrap();
     assert!(
-        crate::commands::build(&source, Some(&source), None, &[], None, 0)
+        crate::commands::build(&source, Some(&source), None, &[], None, &[], 0)
             .unwrap_err()
             .to_string()
             .contains("OUTPUT_OVERWRITES_INPUT")
@@ -63,15 +63,15 @@ fn formatter_supports_check_stdout_and_atomic_in_place_modes() {
     let temp = tempdir().unwrap();
     let messy = EXECUTABLE_SOURCE.replacen("fn main", "fn  main", 1);
     let source = source_file(&temp, &messy);
-    let expected = crate::frontend::format(&source).unwrap().1;
-    assert!(crate::commands::format(&source, true, false)
+    let expected = crate::frontend::format(&source, &[]).unwrap().1;
+    assert!(crate::commands::format(&source, true, false, &[])
         .unwrap_err()
         .to_string()
         .contains("FORMAT_REQUIRED"));
-    crate::commands::format(&source, false, true).unwrap();
+    crate::commands::format(&source, false, true, &[]).unwrap();
     assert_eq!(std::fs::read_to_string(&source).unwrap(), messy);
-    crate::commands::format(&source, false, false).unwrap();
-    crate::commands::format(&source, true, false).unwrap();
+    crate::commands::format(&source, false, false, &[]).unwrap();
+    crate::commands::format(&source, true, false, &[]).unwrap();
     assert_eq!(std::fs::read_to_string(source).unwrap(), expected);
 }
 

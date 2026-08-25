@@ -7,8 +7,11 @@ use super::{BuiltinFunction, CollectionOperation, TemporalAttachmentKind, Value,
 use crate::program::DomainOperationRegistry;
 use crate::program::TypeRegistry;
 
+mod call;
 mod nominal;
+mod retained;
 
+pub(super) use call::{TypedCallArgument, TypedDefaultArgument};
 pub(super) use nominal::{
     TypedEnumConstruct, TypedMatchArm, TypedMethodCall, TypedPatternBinding, TypedStructConstruct,
     TypedStructProject,
@@ -103,7 +106,7 @@ pub(super) struct TypedCapture {
 #[derive(Debug, Clone)]
 pub(super) struct TypedDomainCall {
     pub opcode: u16,
-    pub operands: Vec<TypedNode>,
+    pub operands: Vec<TypedCallArgument>,
 }
 
 #[derive(Debug, Clone)]
@@ -149,7 +152,8 @@ pub(super) enum TypedNodeKind {
     },
     Call {
         target: CallTarget,
-        arguments: Vec<TypedNode>,
+        arguments: Vec<TypedCallArgument>,
+        defaults: Vec<TypedDefaultArgument>,
     },
     Invoke {
         callee: Box<TypedNode>,

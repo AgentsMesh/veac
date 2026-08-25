@@ -3,12 +3,15 @@ use std::collections::BTreeSet;
 use super::{kind, Parser};
 use crate::program::diagnostic::Diagnostic;
 use crate::program::expression::MAX_FUNCTION_PARAMETERS;
-use crate::program::model::{FunctionBodyBinding, FunctionDecl, FunctionParameterDecl};
+use crate::program::model::{
+    FunctionBodyBinding, FunctionDecl, FunctionParameterDecl, ParameterDefaultBinding,
+};
 use crate::program::token::TokenKind;
 use crate::vocabulary::control_uses::static_program as controls;
 use crate::vocabulary::{accepts_expression_name, ExpressionNameKind};
 
 pub(super) fn parse(parser: &mut Parser<'_>, exported: bool) -> Result<FunctionDecl, Diagnostic> {
+    let syntax_start = parser.mark();
     let start = parser.expect_control(controls::FUNCTION_DECLARATION)?;
     let (name, name_span) = parser.identifier("function name")?;
     if !accepts_expression_name(&name, ExpressionNameKind::Function) {
@@ -25,17 +28,18 @@ pub(super) fn parse(parser: &mut Parser<'_>, exported: bool) -> Result<FunctionD
     let return_type_syntax = kind::value(parser)?;
     let block = parser.raw_block()?;
     let body_span = block.span;
-    let source = parser.source[body_span.start..body_span.end].to_owned();
+    let span = start.join(block.span);
     Ok(FunctionDecl {
         name,
         parameters,
         return_type_syntax,
         body: FunctionBodyBinding {
-            source,
             span: body_span,
+            syntax: block.syntax,
         },
         exported,
-        span: start.join(block.span),
+        span,
+        syntax: parser.slice_from(syntax_start, span),
     })
 }
 
@@ -51,6 +55,7 @@ pub(super) fn parameters_with_limit(
 ) -> Result<Vec<FunctionParameterDecl>, Diagnostic> {
     let mut parameters = Vec::new();
     let mut names = BTreeSet::new();
+    let mut found_default = false;
     while !parser.at(&TokenKind::RightParen) {
         let (name, name_span) = parser.identifier("function parameter name")?;
         if !accepts_expression_name(&name, ExpressionNameKind::Parameter) {
@@ -76,10 +81,29 @@ pub(super) fn parameters_with_limit(
         }
         parser.expect(TokenKind::Colon, "`:`")?;
         let (type_syntax, type_span) = kind::value_with_span(parser)?;
+        let default = if parser.at(&TokenKind::Equals) {
+            parser.advance();
+            let (syntax, span) = parser.expression_until_parameter_end()?;
+            found_default = true;
+            Some(ParameterDefaultBinding { span, syntax })
+        } else {
+            if found_default {
+                return Err(parser.error(
+                    "PROGRAM_REQUIRED_PARAMETER_AFTER_DEFAULT",
+                    "required parameters cannot follow a parameter with a default",
+                    name_span,
+                ));
+            }
+            None
+        };
+        let span = default.as_ref().map_or(name_span.join(type_span), |value| {
+            name_span.join(value.span)
+        });
         parameters.push(FunctionParameterDecl {
             name,
             type_syntax,
-            span: name_span.join(type_span),
+            span,
+            default,
         });
         if !parser.at(&TokenKind::Comma) {
             break;

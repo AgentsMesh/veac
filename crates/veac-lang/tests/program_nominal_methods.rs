@@ -48,6 +48,24 @@ fn render(value: Timing) -> time { value.finish() }
 }
 
 #[test]
+fn methods_fill_positional_and_named_default_parameters() {
+    let declarations = r#"struct Timing { duration: time, }
+impl Timing @timing {
+  fn padded(self, extra: time = 500ms, factor: scalar = 2.0) -> time {
+    (self.duration + extra) * factor
+  }
+}"#;
+    for (expression, expected) in [
+        ("Timing { duration: 1s, }.padded()", 1_800),
+        ("Timing { duration: 1s, }.padded(1s)", 2_400),
+        ("Timing { duration: 1s, }.padded(factor: 3.0)", 2_700),
+    ] {
+        let compiled = build_source(&project(declarations, expression)).unwrap();
+        assert_eq!(duration(&compiled).value, expected);
+    }
+}
+
+#[test]
 fn imported_exported_method_retains_private_method_and_helper() {
     let module = r#"module {
   export struct Timing { duration: time, }

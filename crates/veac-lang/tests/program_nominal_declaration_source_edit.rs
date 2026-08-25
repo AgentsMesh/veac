@@ -36,10 +36,9 @@ fn atomic_declaration_replacements_retype_reexecute_and_lower() {
     let entry = temp.path().join("main.veac");
     fs::write(&entry, SOURCE).unwrap();
     let compiled = prepare_path(&entry).unwrap();
-    let index = compiled.source_index().unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_nominal_declaration_edit").unwrap(),
-        index.revision().clone(),
+        compiled.source_revision().unwrap(),
     );
     add_declaration_edit(
         &mut batch,
@@ -90,10 +89,9 @@ fn rejected_declaration_preview_never_changes_the_source_file() {
     let entry = temp.path().join("main.veac");
     fs::write(&entry, SOURCE).unwrap();
     let compiled = prepare_path(&entry).unwrap();
-    let index = compiled.source_index().unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_rejected_nominal_declaration").unwrap(),
-        index.revision().clone(),
+        compiled.source_revision().unwrap(),
     );
     add_declaration_edit(
         &mut batch,
@@ -112,10 +110,9 @@ fn missing_declaration_target_is_rejected_without_writing() {
     let entry = temp.path().join("main.veac");
     fs::write(&entry, SOURCE).unwrap();
     let compiled = prepare_path(&entry).unwrap();
-    let index = compiled.source_index().unwrap();
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_missing_nominal_declaration").unwrap(),
-        index.revision().clone(),
+        compiled.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetDeclaration {
         target: SourceNodeRef::struct_field("main.veac", "Timing", "missing"),

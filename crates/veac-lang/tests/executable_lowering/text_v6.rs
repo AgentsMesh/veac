@@ -107,4 +107,8 @@ impl SourceLoader for PreviewLoader {
             "fixture cannot resolve module `{requested}` imported by `{importer}`"
         ))
     }
+
+    fn authority(&self, _source_id: &str) -> veac_lang::program::SourceAuthority {
+        veac_lang::program::SourceAuthority::Project
+    }
 }

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+DEFAULT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+ROOT=$(cd "${VEAC_FILE_SIZE_ROOT:-$DEFAULT_ROOT}" && pwd -P)
 STATUS=0
 
 check_file() {
@@ -18,11 +19,12 @@ check_file() {
 while IFS= read -r -d '' file; do
   check_file "$file"
 done < <(
-  find "$ROOT/crates" "$ROOT/docs" "$ROOT/examples" "$ROOT/scripts" "$ROOT/.github" \
+  find "$ROOT/crates" "$ROOT/docs" "$ROOT/examples" "$ROOT/scripts" "$ROOT/spec" \
+    "$ROOT/stdlib" "$ROOT/.github" \
     -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.py' -o -name '*.jq' \
       -o -name '*.md' -o -name '*.txt' \
       -o -name '*.veac' -o -name '*.json' -o -name '*.toml' -o -name '*.cube' \
-      -o -name '*.yml' -o -name '*.yaml' \) \
+      -o -name '*.yml' -o -name '*.yaml' -o -name 'veac.package.lock' \) \
     -print0
 )
 

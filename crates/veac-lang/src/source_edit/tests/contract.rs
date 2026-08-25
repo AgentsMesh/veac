@@ -12,7 +12,8 @@ fn contract_round_trips_and_has_a_schema() {
     let schema = schemars::schema_for!(SourceEditBatch);
     let encoded = serde_json::to_value(schema).unwrap();
     let encoded = encoded.to_string();
-    assert!(encoded.contains("source_graph_sha256"));
+    assert!(encoded.contains("authored_source_graph_sha256"));
+    assert!(encoded.contains("complete_source_graph_sha256"));
     assert!(encoded.contains("set_expression"));
     assert!(encoded.contains("set_statement"));
     assert!(encoded.contains("statement_equals"));
@@ -32,11 +33,12 @@ fn contract_round_trips_and_has_a_schema() {
     assert!(encoded.contains(r#""maxItems":4096"#));
     assert!(encoded.contains(r#""maxLength":65536"#));
     assert!(encoded.contains("constant_value"));
+    assert!(encoded.contains("parameter_default"));
     assert!(encoded.contains("body_expression"));
     assert!(encoded.contains("local_value"));
     assert!(encoded.contains(r#""maxItems":128"#));
     assert!(encoded.contains(r#""const":"https://veac.dev/schemas/source-edit""#));
-    assert!(encoded.contains(r#""const":6"#));
+    assert!(encoded.contains(&format!(r#""const":{}"#, SOURCE_EDIT_SCHEMA_VERSION)));
     assert!(encoded.contains("temporal_animation"));
     assert!(encoded.contains("component_animation"));
     assert!(encoded.contains("function_body"));
@@ -90,6 +92,13 @@ fn target_and_site_compatibility_is_closed() {
     assert!(nested.accepts(SourceNodeKind::Function));
     assert!(nested.accepts(SourceNodeKind::Method));
     assert!(!nested.accepts(SourceNodeKind::Constant));
+    let default = ExpressionSite::ParameterDefault {
+        parameter: "duration".to_owned(),
+    };
+    assert!(default.accepts(SourceNodeKind::Function));
+    assert!(default.accepts(SourceNodeKind::Method));
+    assert!(!default.accepts(SourceNodeKind::Constant));
+    assert!(default.is_valid());
     assert!(BodySite::TemporalAnimation {
         property: SourceTemporalProperty::VisualOpacity
     }

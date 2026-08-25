@@ -1,3 +1,4 @@
+mod build;
 mod component_animation;
 mod expression;
 mod fragment;
@@ -5,6 +6,7 @@ mod function;
 mod inventory;
 mod method;
 mod nominal;
+mod parameter_default;
 mod snapshot;
 mod storage;
 mod structural;
@@ -18,17 +20,17 @@ use std::collections::BTreeMap;
 
 use crate::authoring::Span;
 use crate::source_edit::{
-    source_graph_revision, BodySite, DeclarationSite, ExpressionSite, SourceModule, SourceNodeRef,
-    SourceRevision, StatementSite, TextRange,
+    AuthoredSourceRevision, BodySite, DeclarationSite, ExpressionSite, SourceNodeRef,
+    StatementSite, TextRange,
 };
 
-use super::diagnostic::{Diagnostic, Diagnostics};
+use super::diagnostic::Diagnostic;
 use super::model::SurfaceFile;
-use super::parser;
 
 #[derive(Debug, Clone)]
 pub struct SourceIndex {
-    revision: SourceRevision,
+    revision: AuthoredSourceRevision,
+    complete_revision: Option<super::PreparedSourceGraphRevision>,
     build_inputs: Vec<SourceIndexBuildInput>,
     expressions: BTreeMap<(SourceNodeRef, ExpressionSite), IndexedExpression>,
     statements: BTreeMap<(SourceNodeRef, StatementSite), IndexedStatement>,
@@ -41,39 +43,7 @@ pub struct SourceIndex {
 }
 
 impl SourceIndex {
-    pub fn build(sources: &BTreeMap<String, String>) -> Result<Self, Diagnostics> {
-        let modules = sources
-            .iter()
-            .map(|(path, source)| SourceModule::utf8(path, source))
-            .collect::<Vec<_>>();
-        let revision = source_graph_revision(&modules).map_err(|error| {
-            Diagnostics::one(Diagnostic::new(
-                "SOURCE_GRAPH_REVISION",
-                "<source-graph>",
-                error.to_string(),
-                Span::default(),
-            ))
-        })?;
-        let mut index = Self {
-            revision,
-            build_inputs: Vec::new(),
-            expressions: BTreeMap::new(),
-            statements: BTreeMap::new(),
-            bodies: BTreeMap::new(),
-            declarations: BTreeMap::new(),
-            imports: BTreeMap::new(),
-            modules: BTreeMap::new(),
-            nodes: BTreeMap::new(),
-            top_levels: BTreeMap::new(),
-        };
-        for (path, source) in sources {
-            let file = parser::parse_executable(path, source).map_err(Diagnostics)?;
-            index.file(&file).map_err(Diagnostics::one)?;
-        }
-        Ok(index)
-    }
-
-    pub fn revision(&self) -> &SourceRevision {
+    pub fn revision(&self) -> &AuthoredSourceRevision {
         &self.revision
     }
 
@@ -118,7 +88,7 @@ impl SourceIndex {
                 &file.path,
                 target,
                 ExpressionSite::ConstantValue,
-                &value.expression,
+                file.syntax.slice_text(&value.expression),
                 value.expression_span,
             )?;
         }
@@ -129,7 +99,7 @@ impl SourceIndex {
                 &file.path,
                 target,
                 DeclarationSite::BuildInputDeclaration,
-                &file.source,
+                file.source(),
                 value.span,
             )?;
         }
@@ -176,11 +146,20 @@ fn ambiguous(path: &str, target: &SourceNodeRef, span: Span) -> Diagnostic {
 }
 
 #[cfg(test)]
+#[path = "index/test_support.rs"]
+mod test_support;
+#[cfg(test)]
+use test_support::revision as test_revision;
+
+#[cfg(test)]
 #[path = "index/build_input_inventory_tests.rs"]
 mod build_input_inventory_tests;
 #[cfg(test)]
 #[path = "index/inventory_tests.rs"]
 mod inventory_tests;
+#[cfg(test)]
+#[path = "index/revision_binding_tests.rs"]
+mod revision_binding_tests;
 #[cfg(test)]
 #[path = "index/statement_tests.rs"]
 mod statement_tests;

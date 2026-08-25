@@ -1,0 +1,69 @@
+module {
+  import "./layout.veac" as layout;
+  import "./text.veac" as text;
+  import "./delivery.veac" as delivery;
+  import "./components/card.veac" as component_card;
+
+  export enum Tone {
+    Calm,
+    Accent { color: color, },
+  }
+
+  export struct CardConfig {
+    key: identifier,
+    at: time,
+    duration: time,
+    title: text,
+    detail: text,
+    tone: Tone,
+  }
+
+  export struct TitleConfig {
+    key: identifier,
+    at: time,
+    duration: time,
+    content: text,
+  }
+
+  impl CardConfig @presentation {
+    export fn label(self, separator: text = "：") -> text {
+      self.title + separator + self.detail
+    }
+
+    export fn background(self) -> color {
+      match self.tone {
+        Tone.Calm => #176b72ff,
+        Tone.Accent { color } => color,
+      }
+    }
+  }
+
+  export fn card(
+    key: identifier, at: time, title: text, detail: text,
+    duration: time = 3s, tone: Tone = Tone.Calm,
+  ) -> CardConfig {
+    CardConfig { key: key, at: at, duration: duration,
+      title: title, detail: detail, tone: tone, }
+  }
+
+  export fn title(
+    key: identifier, at: time, content: text, duration: time = 3s,
+  ) -> TitleConfig {
+    TitleConfig { key: key, at: at, duration: duration, content: content, }
+  }
+
+  export fn card_item(card: CardConfig) -> Item {
+    component_card.panel(item(card.key, item_enabled(), during(card.at, card.duration),
+      source_generated(generator_solid(card.background())), source_timing_native())
+    )
+  }
+
+  export fn title_item(value: TitleConfig, font: Resource, size: length = 50px) -> Item {
+    item(value.key, item_enabled(), during(value.at, value.duration),
+      source_text(value.content, text.style(font, size)), source_timing_native())
+  }
+
+  export fn preview(timeline: Sequence, canvas_size: Canvas, rate: FrameRate) -> Delivery {
+    delivery.video(timeline, canvas_size, rate)
+  }
+}

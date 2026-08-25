@@ -5,7 +5,7 @@ use crate::program::expression::{
     FunctionEffect, MapKeyType, PrimitiveType, ValueType, ValueTypeKind,
 };
 
-pub(super) fn encode(digest: &mut Sha256, value: &ValueType) {
+pub(crate) fn encode(digest: &mut Sha256, value: &ValueType) {
     match value.kind() {
         ValueTypeKind::Primitive(value) => digest.update([0x00, primitive(value)]),
         ValueTypeKind::Domain(value) => {

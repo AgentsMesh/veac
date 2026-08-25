@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
 
 use crate::arguments::PackageBindingsArgs;
@@ -9,12 +10,10 @@ pub(crate) fn run(arguments: PackageBindingsArgs) -> CliResult {
     let manifest_file = crate::fs::canonical_file(&root.join("package.json"), "package manifest")?;
     let manifest: veac_artifact::PackageManifest =
         super::workflow_io::read_json(&manifest_file, "package manifest")?;
-    let project = veac_artifact::packaged_project(&root, &manifest)
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
-    let bindings = veac_artifact::package_binding_manifest(&root, &manifest)
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
-    let bytes = veac_artifact::canonical_binding_bytes(&bindings)
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
+    let project = veac_artifact::packaged_project(&root, &manifest).map_err(package_error)?;
+    let bindings =
+        veac_artifact::package_binding_manifest(&root, &manifest).map_err(package_error)?;
+    let bytes = veac_artifact::canonical_binding_bytes(&bindings).map_err(package_error)?;
     let mut protected = vec![manifest_file, project];
     protected.extend(
         manifest
@@ -29,8 +28,8 @@ fn reject_package_output(root: &Path, output: Option<&Path>) -> CliResult {
     let Some(output) = output else {
         return Ok(());
     };
-    let parent = std::fs::canonicalize(output.parent().unwrap_or(Path::new(".")))
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
+    let parent =
+        std::fs::canonicalize(output.parent().unwrap_or(Path::new("."))).map_err(package_error)?;
     if parent.starts_with(root) {
         Err(CliError::new(
             "PACKAGE_BINDINGS_OUTPUT_CONFLICT",
@@ -42,8 +41,7 @@ fn reject_package_output(root: &Path, output: Option<&Path>) -> CliResult {
 }
 
 fn canonical_directory(path: &Path) -> CliResult<PathBuf> {
-    let authored = std::fs::symlink_metadata(path)
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
+    let authored = std::fs::symlink_metadata(path).map_err(package_error)?;
     if authored.file_type().is_symlink() || !authored.is_dir() {
         return Err(CliError::new(
             "PACKAGE_BINDINGS_FAILED",
@@ -56,8 +54,7 @@ fn canonical_directory(path: &Path) -> CliResult<PathBuf> {
             format!("cannot resolve package {}: {error}", path.display()),
         )
     })?;
-    let metadata = std::fs::symlink_metadata(&canonical)
-        .map_err(|error| CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string()))?;
+    let metadata = std::fs::symlink_metadata(&canonical).map_err(package_error)?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err(CliError::new(
             "PACKAGE_BINDINGS_FAILED",
@@ -65,4 +62,8 @@ fn canonical_directory(path: &Path) -> CliResult<PathBuf> {
         ));
     }
     Ok(canonical)
+}
+
+fn package_error(error: impl Display) -> CliError {
+    CliError::new("PACKAGE_BINDINGS_FAILED", error.to_string())
 }

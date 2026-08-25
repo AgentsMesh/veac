@@ -7,13 +7,13 @@ use super::SourceIndex;
 pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), Diagnostic> {
     for declaration in &file.temporal {
         let target = target(&file.path, declaration);
-        index.register(&file.path, target.clone(), declaration.span)?;
+        index.register(&file.path, target.clone(), declaration.syntax.span)?;
         index.insert_declaration(
             &file.path,
             target.clone(),
             crate::source_edit::DeclarationSite::TemporalDeclaration,
-            &file.source,
-            declaration.span,
+            file.source(),
+            declaration.syntax.span,
         )?;
         index.insert_body(
             &file.path,
@@ -21,7 +21,7 @@ pub(super) fn index(index: &mut SourceIndex, file: &SurfaceFile) -> Result<(), D
             BodySite::TemporalAnimation {
                 property: property(declaration.property),
             },
-            &declaration.body.source,
+            file.syntax.slice_text(&declaration.body.syntax),
             declaration.body.span,
         )?;
     }

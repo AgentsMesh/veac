@@ -4,6 +4,8 @@ mod contexts;
 mod control_flow;
 #[path = "program_functions/control_flow_diagnostics.rs"]
 mod control_flow_diagnostics;
+#[path = "program_functions/default_parameters.rs"]
+mod default_parameters;
 #[path = "program_functions/diagnostics.rs"]
 mod diagnostics;
 #[path = "program_functions/evaluation_order.rs"]

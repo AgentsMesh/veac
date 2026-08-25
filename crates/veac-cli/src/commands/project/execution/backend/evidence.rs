@@ -23,7 +23,12 @@ pub(super) fn execute(
     cancellation: &CancellationToken,
 ) -> Result<Vec<ProducedProjectOutput>, ProjectBackendError> {
     cancelled(cancellation, "before evidence preparation")?;
-    let authored = source_graph::prepare(&backend.source_root, snapshot, source_revision)?;
+    let authored = source_graph::prepare(
+        &backend.source_root,
+        &backend.packages,
+        snapshot,
+        source_revision,
+    )?;
     let suite = veac_evidence::validate(authored.suite.clone())
         .project_context("evidence contract validation failed")?;
     let plan = veac_evidence::plan_observations(&suite)
@@ -54,7 +59,12 @@ pub(super) fn execute(
     let bundle = veac_evidence::prepare_evidence_bundle(&suite, &plan, &run, &provenance)
         .project_context("evidence bundle preparation failed")?;
     let produced = output::publish(workspace, computation, &bundle)?;
-    source_graph::verify(&backend.source_root, snapshot, source_revision)?;
+    source_graph::verify(
+        &backend.source_root,
+        &backend.packages,
+        snapshot,
+        source_revision,
+    )?;
     bindings::verify(backend, computation, artifacts, &authored.suite.sources)?;
     Ok(produced)
 }

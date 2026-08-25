@@ -1,20 +1,22 @@
 use super::Lowerer;
-use crate::program::expression::ast::Expression;
-use crate::program::expression::hir::{CallTarget, TypedNode, TypedNodeKind};
+use crate::program::expression::ast::{CallArgument, Expression};
+use crate::program::expression::hir::{CallTarget, TypedNodeKind};
 use crate::program::expression::{
     BuiltinFunction, CollectionOperation, ExpressionError, FunctionId, FunctionParameter,
     ValueType, MAX_CALL_ARGUMENTS,
 };
 
+mod arguments;
 mod invoke;
 
+pub(super) use arguments::{reject_named, DeclaredParameter};
 pub(super) use invoke::check_value_argument;
 
 impl Lowerer<'_> {
     pub(super) fn call(
         &mut self,
         callee: &Expression,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         if arguments.len() > MAX_CALL_ARGUMENTS {
@@ -67,26 +69,37 @@ impl Lowerer<'_> {
     fn named_call(
         &mut self,
         name: &str,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         if let Some(contract) = self.domain.lookup_function(name).cloned() {
             return self.domain_function(&contract, arguments, expression);
         }
         if let Some(operation) = CollectionOperation::parse(name) {
+            reject_named(operation.as_str(), arguments, expression)?;
             return self.collection_call(operation, arguments, expression);
         }
         if let Some(function) = BuiltinFunction::parse(name) {
+            reject_named(function.as_str(), arguments, expression)?;
             let arguments = arguments
                 .iter()
-                .map(|argument| self.lower(argument))
+                .enumerate()
+                .map(|(slot, argument)| {
+                    self.lower(&argument.value).map(|value| {
+                        crate::program::expression::hir::TypedCallArgument { slot, value }
+                    })
+                })
                 .collect::<Result<Vec<_>, _>>()?;
-            let types = argument_types(&arguments);
+            let types = arguments
+                .iter()
+                .map(|argument| argument.value.value_type.clone())
+                .collect::<Vec<_>>();
             let value_type = super::typing::builtin(function, &types, expression.span.clone())?;
             return Ok((
                 TypedNodeKind::Call {
                     target: CallTarget::Builtin(function),
                     arguments,
+                    defaults: Vec::new(),
                 },
                 value_type,
             ));
@@ -124,38 +137,25 @@ impl Lowerer<'_> {
         name: &str,
         parameters: &[FunctionParameter],
         return_type: &ValueType,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
-        super::typing::require_arity(
-            name,
-            arguments.len(),
-            parameters.len(),
-            expression.span.clone(),
-        )?;
-        let lowered = arguments
+        let declared = parameters
             .iter()
-            .zip(parameters)
-            .enumerate()
-            .map(|(index, (argument, parameter))| {
-                let value = self.lower_context(argument, Some(&parameter.value_type))?;
-                check_value_argument(index, &value, &parameter.value_type, argument)?;
-                Ok(value)
+            .map(|parameter| DeclaredParameter {
+                name: &parameter.name,
+                value_type: parameter.value_type.clone(),
+                default: parameter.default().map(|value| value.thunk()),
             })
-            .collect::<Result<Vec<_>, ExpressionError>>()?;
+            .collect::<Vec<_>>();
+        let lowered = self.bind_call_arguments(name, arguments, &declared, 0, expression)?;
         Ok((
             TypedNodeKind::Call {
                 target: CallTarget::User(id),
-                arguments: lowered,
+                arguments: lowered.explicit,
+                defaults: lowered.defaults,
             },
             return_type.clone(),
         ))
     }
-}
-
-fn argument_types(arguments: &[TypedNode]) -> Vec<ValueType> {
-    arguments
-        .iter()
-        .map(|value| value.value_type.clone())
-        .collect()
 }

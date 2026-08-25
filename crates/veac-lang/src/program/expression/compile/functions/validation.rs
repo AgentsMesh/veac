@@ -5,7 +5,7 @@ use crate::program::expression::{
     MAX_FUNCTION_PARAMETERS,
 };
 
-pub(super) fn validate_definitions(
+pub(crate) fn validate_definitions(
     context: &ExpressionContext,
     definitions: &[FunctionDefinition],
 ) -> Result<(), ExpressionError> {
@@ -58,6 +58,7 @@ fn validate_parameters(definition: &FunctionDefinition) -> Result<(), Expression
         .in_function(&definition.name));
     }
     let mut names = BTreeSet::new();
+    let mut found_default = false;
     for parameter in &definition.parameters {
         if !crate::name::is_name(&parameter.name) {
             return Err(ExpressionError::new(
@@ -74,6 +75,16 @@ fn validate_parameters(definition: &FunctionDefinition) -> Result<(), Expression
                     "function `{}` declares parameter `{}` more than once",
                     definition.name, parameter.name
                 ),
+                0..definition.body.len().min(1),
+            )
+            .in_function(&definition.name));
+        }
+        if parameter.has_default() {
+            found_default = true;
+        } else if found_default {
+            return Err(ExpressionError::new(
+                "EXPRESSION_REQUIRED_PARAMETER_AFTER_DEFAULT",
+                "required parameters cannot follow a parameter with a default",
                 0..definition.body.len().min(1),
             )
             .in_function(&definition.name));

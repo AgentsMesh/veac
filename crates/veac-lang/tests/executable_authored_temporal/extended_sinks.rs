@@ -128,7 +128,7 @@ fn nested_sink_body_edit_rebuilds_from_veac_source_truth() {
     };
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_nested_temporal_body").unwrap(),
-        prepared.source_index().unwrap().revision().clone(),
+        prepared.source_revision().unwrap(),
     );
     batch.operations.push(SourceEditOperation::SetBody {
         target,

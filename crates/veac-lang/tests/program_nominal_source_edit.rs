@@ -42,7 +42,7 @@ fn editing_a_nominal_function_retypes_and_reexecutes_from_source() {
     );
     let mut batch = SourceEditBatch::new(
         veac_ir::OperationId::new("op_nominal_function_body").unwrap(),
-        index.revision().clone(),
+        compiled.source_revision().unwrap(),
     );
     batch.preconditions.push(SourcePrecondition::BodyEquals {
         target: target.clone(),

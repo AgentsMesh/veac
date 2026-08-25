@@ -56,7 +56,7 @@ fn detached_package_contains_verified_media_and_portable_ir() {
     fixture.build_success();
     let package = fixture.package_root();
     fixture
-        .command("package")
+        .command("bundle")
         .arg("--destination")
         .arg(&package)
         .assert()

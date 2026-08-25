@@ -23,10 +23,7 @@ fn checked_in_function_edit_is_typed_revision_bound_and_executable() {
     let batch = decode_source_edit_batch_json(&json).unwrap();
     let prepared = prepare_path(&entry).unwrap();
     assert_eq!(batch.schema_version, SOURCE_EDIT_SCHEMA_VERSION);
-    assert_eq!(
-        &batch.base_revision,
-        prepared.source_index().unwrap().revision()
-    );
+    assert_eq!(batch.base_revision, prepared.source_revision().unwrap());
     assert!(matches!(
         batch.preconditions.as_slice(),
         [
@@ -49,8 +46,12 @@ fn checked_in_function_edit_is_typed_revision_bound_and_executable() {
     let preview = apply_executable_source_edit_path_with_inputs(&entry, &batch, &inputs).unwrap();
     assert_eq!(preview.changed_modules(), ["brand.veac", "main.veac"]);
     assert_eq!(
-        preview.new_revision.source_graph_sha256,
-        "9e728b823124e0b4592b70d4b107c11050982bfea3fdb29c9263e30ccc12574d"
+        preview.new_revision.authored_source_graph_sha256,
+        "4fbe74e49426b74f334eacf913c6c7edd27ab934f2a9ece1b01077e6655896d8"
+    );
+    assert_eq!(
+        preview.new_revision.complete_source_graph_sha256,
+        "f5a3880f209a15fff8cc9634454398b5c23b5cdf44dd7b54fa6e064fd61d690a"
     );
     let sequence = &preview.built.envelope().project.sequences[0];
     assert_eq!(sequence.tracks.len(), 2);

@@ -1,5 +1,5 @@
 use super::Lowerer;
-use crate::program::expression::ast::Expression;
+use crate::program::expression::ast::{CallArgument, Expression};
 use crate::program::expression::hir::TypedNodeKind;
 use crate::program::expression::{CollectionOperation, ExpressionError, PrimitiveType, ValueType};
 
@@ -13,7 +13,7 @@ impl Lowerer<'_> {
     pub(super) fn collection_call(
         &mut self,
         operation: CollectionOperation,
-        arguments: &[Expression],
+        arguments: &[CallArgument],
         expression: &Expression,
     ) -> Result<(TypedNodeKind, ValueType), ExpressionError> {
         let arity = if operation == CollectionOperation::Fold {
@@ -28,24 +28,24 @@ impl Lowerer<'_> {
             expression.span.clone(),
         )?;
         let input = self.collection_input(operation, arguments)?;
-        let element = iterable_element(&input.value_type, &arguments[0])?;
+        let element = iterable_element(&input.value_type, &arguments[0].value)?;
         let mut lowered = vec![input];
         let value_type = match operation {
             CollectionOperation::Map => {
-                let callback = self.lower(&arguments[1])?;
+                let callback = self.lower(&arguments[1].value)?;
                 let result =
-                    callback_result(operation, &callback, &[element], None, &arguments[1])?;
+                    callback_result(operation, &callback, &[element], None, &arguments[1].value)?;
                 lowered.push(callback);
                 list_type(result, expression)?
             }
             CollectionOperation::Filter => {
-                let callback = self.lower(&arguments[1])?;
+                let callback = self.lower(&arguments[1].value)?;
                 callback_result(
                     operation,
                     &callback,
                     std::slice::from_ref(&element),
                     Some(&PrimitiveType::Boolean.into()),
-                    &arguments[1],
+                    &arguments[1].value,
                 )?;
                 lowered.push(callback);
                 list_type(element, expression)?
@@ -53,13 +53,13 @@ impl Lowerer<'_> {
             CollectionOperation::Fold => {
                 let initial = self.fold_initial(arguments)?;
                 let accumulator = initial.value_type.clone();
-                let callback = self.lower(&arguments[2])?;
+                let callback = self.lower(&arguments[2].value)?;
                 callback_result(
                     operation,
                     &callback,
                     &[accumulator.clone(), element],
                     Some(&accumulator),
-                    &arguments[2],
+                    &arguments[2].value,
                 )?;
                 lowered.extend([initial, callback]);
                 accumulator

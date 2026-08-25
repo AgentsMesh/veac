@@ -8,6 +8,7 @@ use crate::vocabulary::{accepts_expression_name, ExpressionNameKind};
 use super::{function, kind, Parser};
 
 pub(super) fn parse(parser: &mut Parser<'_>) -> Result<ImplDecl, Diagnostic> {
+    let syntax_start = parser.mark();
     let start = parser.expect_control(controls::IMPL_DECLARATION)?;
     let target = kind::value(parser)?;
     let (identity, identity_span) = parser.local_id("implementation identity")?;
@@ -40,16 +41,19 @@ pub(super) fn parse(parser: &mut Parser<'_>) -> Result<ImplDecl, Diagnostic> {
         methods.push(method(parser, exported)?);
     }
     let end = parser.expect(TokenKind::RightBrace, "`}`")?;
+    let span = start.join(end);
     Ok(ImplDecl {
         target,
         identity,
         identity_span,
         methods,
-        span: start.join(end),
+        span,
+        syntax: parser.slice_from(syntax_start, span),
     })
 }
 
 fn method(parser: &mut Parser<'_>, exported: bool) -> Result<MethodDecl, Diagnostic> {
+    let syntax_start = parser.mark();
     let start = parser.expect_control(controls::FUNCTION_DECLARATION)?;
     let (name, name_span) = parser.identifier("method name")?;
     if !accepts_expression_name(&name, ExpressionNameKind::Function) {
@@ -72,16 +76,17 @@ fn method(parser: &mut Parser<'_>, exported: bool) -> Result<MethodDecl, Diagnos
     let return_type_syntax = kind::value(parser)?;
     let block = parser.raw_block()?;
     let body_span = block.span;
-    let source = parser.source[body_span.start..body_span.end].to_owned();
+    let span = start.join(block.span);
     Ok(MethodDecl {
         name,
         parameters,
         return_type_syntax,
         body: FunctionBodyBinding {
-            source,
             span: body_span,
+            syntax: block.syntax,
         },
         exported,
-        span: start.join(block.span),
+        span,
+        syntax: parser.slice_from(syntax_start, span),
     })
 }

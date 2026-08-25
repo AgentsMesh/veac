@@ -11,7 +11,7 @@ use super::SourceIndex;
 pub use model::*;
 
 pub const SOURCE_INDEX_SCHEMA: &str = "https://veac.dev/schemas/source-index";
-pub const SOURCE_INDEX_SCHEMA_VERSION: u32 = 8;
+pub const SOURCE_INDEX_SCHEMA_VERSION: u32 = 11;
 
 pub(crate) use build_inputs::describe as describe_build_inputs;
 
@@ -22,7 +22,11 @@ impl SourceIndex {
     }
 
     /// Returns a detached view ordered by module, typed path, and source site.
-    pub fn inventory(&self) -> SourceIndexInventory {
+    pub fn inventory(
+        &self,
+        revision: &crate::source_edit::SourceRevision,
+    ) -> Result<SourceIndexInventory, crate::source_edit::SourceEditError> {
+        let revision = validate_revision(self, revision)?;
         let modules = self
             .modules
             .iter()
@@ -95,14 +99,14 @@ impl SourceIndex {
                     range: value.range,
                 });
         }
-        SourceIndexInventory {
+        Ok(SourceIndexInventory {
             schema: SOURCE_INDEX_SCHEMA.to_owned(),
             schema_version: SOURCE_INDEX_SCHEMA_VERSION,
-            revision: self.revision.clone(),
+            revision,
             build_inputs: self.build_inputs.clone(),
             modules,
             nodes: nodes.into_values().collect(),
-        }
+        })
     }
 
     fn module_imports(&self, module: &str) -> Vec<SourceIndexImport> {
@@ -129,6 +133,39 @@ impl SourceIndex {
             })
             .collect()
     }
+}
+
+fn validate_revision(
+    index: &SourceIndex,
+    revision: &crate::source_edit::SourceRevision,
+) -> Result<crate::source_edit::SourceRevision, crate::source_edit::SourceEditError> {
+    for digest in [
+        &revision.authored_source_graph_sha256,
+        &revision.complete_source_graph_sha256,
+    ] {
+        if !crate::source_edit::valid_sha256(digest) {
+            return Err(crate::source_edit::SourceEditError::InvalidDigest(
+                digest.clone(),
+            ));
+        }
+    }
+    let expected = index
+        .bound_revision()
+        .ok_or(crate::source_edit::SourceEditError::UnboundSourceIndex)?;
+    if revision != &expected {
+        return Err(crate::source_edit::SourceEditError::StaleRevision {
+            expected: describe(&expected),
+            actual: describe(revision),
+        });
+    }
+    Ok(expected)
+}
+
+fn describe(revision: &crate::source_edit::SourceRevision) -> String {
+    format!(
+        "authored={}, complete={}",
+        revision.authored_source_graph_sha256, revision.complete_source_graph_sha256
+    )
 }
 
 pub fn source_index_json_schema() -> Result<serde_json::Value, serde_json::Error> {

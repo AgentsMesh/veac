@@ -137,10 +137,10 @@ block，事务会重新 parse、resolve、type-check、执行并验证 canonical
 
 nominal declaration 也有独立、module-qualified target：`struct`、`struct_field`、`enum`、
 `enum_variant` 与 `enum_variant_field` 分别保留声明 owner，不以 byte offset 或 registry ordinal
-作为身份。source-index v8 在节点的 `declarations` 中给出 nominal member 的精确源码、range 与 closed
+作为身份。source-index v11 在节点的 `declarations` 中给出 nominal member 的精确源码、range 与 closed
 `DeclarationSite`，并在 module inventory 发布完整 struct、enum 与 impl 顶层声明。
 
-source-edit v6 的 `declaration_equals`/`set_declaration` 支持 nominal member；
+source-edit v9 的 `declaration_equals`/`set_declaration` 支持 nominal member；
 `top_level_declaration_equals`/`set_top_level_declaration` 与 insert/remove declaration 支持完整 struct、
 enum 和 impl block。member range 不包含分隔逗号。重命名后，Agent 可在同一个 atomic multi-module
 batch 中更新 import、callable 与 constant use site。未覆盖的 constructor、projection、match pattern

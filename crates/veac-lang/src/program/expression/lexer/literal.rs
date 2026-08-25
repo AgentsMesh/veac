@@ -17,14 +17,7 @@ impl Lexer<'_> {
                     if self.current().is_none() {
                         return Err(self.string_error(start));
                     }
-                    let decoded = crate::string_codec::decode_escape(&self.source[self.offset..])
-                        .map_err(|message| {
-                        ExpressionError::new(
-                            "EXPRESSION_STRING_ESCAPE",
-                            message,
-                            escape_start..self.offset + self.current().map_or(0, char::len_utf8),
-                        )
-                    })?;
+                    let decoded = decode_escape(&self.source[self.offset..], escape_start)?;
                     value.push(decoded.character);
                     let end = self.offset + decoded.bytes;
                     while self.offset < end {
@@ -32,11 +25,7 @@ impl Lexer<'_> {
                     }
                 }
                 Some(character) if character.is_control() => {
-                    return Err(ExpressionError::new(
-                        "EXPRESSION_STRING_CONTROL",
-                        "control characters must use an escape sequence",
-                        self.offset..self.offset + character.len_utf8(),
-                    ))
+                    return Err(control_error(character, self.offset));
                 }
                 Some(character) => {
                     value.push(character);
@@ -61,17 +50,8 @@ impl Lexer<'_> {
             self.advance();
         }
         let raw = &self.source[start..self.offset];
-        let valid =
-            matches!(raw.len(), 7 | 9) && raw[1..].bytes().all(|value| value.is_ascii_hexdigit());
-        if !valid {
-            return Err(ExpressionError::new(
-                "EXPRESSION_COLOR_LITERAL",
-                "color must be #rrggbb or #rrggbbaa",
-                start..self.offset,
-            ));
-        }
         self.tokens.push(Token {
-            kind: TokenKind::Color(raw.to_ascii_lowercase()),
+            kind: validate_color(raw, start..self.offset)?,
             span: start..self.offset,
         });
         Ok(())
@@ -84,4 +64,76 @@ impl Lexer<'_> {
             start..self.offset,
         )
     }
+}
+
+pub(in crate::program::expression) fn decode_string(
+    raw: &str,
+    content_start: usize,
+) -> Result<String, ExpressionError> {
+    let mut value = String::new();
+    let mut offset = 0;
+    while let Some(character) = raw[offset..].chars().next() {
+        if character == '\\' {
+            let escape_start = offset;
+            offset += character.len_utf8();
+            if raw[offset..].chars().next().is_none() {
+                return Err(ExpressionError::new(
+                    "EXPRESSION_STRING_LITERAL",
+                    "unterminated string literal",
+                    content_start + escape_start..content_start + offset,
+                ));
+            }
+            let decoded = decode_escape(&raw[offset..], content_start + escape_start)?;
+            value.push(decoded.character);
+            offset += decoded.bytes;
+        } else if character.is_control() {
+            return Err(control_error(character, content_start + offset));
+        } else {
+            value.push(character);
+            offset += character.len_utf8();
+        }
+    }
+    Ok(value)
+}
+
+fn decode_escape(
+    raw: &str,
+    escape_start: usize,
+) -> Result<crate::string_codec::DecodedEscape, ExpressionError> {
+    let current = raw
+        .chars()
+        .next()
+        .expect("escape sequence starts with a character");
+    crate::string_codec::decode_escape(raw).map_err(|message| {
+        ExpressionError::new(
+            "EXPRESSION_STRING_ESCAPE",
+            message,
+            escape_start..escape_start + 1 + current.len_utf8(),
+        )
+    })
+}
+
+fn control_error(character: char, start: usize) -> ExpressionError {
+    ExpressionError::new(
+        "EXPRESSION_STRING_CONTROL",
+        "control characters must use an escape sequence",
+        start..start + character.len_utf8(),
+    )
+}
+
+pub(in crate::program::expression) fn validate_color(
+    raw: &str,
+    span: std::ops::Range<usize>,
+) -> Result<TokenKind, ExpressionError> {
+    let valid =
+        matches!(raw.len(), 7 | 9) && raw[1..].bytes().all(|value| value.is_ascii_hexdigit());
+    valid
+        .then(|| TokenKind::Color(raw.to_ascii_lowercase()))
+        .ok_or_else(|| {
+            ExpressionError::new(
+                "EXPRESSION_COLOR_LITERAL",
+                "color must be #rrggbb or #rrggbbaa",
+                span,
+            )
+        })
 }
